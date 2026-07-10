@@ -161,6 +161,49 @@ def _build_global_issue(*, target_num: int, available_samples: int) -> ReverseFi
         suggestion="请降低目标份数，或把起始样本行往前调，或更换样本更多的 Excel",
     )
 
+def _append_question_issue_and_plan(
+    *,
+    issues: list[ReverseFillIssue],
+    question_plans: list[ReverseFillQuestionPlan],
+    question_num: int,
+    title: str,
+    question_type: str,
+    columns: list[Any],
+    detail: str,
+    category: str,
+    reason: str,
+    fallback_ready: bool,
+    fallback_resolved: bool = False,
+    sample_rows: list[int] | None = None,
+    severity: str | None = None,
+    suggestion: str | None = None,
+) -> None:
+    """Append a matching ``ReverseFillIssue`` and ``ReverseFillQuestionPlan`` pair."""
+    issues.append(
+        _question_issue(
+            question_num=question_num,
+            title=title,
+            category=category,
+            reason=reason,
+            fallback_ready=fallback_ready,
+            sample_rows=sample_rows,
+            suggestion=suggestion,
+            severity=severity,
+        )
+    )
+    question_plans.append(
+        _build_question_plan(
+            question_num=question_num,
+            title=title,
+            question_type=question_type,
+            status=REVERSE_FILL_STATUS_FALLBACK if fallback_ready else REVERSE_FILL_STATUS_BLOCKED,
+            columns=columns,
+            detail=detail,
+            fallback_ready=fallback_ready,
+            fallback_resolved=fallback_resolved,
+        )
+    )
+
 def build_reverse_fill_spec(
     *,
     source_path: str,
@@ -223,158 +266,70 @@ def build_reverse_fill_spec(
         fallback_resolved = fallback_ready and _entry_differs_from_default(entry, default_entry_by_num.get(question_num))
 
         if bool(info.unsupported):
-            reason = str(info.unsupported_reason or "当前程序暂不支持这道题").strip()
-            issues.append(
-                ReverseFillIssue(
-                    question_num=question_num,
-                    title=title,
-                    severity="block",
-                    category="runtime_unsupported",
-                    reason=reason,
-                    suggestion="这题不是反填没做，是程序本身还不能答，当前版本无法启动",
-                )
-            )
-            question_plans.append(
-                _build_question_plan(
-                    question_num=question_num,
-                    title=title,
-                    question_type=question_type,
-                    status=REVERSE_FILL_STATUS_BLOCKED,
-                    columns=columns,
-                    detail=reason,
-                    fallback_ready=False,
-                    fallback_resolved=False,
-                )
+            _append_question_issue_and_plan(
+                issues=issues, question_plans=question_plans,
+                question_num=question_num, title=title, question_type=question_type,
+                columns=columns, detail=str(info.unsupported_reason or "当前程序暂不支持这道题").strip(),
+                category="runtime_unsupported",
+                reason=str(info.unsupported_reason or "当前程序暂不支持这道题").strip(),
+                fallback_ready=False,
+                suggestion="这题不是反填没做，是程序本身还不能答，当前版本无法启动",
             )
             continue
 
         if question_type == QuestionType.ORDER:
-            reason = "排序题目前不参与反填覆盖"
-            issues.append(
-                _question_issue(
-                    question_num=question_num,
-                    title=title,
-                    category="auto_handled",
-                    reason=reason,
-                    fallback_ready=False,
-                    suggestion="自动按常规逻辑处理（执行时自动随机排序）",
-                    severity="warn",
-                )
-            )
-            question_plans.append(
-                _build_question_plan(
-                    question_num=question_num,
-                    title=title,
-                    question_type=question_type,
-                    status=REVERSE_FILL_STATUS_BLOCKED,
-                    columns=columns,
-                    detail=reason,
-                    fallback_ready=False,
-                    fallback_resolved=False,
-                )
+            _append_question_issue_and_plan(
+                issues=issues, question_plans=question_plans,
+                question_num=question_num, title=title, question_type=question_type,
+                columns=columns, detail="排序题目前不参与反填覆盖",
+                category="auto_handled", reason="排序题目前不参与反填覆盖",
+                fallback_ready=False,
+                suggestion="自动按常规逻辑处理（执行时自动随机排序）",
+                severity="warn",
             )
             continue
 
         if not supports_reverse_fill_runtime(question_type, info):
-            reason = "当前题型或题目结构不在反填 V1 支持范围内"
-            issues.append(
-                _question_issue(
-                    question_num=question_num,
-                    title=title,
-                    category="unsupported_type",
-                    reason=reason,
-                    fallback_ready=fallback_ready,
-                )
-            )
-            question_plans.append(
-                _build_question_plan(
-                    question_num=question_num,
-                    title=title,
-                    question_type=question_type,
-                    status=REVERSE_FILL_STATUS_FALLBACK if fallback_ready else REVERSE_FILL_STATUS_BLOCKED,
-                    columns=columns,
-                    detail=reason,
-                    fallback_ready=fallback_ready,
-                    fallback_resolved=fallback_resolved,
-                )
+            _append_question_issue_and_plan(
+                issues=issues, question_plans=question_plans,
+                question_num=question_num, title=title, question_type=question_type,
+                columns=columns, detail="当前题型或题目结构不在反填 V1 支持范围内",
+                category="unsupported_type", reason="当前题型或题目结构不在反填 V1 支持范围内",
+                fallback_ready=fallback_ready, fallback_resolved=fallback_resolved,
             )
             continue
 
         if not columns:
-            reason = "Excel 中没有找到这道题对应的列"
-            issues.append(
-                _question_issue(
-                    question_num=question_num,
-                    title=title,
-                    category="mapping_missing",
-                    reason=reason,
-                    fallback_ready=fallback_ready,
-                )
-            )
-            question_plans.append(
-                _build_question_plan(
-                    question_num=question_num,
-                    title=title,
-                    question_type=question_type,
-                    status=REVERSE_FILL_STATUS_FALLBACK if fallback_ready else REVERSE_FILL_STATUS_BLOCKED,
-                    columns=columns,
-                    detail=reason,
-                    fallback_ready=fallback_ready,
-                    fallback_resolved=fallback_resolved,
-                )
+            _append_question_issue_and_plan(
+                issues=issues, question_plans=question_plans,
+                question_num=question_num, title=title, question_type=question_type,
+                columns=columns, detail="Excel 中没有找到这道题对应的列",
+                category="mapping_missing", reason="Excel 中没有找到这道题对应的列",
+                fallback_ready=fallback_ready, fallback_resolved=fallback_resolved,
             )
             continue
 
         ordered_columns = columns
         if question_type in CHOICE_TYPES | TEXT_TYPES and question_type != QuestionType.MULTI_TEXT and len(columns) != 1:
-            reason = "这道题在 Excel 中对应了多列，V1 无法确认唯一答案列"
-            issues.append(
-                _question_issue(
-                    question_num=question_num,
-                    title=title,
-                    category="mapping_ambiguous",
-                    reason=reason,
-                    fallback_ready=fallback_ready,
-                )
-            )
-            question_plans.append(
-                _build_question_plan(
-                    question_num=question_num,
-                    title=title,
-                    question_type=question_type,
-                    status=REVERSE_FILL_STATUS_FALLBACK if fallback_ready else REVERSE_FILL_STATUS_BLOCKED,
-                    columns=columns,
-                    detail=reason,
-                    fallback_ready=fallback_ready,
-                    fallback_resolved=fallback_resolved,
-                )
+            _append_question_issue_and_plan(
+                issues=issues, question_plans=question_plans,
+                question_num=question_num, title=title, question_type=question_type,
+                columns=columns, detail="这道题在 Excel 中对应了多列，V1 无法确认唯一答案列",
+                category="mapping_ambiguous", reason="这道题在 Excel 中对应了多列，V1 无法确认唯一答案列",
+                fallback_ready=fallback_ready, fallback_resolved=fallback_resolved,
             )
             continue
 
         if question_type == QuestionType.MATRIX:
             row_texts = list(info.row_texts or [])
             if row_texts and len(columns) != len(row_texts):
-                reason = f"矩阵题解析出 {len(row_texts)} 行，但 Excel 里只有 {len(columns)} 列"
-                issues.append(
-                    _question_issue(
-                        question_num=question_num,
-                        title=title,
-                        category="mapping_mismatch",
-                        reason=reason,
-                        fallback_ready=fallback_ready,
-                    )
-                )
-                question_plans.append(
-                    _build_question_plan(
-                        question_num=question_num,
-                        title=title,
-                        question_type=question_type,
-                        status=REVERSE_FILL_STATUS_FALLBACK if fallback_ready else REVERSE_FILL_STATUS_BLOCKED,
-                        columns=columns,
-                        detail=reason,
-                        fallback_ready=fallback_ready,
-                        fallback_resolved=fallback_resolved,
-                    )
+                _append_question_issue_and_plan(
+                    issues=issues, question_plans=question_plans,
+                    question_num=question_num, title=title, question_type=question_type,
+                    columns=columns, detail=f"矩阵题解析出 {len(row_texts)} 行，但 Excel 里只有 {len(columns)} 列",
+                    category="mapping_mismatch",
+                    reason=f"矩阵题解析出 {len(row_texts)} 行，但 Excel 里只有 {len(columns)} 列",
+                    fallback_ready=fallback_ready, fallback_resolved=fallback_resolved,
                 )
                 continue
             ordered_columns = resolve_ordered_columns(columns, row_texts)
@@ -382,27 +337,13 @@ def build_reverse_fill_spec(
         if question_type == QuestionType.MULTI_TEXT:
             blank_labels = list(info.text_input_labels or [])
             if blank_labels and len(columns) != len(blank_labels):
-                reason = f"多项填空解析出 {len(blank_labels)} 个空，但 Excel 里只有 {len(columns)} 列"
-                issues.append(
-                    _question_issue(
-                        question_num=question_num,
-                        title=title,
-                        category="mapping_mismatch",
-                        reason=reason,
-                        fallback_ready=fallback_ready,
-                    )
-                )
-                question_plans.append(
-                    _build_question_plan(
-                        question_num=question_num,
-                        title=title,
-                        question_type=question_type,
-                        status=REVERSE_FILL_STATUS_FALLBACK if fallback_ready else REVERSE_FILL_STATUS_BLOCKED,
-                        columns=columns,
-                        detail=reason,
-                        fallback_ready=fallback_ready,
-                        fallback_resolved=fallback_resolved,
-                    )
+                _append_question_issue_and_plan(
+                    issues=issues, question_plans=question_plans,
+                    question_num=question_num, title=title, question_type=question_type,
+                    columns=columns, detail=f"多项填空解析出 {len(blank_labels)} 个空，但 Excel 里只有 {len(columns)} 列",
+                    category="mapping_mismatch",
+                    reason=f"多项填空解析出 {len(blank_labels)} 个空，但 Excel 里只有 {len(columns)} 列",
+                    fallback_ready=fallback_ready, fallback_resolved=fallback_resolved,
                 )
                 continue
             ordered_columns = resolve_ordered_columns(columns, blank_labels)
@@ -453,27 +394,13 @@ def build_reverse_fill_spec(
                     reason = "这道题在样本中出现了无法匹配选项的值或 V1 不支持的复合值"
             else:
                 reason = "这道题在样本中出现了 V1 无法稳定回放的值"
-            issues.append(
-                _question_issue(
-                    question_num=question_num,
-                    title=title,
-                    category="unsupported_value",
-                    reason=reason,
-                    fallback_ready=fallback_ready,
-                    sample_rows=parse_errors[:3],
-                )
-            )
-            question_plans.append(
-                _build_question_plan(
-                    question_num=question_num,
-                    title=title,
-                    question_type=question_type,
-                    status=REVERSE_FILL_STATUS_FALLBACK if fallback_ready else REVERSE_FILL_STATUS_BLOCKED,
-                    columns=columns,
-                    detail=reason,
-                    fallback_ready=fallback_ready,
-                    fallback_resolved=fallback_resolved,
-                )
+            _append_question_issue_and_plan(
+                issues=issues, question_plans=question_plans,
+                question_num=question_num, title=title, question_type=question_type,
+                columns=columns, detail=reason,
+                category="unsupported_value", reason=reason,
+                fallback_ready=fallback_ready, fallback_resolved=fallback_resolved,
+                sample_rows=parse_errors[:3],
             )
             for row_answers in answers_by_row.values():
                 row_answers.pop(question_num, None)
