@@ -1,17 +1,34 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Mapping, Optional
+from dataclasses import dataclass
+from typing import Any, Iterable, Mapping
 
 from survey_submitter.core.config.base import BaseConfigModel
+from survey_submitter.core.questions.types import TypeCode
 from survey_submitter.providers.common import SURVEY_PROVIDER_WJX, normalize_survey_provider
+
+type JumpRule = dict[str, str | int | bool]
+type DisplayCondition = dict[str, str | list[str]]
+type QuestionMedia = dict[str, str | int | None]
+type AttachedOptionSelect = dict[str, str | list[str] | list[float]]
 
 __all__ = [
     "LOGIC_PARSE_STATUS_COMPLETE",
     "LOGIC_PARSE_STATUS_NONE",
     "LOGIC_PARSE_STATUS_UNKNOWN",
+    "AttachedOptionSelect",
+    "ChoiceQuestionMeta",
+    "DisplayCondition",
+    "JumpRule",
+    "MatrixQuestionMeta",
+    "MultipleChoiceQuestionMeta",
+    "QuestionMedia",
+    "RatingQuestionMeta",
+    "SingleChoiceQuestionMeta",
+    "SliderQuestionMeta",
     "SurveyDefinition",
     "SurveyQuestionMeta",
+    "TextQuestionMeta",
     "build_survey_definition",
     "clone_survey_question_metas",
     "ensure_survey_question_meta",
@@ -31,65 +48,6 @@ _VALID_LOGIC_PARSE_STATUSES = {
 }
 
 
-class SurveyQuestionMeta(BaseConfigModel):
-    num: int = 0
-    title: str = ""
-    display_num: Optional[int] = None
-    description: str = ""
-    type_code: str = "0"
-    options: int = 0
-    rows: int = 1
-    row_texts: List[str] = []
-    page: int = 1
-    option_texts: List[str] = []
-    forced_option_index: Optional[int] = None
-    forced_option_text: str = ""
-    forced_texts: List[str] = []
-    fillable_options: List[int] = []
-    attached_option_selects: List[Dict[str, Any]] = []
-    has_attached_option_select: bool = False
-    is_location: bool = False
-    is_rating: bool = False
-    is_description: bool = False
-    rating_max: int = 0
-    text_inputs: int = 0
-    text_input_labels: List[str] = []
-    is_multi_text: bool = False
-    is_text_like: bool = False
-    is_slider_matrix: bool = False
-    has_jump: bool = False
-    jump_rules: List[Dict[str, Any]] = []
-    has_display_condition: bool = False
-    display_conditions: List[Dict[str, Any]] = []
-    has_dependent_display_logic: bool = False
-    controls_display_targets: List[Dict[str, Any]] = []
-    logic_parse_status: str = LOGIC_PARSE_STATUS_UNKNOWN
-    question_media: List[Dict[str, Any]] = []
-    slider_min: Any = None
-    slider_max: Any = None
-    slider_step: Any = None
-    multi_min_limit: Any = None
-    multi_max_limit: Any = None
-    provider: str = SURVEY_PROVIDER_WJX
-    provider_question_id: str = ""
-    provider_page_id: str = ""
-    provider_type: str = ""
-    provider_page_raw: Any = None
-    unsupported: bool = False
-    unsupported_reason: str = ""
-    required: bool = False
-
-
-@dataclass(frozen=True)
-class SurveyDefinition:
-    provider: str
-    title: str
-    questions: List[SurveyQuestionMeta]
-
-
-SurveyQuestionInput = SurveyQuestionMeta | Mapping[str, Any]
-
-
 def _as_int(value: Any, default: int, *, minimum: int | None = None) -> int:
     try:
         number = int(value)
@@ -100,16 +58,16 @@ def _as_int(value: Any, default: int, *, minimum: int | None = None) -> int:
     return number
 
 
-def _normalize_text_list(raw: Any) -> List[str]:
+def _normalize_text_list(raw: Any) -> list[str]:
     if not isinstance(raw, list):
         return []
     return [str(item or "").strip() for item in raw]
 
 
-def _normalize_dict_list(raw: Any) -> List[Dict[str, Any]]:
+def _normalize_dict_list(raw: Any) -> list[dict[str, Any]]:
     if not isinstance(raw, list):
         return []
-    items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     for item in raw:
         normalized = _survey_question_input_to_dict(item)
         if normalized is not None:
@@ -117,9 +75,9 @@ def _normalize_dict_list(raw: Any) -> List[Dict[str, Any]]:
     return items
 
 
-def _normalize_jump_rules(raw: Any) -> List[Dict[str, Any]]:
+def _normalize_jump_rules(raw: Any) -> list[JumpRule]:
     rules = _normalize_dict_list(raw)
-    normalized_rules: List[Dict[str, Any]] = []
+    normalized_rules: list[JumpRule] = []
     terminate_keywords = ("结束作答", "结束答题", "结束填写", "终止作答", "停止作答")
     for rule in rules:
         normalized_rule = dict(rule)
@@ -132,13 +90,6 @@ def _normalize_jump_rules(raw: Any) -> List[Dict[str, Any]]:
             normalized_rule["terminates_survey"] = bool(normalized_rule.get("terminates_survey"))
         normalized_rules.append(normalized_rule)
     return normalized_rules
-
-
-def _normalize_logic_parse_status(raw: Any) -> str:
-    value = str(raw or "").strip().lower()
-    if value in _VALID_LOGIC_PARSE_STATUSES:
-        return value
-    return LOGIC_PARSE_STATUS_UNKNOWN
 
 
 def _infer_logic_parse_status(normalized: Mapping[str, Any]) -> str:
@@ -164,10 +115,10 @@ def _infer_logic_parse_status(normalized: Mapping[str, Any]) -> str:
     return LOGIC_PARSE_STATUS_COMPLETE if has_parsed_logic else LOGIC_PARSE_STATUS_UNKNOWN
 
 
-def _normalize_question_media_list(raw: Any) -> List[Dict[str, Any]]:
+def _normalize_question_media_list(raw: Any) -> list[QuestionMedia]:
     if not isinstance(raw, list):
         return []
-    items: List[Dict[str, Any]] = []
+    items: list[QuestionMedia] = []
     for item in raw:
         if not isinstance(item, Mapping):
             continue
@@ -205,7 +156,85 @@ def _normalize_question_media_list(raw: Any) -> List[Dict[str, Any]]:
     return items
 
 
-def _survey_question_input_to_dict(question: Any) -> Optional[Dict[str, Any]]:
+class SurveyQuestionMeta(BaseConfigModel):
+    num: int
+    title: str
+    type_code: TypeCode = TypeCode.UNKNOWN
+    required: bool = False
+    description: str | None = None
+    unsupported: bool = False
+    unsupported_reason: str | None = None
+    provider_question_id: str = ""
+    provider_page_id: str = ""
+
+
+class _QuestionMetaBase(SurveyQuestionMeta):
+    display_num: int | None = None
+    has_jump: bool = False
+    jump_rules: list[JumpRule] | None = None
+    has_display_condition: bool = False
+    display_conditions: list[DisplayCondition] | None = None
+    has_dependent_display_logic: bool = False
+    controls_display_targets: list[DisplayCondition] | None = None
+    logic_parse_status: str = LOGIC_PARSE_STATUS_UNKNOWN
+    question_media: list[QuestionMedia] | None = None
+
+
+class ChoiceQuestionMeta(_QuestionMetaBase):
+    option_texts: list[str] | None = None
+    forced_option_index: int | None = None
+    forced_option_text: str | None = None
+    fillable_options: list[int] | None = None
+    attached_option_selects: list[AttachedOptionSelect] | None = None
+    has_attached_option_select: bool = False
+
+
+class SingleChoiceQuestionMeta(ChoiceQuestionMeta):
+    pass
+
+
+class MultipleChoiceQuestionMeta(ChoiceQuestionMeta):
+    multi_min_limit: int | None = None
+    multi_max_limit: int | None = None
+
+
+class MatrixQuestionMeta(_QuestionMetaBase):
+    rows: int = 1
+    row_texts: list[str] | None = None
+
+
+class RatingQuestionMeta(_QuestionMetaBase):
+    rating_max: int = 0
+
+
+class TextQuestionMeta(_QuestionMetaBase):
+    text_inputs: int = 0
+    text_input_labels: list[str] | None = None
+    is_location: bool = False
+
+
+class SliderQuestionMeta(_QuestionMetaBase):
+    slider_min: int | float | None = None
+    slider_max: int | float | None = None
+    slider_step: int | float | None = None
+
+
+@dataclass(frozen=True)
+class SurveyDefinition:
+    provider: str
+    title: str
+    questions: list[SurveyQuestionMeta]
+
+
+SurveyQuestionInput = SurveyQuestionMeta | Mapping[str, Any]
+
+
+def _filter_kwargs(cls: type[BaseConfigModel], kwargs: dict[str, Any]) -> dict[str, Any]:
+    valid_fields = set(cls.model_fields)
+    return {k: v for k, v in kwargs.items() if k in valid_fields}
+
+
+def _survey_question_input_to_dict(question: Any) -> dict[str, Any] | None:
     if isinstance(question, SurveyQuestionMeta):
         return survey_question_meta_to_dict(question)
     if isinstance(question, Mapping):
@@ -213,108 +242,178 @@ def _survey_question_input_to_dict(question: Any) -> Optional[Dict[str, Any]]:
     return None
 
 
-def survey_question_meta_to_dict(question: SurveyQuestionMeta) -> Dict[str, Any]:
+def survey_question_meta_to_dict(question: SurveyQuestionMeta) -> dict[str, Any]:
     return question.model_dump()
 
 
-def _normalize_question(question: SurveyQuestionInput, provider: str, index: int) -> SurveyQuestionMeta:
-    normalized = dict(_survey_question_input_to_dict(question) or {})
+def _resolve_type_code(normalized: Mapping[str, Any]) -> TypeCode:
+    raw = str(normalized.get("type_code") or "0").strip()
+    provider_type = str(normalized.get("provider_type") or "").strip().lower()
+    if provider_type == "description" or raw == TypeCode.DESCRIPTION:
+        return TypeCode.DESCRIPTION
+    try:
+        type_code = TypeCode(raw)
+    except ValueError:
+        type_code = TypeCode.UNKNOWN
+    if type_code == TypeCode.RATING and bool(normalized.get("is_rating")):
+        return TypeCode.SCORE
+    if type_code == TypeCode.MATRIX_TEXT and bool(normalized.get("is_multi_text")):
+        return TypeCode.MULTI_TEXT
+    if type_code == TypeCode.SLIDER and bool(normalized.get("is_slider_matrix")):
+        return TypeCode.SLIDER_MATRIX
+    return type_code
+
+
+def _build_common_kwargs(normalized: dict[str, Any], type_code: TypeCode, question_number: int) -> dict[str, Any]:
+    unsupported_reason = str(normalized.get("unsupported_reason") or "").strip()
+    if bool(normalized.get("unsupported")) and not unsupported_reason:
+        unsupported_reason = "当前平台暂不支持该题型"
     page_number = _as_int(normalized.get("page"), 1, minimum=1)
-    question_number = _as_int(normalized.get("num"), index, minimum=1)
+    return {
+        "num": question_number,
+        "title": str(normalized.get("title") or "").strip(),
+        "type_code": type_code,
+        "required": bool(normalized.get("required")),
+        "description": str(normalized.get("description") or "").strip() or None,
+        "unsupported": bool(normalized.get("unsupported")) and type_code != TypeCode.DESCRIPTION,
+        "unsupported_reason": unsupported_reason or None,
+        "provider_question_id": str(normalized.get("provider_question_id") or question_number).strip(),
+        "provider_page_id": str(normalized.get("provider_page_id") or page_number).strip(),
+    }
+
+
+def _build_logic_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
     raw_display_num = normalized.get("display_num")
-    display_number: Optional[int] = None
+    display_number: int | None = None
     if raw_display_num not in (None, ""):
         try:
             display_number = int(raw_display_num)
         except Exception:
             display_number = None
-    option_count = _as_int(normalized.get("options"), len(_normalize_text_list(normalized.get("option_texts"))), minimum=0)
-    row_count = _as_int(normalized.get("rows"), len(_normalize_text_list(normalized.get("row_texts"))) or 1, minimum=1)
+    return {
+        "display_num": display_number,
+        "has_jump": bool(normalized.get("has_jump")),
+        "jump_rules": _normalize_jump_rules(normalized.get("jump_rules")) or None,
+        "has_display_condition": bool(normalized.get("has_display_condition")),
+        "display_conditions": _normalize_dict_list(normalized.get("display_conditions")) or None,
+        "has_dependent_display_logic": bool(normalized.get("has_dependent_display_logic")),
+        "controls_display_targets": _normalize_dict_list(normalized.get("controls_display_targets")) or None,
+        "logic_parse_status": _infer_logic_parse_status(normalized),
+        "question_media": _normalize_question_media_list(normalized.get("question_media")) or None,
+    }
 
-    normalized_provider = normalize_survey_provider(normalized.get("provider"), default=provider)
+
+def _build_choice_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
     option_texts = _normalize_text_list(normalized.get("option_texts"))
-    row_texts = _normalize_text_list(normalized.get("row_texts"))
-    text_input_labels = _normalize_text_list(normalized.get("text_input_labels"))
-    forced_texts = _normalize_text_list(normalized.get("forced_texts"))
-    fillable_options_raw = normalized.get("fillable_options")
-    if isinstance(fillable_options_raw, list):
-        fillable_options: List[int] = []
-        for raw in fillable_options_raw:
-            try:
-                fillable_options.append(int(raw))
-            except Exception:
-                continue
-    else:
-        fillable_options = []
-    attached_option_selects = normalized.get("attached_option_selects")
-    if not isinstance(attached_option_selects, list):
-        attached_option_selects = []
-
-    provider_type = str(normalized.get("provider_type") or normalized.get("type_code") or "").strip()
-    is_description = bool(normalized.get("is_description")) or provider_type.lower() == "description"
-    unsupported = bool(normalized.get("unsupported")) and not is_description
-    unsupported_reason = str(normalized.get("unsupported_reason") or "").strip()
-    if unsupported and not unsupported_reason:
-        unsupported_reason = "当前平台暂不支持该题型"
-
     forced_option_index = normalized.get("forced_option_index")
     try:
         if forced_option_index is not None:
             forced_option_index = int(forced_option_index)
     except Exception:
         forced_option_index = None
-
-    return SurveyQuestionMeta(
-        num=question_number,
-        title=str(normalized.get("title") or "").strip(),
-        display_num=display_number,
-        description=str(normalized.get("description") or "").strip(),
-        type_code=str(normalized.get("type_code") or "0").strip() or "0",
-        options=option_count,
-        rows=row_count,
-        row_texts=row_texts,
-        page=page_number,
-        option_texts=option_texts,
-        forced_option_index=forced_option_index,
-        forced_option_text=str(normalized.get("forced_option_text") or "").strip(),
-        forced_texts=forced_texts,
-        fillable_options=fillable_options,
-        attached_option_selects=_normalize_dict_list(attached_option_selects),
-        has_attached_option_select=bool(normalized.get("has_attached_option_select") or attached_option_selects),
-        is_location=bool(normalized.get("is_location")),
-        is_rating=bool(normalized.get("is_rating")),
-        is_description=is_description,
-        rating_max=_as_int(normalized.get("rating_max"), option_count if bool(normalized.get("is_rating")) else 0, minimum=0),
-        text_inputs=_as_int(normalized.get("text_inputs"), 0, minimum=0),
-        text_input_labels=text_input_labels,
-        is_multi_text=bool(normalized.get("is_multi_text")),
-        is_text_like=bool(normalized.get("is_text_like")),
-        is_slider_matrix=bool(normalized.get("is_slider_matrix")),
-        has_jump=bool(normalized.get("has_jump")),
-        jump_rules=_normalize_jump_rules(normalized.get("jump_rules")),
-        has_display_condition=bool(normalized.get("has_display_condition")),
-        display_conditions=_normalize_dict_list(normalized.get("display_conditions")),
-        has_dependent_display_logic=bool(normalized.get("has_dependent_display_logic")),
-        controls_display_targets=_normalize_dict_list(normalized.get("controls_display_targets")),
-        logic_parse_status=_infer_logic_parse_status(normalized),
-        question_media=_normalize_question_media_list(normalized.get("question_media")),
-        slider_min=normalized.get("slider_min"),
-        slider_max=normalized.get("slider_max"),
-        slider_step=normalized.get("slider_step"),
-        multi_min_limit=normalized.get("multi_min_limit"),
-        multi_max_limit=normalized.get("multi_max_limit"),
-        provider=normalized_provider,
-        provider_question_id=str(normalized.get("provider_question_id") or question_number).strip(),
-        provider_page_id=str(normalized.get("provider_page_id") or page_number).strip(),
-        provider_type=provider_type,
-        provider_page_raw=normalized.get("provider_page_raw"),
-        unsupported=unsupported,
-        unsupported_reason=unsupported_reason,
-        required=bool(normalized.get("required")),
-    )
+    fillable_options_raw = normalized.get("fillable_options")
+    fillable_options: list[int] = []
+    if isinstance(fillable_options_raw, list):
+        for raw in fillable_options_raw:
+            try:
+                fillable_options.append(int(raw))
+            except Exception:
+                continue
+    attached = normalized.get("attached_option_selects")
+    attached_list = _normalize_dict_list(attached) if isinstance(attached, list) else []
+    return {
+        "option_texts": option_texts or None,
+        "forced_option_index": forced_option_index,
+        "forced_option_text": str(normalized.get("forced_option_text") or "").strip() or None,
+        "fillable_options": fillable_options or None,
+        "attached_option_selects": attached_list or None,
+        "has_attached_option_select": bool(normalized.get("has_attached_option_select") or attached_list),
+    }
 
 
-def ensure_survey_question_meta(question: SurveyQuestionInput, *, default_provider: str = SURVEY_PROVIDER_WJX, index: int = 1) -> SurveyQuestionMeta:
+def _build_matrix_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
+    row_texts = _normalize_text_list(normalized.get("row_texts"))
+    return {
+        "rows": _as_int(normalized.get("rows"), len(row_texts) or 1, minimum=1),
+        "row_texts": row_texts or None,
+    }
+
+
+def _build_rating_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
+    option_count = _as_int(normalized.get("options"), len(_normalize_text_list(normalized.get("option_texts"))), minimum=0)
+    return {
+        "rating_max": _as_int(normalized.get("rating_max"), option_count, minimum=0),
+    }
+
+
+def _build_text_kwargs(normalized: dict[str, Any], type_code: TypeCode = TypeCode.UNKNOWN) -> dict[str, Any]:
+    return {
+        "text_inputs": _as_int(normalized.get("text_inputs"), 0, minimum=0),
+        "text_input_labels": _normalize_text_list(normalized.get("text_input_labels")) or None,
+        "is_location": bool(normalized.get("is_location")) or type_code == TypeCode.LOCATION_TEXT,
+    }
+
+
+def _build_slider_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "slider_min": normalized.get("slider_min"),
+        "slider_max": normalized.get("slider_max"),
+        "slider_step": normalized.get("slider_step"),
+    }
+
+
+def _normalize_question(question: SurveyQuestionInput, provider: str, index: int) -> SurveyQuestionMeta:
+    normalized = dict(_survey_question_input_to_dict(question) or {})
+    question_number = _as_int(normalized.get("num"), index, minimum=1)
+    type_code = _resolve_type_code(normalized)
+
+    common = _build_common_kwargs(normalized, type_code, question_number)
+    logic = _build_logic_kwargs(normalized)
+
+    match type_code:
+        case TypeCode.RADIO:
+            return SingleChoiceQuestionMeta(**_filter_kwargs(
+                SingleChoiceQuestionMeta, {**common, **logic, **_build_choice_kwargs(normalized)},
+            ))
+        case TypeCode.CHECKBOX:
+            kwargs = {**common, **logic, **_build_choice_kwargs(normalized)}
+            kwargs["multi_min_limit"] = normalized.get("multi_min_limit")
+            kwargs["multi_max_limit"] = normalized.get("multi_max_limit")
+            return MultipleChoiceQuestionMeta(**_filter_kwargs(MultipleChoiceQuestionMeta, kwargs))
+        case TypeCode.DROPDOWN | TypeCode.ORDER:
+            return SingleChoiceQuestionMeta(**_filter_kwargs(
+                SingleChoiceQuestionMeta, {**common, **logic, **_build_choice_kwargs(normalized)},
+            ))
+        case TypeCode.MATRIX | TypeCode.MATRIX_TEXT:
+            return MatrixQuestionMeta(**_filter_kwargs(
+                MatrixQuestionMeta, {**common, **logic, **_build_matrix_kwargs(normalized)},
+            ))
+        case TypeCode.RATING | TypeCode.SCORE | TypeCode.SCALE:
+            return RatingQuestionMeta(**_filter_kwargs(
+                RatingQuestionMeta, {**common, **logic, **_build_rating_kwargs(normalized)},
+            ))
+        case TypeCode.SLIDER | TypeCode.SLIDER_MATRIX:
+            return SliderQuestionMeta(**_filter_kwargs(
+                SliderQuestionMeta, {**common, **logic, **_build_slider_kwargs(normalized)},
+            ))
+        case TypeCode.GAPFILL | TypeCode.LOCATION_TEXT | TypeCode.MULTI_TEXT:
+            return TextQuestionMeta(**_filter_kwargs(
+                TextQuestionMeta, {**common, **logic, **_build_text_kwargs(normalized, type_code)},
+            ))
+        case TypeCode.DESCRIPTION:
+            return _QuestionMetaBase(**_filter_kwargs(_QuestionMetaBase, {**common, **logic}))
+        case _:
+            return ChoiceQuestionMeta(**_filter_kwargs(
+                ChoiceQuestionMeta, {**common, **logic, **_build_choice_kwargs(normalized)},
+            ))
+
+
+def ensure_survey_question_meta(
+    question: SurveyQuestionInput,
+    *,
+    default_provider: str = SURVEY_PROVIDER_WJX,
+    index: int = 1,
+) -> SurveyQuestionMeta:
     return _normalize_question(question, normalize_survey_provider(default_provider, default=SURVEY_PROVIDER_WJX), index)
 
 
@@ -322,9 +421,9 @@ def ensure_survey_question_metas(
     questions: Iterable[SurveyQuestionInput],
     *,
     default_provider: str = SURVEY_PROVIDER_WJX,
-) -> List[SurveyQuestionMeta]:
+) -> list[SurveyQuestionMeta]:
     normalized_provider = normalize_survey_provider(default_provider, default=SURVEY_PROVIDER_WJX)
-    normalized: List[SurveyQuestionMeta] = []
+    normalized: list[SurveyQuestionMeta] = []
     for index, question in enumerate(questions or [], start=1):
         if not isinstance(question, (SurveyQuestionMeta, Mapping)):
             continue
@@ -332,8 +431,8 @@ def ensure_survey_question_metas(
     return normalized
 
 
-def serialize_survey_question_metas(questions: Iterable[SurveyQuestionInput]) -> List[Dict[str, Any]]:
-    serialized: List[Dict[str, Any]] = []
+def serialize_survey_question_metas(questions: Iterable[SurveyQuestionInput]) -> list[dict[str, Any]]:
+    serialized: list[dict[str, Any]] = []
     for question in questions or []:
         normalized = _survey_question_input_to_dict(question)
         if normalized is not None:
@@ -345,12 +444,12 @@ def clone_survey_question_metas(
     questions: Iterable[SurveyQuestionInput],
     *,
     default_provider: str = SURVEY_PROVIDER_WJX,
-) -> List[SurveyQuestionMeta]:
+) -> list[SurveyQuestionMeta]:
     serialized = serialize_survey_question_metas(questions)
     return ensure_survey_question_metas(serialized, default_provider=default_provider)
 
 
-def normalize_survey_questions(provider: str, questions: Iterable[SurveyQuestionInput]) -> List[SurveyQuestionMeta]:
+def normalize_survey_questions(provider: str, questions: Iterable[SurveyQuestionInput]) -> list[SurveyQuestionMeta]:
     normalized_provider = normalize_survey_provider(provider, default=SURVEY_PROVIDER_WJX)
     return ensure_survey_question_metas(questions, default_provider=normalized_provider)
 

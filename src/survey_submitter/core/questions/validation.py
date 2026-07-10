@@ -106,7 +106,7 @@ def validate_question_config(
         lines = ["当前问卷包含暂不支持的题型，已禁止启动："]
         for item in unsupported_questions[:MAX_DISPLAYED_UNSUPPORTED_ITEMS]:
             title = str(item.title or f"第{item.num}题").strip()
-            provider_type = str(item.provider_type or item.type_code or "未知类型").strip()
+            provider_type = str(item.type_code or "未知类型").strip()
             reason = str(item.unsupported_reason or "").strip()
             suffix = f"（{provider_type}，{reason}）" if reason else f"（{provider_type}）"
             lines.append(f"  - 第 {item.num} 题：{title}{suffix}")

@@ -12,8 +12,15 @@ from survey_submitter.core.questions.meta_helpers import (
 )
 from survey_submitter.core.questions.schema import QuestionEntry
 from survey_submitter.core.questions.schema import _TEXT_RANDOM_ID_CARD, _TEXT_RANDOM_MOBILE, _TEXT_RANDOM_NAME, _TEXT_RANDOM_NONE
-from survey_submitter.core.questions.types import QuestionType, CHOICE_TYPES, TEXT_TYPES, CHOICE_LIKE_TYPES
-from survey_submitter.providers.contracts import SurveyQuestionMeta
+from survey_submitter.core.questions.types import QuestionType, TypeCode, CHOICE_TYPES, TEXT_TYPES, CHOICE_LIKE_TYPES
+from survey_submitter.providers.contracts import (
+    ChoiceQuestionMeta,
+    MatrixQuestionMeta,
+    RatingQuestionMeta,
+    SliderQuestionMeta,
+    SurveyQuestionMeta,
+    TextQuestionMeta,
+)
 from survey_submitter.providers.common import (
     SURVEY_PROVIDER_WJX,
     detect_survey_provider,
@@ -82,8 +89,8 @@ def _build_forced_single_weights(option_count: int, forced_index: int) -> List[f
 
 
 def _infer_multi_text_blank_modes(q: SurveyQuestionMeta, blank_count: int) -> List[str]:
-    labels = [str(item or "").strip() for item in list(getattr(q, "text_input_labels", None) or [])]
-    title = str(getattr(q, "title", None) or "").strip()
+    labels = [str(item or "").strip() for item in list(q.text_input_labels if isinstance(q, TextQuestionMeta) and q.text_input_labels else [])]
+    title = str(q.title or "").strip()
     modes: List[str] = []
     for index in range(max(0, int(blank_count or 0))):
         text = labels[index] if index < len(labels) else ""
@@ -156,28 +163,27 @@ def build_default_question_entries(
     detected_provider = detect_survey_provider(survey_url)
     entries: List[QuestionEntry] = []
     for q in questions_info:
-        if bool(getattr(q, "is_description", None)) or bool(getattr(q, "unsupported", None)):
+        if q.type_code == TypeCode.DESCRIPTION or q.unsupported:
             continue
 
-        option_count = int(getattr(q, "options", None) or 0)
-        rows = int(getattr(q, "rows", None) or 1)
-        is_location = bool(getattr(q, "is_location", None))
-        text_inputs = int(getattr(q, "text_inputs", None) or 0)
-        slider_min = getattr(q, "slider_min", None)
-        slider_max = getattr(q, "slider_max", None)
-        rating_max = int(getattr(q, "rating_max", None) or 0)
-        title_text = str(getattr(q, "title", None) or "").strip()
-        forced_option_text = str(getattr(q, "forced_option_text", None) or "").strip()
-        forced_texts_raw = getattr(q, "forced_texts", None)
-        forced_texts = [
-            str(item or "").strip()
-            for item in (forced_texts_raw if isinstance(forced_texts_raw, list) else [])
-            if str(item or "").strip()
-        ]
-        attached_option_selects = getattr(q, "attached_option_selects", None) if isinstance(getattr(q, "attached_option_selects", None), list) else []
-        survey_provider = normalize_survey_provider(getattr(q, "provider", None), default=detected_provider)
-        provider_question_id = str(getattr(q, "provider_question_id", None) or "").strip()
-        provider_page_id = str(getattr(q, "provider_page_id", None) or "").strip()
+        option_texts = q.option_texts if isinstance(q, ChoiceQuestionMeta) and q.option_texts else []
+        option_count = len(option_texts)
+        rows = q.rows if isinstance(q, MatrixQuestionMeta) else 1
+        is_location = q.is_location if isinstance(q, TextQuestionMeta) else False
+        text_inputs = q.text_inputs if isinstance(q, TextQuestionMeta) else 0
+        slider_min = q.slider_min if isinstance(q, SliderQuestionMeta) else None
+        slider_max = q.slider_max if isinstance(q, SliderQuestionMeta) else None
+        rating_max = q.rating_max if isinstance(q, RatingQuestionMeta) else 0
+        title_text = str(q.title or "").strip()
+        forced_option_text = q.forced_option_text if isinstance(q, ChoiceQuestionMeta) and q.forced_option_text else ""
+        attached_option_selects = (
+            q.attached_option_selects
+            if isinstance(q, ChoiceQuestionMeta) and isinstance(q.attached_option_selects, list)
+            else []
+        )
+        survey_provider = detected_provider
+        provider_question_id = str(q.provider_question_id or "").strip()
+        provider_page_id = str(q.provider_page_id or "").strip()
 
         q_type = infer_question_entry_type(q)
 
@@ -186,7 +192,10 @@ def build_default_question_entries(
             option_count = max(base_option_count, text_inputs, 1)
         else:
             option_count = base_option_count
-        forced_option_index = _normalize_forced_option_index(getattr(q, "forced_option_index", None), option_count)
+        forced_option_index = _normalize_forced_option_index(
+            q.forced_option_index if isinstance(q, ChoiceQuestionMeta) else None,
+            option_count,
+        )
         parsed_title_key = _normalize_title(title_text)
 
         existing_config: Optional[QuestionEntry] = None
@@ -195,7 +204,7 @@ def build_default_question_entries(
             candidate = existing_by_provider.get(provider_key)
             if candidate and candidate.question_type == q_type:
                 existing_config = candidate
-        parsed_question_num = _normalize_question_num(getattr(q, "num", None))
+        parsed_question_num = _normalize_question_num(q.num)
         if existing_config is None and parsed_question_num is not None:
             candidate = existing_by_num.get(parsed_question_num)
             if candidate and candidate.question_type == q_type:
@@ -319,17 +328,14 @@ def build_default_question_entries(
             custom_weights = list(forced_weights)
             logging.info(
                 "题号%s检测到指定作答指令，已强制锁定为第%s项（%s）",
-                getattr(q, "num", None),
+                q.num,
                 forced_option_index + 1,
                 forced_option_text or "无文本",
             )
-        if forced_texts and q_type in TEXT_TYPES:
-            texts = list(forced_texts)
-            logging.info("题号%s检测到指定填空内容，已自动填入固定答案", getattr(q, "num", None))
 
         fillable_option_indices = (
             normalize_fillable_option_indices(
-                getattr(q, "fillable_options", None),
+                q.fillable_options if isinstance(q, ChoiceQuestionMeta) else None,
                 option_count,
                 fillable_indices_from_existing,
             )
@@ -354,7 +360,7 @@ def build_default_question_entries(
                 option_count=option_count,
                 distribution_mode=distribution,
                 custom_weights=custom_weights,
-                question_num=getattr(q, "num", None),
+                question_num=q.num,
                 question_title=title_text or None,
                 survey_provider=survey_provider,
                 provider_question_id=provider_question_id or None,

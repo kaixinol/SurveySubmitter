@@ -263,7 +263,8 @@ def build_psychometric_blueprint(config: "ExecutionConfig") -> Dict[str, List[Ps
             default_provider=getattr(config, "survey_provider", "wjx"),
             index=question_num,
         )
-        meta_option_count = int(question_meta.options or 0)
+        from survey_submitter.providers.contracts import ChoiceQuestionMeta
+        meta_option_count = len(question_meta.option_texts) if isinstance(question_meta, ChoiceQuestionMeta) and question_meta.option_texts else 0
         saved_bias = config.question_psycho_bias_map.get(question_num, "custom")
 
         if question_type in {QuestionType.SINGLE, QuestionType.SCALE, QuestionType.SCORE}:

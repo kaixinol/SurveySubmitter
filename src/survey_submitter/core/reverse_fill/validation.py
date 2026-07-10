@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from survey_submitter.core.questions.default_builder import build_default_question_entries
 from survey_submitter.core.questions.schema import QuestionEntry, _infer_option_count
-from survey_submitter.core.questions.types import CHOICE_TYPES, QuestionType, TEXT_TYPES
+from survey_submitter.core.questions.types import CHOICE_TYPES, QuestionType, TEXT_TYPES, TypeCode
 from survey_submitter.core.questions.validation import validate_question_config
 from survey_submitter.core.reverse_fill.parser import (
     infer_reverse_fill_question_type,
@@ -213,7 +213,7 @@ def build_reverse_fill_spec(
         issues.append(_build_global_issue(target_num=target_num, available_samples=available_rows))
 
     for info in normalized_questions_info:
-        if bool(info.is_description):
+        if info.type_code == TypeCode.DESCRIPTION:
             continue
         question_num = int(info.num or 0)
         if question_num <= 0:

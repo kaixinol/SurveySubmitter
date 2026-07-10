@@ -32,8 +32,18 @@ class TypeCode(StrEnum):
     SLIDER = "8"
     MATRIX_TEXT = "9"
     ORDER = "11"
+    TYPE_12 = "12"
+    TYPE_13 = "13"
+    TYPE_15 = "15"
+    TYPE_16 = "16"
+    TYPE_17 = "17"
     CAPTCHA = "33"
     SIGNATURE = "34"
+    SCORE = "score"
+    SCALE = "scale"
+    DESCRIPTION = "description"
+    MULTI_TEXT = "multi_text"
+    SLIDER_MATRIX = "slider_matrix"
 
 
 # Common type groupings (replaces repeated inline tuples)

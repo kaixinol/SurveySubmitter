@@ -177,13 +177,15 @@ def _build_questions_metadata(
 
 def _build_provider_question_metadata(
     questions_info: List[SurveyQuestionMeta],
+    *,
+    survey_provider: str = "",
 ) -> dict[str, SurveyQuestionMeta]:
     metadata: dict[str, SurveyQuestionMeta] = {}
     for item in questions_info:
         provider_key = make_provider_question_key(
-            getattr(item, "provider", None),
-            getattr(item, "provider_page_id", None),
-            getattr(item, "provider_question_id", None),
+            survey_provider,
+            item.provider_page_id,
+            item.provider_question_id,
         )
         if provider_key and provider_key not in metadata:
             metadata[provider_key] = item
@@ -261,7 +263,10 @@ def _build_execution_config_template(
         ai_system_prompt=str(getattr(config, "ai_system_prompt", "") or "").strip(),
     )
     execution_config.questions_metadata = _build_questions_metadata(questions_info)
-    execution_config.provider_question_metadata_map = _build_provider_question_metadata(questions_info)
+    execution_config.provider_question_metadata_map = _build_provider_question_metadata(
+        questions_info,
+        survey_provider=str(getattr(config, "survey_provider", "") or ""),
+    )
     return execution_config
 
 
