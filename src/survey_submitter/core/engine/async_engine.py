@@ -4,7 +4,7 @@ import asyncio
 import concurrent.futures
 import logging
 import threading
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 from survey_submitter.version import __VERSION__
 from survey_submitter.core.engine.async_events import AsyncRunContext
@@ -246,13 +246,6 @@ class AsyncRuntimeEngine:
     def parse_survey(self, url: str) -> concurrent.futures.Future[Any]:
         return self._submit(parse_survey(url))
 
-    def submit_ui_task(self, task_name: str, coro_factory: Callable[[], Any]) -> concurrent.futures.Future[Any]:
-        async def _run_task() -> Any:
-            logging.debug("AsyncUiTaskService 执行任务：%s", task_name)
-            return await coro_factory()
-
-        return self._submit(_run_task())
-
     def shutdown(self, *, timeout: float = 5.0) -> None:
         if self._closed:
             return
@@ -274,42 +267,4 @@ class AsyncRuntimeEngine:
         self._loop = None
 
 
-class AsyncEngineClient:
-    
-
-    def __init__(self, engine: Optional[AsyncRuntimeEngine] = None) -> None:
-        self._engine = engine or AsyncRuntimeEngine()
-
-    @property
-    def thread(self) -> Optional[threading.Thread]:
-        return self._engine.thread
-
-    def start_run(
-        self,
-        config: ExecutionConfig,
-        state: ExecutionState,
-        *,
-        runtime_bridge: RuntimeControlPort | None = None,
-    ) -> concurrent.futures.Future[Any]:
-        return self._engine.start_run(config=config, state=state, runtime_bridge=runtime_bridge)
-
-    def stop_run(self) -> None:
-        self._engine.stop_run()
-
-    def pause_run(self, reason: str = "") -> None:
-        self._engine.pause_run(reason)
-
-    def resume_run(self) -> None:
-        self._engine.resume_run()
-
-    def parse_survey(self, url: str) -> concurrent.futures.Future[Any]:
-        return self._engine.parse_survey(url)
-
-    def submit_ui_task(self, task_name: str, coro_factory: Callable[[], Any]) -> concurrent.futures.Future[Any]:
-        return self._engine.submit_ui_task(task_name, coro_factory)
-
-    def shutdown(self, *, timeout: float = 5.0) -> None:
-        self._engine.shutdown(timeout=timeout)
-
-
-__all__ = ["AsyncEngineClient", "AsyncRuntimeEngine"]
+__all__ = ["AsyncRuntimeEngine"]

@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 import survey_submitter.core.engine.async_engine as async_engine
-from survey_submitter.core.engine.async_engine import AsyncEngineClient, AsyncRuntimeEngine
+from survey_submitter.core.engine.async_engine import AsyncRuntimeEngine
 from survey_submitter.core.task import ExecutionConfig, ExecutionState, ProxyLease
 
 
@@ -130,15 +130,14 @@ class AsyncRuntimeEngineLargeTests:
         assert engine.thread is None
         assert engine._loop is None
 
-    def test_start_run_stop_pause_resume_parse_and_submit_ui_task(self, monkeypatch) -> None:
+    def test_start_run_stop_pause_resume_and_parse(self, monkeypatch) -> None:
         engine = _build_engine()
         config = ExecutionConfig(num_threads=2, survey_provider="wjx")
         state = ExecutionState(config=config)
         submitted: list[object] = []
         run_future = _DoneFuture(done=False)
         parse_future = _DoneFuture(result_value="parsed")
-        ui_future = _DoneFuture(result_value="ui-ok")
-        returned_futures = [run_future, parse_future, ui_future]
+        returned_futures = [run_future, parse_future]
         loop = _FakeLoop()
         engine._loop = loop
         engine._run_future = _DoneFuture(done=True)
@@ -168,7 +167,6 @@ class AsyncRuntimeEngineLargeTests:
         engine.pause_run("reason")
         engine.resume_run()
         parse_result = engine.parse_survey("https://example.com")
-        ui_result = engine.submit_ui_task("task", lambda: asyncio.sleep(0, result="ui-ok"))
 
         for item in submitted:
             if asyncio.iscoroutine(item):
@@ -178,7 +176,6 @@ class AsyncRuntimeEngineLargeTests:
         assert "pause" in submitted
         assert "resume" in submitted
         assert parse_result is parse_future
-        assert ui_result is ui_future
         assert state.stop_event.is_set()
         assert engine._run_future is None
         assert any(call[0] == stop_event.set for call in loop.threadsafe_calls)
@@ -465,40 +462,3 @@ class AsyncRuntimeEngineLargeTests:
         assert engine._loop is None
         assert engine._thread is None
         assert thread.join_calls == [2.5]
-
-    def test_async_engine_client_forwards_all_calls(self) -> None:
-        calls: list[tuple[str, object]] = []
-        future = concurrent.futures.Future()
-        future.set_result("ok")
-        engine = SimpleNamespace(
-            thread="thread",
-            start_run=lambda **kwargs: calls.append(("start_run", kwargs)) or future,
-            stop_run=lambda: calls.append(("stop_run", None)),
-            pause_run=lambda reason="": calls.append(("pause_run", reason)),
-            resume_run=lambda: calls.append(("resume_run", None)),
-            parse_survey=lambda url: calls.append(("parse_survey", url)) or future,
-            submit_ui_task=lambda task_name, coro_factory: calls.append(("submit_ui_task", task_name)) or future,
-            shutdown=lambda timeout=5.0: calls.append(("shutdown", timeout)),
-        )
-        client = AsyncEngineClient(engine=engine)
-        config = ExecutionConfig(survey_provider="wjx")
-        state = ExecutionState(config=config)
-
-        assert client.thread == "thread"
-        assert client.start_run(config, state) is future
-        client.stop_run()
-        client.pause_run("pause")
-        client.resume_run()
-        assert client.parse_survey("https://example.com") is future
-        assert client.submit_ui_task("task", lambda: asyncio.sleep(0)) is future
-        client.shutdown(timeout=1.2)
-
-        assert [name for name, _value in calls] == [
-            "start_run",
-            "stop_run",
-            "pause_run",
-            "resume_run",
-            "parse_survey",
-            "submit_ui_task",
-            "shutdown",
-        ]

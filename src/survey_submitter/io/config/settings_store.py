@@ -84,10 +84,3 @@ def get_int_from_qsettings(value: Any, default: int = 0) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
-
-
-def get_str_from_qsettings(value: Any, default: str = "") -> str:
-    return str(value) if value is not None else default
-
-
-CONFIG_DIRECTORY_SETTING_KEY = "config_directory"

@@ -100,7 +100,7 @@ class WjxExcelExportTests:
         path.write_bytes(b"not a real workbook")
 
         with patch("os.path.exists", return_value=True), patch(
-            "software.io.spreadsheets.wjx_excel.CalamineWorkbook",
+            "survey_submitter.io.spreadsheets.wjx_excel.CalamineWorkbook",
             side_effect=RuntimeError("reader failed"),
         ):
             with pytest.raises(RuntimeError, match="reader failed"):

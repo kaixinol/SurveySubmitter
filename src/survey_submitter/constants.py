@@ -43,9 +43,6 @@ def _resolve_env_value(key: str, default: str) -> str:
     return default
 
 
-def get_proxy_auth() -> str:
-    
-    return os.environ.get("WJX_PROXY_AUTH", "")
 _DEFAULT_CONTACT_API = "https://bot.hungrym0.com"
 _DEFAULT_AUTH_TRIAL = "https://api-wjx.hungrym0.com/api/auth/trial"
 _DEFAULT_AUTH_BONUS_CLAIM = "https://api-wjx.hungrym0.com/api/bonus"
@@ -55,9 +52,6 @@ _DEFAULT_SUBMISSION_REPORT_ENDPOINT = "https://api-wjx.hungrym0.com/api/submissi
 _DEFAULT_AI_FREE_ENDPOINT = "https://api-wjx.hungrym0.com/api/ai/free"
 _DEFAULT_STATUS_ENDPOINT = "https://api-wjx.hungrym0.com/api/status"
 
-
-
-HTTP_MAX_THREADS = 64
 
 
 USER_AGENT_PRESETS = {
@@ -89,21 +83,6 @@ DEFAULT_HTTP_HEADERS = {
 
 LOG_FORMAT = "%(asctime)s [%(levelname)s] %(message)s"
 LOG_BUFFER_CAPACITY = 2000
-LOG_DIR_NAME = "logs"
-LOG_REFRESH_INTERVAL_MS = 500
-
-
-SUBMIT_INITIAL_DELAY = 0.35
-
-SUBMIT_CLICK_SETTLE_DELAY = 0.25
-
-POST_SUBMIT_URL_MAX_WAIT = 0.8
-
-POST_SUBMIT_URL_POLL_INTERVAL = 0.05
-
-POST_SUBMIT_CLOSE_GRACE_SECONDS = 0.8
-
-STOP_FORCE_WAIT_SECONDS = 0.3
 
 
 PROXY_MAX_PROXIES = 80
@@ -125,7 +104,6 @@ PROXY_SOURCE_DEFAULT = "default"
 PROXY_SOURCE_BENEFIT = "benefit"
 PROXY_SOURCE_CUSTOM = "custom"
 
-PROXY_POOL_ORDINARY = "ordinary"
 PROXY_POOL_QUALITY = "quality"
 
 CONTACT_API_URL = _resolve_env_value("CONTACT_API_URL", _DEFAULT_CONTACT_API)
@@ -137,37 +115,10 @@ SUBMISSION_REPORT_ENDPOINT = _resolve_env_value("SUBMISSION_REPORT_ENDPOINT", _D
 AI_FREE_ENDPOINT = _resolve_env_value("AI_FREE_ENDPOINT", _DEFAULT_AI_FREE_ENDPOINT)
 STATUS_ENDPOINT = _resolve_env_value("STATUS_ENDPOINT", _DEFAULT_STATUS_ENDPOINT)
 
-QUESTION_TYPE_LABELS = {
-    "radio": "单选题",
-    "checkbox": "多选题",
-    "textarea": "简答题",
-    "input": "填空题",
-    "dropdown": "下拉题",
-    "slider": "滑块题",
-    "order": "排序题",
-    "score": "评价题",
-    "single": "单选题",
-    "multiple": "多选题",
-    "matrix": "矩阵题",
-    "scale": "量表题",
-    "text": "填空题",
-    "multi_text": "多项填空题",
-    "location": "地区题",
-}
-LOCATION_QUESTION_LABEL = "位置题"
-DEFAULT_FILL_TEXT = "无"  
+DEFAULT_FILL_TEXT = "无"
 
 
-
-PRESET_DIMENSIONS = [
-    "满意度",
-    "信任感",
-    "使用意愿",
-    "感知价值",
-    "服务质量",
-    "产品质量",
-]
-DIMENSION_UNGROUPED = "未分组"  
+DIMENSION_UNGROUPED = "未分组"
 
 
 _HTML_SPACE_RE = re.compile(r"\s+")
@@ -291,5 +242,3 @@ _ENGLISH_MULTI_EXACT_PATTERNS = (
 _ENGLISH_MULTI_MIN_PATTERNS = (
     re.compile(r"(?:at\s+least|min(?:imum)?\s*)\s*(\d+)", re.IGNORECASE),
 )
-
-

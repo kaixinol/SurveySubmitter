@@ -29,7 +29,7 @@ from CI.python_checks.common import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Check syntax, static imports, and startup-chain issues in wjx and software."
+        description="Check syntax, static imports, and startup-chain issues in survey_submitter."
     )
     parser.add_argument(
         "--full",

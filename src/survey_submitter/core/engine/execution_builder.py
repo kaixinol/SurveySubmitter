@@ -1,6 +1,6 @@
 """Execution artifact builder – pure core logic, no UI dependencies.
 
-Migrated from ``software.ui.controller.run_controller_parts.runtime_preparation``.
+Migrated from the legacy GUI run controller.
 This module prepares everything the async engine needs before a run:
 validates the RuntimeConfig, resolves provider details, clones question
 metadata, validates question configuration, optionally builds a reverse-fill

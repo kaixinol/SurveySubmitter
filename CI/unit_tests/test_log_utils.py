@@ -21,7 +21,7 @@ class LogUtilsTests:
         log_utils._DELETE_SESSION_LOG_ON_SHUTDOWN = False
 
     def test_log_deduped_message_only_logs_same_message_once(self) -> None:
-        with patch('software.logging.log_utils.logging.log') as mock_log:
+        with patch('survey_submitter.logging.log_utils.logging.log') as mock_log:
             first = log_deduped_message('test_random_ip_sync_failure', '同步随机IP额度失败：网络超时', level=logging.INFO)
             second = log_deduped_message('test_random_ip_sync_failure', '同步随机IP额度失败：网络超时', level=logging.INFO)
         assert first
@@ -29,7 +29,7 @@ class LogUtilsTests:
         mock_log.assert_called_once_with(logging.INFO, '同步随机IP额度失败：网络超时')
 
     def test_reset_deduped_log_message_allows_same_message_to_log_again(self) -> None:
-        with patch('software.logging.log_utils.logging.log') as mock_log:
+        with patch('survey_submitter.logging.log_utils.logging.log') as mock_log:
             first = log_deduped_message('test_random_ip_sync_failure', '同步随机IP额度失败：网络超时', level=logging.INFO)
             reset_deduped_log_message('test_random_ip_sync_failure')
             second = log_deduped_message('test_random_ip_sync_failure', '同步随机IP额度失败：网络超时', level=logging.INFO)
@@ -83,7 +83,7 @@ class LogUtilsTests:
             @staticmethod
             def value(_key):
                 return None
-        with patch('software.logging.log_utils.app_settings', return_value=_StubSettings()):
+        with patch('survey_submitter.logging.log_utils.app_settings', return_value=_StubSettings()):
             enabled, keep_count = get_auto_save_log_settings()
         assert enabled
         assert keep_count == 10
@@ -125,7 +125,7 @@ class LogUtilsTests:
                     os.utime(stale_path, (100 + index, 100 + index))
                     stale_paths.append(stale_path)
                 os.utime(source_path, (200, 200))
-                with patch('software.logging.log_utils.get_auto_save_log_settings', return_value=(True, 2)):
+                with patch('survey_submitter.logging.log_utils.get_auto_save_log_settings', return_value=(True, 2)):
                     finalize_session_log_persistence(temp_dir)
                 last_session_path = os.path.join(logs_dir, 'last_session.log')
                 assert os.path.exists(last_session_path)
@@ -147,7 +147,7 @@ class LogUtilsTests:
             last_session_path = os.path.join(logs_dir, 'last_session.log')
             with open(last_session_path, 'w', encoding='utf-8') as file:
                 file.write('旧的上次日志\n')
-            with patch('software.logging.log_utils.get_auto_save_log_settings', return_value=(False, 10)):
+            with patch('survey_submitter.logging.log_utils.get_auto_save_log_settings', return_value=(False, 10)):
                 finalize_session_log_persistence(temp_dir)
             assert not os.path.exists(last_session_path)
             assert log_utils._DELETE_SESSION_LOG_ON_SHUTDOWN

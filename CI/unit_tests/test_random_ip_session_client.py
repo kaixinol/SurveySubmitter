@@ -54,7 +54,7 @@ class RandomIPSessionClientTests:
             return (url, kwargs)
 
         monkeypatch.setattr(client.http_client, "apost", _apost)
-        monkeypatch.setattr("software.network.proxy.session.auth._endpoint_name", lambda url: f"endpoint:{url}")
+        monkeypatch.setattr("survey_submitter.network.proxy.session.auth._endpoint_name", lambda url: f"endpoint:{url}")
 
         assert client._post_json("https://api.test/x", json_body={"a": 1}, timeout=12) == (
             "https://api.test/x",
@@ -84,7 +84,7 @@ class RandomIPSessionClientTests:
         logged: list[str] = []
         monkeypatch.setattr(client, "_log_extract_proxy_issue", lambda message, **_kwargs: logged.append(message))
         monkeypatch.setattr(
-            "software.network.proxy.session.auth._apply_quota_payload",
+            "survey_submitter.network.proxy.session.auth._apply_quota_payload",
             lambda data, **_kwargs: RandomIPSession(
                 user_id=9,
                 remaining_quota=float(data.get("remaining_quota", 4)),

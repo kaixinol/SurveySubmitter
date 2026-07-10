@@ -10,7 +10,7 @@ class PsychometricPlanTests:
 
     def test_build_psychometric_plan_applies_reverse_item_inference(self) -> None:
         items = [PsychometricItem(kind='scale', question_index=1, option_count=5, bias='left', target_probabilities=[1, 0, 0, 0, 0]), PsychometricItem(kind='scale', question_index=2, option_count=5, bias='left', target_probabilities=[1, 0, 0, 0, 0]), PsychometricItem(kind='scale', question_index=3, option_count=5, bias='right', target_probabilities=[0, 0, 0, 0, 1])]
-        with patch('software.core.psychometrics.psychometric.randn', side_effect=[1.0, 0.0, 0.0, 0.0]):
+        with patch('survey_submitter.core.psychometrics.psychometric.randn', side_effect=[1.0, 0.0, 0.0, 0.0]):
             plan = build_psychometric_plan(items, target_alpha=0.9)
         assert plan is not None
         assert plan is not None
@@ -22,7 +22,7 @@ class PsychometricPlanTests:
 
     def test_build_dimension_psychometric_plan_skips_small_dimension_and_exposes_choices(self) -> None:
         grouped_items = {'engagement': [PsychometricItem(kind='scale', question_index=1, option_count=5, bias='center', target_probabilities=[1, 1, 1, 1, 1]), PsychometricItem(kind='scale', question_index=2, option_count=5, bias='center', target_probabilities=[1, 1, 1, 1, 1])], 'single-item': [PsychometricItem(kind='scale', question_index=9, option_count=5, bias='center', target_probabilities=[1, 1, 1, 1, 1])]}
-        with patch('software.core.psychometrics.psychometric.randn', return_value=0.0):
+        with patch('survey_submitter.core.psychometrics.psychometric.randn', return_value=0.0):
             plan = build_dimension_psychometric_plan(grouped_items, target_alpha=0.9)
         assert plan is not None
         assert plan is not None

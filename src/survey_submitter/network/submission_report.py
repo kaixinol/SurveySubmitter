@@ -7,9 +7,8 @@ import survey_submitter.network.http as http_client
 from survey_submitter.constants import (
     SUBMISSION_REPORT_ENDPOINT,
     SUBMISSION_REPORT_TELEMETRY_SETTING_KEY,
-    app_settings,
-    get_bool_from_qsettings,
 )
+from survey_submitter.io.config.settings_store import app_settings, get_bool_from_qsettings
 from survey_submitter.version import __VERSION__
 from survey_submitter.network.proxy.policy.source import PROXY_SOURCE_BENEFIT, PROXY_SOURCE_DEFAULT
 from survey_submitter.network.proxy.session import get_device_id

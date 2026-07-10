@@ -64,7 +64,7 @@ class LogBufferHandlerConcurrencyTests:
         handler = self._create_handler()
         logger = logging.getLogger('unit.logbuffer.failure')
         original_format = handler.format
-        with patch('software.logging.log_utils._safe_internal_log') as mock_safe_log:
+        with patch('survey_submitter.logging.log_utils._safe_internal_log') as mock_safe_log:
             with patch.object(handler, 'format', side_effect=[RuntimeError('boom'), original_format(logging.LogRecord(logger.name, logging.INFO, __file__, 10, '恢复后的日志', (), None))]):
                 handler.emit(logging.LogRecord(logger.name, logging.INFO, __file__, 10, '坏日志', (), None))
                 handler.emit(logging.LogRecord(logger.name, logging.INFO, __file__, 10, '好日志', (), None))
