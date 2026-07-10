@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from survey_submitter.io.config.settings_store import app_settings
+from survey_submitter.core.questions.types import QuestionType
 
 AI_PROVIDERS = {
     "deepseek": {
@@ -37,8 +38,8 @@ CUSTOM_API_PROTOCOLS = {
 AI_MODE_PROVIDER = "provider"
 AI_MODE_FREE = "free"
 
-FREE_QUESTION_TYPE_FILL = "fill_blank"
-FREE_QUESTION_TYPE_MULTI = "multi_fill_blank"
+FREE_QUESTION_TYPE_FILL = QuestionType.FILL_BLANK
+FREE_QUESTION_TYPE_MULTI = QuestionType.MULTI_FILL_BLANK
 
 _SYSTEM_PROMPT_BASE = (
     "你现在不是AI助手，而是一名有实际使用经验但不专业的普通用户。\n"

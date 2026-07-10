@@ -16,6 +16,7 @@ from survey_submitter.core.psychometrics.psychometric import (
     normalize_target_alpha,
 )
 from survey_submitter.core.psychometrics.utils import cronbach_alpha, randn
+from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.questions.utils import normalize_droplist_probs
 from survey_submitter.providers.contracts import ensure_survey_question_meta
 
@@ -24,9 +25,20 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-JOINT_PSYCHOMETRIC_SUPPORTED_TYPES = frozenset({"single", "scale", "score", "dropdown", "matrix"})
+JOINT_PSYCHOMETRIC_SUPPORTED_TYPES = frozenset({
+    QuestionType.SINGLE,
+    QuestionType.SCALE,
+    QuestionType.SCORE,
+    QuestionType.DROPDOWN,
+    QuestionType.MATRIX,
+})
 _PSYCHO_BIAS_CHOICES = {"left", "center", "right"}
+# Small Gaussian noise added per-item per-sample to break ties and prevent
+# degenerate allocations when standard + psychometric sigma produce identical scores.
 _MICRO_JITTER_SIGMA = 0.03
+# Default number of scale options when neither metadata nor probability config
+# provides an explicit option count.
+DEFAULT_SCALE_OPTION_COUNT = 5
 
 
 def build_psychometric_choice_key(question_index: int, row_index: Optional[int] = None) -> str:
@@ -118,7 +130,7 @@ class PsychometricBlueprintItem:
         return max(0, min(self.option_count - 1, target_score))
 
     def to_runtime_item(self) -> PsychometricItem:
-        if self.question_type == "matrix" and self.row_index is not None:
+        if self.question_type == QuestionType.MATRIX and self.row_index is not None:
             return PsychometricItem(
                 kind="matrix_row",
                 question_index=self.question_index,
@@ -254,8 +266,8 @@ def build_psychometric_blueprint(config: "ExecutionConfig") -> Dict[str, List[Ps
         meta_option_count = int(question_meta.options or 0)
         saved_bias = config.question_psycho_bias_map.get(question_num, "custom")
 
-        if question_type in {"single", "scale", "score"}:
-            if question_type == "single":
+        if question_type in {QuestionType.SINGLE, QuestionType.SCALE, QuestionType.SCORE}:
+            if question_type == QuestionType.SINGLE:
                 score_map = list((getattr(config, "question_ordinal_score_map", {}) or {}).get(question_num) or [])
                 if not score_map:
                     continue
@@ -284,7 +296,7 @@ def build_psychometric_blueprint(config: "ExecutionConfig") -> Dict[str, List[Ps
             )
             continue
 
-        if question_type == "dropdown":
+        if question_type == QuestionType.DROPDOWN:
             probability_config = config.droplist_prob[start_index] if start_index < len(config.droplist_prob) else -1
             option_count = _resolve_option_count(
                 probability_config,
@@ -303,7 +315,7 @@ def build_psychometric_blueprint(config: "ExecutionConfig") -> Dict[str, List[Ps
             )
             continue
 
-        if question_type == "matrix":
+        if question_type == QuestionType.MATRIX:
             row_count = int(question_meta.rows or 0)
             if row_count <= 0:
                 row_count = 1
@@ -321,7 +333,7 @@ def build_psychometric_blueprint(config: "ExecutionConfig") -> Dict[str, List[Ps
                 grouped_items.setdefault(dimension, []).append(
                     PsychometricBlueprintItem(
                         question_index=question_num,
-                        question_type="matrix",
+                        question_type=QuestionType.MATRIX,
                         option_count=option_count,
                         bias=bias,
                         target_probabilities=_resolve_target_probabilities(probability_config, option_count, bias),

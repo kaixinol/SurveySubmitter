@@ -3,7 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, List, Optional, Union
 
+from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.logging.log_utils import log_suppressed_exception
+
+# Default number of options for rating-type questions (scale / score)
+DEFAULT_RATING_OPTION_COUNT = 5
 
 _TEXT_RANDOM_NAME_TOKEN = "__RANDOM_NAME__"
 _TEXT_RANDOM_MOBILE_TOKEN = "__RANDOM_MOBILE__"
@@ -16,6 +20,7 @@ _TEXT_RANDOM_INTEGER = "integer"
 GLOBAL_RELIABILITY_DIMENSION = "__global_reliability__"
 
 __all__ = [
+    "DEFAULT_RATING_OPTION_COUNT",
     "GLOBAL_RELIABILITY_DIMENSION",
     "QuestionEntry",
     "_TEXT_RANDOM_ID_CARD",
@@ -42,7 +47,7 @@ def _infer_option_count(entry: "QuestionEntry") -> int:
                 lengths.append(len(item))
         return max(lengths) if lengths else None
 
-    if getattr(entry, "question_type", "") == "matrix":
+    if getattr(entry, "question_type", "") == QuestionType.MATRIX:
         nested_len = _nested_length(getattr(entry, "custom_weights", None))
         if nested_len:
             return nested_len
@@ -70,8 +75,8 @@ def _infer_option_count(entry: "QuestionEntry") -> int:
             return len(entry.texts)
     except Exception as exc:
         log_suppressed_exception("questions.schema._infer_option_count texts", exc)
-    if getattr(entry, "question_type", "") in ("scale", "score"):
-        return 5
+    if getattr(entry, "question_type", "") in (QuestionType.SCALE, QuestionType.SCORE):
+        return DEFAULT_RATING_OPTION_COUNT
     return 0
 
 

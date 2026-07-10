@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from survey_submitter.core.psychometrics.orientation import build_bias_target_probabilities, infer_dimension_orientation
 from survey_submitter.core.psychometrics.utils import randn, z_to_category
+from survey_submitter.core.questions.types import QuestionType
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +137,7 @@ def _coerce_psychometric_item(raw_item: Any) -> Optional[PsychometricItem]:
         probabilities = raw_item[5] if len(raw_item) >= 6 else None
         if not isinstance(probabilities, list) or not probabilities:
             probabilities = build_bias_target_probabilities(int(opt_count or 5), str(bias or "center"))
-        kind = "matrix_row" if q_type == "matrix" and row_idx is not None else q_type
+        kind = "matrix_row" if q_type == QuestionType.MATRIX and row_idx is not None else q_type
         return PsychometricItem(
             kind=str(kind or "scale"),
             question_index=int(q_idx or 0),
@@ -157,7 +158,7 @@ def _coerce_psychometric_item(raw_item: Any) -> Optional[PsychometricItem]:
         return None
     row_index = getattr(raw_item, "row_index", None)
     kind = getattr(raw_item, "kind", getattr(raw_item, "question_type", "scale"))
-    if kind == "matrix" and row_index is not None:
+    if kind == QuestionType.MATRIX and row_index is not None:
         kind = "matrix_row"
     option_count = max(2, int(getattr(raw_item, "option_count", 5) or 5))
     bias = str(getattr(raw_item, "bias", "center") or "center")

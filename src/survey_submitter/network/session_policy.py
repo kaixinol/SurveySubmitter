@@ -1,6 +1,4 @@
 import asyncio
-from collections import deque
-from dataclasses import dataclass
 from typing import Iterable, Optional
 import logging
 
@@ -8,32 +6,22 @@ from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.engine.runtime_ui_bridge import RuntimeUiBridge
 from survey_submitter.core.task import ExecutionState, ProxyLease
 from survey_submitter.constants import PROXY_MAX_PROXIES
-from survey_submitter.network.proxy.pool import coerce_proxy_lease, mask_proxy_for_log
 from survey_submitter.network.proxy.api import fetch_proxy_batch_async
-from survey_submitter.network.proxy import get_proxy_required_ttl_seconds, proxy_lease_has_sufficient_ttl
-from survey_submitter.core.config.codec import UserAgentProfile, _select_user_agent_from_ratios
+
+from survey_submitter.network.proxy.submit_pool import (
+    SubmitProxyLease,
+    SubmitProxyUnavailableError,
+    _blocked_proxy_addresses_locked,
+    _discard_unresponsive_proxy,
+    _ensure_proxy_pool_deque_locked,
+    _mark_proxy_in_use,
+    _mark_proxy_temporarily_bad,
+    _merge_fetched_proxy_leases_locked,
+    _pop_available_proxy_lease_locked,
+)
+from survey_submitter.network.user_agent import _select_user_agent_for_session
 
 _PROXY_WAIT_POLL_SECONDS = 0.3
-_BAD_PROXY_COOLDOWN_SECONDS = 180.0
-_PROXY_PREFETCH_IDLE_SECONDS = 0.35
-
-
-@dataclass(frozen=True)
-class SubmitProxyLease:
-    address: Optional[str]
-    provider: str = "unknown"
-
-
-class SubmitProxyUnavailableError(RuntimeError):
-    pass
-
-def _ensure_proxy_pool_deque_locked(ctx: ExecutionState) -> deque:
-    pool = ctx.config.proxy_ip_pool
-    if isinstance(pool, deque):
-        return pool
-    normalized_pool = deque(pool or [])
-    ctx.config.proxy_ip_pool = normalized_pool
-    return normalized_pool
 
 
 def _get_proxy_fetch_async_lock(ctx: ExecutionState) -> asyncio.Lock:
@@ -58,16 +46,6 @@ def release_proxy_fetch_lock(ctx: ExecutionState) -> None:
         current_lock.release()
 
 
-def _active_proxy_addresses_locked(ctx: ExecutionState, *, exclude_thread_name: str = "") -> set[str]:
-    return ctx.active_proxy_addresses_locked(exclude_thread_name=exclude_thread_name)
-
-
-def _blocked_proxy_addresses_locked(ctx: ExecutionState, *, exclude_thread_name: str = "") -> set[str]:
-    blocked = _active_proxy_addresses_locked(ctx, exclude_thread_name=exclude_thread_name)
-    blocked.update(ctx.successful_proxy_addresses_locked())
-    return blocked
-
-
 def _resolve_proxy_fetch_max_batch_size(ctx: ExecutionState) -> int:
     worker_count = max(1, int(getattr(ctx.config, "num_threads", 1) or 1))
     dynamic_limit = worker_count
@@ -83,154 +61,14 @@ def _record_bad_proxy_and_maybe_pause(
     return False
 
 
-def _required_proxy_ttl_seconds(ctx: ExecutionState) -> int:
-    return int(
-        get_proxy_required_ttl_seconds(
-            getattr(ctx.config, "answer_duration_range_seconds", (0, 0)),
-            survey_provider=getattr(ctx.config, "survey_provider", ""),
-        )
-    )
-
-
-def _mark_proxy_temporarily_bad(
-    ctx: ExecutionState,
-    proxy_address: str,
-    *,
-    cooldown_seconds: float = _BAD_PROXY_COOLDOWN_SECONDS,
-) -> None:
-    normalized = str(proxy_address or "").strip()
-    if not normalized:
-        return
-    ctx.mark_proxy_in_cooldown(normalized, cooldown_seconds)
-    _discard_unresponsive_proxy(ctx, normalized)
-    logging.info(
-        "代理已本地临时屏蔽 %.0fs：%s",
-        float(cooldown_seconds or 0.0),
-        mask_proxy_for_log(normalized),
-    )
-
-
-def _cooldown_proxy_addresses_locked(ctx: ExecutionState) -> set[str]:
-    ctx._purge_expired_proxy_cooldowns_locked()
-    return {
-        str(address or "").strip()
-        for address, cooldown_until in ctx.proxy_cooldown_until_by_address.items()
-        if str(address or "").strip() and float(cooldown_until or 0.0) > 0.0
-    }
-
-
-def _purge_unusable_proxy_pool_locked(
-    ctx: ExecutionState,
-    *,
-    required_ttl: Optional[int] = None,
-    blocked_addresses: Optional[set[str]] = None,
-) -> set[str]:
-    ctx._purge_expired_proxy_cooldowns_locked()
-    required_ttl_seconds = _required_proxy_ttl_seconds(ctx) if required_ttl is None else int(required_ttl)
-    pool = _ensure_proxy_pool_deque_locked(ctx)
-    kept = deque()
-    seen = set()
-    removed = 0
-    while pool:
-        item = pool.popleft()
-        lease = coerce_proxy_lease(item)
-        if lease is None:
-            removed += 1
-            continue
-        if not lease.poolable:
-            removed += 1
-            continue
-        if lease.address in seen:
-            removed += 1
-            continue
-        if ctx._is_proxy_in_cooldown_locked(lease.address):
-            removed += 1
-            logging.info("已移除本地临时屏蔽中的代理：%s", mask_proxy_for_log(lease.address))
-            continue
-        if not proxy_lease_has_sufficient_ttl(lease, required_ttl_seconds=required_ttl_seconds):
-            removed += 1
-            logging.info("已丢弃即将过期的代理：%s", mask_proxy_for_log(lease.address))
-            continue
-        seen.add(lease.address)
-        kept.append(lease)
-    if removed:
-        logging.info("代理池已清理无效/重复代理 %s 个", removed)
-    ctx.config.proxy_ip_pool = kept
-    if removed:
-        ctx.notify_runtime_change()
-    return seen
-
-
-def _pop_available_proxy_lease_locked(ctx: ExecutionState) -> Optional[ProxyLease]:
-    required_ttl = _required_proxy_ttl_seconds(ctx)
-    blocked_addresses = _blocked_proxy_addresses_locked(ctx)
-    _purge_unusable_proxy_pool_locked(
-        ctx,
-        required_ttl=required_ttl,
-        blocked_addresses=blocked_addresses,
-    )
-    pool = _ensure_proxy_pool_deque_locked(ctx)
-    while pool:
-        lease = coerce_proxy_lease(pool.popleft())
-        if lease is None:
-            continue
-        if not proxy_lease_has_sufficient_ttl(lease, required_ttl_seconds=required_ttl):
-            logging.info("已跳过即将过期的代理：%s", mask_proxy_for_log(lease.address))
-            continue
-        if ctx._is_proxy_in_cooldown_locked(lease.address):
-            logging.info("已跳过本地临时屏蔽中的代理：%s", mask_proxy_for_log(lease.address))
-            continue
-        if lease.address in blocked_addresses:
-            logging.info("已跳过已占用或已成功使用过的代理：%s", mask_proxy_for_log(lease.address))
-            continue
-        return lease
-    return None
-
-
-def _merge_fetched_proxy_leases_locked(
-    ctx: ExecutionState,
-    fetched: Iterable[object],
-    *,
-    select_first: bool,
-) -> Optional[ProxyLease]:
-    required_ttl = _required_proxy_ttl_seconds(ctx)
-    blocked_addresses = _blocked_proxy_addresses_locked(ctx)
-    existing = _purge_unusable_proxy_pool_locked(
-        ctx,
-        required_ttl=required_ttl,
-        blocked_addresses=blocked_addresses,
-    )
-    existing.update(blocked_addresses)
-    pool = _ensure_proxy_pool_deque_locked(ctx)
-    selected: Optional[ProxyLease] = None
-    changed = False
-
-    for item in fetched or []:
-        lease = coerce_proxy_lease(item)
-        if lease is None:
-            continue
-        if not proxy_lease_has_sufficient_ttl(lease, required_ttl_seconds=required_ttl):
-            logging.info("已丢弃即将过期的新代理：%s", mask_proxy_for_log(lease.address))
-            continue
-        if ctx._is_proxy_in_cooldown_locked(lease.address):
-            logging.info("已跳过本地临时屏蔽中的新代理：%s", mask_proxy_for_log(lease.address))
-            continue
-        if lease.address in existing:
-            logging.info("已跳过重复或正在占用的新代理：%s", mask_proxy_for_log(lease.address))
-            continue
-        if select_first and selected is None:
-            selected = lease
-            existing.add(lease.address)
-            continue
-        if not lease.poolable:
-            continue
-        pool.append(lease)
-        existing.add(lease.address)
-        changed = True
-
-    if changed or selected is not None:
-        ctx.notify_runtime_change()
-    return selected
+def _resolve_proxy_request_num_locked(ctx: ExecutionState) -> int:
+    waiting_count = max(1, int(ctx.proxy_waiting_threads or 0))
+    active_count = len(ctx.proxy_in_use_by_thread)
+    remaining_to_start = max(0, int(ctx.config.target_num or 0) - int(ctx.cur_num or 0) - active_count)
+    if remaining_to_start <= 0:
+        return 0
+    request_capacity = min(waiting_count, _resolve_proxy_fetch_max_batch_size(ctx))
+    return max(1, min(request_capacity, remaining_to_start))
 
 
 def merge_prefetched_proxy_leases(ctx: ExecutionState, fetched: Iterable[object]) -> int:
@@ -244,30 +82,6 @@ def merge_prefetched_proxy_leases(ctx: ExecutionState, fetched: Iterable[object]
     if merged_count:
         ctx.notify_runtime_change()
     return merged_count
-
-
-def _mark_proxy_in_use(ctx: ExecutionState, thread_name: str, lease: Optional[ProxyLease]) -> Optional[str]:
-    if lease is None:
-        return None
-    if thread_name:
-        ctx.mark_proxy_in_use(thread_name, lease)
-    logging.debug(
-        "线程[%s] 已分配随机IP：%s（来源=%s）",
-        thread_name or "?",
-        mask_proxy_for_log(lease.address),
-        str(getattr(lease, "source", "") or "unknown"),
-    )
-    return lease.address
-
-
-def _resolve_proxy_request_num_locked(ctx: ExecutionState) -> int:
-    waiting_count = max(1, int(ctx.proxy_waiting_threads or 0))
-    active_count = len(ctx.proxy_in_use_by_thread)
-    remaining_to_start = max(0, int(ctx.config.target_num or 0) - int(ctx.cur_num or 0) - active_count)
-    if remaining_to_start <= 0:
-        return 0
-    request_capacity = min(waiting_count, _resolve_proxy_fetch_max_batch_size(ctx))
-    return max(1, min(request_capacity, remaining_to_start))
 
 
 def resolve_proxy_prefetch_request_count(ctx: ExecutionState) -> int:
@@ -327,6 +141,9 @@ async def _wait_for_next_proxy_cycle_async(
         stop_signal=stop_signal,
         timeout=timeout,
     )
+
+
+_PROXY_PREFETCH_IDLE_SECONDS = 0.35
 
 
 async def wait_for_proxy_prefetch_cycle(
@@ -402,7 +219,7 @@ async def _select_proxy_for_session_async(
                             stop_signal=ctx.stop_event,
                         )
                     except Exception as exc:
-                        logging.warning(f"获取随机代理失败：{exc}")
+                        logging.warning(f"\u83b7\u53d6\u968f\u673a\u4ee3\u7406\u5931\u8d25\uff1a{exc}")
                         fetched = None
                     if fetched:
                         with ctx.lock:
@@ -429,7 +246,7 @@ def _resolve_proxy_provider_for_thread(ctx: ExecutionState, thread_name: str) ->
             lease = ctx.proxy_in_use_by_thread.get(thread_name)
             return str(getattr(lease, "source", "") or "unknown").strip() or "unknown"
     except Exception:
-        logging.info("读取代理来源失败", exc_info=True)
+        logging.info("\u8bfb\u53d6\u4ee3\u7406\u6765\u6e90\u5931\u8d25", exc_info=True)
     return "unknown"
 
 
@@ -456,7 +273,7 @@ def release_submit_proxy(ctx: ExecutionState, thread_name: str, proxy_address: s
     try:
         ctx.release_proxy_in_use(thread_name)
     except Exception:
-        logging.info("释放提交代理占用失败", exc_info=True)
+        logging.info("\u91ca\u653e\u63d0\u4ea4\u4ee3\u7406\u5360\u7528\u5931\u8d25", exc_info=True)
 
 
 def mark_submit_proxy_success(ctx: ExecutionState, proxy_address: str | None) -> None:
@@ -465,37 +282,4 @@ def mark_submit_proxy_success(ctx: ExecutionState, proxy_address: str | None) ->
     try:
         ctx.mark_successful_proxy_address(proxy_address)
     except Exception:
-        logging.info("记录成功代理失败：%s", proxy_address, exc_info=True)
-
-
-
-
-def _select_user_agent_for_session(ctx: ExecutionState) -> Optional[UserAgentProfile]:
-    if not ctx.config.random_user_agent_enabled:
-        return None
-    return _select_user_agent_from_ratios(ctx.config.user_agent_ratios)
-
-
-def _discard_unresponsive_proxy(ctx: ExecutionState, proxy_address: str) -> None:
-    if not proxy_address:
-        return
-    with ctx.lock:
-        removed = False
-        normalized = str(proxy_address or "").strip()
-        retained = deque()
-        pool = _ensure_proxy_pool_deque_locked(ctx)
-        while pool:
-            item = pool.popleft()
-            lease = coerce_proxy_lease(item)
-            if lease is None:
-                continue
-            if lease.address == normalized:
-                removed = True
-                continue
-            retained.append(lease)
-        ctx.config.proxy_ip_pool = retained
-        if removed:
-            logging.info(f"已移除无响应代理：{mask_proxy_for_log(proxy_address)}")
-            ctx.notify_runtime_change()
-
-
+        logging.info("\u8bb0\u5f55\u6210\u529f\u4ee3\u7406\u5931\u8d25\uff1a%s", proxy_address, exc_info=True)

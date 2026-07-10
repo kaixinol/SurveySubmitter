@@ -11,7 +11,17 @@ from survey_submitter.logging.log_utils import log_suppressed_exception
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.system.runtime_paths import get_resource_path
 
-_KNOWN_NON_TEXT_QUESTION_TYPES = {"3", "4", "5", "6", "7", "8", "11"}
+from survey_submitter.core.questions.types import TypeCode
+
+_KNOWN_NON_TEXT_QUESTION_TYPES = {
+    TypeCode.RADIO,
+    TypeCode.CHECKBOX,
+    TypeCode.RATING,
+    TypeCode.MATRIX,
+    TypeCode.DROPDOWN,
+    TypeCode.SLIDER,
+    TypeCode.ORDER,
+}
 RANDOM_INT_TOKEN_PREFIX = "__RANDOM_INT__:"
 _RANDOM_ID_CARD_TOKEN = "__RANDOM_ID_CARD__"
 OPTION_FILL_AI_TOKEN = "__AI_FILL__"

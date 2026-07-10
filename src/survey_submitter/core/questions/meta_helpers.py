@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, Tuple
 
+from survey_submitter.core.questions.types import QuestionType, TypeCode
 from survey_submitter.core.questions.utils import _normalize_question_type_code
 from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_survey_question_meta
 
@@ -59,26 +60,26 @@ def infer_question_entry_type(question: QuestionMetaLike) -> str:
     type_code = _normalize_question_type_code(meta.type_code)
 
     if bool(meta.is_slider_matrix):
-        return "matrix"
+        return QuestionType.MATRIX
     if bool(meta.is_multi_text) or (bool(meta.is_text_like) and int(meta.text_inputs or 0) > 1):
-        return "multi_text"
-    if bool(meta.is_text_like) or type_code in ("1", "2"):
-        return "text"
-    if type_code == "3":
-        return "single"
-    if type_code == "4":
-        return "multiple"
-    if type_code == "5":
-        return "score" if bool(meta.is_rating) else "scale"
-    if type_code in ("6", "9"):
-        return "matrix"
-    if type_code == "7":
-        return "dropdown"
-    if type_code == "8":
-        return "slider"
-    if type_code == "11":
-        return "order"
-    return "single"
+        return QuestionType.MULTI_TEXT
+    if bool(meta.is_text_like) or type_code in (TypeCode.GAPFILL, TypeCode.LOCATION_TEXT):
+        return QuestionType.TEXT
+    if type_code == TypeCode.RADIO:
+        return QuestionType.SINGLE
+    if type_code == TypeCode.CHECKBOX:
+        return QuestionType.MULTIPLE
+    if type_code == TypeCode.RATING:
+        return QuestionType.SCORE if bool(meta.is_rating) else QuestionType.SCALE
+    if type_code in (TypeCode.MATRIX, TypeCode.MATRIX_TEXT):
+        return QuestionType.MATRIX
+    if type_code == TypeCode.DROPDOWN:
+        return QuestionType.DROPDOWN
+    if type_code == TypeCode.SLIDER:
+        return QuestionType.SLIDER
+    if type_code == TypeCode.ORDER:
+        return QuestionType.ORDER
+    return QuestionType.SINGLE
 
 
 def normalize_attached_option_selects(

@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from survey_submitter.core.questions.types import QuestionType
+
 from .actions import AnswerAction
 
 
@@ -26,11 +28,11 @@ def record_answer_action(
             int(option_count),
             row_index=row_index,
         )
-    if record_type == "matrix":
+    if record_type == QuestionType.MATRIX:
         for row_index, selected_index in enumerate(action.matrix_indices):
             record_answer_fn(current, "matrix", selected_indices=[int(selected_index)], row_index=row_index)
         return
-    if record_type == "text":
+    if record_type == QuestionType.TEXT:
         text_values = [str(item or "").strip() or default_fill_text for item in action.text_values]
         if not text_values:
             text_values = [default_fill_text]
@@ -40,7 +42,7 @@ def record_answer_action(
             text_answer=" | ".join(text_values) if len(text_values) > 1 else text_values[0],
         )
         return
-    if record_type == "slider":
+    if record_type == QuestionType.SLIDER:
         record_answer_fn(
             current,
             "slider",

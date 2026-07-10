@@ -34,7 +34,10 @@ from survey_submitter.core.questions.utils import (
     serialize_random_int_range,
     try_parse_random_int_range,
 )
+from survey_submitter.core.questions.types import QuestionType, CHOICE_TYPES, TEXT_TYPES, RATING_TYPES
 from survey_submitter.providers.common import make_provider_question_key
+
+DEFAULT_SLIDER_TARGET = 50.0
 
 if TYPE_CHECKING:
     from survey_submitter.core.task import ExecutionConfig
@@ -151,7 +154,7 @@ def configure_probabilities(
         )
         target.question_strict_ratio_map[question_num] = strict_ratio
 
-        if entry.question_type == "single":
+        if entry.question_type == QuestionType.SINGLE:
             _raise_if_all_zero_single_like(probs, question_num, "single")
             mapped_value = ("single", idx_single)
             target.question_config_index_map[question_num] = mapped_value
@@ -174,7 +177,7 @@ def configure_probabilities(
             target.single_prob.append(_normalize_single_like_prob_config(probs, entry.option_count))
             target.single_option_fill_texts.append(_normalize_option_fill_texts(entry.option_fill_texts, entry.option_count))
             target.single_attached_option_selects.append(copy.deepcopy(getattr(entry, "attached_option_selects", []) or []))
-        elif entry.question_type == "dropdown":
+        elif entry.question_type == QuestionType.DROPDOWN:
             _raise_if_all_zero_single_like(probs, question_num, "dropdown")
             mapped_value = ("dropdown", idx_dropdown)
             target.question_config_index_map[question_num] = mapped_value
@@ -189,7 +192,7 @@ def configure_probabilities(
             idx_dropdown += 1
             target.droplist_prob.append(_normalize_single_like_prob_config(probs, entry.option_count))
             target.droplist_option_fill_texts.append(_normalize_option_fill_texts(entry.option_fill_texts, entry.option_count))
-        elif entry.question_type == "multiple":
+        elif entry.question_type == QuestionType.MULTIPLE:
             mapped_value = ("multiple", idx_multiple)
             target.question_config_index_map[question_num] = mapped_value
             _remember_provider_mapping(entry, mapped_value)
@@ -198,7 +201,7 @@ def configure_probabilities(
                 raise ValueError("多选题必须提供概率列表，数值范围0-100")
             target.multiple_prob.append([float(value) for value in probs])
             target.multiple_option_fill_texts.append(_normalize_option_fill_texts(entry.option_fill_texts, entry.option_count))
-        elif entry.question_type == "matrix":
+        elif entry.question_type == QuestionType.MATRIX:
             _raise_if_all_zero_matrix(probs, question_num)
             rows = max(1, entry.rows)
             mapped_value = ("matrix", idx_matrix)
@@ -259,7 +262,7 @@ def configure_probabilities(
             else:
                 for _ in range(rows):
                     target.matrix_prob.append(-1)
-        elif entry.question_type in ("scale", "score"):
+        elif entry.question_type in RATING_TYPES:
             _raise_if_all_zero_single_like(probs, question_num, entry.question_type)
             mapped_value = (entry.question_type, idx_scale)
             target.question_config_index_map[question_num] = mapped_value
@@ -273,7 +276,7 @@ def configure_probabilities(
             reliability_candidates.append((question_num, strict_ratio, entry.question_type))
             idx_scale += 1
             target.scale_prob.append(_normalize_single_like_prob_config(probs, entry.option_count))
-        elif entry.question_type == "slider":
+        elif entry.question_type == QuestionType.SLIDER:
             mapped_value = ("slider", idx_slider)
             target.question_config_index_map[question_num] = mapped_value
             _remember_provider_mapping(entry, mapped_value)
@@ -297,12 +300,12 @@ def configure_probabilities(
                         target_value = float(probs[0])
                     except Exception:
                         target_value = None
-            target.slider_targets.append(50.0 if target_value is None else target_value)
-        elif entry.question_type == "order":
+            target.slider_targets.append(DEFAULT_SLIDER_TARGET if target_value is None else target_value)
+        elif entry.question_type == QuestionType.ORDER:
             mapped_value = ("order", -1)
             target.question_config_index_map[question_num] = mapped_value
             _remember_provider_mapping(entry, mapped_value)
-        elif entry.question_type in ("text", "multi_text"):
+        elif entry.question_type in TEXT_TYPES:
             if not getattr(entry, "is_location", False):
                 mapped_value = ("text", idx_text)
                 target.question_config_index_map[question_num] = mapped_value
@@ -320,7 +323,7 @@ def configure_probabilities(
             normalized_values = [str(item).strip() for item in (entry.texts or []) if str(item).strip()]
             normalized_blank_ai_flags: List[bool] = []
             normalized_blank_int_ranges: List[List[int]] = []
-            if entry.question_type == "multi_text":
+            if entry.question_type == QuestionType.MULTI_TEXT:
                 raw_blank_ai_flags = getattr(entry, "multi_text_blank_ai_flags", []) or []
                 if isinstance(raw_blank_ai_flags, list):
                     normalized_blank_ai_flags = [bool(flag) for flag in raw_blank_ai_flags]
@@ -333,15 +336,15 @@ def configure_probabilities(
                     target_range = raw_blank_int_ranges[blank_idx] if blank_idx < len(raw_blank_int_ranges) else []
                     if try_parse_random_int_range(target_range) is None:
                         raise ValueError(f"多项填空题第{blank_idx + 1}个空位的随机整数范围未设置完整")
-            if entry.question_type == "text":
+            if entry.question_type == QuestionType.TEXT:
                 ai_enabled = bool(getattr(entry, "ai_enabled", False))
-            elif entry.question_type == "multi_text":
+            elif entry.question_type == QuestionType.MULTI_TEXT:
                 ai_enabled = bool(getattr(entry, "ai_enabled", False)) or (
                     bool(normalized_blank_ai_flags) and all(normalized_blank_ai_flags)
                 )
             else:
                 ai_enabled = False
-            if entry.question_type == "text" and text_random_mode in (_TEXT_RANDOM_NAME, _TEXT_RANDOM_MOBILE, _TEXT_RANDOM_ID_CARD, _TEXT_RANDOM_INTEGER):
+            if entry.question_type == QuestionType.TEXT and text_random_mode in (_TEXT_RANDOM_NAME, _TEXT_RANDOM_MOBILE, _TEXT_RANDOM_ID_CARD, _TEXT_RANDOM_INTEGER):
                 ai_enabled = False
                 if text_random_mode == _TEXT_RANDOM_NAME:
                     normalized_values = [_TEXT_RANDOM_NAME_TOKEN]

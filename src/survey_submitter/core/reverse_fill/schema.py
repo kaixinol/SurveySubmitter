@@ -4,6 +4,8 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Deque, Dict, List, Optional
 
+from survey_submitter.core.questions.types import CHOICE_TYPES, QuestionType, TEXT_TYPES
+
 REVERSE_FILL_FORMAT_AUTO = "auto"
 REVERSE_FILL_FORMAT_WJX_SEQUENCE = "wjx_sequence"
 REVERSE_FILL_FORMAT_WJX_SCORE = "wjx_score"
@@ -24,15 +26,15 @@ REVERSE_FILL_KIND_TEXT = "text"
 REVERSE_FILL_KIND_MULTI_TEXT = "multi_text"
 REVERSE_FILL_KIND_MATRIX = "matrix"
 
-REVERSE_FILL_RUNTIME_SUPPORTED_TYPES = {
-    "single",
-    "dropdown",
-    "scale",
-    "score",
-    "text",
-    "multi_text",
-    "matrix",
-}
+REVERSE_FILL_RUNTIME_SUPPORTED_TYPES = frozenset({
+    QuestionType.SINGLE,
+    QuestionType.DROPDOWN,
+    QuestionType.SCALE,
+    QuestionType.SCORE,
+    QuestionType.TEXT,
+    QuestionType.MULTI_TEXT,
+    QuestionType.MATRIX,
+})
 
 
 def reverse_fill_format_label(format_key: str) -> str:

@@ -31,6 +31,7 @@ from survey_submitter.core.questions.strict_ratio import (
     weighted_sample_without_replacement,
 )
 from survey_submitter.core.questions.tendency import get_tendency_index
+from survey_submitter.core.questions.types import QuestionType, TEXT_TYPES
 from survey_submitter.core.questions.utils import (
     normalize_droplist_probs,
     weighted_index,
@@ -52,15 +53,124 @@ from survey_submitter.providers.answering.selection import (
 from survey_submitter.providers.contracts import SurveyQuestionMeta
 from survey_submitter.providers.wjx.questions.multiple_rules import _normalize_selected_indices
 
+DEFAULT_MULTIPLE_PROBABILITY = 50.0
+PROBABILITY_CEILING = 100.0
+MAX_MULTIPLE_SELECTION_ATTEMPTS = 32
+
 
 async def _resolve_runtime_option_texts(
-    _driver: Any,
     question: SurveyQuestionMeta,
 ) -> list[str]:
     return [str(item or "").strip() for item in list(question.option_texts or []) if str(item or "").strip()]
 
+async def _build_wjx_choice_action(
+    *,
+    question: SurveyQuestionMeta,
+    config_index: int,
+    ctx: ExecutionState,
+    psycho_plan: Optional[Any],
+    thread_name: str,
+    entry_type: QuestionType,
+    prob_config_key: str,
+    fill_config_key: str,
+    kind: str,
+    record_type: str,
+    allow_ai_placeholder: bool = False,
+) -> Optional[AnswerAction]:
+    """Shared logic for single-choice and dropdown builders."""
+    config = ctx.config
+    current = int(question.num or 0)
+    option_texts = await _resolve_runtime_option_texts(question)
+    option_count = max(1, len(option_texts) or int(question.options or 0))
+    reverse_fill_answer = resolve_current_reverse_fill_answer(
+        ctx,
+        current,
+        thread_name=thread_name,
+    )
+    forced_index: Optional[int] = None
+    if reverse_fill_answer is not None and reverse_fill_answer.kind == REVERSE_FILL_KIND_CHOICE:
+        forced_index = _valid_forced_choice_index(reverse_fill_answer.choice_index, option_count)
+    if forced_index is None:
+        forced_index = _valid_forced_choice_index(question.forced_option_index, option_count)
+
+    _apply_consistency = (entry_type == QuestionType.SINGLE)
+    _use_dimension_gate = (entry_type == QuestionType.SINGLE)
+
+    dimension = config.question_dimension_map.get(current)
+    has_reliability_dimension = isinstance(dimension, str) and bool(str(dimension).strip())
+    strict_ratio = False
+    if forced_index is None:
+        prob_list = getattr(config, prob_config_key)[config_index] if config_index < len(getattr(config, prob_config_key)) else -1
+        probabilities = normalize_droplist_probs(prob_list, option_count)
+        strict_ratio = is_strict_ratio_question(ctx, current)
+        if not strict_ratio:
+            probabilities = apply_persona_boost(option_texts, probabilities)
+        if _apply_consistency and not has_reliability_dimension:
+            probabilities = apply_single_like_consistency(probabilities, current)
+        distribution_trigger = (strict_ratio or has_reliability_dimension) if _use_dimension_gate else strict_ratio
+        if strict_ratio or (_use_dimension_gate and has_reliability_dimension):
+            strict_reference = list(probabilities)
+            probabilities = resolve_distribution_probabilities(
+                probabilities,
+                option_count,
+                ctx,
+                current,
+                psycho_plan=psycho_plan,
+            )
+            if entry_type == QuestionType.SINGLE:
+                probabilities = enforce_reference_rank_order(probabilities, strict_reference)
+            elif strict_ratio:
+                probabilities = enforce_reference_rank_order(probabilities, strict_reference)
+        elif distribution_trigger:
+            probabilities = resolve_distribution_probabilities(
+                probabilities,
+                option_count,
+                ctx,
+                current,
+                psycho_plan=psycho_plan,
+            )
+        selected_index = (
+            get_tendency_index(
+                option_count,
+                probabilities,
+                dimension=dimension,
+                psycho_plan=psycho_plan,
+                question_index=current,
+            )
+            if has_reliability_dimension
+            else weighted_index(probabilities)
+        )
+    else:
+        selected_index = forced_index
+
+    selected_text = option_texts[selected_index] if selected_index < len(option_texts) else ""
+    fill_entries_list = getattr(config, fill_config_key)
+    fill_entries = fill_entries_list[config_index] if config_index < len(fill_entries_list) else None
+    fill_value = await resolve_option_fill_text_from_config(
+        fill_entries,
+        selected_index,
+        question_title=str(question.title or ""),
+        question_number=current,
+        option_text=selected_text,
+        ctx=ctx,
+        thread_name=thread_name,
+        allow_ai_placeholder=allow_ai_placeholder,
+        ai_placeholder_text=build_free_ai_option_fill_placeholder(current, selected_index),
+    )
+    fill_value = default_missing_option_fill(question, selected_index, fill_value)
+    selected_texts = [f"{selected_text} / {fill_value}" if selected_text and fill_value else (fill_value or selected_text)]
+    return AnswerAction(
+        question_num=current,
+        kind=kind,
+        selected_indices=(selected_index,),
+        option_fill_texts=((selected_index, fill_value),) if fill_value else (),
+        selected_texts=tuple(selected_texts),
+        record_type=record_type,
+        pending_distribution_choices=((selected_index, option_count, None),) if forced_index is None and (strict_ratio or has_reliability_dimension) else (),
+    )
+
+
 async def _build_wjx_single_action(
-    driver: Any,
     question: SurveyQuestionMeta,
     config_index: int,
     ctx: ExecutionState,
@@ -69,86 +179,34 @@ async def _build_wjx_single_action(
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
 ) -> Optional[AnswerAction]:
-    config = ctx.config
-    current = int(question.num or 0)
-    option_texts = await _resolve_runtime_option_texts(driver, question)
-    option_count = max(1, len(option_texts) or int(question.options or 0))
-    reverse_fill_answer = resolve_current_reverse_fill_answer(
-        ctx,
-        current,
-        thread_name=thread_name,
-    )
-    forced_index: Optional[int] = None
-    if reverse_fill_answer is not None and reverse_fill_answer.kind == REVERSE_FILL_KIND_CHOICE:
-        forced_index = _valid_forced_choice_index(reverse_fill_answer.choice_index, option_count)
-    if forced_index is None:
-        forced_index = _valid_forced_choice_index(question.forced_option_index, option_count)
-
-    strict_ratio = False
-    dimension = config.question_dimension_map.get(current)
-    has_reliability_dimension = isinstance(dimension, str) and bool(str(dimension).strip())
-    if forced_index is None:
-        probabilities = config.single_prob[config_index] if config_index < len(config.single_prob) else -1
-        probabilities = normalize_droplist_probs(probabilities, option_count)
-        strict_ratio = is_strict_ratio_question(ctx, current)
-        if not strict_ratio:
-            probabilities = apply_persona_boost(option_texts, probabilities)
-        if not has_reliability_dimension:
-            probabilities = apply_single_like_consistency(probabilities, current)
-        if strict_ratio or has_reliability_dimension:
-            strict_reference = list(probabilities)
-            probabilities = resolve_distribution_probabilities(
-                probabilities,
-                option_count,
-                ctx,
-                current,
-                psycho_plan=psycho_plan,
-            )
-            probabilities = enforce_reference_rank_order(probabilities, strict_reference)
-        selected_index = (
-            get_tendency_index(
-                option_count,
-                probabilities,
-                dimension=dimension,
-                psycho_plan=psycho_plan,
-                question_index=current,
-            )
-            if has_reliability_dimension
-            else weighted_index(probabilities)
-        )
-    else:
-        selected_index = forced_index
-
-    selected_text = option_texts[selected_index] if selected_index < len(option_texts) else ""
-    fill_entries = config.single_option_fill_texts[config_index] if config_index < len(config.single_option_fill_texts) else None
-    fill_value = await resolve_option_fill_text_from_config(
-        fill_entries,
-        selected_index,
-        driver=driver,
-        question_title=str(question.title or ""),
-        question_number=current,
-        option_text=selected_text,
+    action = await _build_wjx_choice_action(
+        question=question,
+        config_index=config_index,
         ctx=ctx,
+        psycho_plan=psycho_plan,
         thread_name=thread_name,
-        allow_ai_placeholder=allow_ai_placeholder,
-        ai_placeholder_text=build_free_ai_option_fill_placeholder(current, selected_index),
-    )
-    fill_value = default_missing_option_fill(question, selected_index, fill_value)
-    selected_texts = [f"{selected_text} / {fill_value}" if selected_text and fill_value else (fill_value or selected_text)]
-    return AnswerAction(
-        question_num=current,
+        entry_type=QuestionType.SINGLE,
+        prob_config_key="single_prob",
+        fill_config_key="single_option_fill_texts",
         kind="choice",
-        input_type="radio",
-        selected_indices=(selected_index,),
-        option_fill_texts=((selected_index, fill_value),) if fill_value else (),
-        selected_texts=tuple(selected_texts),
         record_type="single",
-        pending_distribution_choices=((selected_index, option_count, None),) if forced_index is None and (strict_ratio or has_reliability_dimension) else (),
+        allow_ai_placeholder=allow_ai_placeholder,
     )
+    if action is not None:
+        action = AnswerAction(
+            question_num=action.question_num,
+            kind=action.kind,
+            input_type="radio",
+            selected_indices=action.selected_indices,
+            option_fill_texts=action.option_fill_texts,
+            selected_texts=action.selected_texts,
+            record_type=action.record_type,
+            pending_distribution_choices=action.pending_distribution_choices,
+        )
+    return action
 
 
 async def _build_wjx_dropdown_action(
-    driver: Any,
     question: SurveyQuestionMeta,
     config_index: int,
     ctx: ExecutionState,
@@ -157,84 +215,22 @@ async def _build_wjx_dropdown_action(
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
 ) -> Optional[AnswerAction]:
-    config = ctx.config
-    current = int(question.num or 0)
-    option_texts = await _resolve_runtime_option_texts(driver, question)
-    option_count = max(1, len(option_texts) or int(question.options or 0))
-    reverse_fill_answer = resolve_current_reverse_fill_answer(
-        ctx,
-        current,
-        thread_name=thread_name,
-    )
-    forced_index: Optional[int] = None
-    if reverse_fill_answer is not None and reverse_fill_answer.kind == REVERSE_FILL_KIND_CHOICE:
-        forced_index = _valid_forced_choice_index(reverse_fill_answer.choice_index, option_count)
-    if forced_index is None:
-        forced_index = _valid_forced_choice_index(question.forced_option_index, option_count)
-
-    dimension = config.question_dimension_map.get(current)
-    has_reliability_dimension = isinstance(dimension, str) and bool(str(dimension).strip())
-    strict_ratio = False
-    if forced_index is None:
-        probabilities = config.droplist_prob[config_index] if config_index < len(config.droplist_prob) else -1
-        probabilities = normalize_droplist_probs(probabilities, option_count)
-        strict_ratio = is_strict_ratio_question(ctx, current)
-        if not strict_ratio:
-            probabilities = apply_persona_boost(option_texts, probabilities)
-        if strict_ratio or has_reliability_dimension:
-            strict_reference = list(probabilities)
-            probabilities = resolve_distribution_probabilities(
-                probabilities,
-                option_count,
-                ctx,
-                current,
-                psycho_plan=psycho_plan,
-            )
-            if strict_ratio:
-                probabilities = enforce_reference_rank_order(probabilities, strict_reference)
-        selected_index = (
-            get_tendency_index(
-                option_count,
-                probabilities,
-                dimension=dimension,
-                psycho_plan=psycho_plan,
-                question_index=current,
-            )
-            if has_reliability_dimension
-            else weighted_index(probabilities)
-        )
-    else:
-        selected_index = forced_index
-
-    selected_text = option_texts[selected_index] if selected_index < len(option_texts) else ""
-    fill_entries = config.droplist_option_fill_texts[config_index] if config_index < len(config.droplist_option_fill_texts) else None
-    fill_value = await resolve_option_fill_text_from_config(
-        fill_entries,
-        selected_index,
-        driver=driver,
-        question_title=str(question.title or ""),
-        question_number=current,
-        option_text=selected_text,
+    return await _build_wjx_choice_action(
+        question=question,
+        config_index=config_index,
         ctx=ctx,
+        psycho_plan=psycho_plan,
         thread_name=thread_name,
-        allow_ai_placeholder=allow_ai_placeholder,
-        ai_placeholder_text=build_free_ai_option_fill_placeholder(current, selected_index),
-    )
-    fill_value = default_missing_option_fill(question, selected_index, fill_value)
-    selected_texts = [f"{selected_text} / {fill_value}" if selected_text and fill_value else (fill_value or selected_text)]
-    return AnswerAction(
-        question_num=current,
+        entry_type=QuestionType.DROPDOWN,
+        prob_config_key="droplist_prob",
+        fill_config_key="droplist_option_fill_texts",
         kind="select",
-        selected_indices=(selected_index,),
-        option_fill_texts=((selected_index, fill_value),) if fill_value else (),
-        selected_texts=tuple(selected_texts),
         record_type="dropdown",
-        pending_distribution_choices=((selected_index, option_count, None),) if forced_index is None and (strict_ratio or has_reliability_dimension) else (),
+        allow_ai_placeholder=allow_ai_placeholder,
     )
 
 
 async def _build_wjx_text_action(
-    driver: Any,
     question: SurveyQuestionMeta,
     config_index: int,
     ctx: ExecutionState,
@@ -267,7 +263,7 @@ async def _build_wjx_text_action(
                     for blank_index in range(blank_count)
                 ]
             else:
-                question_type = "multi_fill_blank" if blank_count > 1 else "fill_blank"
+                question_type = QuestionType.MULTI_FILL_BLANK if blank_count > 1 else QuestionType.FILL_BLANK
                 try:
                     generated = await agenerate_ai_answer(
                         str(question.title or ""),
@@ -292,7 +288,7 @@ async def _build_wjx_text_action(
                 config.texts[config_index] if config_index < len(config.texts) else [DEFAULT_FILL_TEXT],
                 config.texts_prob[config_index] if config_index < len(config.texts_prob) else [1.0],
                 blank_count=blank_count,
-                entry_type=str(text_entry_types[config_index] if config_index < len(text_entry_types) else "text"),
+                entry_type=str(text_entry_types[config_index] if config_index < len(text_entry_types) else QuestionType.TEXT),
                 blank_modes=multi_text_blank_modes[config_index] if config_index < len(multi_text_blank_modes) else [],
                 blank_int_ranges=multi_text_blank_ranges[config_index] if config_index < len(multi_text_blank_ranges) else [],
             )
@@ -310,7 +306,6 @@ async def _build_wjx_text_action(
 
 
 async def _build_wjx_score_like_action(
-    driver: Any,
     question: SurveyQuestionMeta,
     config_index: int,
     ctx: ExecutionState,
@@ -321,7 +316,7 @@ async def _build_wjx_score_like_action(
 ) -> Optional[AnswerAction]:
     config = ctx.config
     current = int(question.num or 0)
-    option_texts = await _resolve_runtime_option_texts(driver, question)
+    option_texts = await _resolve_runtime_option_texts(question)
     option_count = max(2, len(option_texts) or int(question.options or 0))
     reverse_fill_answer = resolve_current_reverse_fill_answer(
         ctx,
@@ -366,7 +361,6 @@ async def _build_wjx_score_like_action(
 
 
 async def _build_wjx_multiple_action(
-    driver: Any,
     question: SurveyQuestionMeta,
     config_index: int,
     ctx: ExecutionState,
@@ -376,7 +370,7 @@ async def _build_wjx_multiple_action(
 ) -> Optional[AnswerAction]:
     config = ctx.config
     current = int(question.num or 0)
-    option_texts = await _resolve_runtime_option_texts(driver, question)
+    option_texts = await _resolve_runtime_option_texts(question)
     option_count = max(1, len(option_texts) or int(question.options or 0))
     min_required = max(1, min(_coerce_positive_int(question.multi_min_limit, 1), option_count))
     max_allowed = max(1, min(_coerce_positive_int(question.multi_max_limit, option_count) or option_count, option_count))
@@ -399,7 +393,6 @@ async def _build_wjx_multiple_action(
             fill_value = await resolve_option_fill_text_from_config(
                 fill_entries,
                 option_idx,
-                driver=driver,
                 question_title=str(question.title or ""),
                 question_number=current,
                 option_text=selected_text,
@@ -433,7 +426,7 @@ async def _build_wjx_multiple_action(
         if forced_index is not None:
             return await _finalize(_normalize_selected_indices([forced_index], option_count))
 
-    selection_probabilities = config.multiple_prob[config_index] if config_index < len(config.multiple_prob) else [50.0] * option_count
+    selection_probabilities = config.multiple_prob[config_index] if config_index < len(config.multiple_prob) else [DEFAULT_MULTIPLE_PROBABILITY] * option_count
     if selection_probabilities == -1 or (
         isinstance(selection_probabilities, list)
         and len(selection_probabilities) == 1
@@ -458,7 +451,7 @@ async def _build_wjx_multiple_action(
             prob_value = 0.0
         if math.isnan(prob_value) or math.isinf(prob_value):
             prob_value = 0.0
-        sanitized_probabilities.append(max(0.0, min(100.0, prob_value)))
+        sanitized_probabilities.append(max(0.0, min(PROBABILITY_CEILING, prob_value)))
     if len(sanitized_probabilities) < option_count:
         sanitized_probabilities.extend([0.0] * (option_count - len(sanitized_probabilities)))
     elif len(sanitized_probabilities) > option_count:
@@ -467,7 +460,7 @@ async def _build_wjx_multiple_action(
     strict_ratio = is_strict_ratio_question(ctx, current)
     if not strict_ratio:
         boosted = apply_persona_boost(option_texts, sanitized_probabilities)
-        sanitized_probabilities = [min(100.0, prob) for prob in boosted]
+        sanitized_probabilities = [min(PROBABILITY_CEILING, prob) for prob in boosted]
     for idx in blocked_indices:
         sanitized_probabilities[idx] = 0.0
     for idx in required_indices:
@@ -485,7 +478,7 @@ async def _build_wjx_multiple_action(
         max_total = min(max_allowed, len(required_selected) + len(positive_optional))
         if min_total > max_total:
             min_total = max_total
-        expected_optional = sum(sanitized_probabilities[idx] for idx in positive_optional) / 100.0
+        expected_optional = sum(sanitized_probabilities[idx] for idx in positive_optional) / PROBABILITY_CEILING
         total_target = len(required_selected) + stochastic_round(expected_optional)
         total_target = max(min_total, min(max_total, total_target))
         optional_target = max(0, total_target - len(required_selected))
@@ -501,10 +494,9 @@ async def _build_wjx_multiple_action(
         return None
     selection_mask: List[int] = []
     attempts = 0
-    max_attempts = 32
     if positive_indices:
-        while sum(selection_mask) == 0 and attempts < max_attempts:
-            selection_mask = [1 if random.random() < (prob / 100.0) else 0 for prob in sanitized_probabilities]
+        while sum(selection_mask) == 0 and attempts < MAX_MULTIPLE_SELECTION_ATTEMPTS:
+            selection_mask = [1 if random.random() < (prob / PROBABILITY_CEILING) else 0 for prob in sanitized_probabilities]
             attempts += 1
         if sum(selection_mask) == 0:
             selection_mask = [0] * option_count
@@ -620,10 +612,9 @@ async def _build_wjx_slider_action(
 
 
 async def _build_wjx_order_action(
-    driver: Any,
     question: SurveyQuestionMeta,
 ) -> AnswerAction:
-    option_texts = await _resolve_runtime_option_texts(driver, question)
+    option_texts = await _resolve_runtime_option_texts(question)
     option_count = max(1, len(option_texts) or int(question.options or 0))
     ordered_indices = list(range(option_count))
     random.shuffle(ordered_indices)
@@ -637,7 +628,6 @@ async def _build_wjx_order_action(
 
 
 async def build_answer_action(
-    driver: Any,
     question: SurveyQuestionMeta,
     ctx: ExecutionState,
     *,
@@ -649,9 +639,8 @@ async def build_answer_action(
     if not config_entry:
         return None
     entry_type, config_index = config_entry
-    if entry_type == "single":
+    if entry_type == QuestionType.SINGLE:
         return await _build_wjx_single_action(
-            driver,
             question,
             config_index,
             ctx,
@@ -659,18 +648,16 @@ async def build_answer_action(
             thread_name=thread_name,
             allow_ai_placeholder=allow_ai_placeholder,
         )
-    if entry_type == "multiple":
+    if entry_type == QuestionType.MULTIPLE:
         return await _build_wjx_multiple_action(
-            driver,
             question,
             config_index,
             ctx,
             thread_name=thread_name,
             allow_ai_placeholder=allow_ai_placeholder,
         )
-    if entry_type == "dropdown":
+    if entry_type == QuestionType.DROPDOWN:
         return await _build_wjx_dropdown_action(
-            driver,
             question,
             config_index,
             ctx,
@@ -678,18 +665,17 @@ async def build_answer_action(
             thread_name=thread_name,
             allow_ai_placeholder=allow_ai_placeholder,
         )
-    if entry_type in {"text", "multi_text"}:
+    if entry_type in TEXT_TYPES:
         return await _build_wjx_text_action(
-            driver,
             question,
             config_index,
             ctx,
             thread_name=thread_name,
             allow_ai_placeholder=allow_ai_placeholder,
         )
-    if entry_type == "location":
+    if entry_type == QuestionType.LOCATION:
         return None
-    if entry_type == "matrix":
+    if entry_type == QuestionType.MATRIX:
         return await _build_wjx_matrix_action(
             question,
             config_index,
@@ -697,9 +683,8 @@ async def build_answer_action(
             psycho_plan=psycho_plan,
             thread_name=thread_name,
         )
-    if entry_type == "scale":
+    if entry_type == QuestionType.SCALE:
         return await _build_wjx_score_like_action(
-            driver,
             question,
             config_index,
             ctx,
@@ -707,9 +692,8 @@ async def build_answer_action(
             answer_type="scale",
             thread_name=thread_name,
         )
-    if entry_type == "score":
+    if entry_type == QuestionType.SCORE:
         return await _build_wjx_score_like_action(
-            driver,
             question,
             config_index,
             ctx,
@@ -717,9 +701,8 @@ async def build_answer_action(
             answer_type="score",
             thread_name=thread_name,
         )
-    if entry_type == "slider":
+    if entry_type == QuestionType.SLIDER:
         return await _build_wjx_slider_action(question, config_index, ctx)
-    if entry_type == "order":
-        return await _build_wjx_order_action(driver, question)
+    if entry_type == QuestionType.ORDER:
+        return await _build_wjx_order_action(question)
     return None
-

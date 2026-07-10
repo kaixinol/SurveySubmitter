@@ -4,7 +4,19 @@ from typing import Any, List, Optional, Tuple, Union
 from survey_submitter.core.questions.reliability_mode import get_reliability_profile
 from survey_submitter.core.questions.utils import normalize_droplist_probs
 
-_STANDARD_CORRECTION_PARAMS = (12, 4.2, 0.45, 2.2, 0.42)
+# Standard correction algorithm parameters:
+_STANDARD_WARMUP_SAMPLES = 12    # minimum samples before correction kicks in
+_STANDARD_GAIN = 4.2             # exponential gain factor for correction sensitivity
+_STANDARD_MIN_FACTOR = 0.45      # lower clamp bound for the correction multiplier
+_STANDARD_MAX_FACTOR = 2.2       # upper clamp bound for the correction multiplier
+_STANDARD_GAP_LIMIT = 0.42       # maximum allowed target-vs-actual gap per step
+_STANDARD_CORRECTION_PARAMS = (
+    _STANDARD_WARMUP_SAMPLES,
+    _STANDARD_GAIN,
+    _STANDARD_MIN_FACTOR,
+    _STANDARD_MAX_FACTOR,
+    _STANDARD_GAP_LIMIT,
+)
 
 
 def build_distribution_stat_key(question_index: int, row_index: Optional[int] = None) -> str:

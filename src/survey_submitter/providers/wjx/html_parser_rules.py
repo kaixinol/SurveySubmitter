@@ -6,6 +6,7 @@ try:
 except ImportError:
     BeautifulSoup = None
 
+from survey_submitter.core.questions.types import TypeCode
 from survey_submitter.providers.match_utils import normalize_match_text
 
 from .html_parser_choice import (
@@ -159,24 +160,24 @@ def _extract_question_metadata_from_html(soup, question_div, question_number: in
     multi_min_limit: Optional[int] = None
     multi_max_limit: Optional[int] = None
 
-    if type_code in {"3", "4", "5", "11"}:
+    if type_code in {TypeCode.RADIO, TypeCode.CHECKBOX, TypeCode.RATING, TypeCode.ORDER}:
         option_texts, fillable_indices = _collect_choice_option_texts(question_div)
         option_count = len(option_texts)
         
-        if type_code == "4":
+        if type_code == TypeCode.CHECKBOX:
             multi_min_limit, multi_max_limit = _extract_multiple_choice_limits(question_div, question_number)
-    elif type_code == "7":
+    elif type_code == TypeCode.DROPDOWN:
         option_texts = _collect_select_option_texts(question_div, soup, question_number)
         option_count = len(option_texts)
         if option_count > 0 and _question_div_has_shared_text_input(question_div):
             fillable_indices = [option_count - 1]
-    elif type_code == "6":
+    elif type_code == TypeCode.MATRIX:
         matrix_rows, option_texts, row_texts = _collect_matrix_option_texts(soup, question_div, question_number)
         option_count = len(option_texts)
     elif _question_div_looks_like_slider_matrix(question_div):
         matrix_rows, option_texts, row_texts = _collect_slider_matrix_metadata(question_div)
         option_count = len(option_texts)
-    elif type_code == "8":
+    elif type_code == TypeCode.SLIDER:
         option_count = 1
     return option_texts, option_count, matrix_rows, row_texts, fillable_indices, multi_min_limit, multi_max_limit
 

@@ -3,6 +3,7 @@ import logging
 import re
 from typing import List, Optional, Union
 
+from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.task import ExecutionState
 from survey_submitter.logging.log_utils import log_suppressed_exception
 
@@ -164,7 +165,7 @@ async def agenerate_ai_answer(
                 blank_count=blank_count,
                 ctx=ctx,
             )
-            if question_type == "multi_fill_blank":
+            if question_type == QuestionType.MULTI_FILL_BLANK:
                 if not isinstance(answer, list):
                     if not answer or not str(answer).strip():
                         raise AIRuntimeError("AI 未返回有效答案")
