@@ -1,6 +1,6 @@
 from __future__ import annotations
-from software.core.questions.schema import QuestionEntry
-from software.core.questions.validation import validate_question_config
+from survey_submitter.core.questions.schema import QuestionEntry
+from survey_submitter.core.questions.validation import validate_question_config
 
 class QuestionValidationTests:
 

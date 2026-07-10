@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from wjx.provider import parser as wjx_parser
+from survey_submitter.providers.wjx import parser as wjx_parser
 
 
 class _FakeHttpResponse:

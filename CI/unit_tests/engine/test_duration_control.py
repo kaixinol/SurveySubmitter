@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from software.core.modes import duration_control
-from software.providers.common import SURVEY_PROVIDER_WJX
+from survey_submitter.core.modes import duration_control
+from survey_submitter.providers.common import SURVEY_PROVIDER_WJX
 
 
 class _Driver:

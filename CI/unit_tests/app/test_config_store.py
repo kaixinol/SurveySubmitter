@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 import pytest
 
-import software.io.config.store as config_store
-from software.core.config.schema import RuntimeConfig
+import survey_submitter.io.config.store as config_store
+from survey_submitter.core.config.schema import RuntimeConfig
 
 
 class ConfigStoreTests:

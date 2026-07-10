@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from bs4 import BeautifulSoup
 
-from wjx.provider import html_parser_choice
-from wjx.provider import html_parser_common
-from wjx.provider import html_parser_rules
+from survey_submitter.providers.wjx import html_parser_choice
+from survey_submitter.providers.wjx import html_parser_common
+from survey_submitter.providers.wjx import html_parser_rules
 
 
 def _soup(html: str) -> BeautifulSoup:

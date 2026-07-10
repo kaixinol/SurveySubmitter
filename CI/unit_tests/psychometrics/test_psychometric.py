@@ -1,6 +1,6 @@
 from __future__ import annotations
 from unittest.mock import patch
-from software.core.psychometrics.psychometric import PsychometricItem, build_dimension_psychometric_plan, build_psychometric_plan
+from survey_submitter.core.psychometrics.psychometric import PsychometricItem, build_dimension_psychometric_plan, build_psychometric_plan
 
 class PsychometricPlanTests:
 

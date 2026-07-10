@@ -1,6 +1,6 @@
 from __future__ import annotations
-from software.core.questions.meta_helpers import count_positive_weights, find_all_zero_attached_selects, find_all_zero_matrix_rows, infer_question_entry_type, normalize_attached_option_selects, normalize_fillable_option_indices
-from software.providers.contracts import (
+from survey_submitter.core.questions.meta_helpers import count_positive_weights, find_all_zero_attached_selects, find_all_zero_matrix_rows, infer_question_entry_type, normalize_attached_option_selects, normalize_fillable_option_indices
+from survey_submitter.providers.contracts import (
     LOGIC_PARSE_STATUS_COMPLETE,
     SurveyQuestionMeta,
     build_survey_definition,

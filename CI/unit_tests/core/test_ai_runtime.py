@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from software.core.ai import runtime as ai_runtime
+from survey_submitter.core.ai import runtime as ai_runtime
 
 
 class AiRuntimeTests:

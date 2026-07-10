@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from bs4 import BeautifulSoup
 
-from wjx.provider.questions import multiple_limits
+from survey_submitter.providers.wjx.questions import multiple_limits
 
 
 class _FakeElement:

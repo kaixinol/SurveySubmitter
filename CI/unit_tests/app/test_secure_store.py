@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import software.system.secure_store as secure_store
+import survey_submitter.system.secure_store as secure_store
 
 
 class _FakeKeyring:

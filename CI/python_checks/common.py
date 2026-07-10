@@ -11,10 +11,9 @@ from typing import Iterable
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 TARGET_DIRS = [
-    ROOT_DIR / "wjx",
-    ROOT_DIR / "software",
+    ROOT_DIR / "src" / "survey_submitter",
 ]
-ENTRY_FILES = [ROOT_DIR / "SurveyController.py"]
+ENTRY_FILES = [ROOT_DIR / "cli.py"]
 
 
 
@@ -31,8 +30,7 @@ TYPE_IGNORE_PATTERNS = (
     "# " + "pyright:",
 )
 TYPE_IGNORE_SCAN_ROOTS = (
-    ROOT_DIR / "wjx",
-    ROOT_DIR / "software",
+    ROOT_DIR / "src" / "survey_submitter",
 )
 UNICODE_ESCAPE_PATTERNS = (
     "\\" + "u",
@@ -143,7 +141,7 @@ def iter_module_names(files: Iterable[Path]) -> list[str]:
 def ensure_target_dirs() -> list[Path]:
     target_dirs = iter_target_dirs()
     if not target_dirs:
-        print("[ERROR] No scan targets found. Expected at least one of wjx/ or software/.")
+        print("[ERROR] No scan targets found. Expected src/survey_submitter/.")
         raise SystemExit(2)
     return target_dirs
 
@@ -152,7 +150,8 @@ def make_child_env() -> dict[str, str]:
     env = os.environ.copy()
     current_python_path = env.get("PYTHONPATH", "")
     root_path = str(ROOT_DIR)
-    env["PYTHONPATH"] = root_path if not current_python_path else os.pathsep.join([root_path, current_python_path])
+    src_path = str(ROOT_DIR / "src")
+    env["PYTHONPATH"] = os.pathsep.join([p for p in [src_path, root_path, current_python_path] if p])
     env.setdefault("QT_QPA_PLATFORM", "offscreen")
     env.setdefault("WJX_IMPORT_CHECK", "1")
 
@@ -246,8 +245,7 @@ def build_unit_test_pytest_args(*, verbose_in_ci: bool) -> list[str]:
     args = build_pytest_args("CI/unit_tests", verbose_in_ci=verbose_in_ci)
     args.extend(
         [
-            "--cov=software",
-            "--cov=wjx",
+            "--cov=survey_submitter",
             f"--cov-fail-under={DEFAULT_UNIT_TEST_COVERAGE_FAIL_UNDER}",
             "--cov-report=term-missing:skip-covered",
             "--cov-report=xml:coverage.xml",

@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import pytest
 
-from software.core.ai import batch_runtime
-from software.core.ai.runtime import (
+from survey_submitter.core.ai import batch_runtime
+from survey_submitter.core.ai.runtime import (
     build_free_ai_option_fill_placeholder,
     build_free_ai_text_placeholder,
 )
-from software.core.task import ExecutionConfig, ExecutionState
-from software.integrations.ai import free_api
-from software.providers.answering import AnswerAction
-from software.providers.contracts import SurveyQuestionMeta
+from survey_submitter.core.task import ExecutionConfig, ExecutionState
+from survey_submitter.integrations.ai import free_api
+from survey_submitter.providers.answering import AnswerAction
+from survey_submitter.providers.contracts import SurveyQuestionMeta
 
 
 @pytest.mark.asyncio

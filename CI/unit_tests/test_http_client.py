@@ -4,8 +4,8 @@ import asyncio
 
 import pytest
 
-import software.network.http.async_client as async_http_client
-import software.network.http.client as http_client
+import survey_submitter.network.http.async_client as async_http_client
+import survey_submitter.network.http.client as http_client
 
 
 class _FakeResponse:

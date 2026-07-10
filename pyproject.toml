@@ -1,7 +1,7 @@
 [project]
 name = "surveycontroller"
 version = "3.2.0"
-description = "SurveyController desktop application"
+description = "SurveyController CLI tool"
 readme = "README.md"
 requires-python = ">=3.13.14"
 dependencies = [
@@ -26,6 +26,10 @@ dev = [
 [tool.uv]
 package = false
 default-groups = ["dev"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false
 
 [tool.ruff]
 line-length = 100

@@ -7,9 +7,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from software.core.task import ProxyLease
-from software.network.proxy.api import provider
-from software.network.proxy.policy import source as proxy_source
+from survey_submitter.core.task import ProxyLease
+from survey_submitter.network.proxy.api import provider
+from survey_submitter.network.proxy.policy import source as proxy_source
 
 
 class _Response:

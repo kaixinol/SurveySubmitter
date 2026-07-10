@@ -4,8 +4,8 @@ import asyncio
 
 import pytest
 
-from software.network.proxy.session import auth
-from software.network.proxy.session.models import RandomIPAuthError, RandomIPSession
+from survey_submitter.network.proxy.session import auth
+from survey_submitter.network.proxy.session.models import RandomIPAuthError, RandomIPSession
 
 
 @pytest.fixture(autouse=True)

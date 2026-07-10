@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from software.core.persona import generator
-from software.core.persona.generator import Persona
+from survey_submitter.core.persona import generator
+from survey_submitter.core.persona.generator import Persona
 
 
 class PersonaGeneratorTests:

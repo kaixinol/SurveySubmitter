@@ -14,7 +14,7 @@ def isolate_qsettings(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     settings_file = tmp_path / "qsettings.ini"
     monkeypatch.setenv("SURVEYCONTROLLER_QSETTINGS_FILE", os.fspath(settings_file))
 
-    from software.integrations.ai import settings as ai_settings
+    from survey_submitter.integrations.ai import settings as ai_settings
 
     ai_settings._RUNTIME_AI_SETTINGS = None
 

@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-import software.network.submission_report as submission_report
+import survey_submitter.network.submission_report as submission_report
 
 
 class _Settings:

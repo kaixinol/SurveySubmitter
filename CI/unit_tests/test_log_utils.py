@@ -3,8 +3,8 @@ import logging
 import os
 import tempfile
 from unittest.mock import patch
-import software.logging.log_utils as log_utils
-from software.logging.log_utils import LogBufferEntry, export_full_log_to_file, finalize_session_log_persistence, get_auto_save_log_settings, log_deduped_message, prune_session_log_files, reset_deduped_log_message
+import survey_submitter.logging.log_utils as log_utils
+from survey_submitter.logging.log_utils import LogBufferEntry, export_full_log_to_file, finalize_session_log_persistence, get_auto_save_log_settings, log_deduped_message, prune_session_log_files, reset_deduped_log_message
 
 class LogUtilsTests:
 

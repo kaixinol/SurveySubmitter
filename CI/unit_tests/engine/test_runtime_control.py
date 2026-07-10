@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from software.core.engine.runtime_control import _sleep_with_stop, _wait_if_paused
+from survey_submitter.core.engine.runtime_control import _sleep_with_stop, _wait_if_paused
 
 class RuntimeControlTests:
     def test_wait_if_paused_calls_gui_handler(self, make_gui_mock) -> None:
