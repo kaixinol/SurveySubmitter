@@ -9,7 +9,6 @@ class FailureReason(str, Enum):
     FILL_FAILED = "fill_failed"
     SUBMISSION_VERIFICATION_REQUIRED = "submission_verification_required"
     SURVEY_PROVIDER_UNAVAILABLE = "survey_provider_unavailable"
-    DEVICE_QUOTA_LIMIT = "device_quota_limit"
     USER_STOPPED = "user_stopped"
 
 

@@ -55,8 +55,6 @@ pause_on_aliyun_captcha: true          # Pause when Aliyun CAPTCHA is detected
 # ---------------------------------------------------------------------------
 # AI configuration (optional)
 # ---------------------------------------------------------------------------
-# ai_mode: "free"                      # "free" or "provider"
-# ai_provider: "deepseek"
 # ai_api_key: ""
 # ai_base_url: ""
 # ai_api_protocol: "auto"

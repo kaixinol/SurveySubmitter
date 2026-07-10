@@ -70,8 +70,6 @@ class RunStopPolicy:
             else:
                 self.state.cur_fail += 1
                 consecutive_failures = int(self.state.cur_fail or 0)
-            if failure_reason == FailureReason.DEVICE_QUOTA_LIMIT:
-                self.state.device_quota_fail_count = max(0, int(self.state.device_quota_fail_count or 0)) + 1
             message = str(log_message or "").strip()
             if message:
                 logging.warning("%s", message)

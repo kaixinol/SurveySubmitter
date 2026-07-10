@@ -31,8 +31,6 @@ class RuntimeConfig:
     pause_on_aliyun_captcha: bool = True
     reliability_mode_enabled: bool = True
     psycho_target_alpha: float = 0.85
-    ai_mode: str = "free"
-    ai_provider: str = "deepseek"
     ai_api_key: str = ""
     ai_base_url: str = ""
     ai_api_protocol: str = "auto"
@@ -47,5 +45,4 @@ class RuntimeConfig:
     dimension_groups: List[str] = field(default_factory=list)
     question_entries: List[QuestionEntry] = field(default_factory=list)
     questions_info: Optional[List[SurveyQuestionMeta]] = field(default_factory=list)
-    _ai_config_present: bool = field(default=False, init=False, repr=False)
 

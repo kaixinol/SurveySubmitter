@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
-from types import SimpleNamespace
 
 import pytest
 
@@ -29,11 +28,6 @@ class _Response:
 
 
 class ProxyApiProviderTests:
-    def test_status_payload_formats_online_offline_and_unknown_states(self) -> None:
-        assert provider.format_status_payload({"online": True}) == ("在线：系统正常运行中", "#228B22")
-        assert provider.format_status_payload({"online": False, "message": "维护中"}) == ("离线：维护中", "#cc0000")
-        assert provider.format_status_payload([]) == ("未知：返回数据格式异常", "#666666")
-
     def test_parse_proxy_payload_deduplicates_nested_proxy_addresses(self) -> None:
         text = """
         {
@@ -188,53 +182,3 @@ class ProxyApiProviderTests:
         finally:
             proxy_source.set_proxy_source(original_source)
             proxy_source.set_proxy_api_override(original_override)
-
-    def test_official_batch_fetch_builds_leases_from_backend_payload(self, patch_attrs) -> None:
-        async def fake_extract_proxy(**_kwargs):
-            return {
-                "provider": "default",
-                "items": [
-                    {
-                        "host": "6.6.6.6",
-                        "port": 9000,
-                        "account": "u",
-                        "password": "p",
-                        "expire_at": "2099-01-01T00:00:00+00:00",
-                    },
-                    {
-                        "host": "7.7.7.7",
-                        "port": 9001,
-                        "expire_at": "2099-01-01T00:00:00+00:00",
-                    },
-                ],
-            }
-        patch_attrs(
-            (provider, "get_proxy_source", lambda: provider.PROXY_SOURCE_DEFAULT),
-            (provider, "is_custom_proxy_source", lambda _source: False),
-            (provider, "is_official_proxy_source", lambda _source: True),
-            (provider, "get_proxy_area_code", lambda: "110100"),
-            (provider, "get_proxy_occupy_minute", lambda: 3),
-            (provider, "get_proxy_upstream", lambda _source: provider.PROXY_UPSTREAM_DEFAULT),
-            (provider, "_resolve_default_pool_by_area", lambda _area: "quality"),
-            (provider, "_resolve_official_area_request_value", lambda _source, _area: "110100"),
-            (provider, "extract_proxy_async", fake_extract_proxy),
-        )
-
-        leases = asyncio.run(provider.fetch_proxy_batch_async(expected_count=2))
-
-        assert [lease.address for lease in leases] == [
-            "http://u:p@6.6.6.6:9000",
-            "http://7.7.7.7:9001",
-        ]
-
-    def test_area_quality_retry_payload_notifies_and_stops(self, patch_attrs) -> None:
-        stop_signal = threading.Event()
-        calls: list[tuple[str, str]] = []
-        patch_attrs((provider, "log_popup_error", lambda title, message: calls.append((title, message))))
-
-        provider._handle_area_quality_failure(stop_signal)
-
-        assert stop_signal.is_set()
-        assert calls == [("地区代理不可用", "当前地区IP质量差，建议切换其他地区")]
-        assert provider._is_area_quality_retry_payload({"code": "-1", "status": "200", "message": "请重试", "data": None})
-        assert not provider._is_area_quality_retry_payload(SimpleNamespace())

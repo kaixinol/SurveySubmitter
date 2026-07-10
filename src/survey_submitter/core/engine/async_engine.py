@@ -34,13 +34,11 @@ def _format_seconds_range(value: Any) -> str:
 
 
 def _format_proxy_source(source: Any) -> str:
-    normalized = str(source or "default").strip().lower()
+    normalized = str(source or "custom").strip().lower()
     labels = {
-        "default": "默认",
-        "benefit": "限时福利",
         "custom": "自定义",
     }
-    return labels.get(normalized, normalized or "默认")
+    return labels.get(normalized, normalized or "自定义")
 
 
 class AsyncRuntimeEngine:

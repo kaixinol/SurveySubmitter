@@ -7,42 +7,24 @@ from typing import Any, List, Optional, Set
 
 import survey_submitter.network.http as http_client
 from survey_submitter.core.task import ProxyLease
-from survey_submitter.network.proxy.session.auth import extract_proxy_async, format_random_ip_error
 from survey_submitter.constants import (
     DEFAULT_HTTP_HEADERS,
     PROXY_MAX_PROXIES,
-    PROXY_POOL_QUALITY,
     PROXY_SOURCE_CUSTOM,
-    PROXY_SOURCE_DEFAULT,
-    PROXY_STATUS_TIMEOUT_SECONDS,
-    STATUS_ENDPOINT,
 )
 from survey_submitter.logging.log_utils import (
     log_popup_error,
-    log_suppressed_exception,
 )
 
 
 from survey_submitter.network.proxy.policy.source import (
-    PROXY_SOURCE_BENEFIT,
-    PROXY_UPSTREAM_BENEFIT,
-    PROXY_UPSTREAM_DEFAULT,
-    _normalize_area_code,
-    _resolve_default_pool_by_area,
     get_effective_proxy_api_url,
-    get_proxy_area_code,
     get_proxy_occupy_minute,
-    get_proxy_source,
-    get_proxy_upstream,
     has_custom_proxy_api_override,
-    is_custom_proxy_source,
-    is_official_proxy_source,
 )
 
 
 from survey_submitter.network.proxy.pool.pool import (
-    _build_default_proxy_lease,
-    _build_default_proxy_leases_from_batch,
     _build_proxy_lease,
     _mask_proxy_for_log,
 )
@@ -65,41 +47,8 @@ _FATAL_PATTERNS = [
 ]
 
 
-class AreaProxyQualityError(RuntimeError):
-    pass
-
-
 class ProxyApiFatalError(RuntimeError):
     pass
-
-
-
-
-def get_status() -> Any:
-    response = http_client.get(
-        STATUS_ENDPOINT,
-        timeout=PROXY_STATUS_TIMEOUT_SECONDS,
-        headers=DEFAULT_HTTP_HEADERS,
-    )
-    response.raise_for_status()
-    return response.json()
-
-
-def _format_status_payload(payload: Any) -> tuple[str, str]:
-    if not isinstance(payload, dict):
-        return "未知：返回数据格式异常", "#666666"
-    online = payload.get("online", None)
-    message = str(payload.get("message") or "").strip()
-    if not message:
-        message = "系统正常运行中" if online is True else ("系统当前不在线" if online is False else "状态未知")
-    color = "#228B22" if online is True else ("#cc0000" if online is False else "#666666")
-    prefix = "在线" if online is True else ("离线" if online is False else "未知")
-    return f"{prefix}：{message}", color
-
-
-def format_status_payload(payload: Any) -> tuple[str, str]:
-    
-    return _format_status_payload(payload)
 
 
 
@@ -110,21 +59,6 @@ def _normalize_expected_proxy_count(expected_count: Any) -> int:
     except Exception:
         parsed = 1
     return max(1, min(PROXY_MAX_PROXIES, parsed))
-
-
-def _normalize_final_upstream(value: Any) -> str:
-    upstream = str(value or "").strip().lower()
-    if upstream in {PROXY_UPSTREAM_DEFAULT, PROXY_UPSTREAM_BENEFIT}:
-        return upstream
-    return ""
-
-
-def _resolve_final_source(final_upstream: str, fallback_source: str) -> str:
-    if final_upstream == PROXY_UPSTREAM_BENEFIT:
-        return PROXY_SOURCE_BENEFIT
-    if final_upstream == PROXY_UPSTREAM_DEFAULT:
-        return PROXY_SOURCE_DEFAULT
-    return fallback_source
 
 
 def _extract_proxy_from_string(s: str) -> Optional[str]:
@@ -197,31 +131,6 @@ def _parse_proxy_payload(text: str) -> List[str]:
     return unique
 
 
-
-
-def _is_area_quality_retry_payload(payload: Any) -> bool:
-    if not isinstance(payload, dict):
-        return False
-    return (
-        str(payload.get("code")) == "-1"
-        and str(payload.get("status")) == "200"
-        and str(payload.get("message") or "").strip() == "请重试"
-        and payload.get("data") is None
-    )
-
-
-def _handle_area_quality_failure(stop_signal: Optional[threading.Event] = None) -> None:
-    log_popup_error("地区代理不可用", "当前地区IP质量差，建议切换其他地区")
-    if stop_signal:
-        try:
-            if not stop_signal.is_set():
-                stop_signal.set()
-        except Exception as exc:
-            log_suppressed_exception("random_ip._handle_area_quality_failure set stop_signal", exc)
-
-
-def _is_default_batch_extract_payload(payload: Any) -> bool:
-    return isinstance(payload, dict) and isinstance(payload.get("items"), list)
 
 
 def _extract_custom_api_error(data: Any) -> Optional[str]:
@@ -324,133 +233,50 @@ def test_custom_proxy_api(url: str) -> tuple[bool, str, List[str]]:
 
 
 
-def _resolve_official_area_request_value(source: str, area_code: Optional[str]) -> str:
-    normalized_area = _normalize_area_code(area_code)
-    if not normalized_area:
-        return ""
-    try:
-        from survey_submitter.network.proxy.areas import resolve_proxy_area_for_source
-    except Exception:
-        return normalized_area
-    try:
-        resolved = resolve_proxy_area_for_source(source, normalized_area)
-    except Exception as exc:
-        log_suppressed_exception("random_ip._resolve_official_area_request_value", exc)
-        return normalized_area
-    return str(resolved or "").strip()
-
-
 async def fetch_proxy_batch_async(
     expected_count: int = 1,
     *,
     proxy_url: Optional[str] = None,
-    notify_on_area_error: bool = True,
     stop_signal: Optional[threading.Event] = None,
 ) -> List[ProxyLease]:
     expected_count = _normalize_expected_proxy_count(expected_count)
-    current_source = get_proxy_source()
-    is_custom = is_custom_proxy_source(current_source)
-    is_official = is_official_proxy_source(current_source)
 
-    if is_custom:
-        if not has_custom_proxy_api_override():
-            raise RuntimeError("自定义代理API地址未配置，请在设置中填写API地址")
-        proxy_url = get_effective_proxy_api_url()
-        logging.info(f"使用自定义代理API: {proxy_url}")
-
-    area_code = get_proxy_area_code()
-    has_area = bool(_normalize_area_code(area_code))
-    if is_official and not is_custom:
-        minute = int(get_proxy_occupy_minute() or 1)
-        upstream = get_proxy_upstream(current_source)
-        if upstream != "default":
-            minute = 1
-        pool = _resolve_default_pool_by_area(area_code) or PROXY_POOL_QUALITY
-        area_value = _resolve_official_area_request_value(current_source, area_code)
-        fetched: List[ProxyLease] = []
-        errors: List[str] = []
-        remaining = expected_count
-        while remaining > 0:
-            try:
-                payload = await extract_proxy_async(
-                    minute=minute,
-                    pool=pool,
-                    area=area_value,
-                    num=remaining,
-                    upstream=upstream,
-                )
-                final_upstream = _normalize_final_upstream(payload.get("provider"))
-                final_source = _resolve_final_source(final_upstream, current_source)
-                if _is_default_batch_extract_payload(payload):
-                    batch_items = _build_default_proxy_leases_from_batch(payload, source=final_source)
-                    fetched.extend(batch_items)
-                    logging.info(
-                        "随机IP提取成功：请求上游=%s，最终成功上游=%s，返回数量=%s",
-                        upstream,
-                        final_upstream or "unknown",
-                        len(batch_items),
-                    )
-                    break
-                lease = _build_default_proxy_lease(payload, source=final_source)
-                if lease is not None:
-                    fetched.append(lease)
-                    logging.info(
-                        "随机IP提取成功：请求上游=%s，最终成功上游=%s",
-                        upstream,
-                        final_upstream or "unknown",
-                    )
-                    logging.info("获取到代理: %s", _mask_proxy_for_log(lease.address))
-                    remaining = max(0, expected_count - len(fetched))
-                    if remaining <= 0:
-                        break
-                    continue
-            except Exception as exc:
-                message = format_random_ip_error(exc)
-                errors.append(message)
-                break
-        if not fetched:
-            raise RuntimeError(f"获取随机IP失败: {'; '.join(errors) if errors else '无可用接口'}")
-        return fetched[:expected_count]
+    if not has_custom_proxy_api_override():
+        raise RuntimeError("自定义代理API地址未配置，请在设置中填写API地址")
+    url = proxy_url or get_effective_proxy_api_url()
+    if not url:
+        raise RuntimeError("自定义代理API地址未配置，请在设置中填写API地址")
+    logging.info(f"使用自定义代理API: {url}")
 
     candidates: List[str] = []
     errors: List[str] = []
-    for url in _proxy_api_candidates(proxy_url):
+    for candidate_url in _proxy_api_candidates(url):
         try:
             resp = await http_client.aget(
-                url,
+                candidate_url,
                 timeout=10,
                 headers=DEFAULT_HTTP_HEADERS,
             )
             resp.raise_for_status()
 
-            if is_custom:
-                try:
-                    payload = json.loads(resp.text)
-                    error = _extract_custom_api_error(payload)
-                    if error:
-                        log_popup_error("代理API错误", error)
-                        if stop_signal and not stop_signal.is_set():
-                            stop_signal.set()
-                        raise ProxyApiFatalError(error)
-                except (json.JSONDecodeError, ProxyApiFatalError):
-                    raise
-                except Exception:
-                    pass
+            try:
+                payload = json.loads(resp.text)
+                error = _extract_custom_api_error(payload)
+                if error:
+                    log_popup_error("代理API错误", error)
+                    if stop_signal and not stop_signal.is_set():
+                        stop_signal.set()
+                    raise ProxyApiFatalError(error)
+            except (json.JSONDecodeError, ProxyApiFatalError):
+                raise
+            except Exception:
+                pass
 
-            if current_source == PROXY_SOURCE_DEFAULT and has_area:
-                try:
-                    payload = json.loads(resp.text)
-                except Exception:
-                    payload = None
-                if _is_area_quality_retry_payload(payload):
-                    if notify_on_area_error:
-                        _handle_area_quality_failure(stop_signal)
-                    raise AreaProxyQualityError("当前地区IP质量差，建议切换其他地区")
             parsed = _parse_proxy_payload(resp.text)
             candidates.extend(parsed)
             if candidates:
                 break
-        except (ProxyApiFatalError, AreaProxyQualityError):
+        except ProxyApiFatalError:
             raise
         except Exception as exc:
             errors.append(str(exc))
@@ -460,7 +286,7 @@ async def fetch_proxy_batch_async(
     seen: Set[str] = set()
     normalized: List[ProxyLease] = []
     for item in candidates:
-        lease = _build_proxy_lease(item, source=current_source or PROXY_SOURCE_CUSTOM)
+        lease = _build_proxy_lease(item, source=PROXY_SOURCE_CUSTOM)
         if lease is None:
             continue
         addr = lease.address
@@ -472,18 +298,13 @@ async def fetch_proxy_batch_async(
             break
     if not normalized:
         raise RuntimeError("随机IP接口返回为空")
-    if is_custom:
-        _warn_custom_api_returned_large_batch(len(normalized), expected_count)
-        return normalized
-    return normalized[:expected_count]
+    _warn_custom_api_returned_large_batch(len(normalized), expected_count)
+    return normalized
 
 
 __all__ = [
-    "AreaProxyQualityError",
     "ProxyApiFatalError",
     "fetch_proxy_batch_async",
-    "format_status_payload",
-    "get_status",
     "test_custom_proxy_api",
 ]
 

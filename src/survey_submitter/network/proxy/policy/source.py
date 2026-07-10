@@ -3,37 +3,22 @@ import threading
 from dataclasses import dataclass
 from typing import Any, Optional, Set, Tuple
 
-from survey_submitter.network.proxy.session.auth import (
-    get_quota_snapshot,
-    get_session_snapshot,
-    has_authenticated_session,
-    has_unknown_local_quota,
-    is_quota_exhausted,
-)
-
 from survey_submitter.constants import (
-    IP_EXTRACT_ENDPOINT,
     PROXY_MINUTE_OPTIONS,
     PROXY_POOL_QUALITY,
     PROXY_SOURCE_CUSTOM,
-    PROXY_QUOTA_COST_MAP,
-    PROXY_SOURCE_DEFAULT,
     PROXY_TTL_GRACE_SECONDS,
 )
 from survey_submitter.providers.common import (
     SURVEY_PROVIDER_WJX,
 )
 
-PROXY_SOURCE_BENEFIT = "benefit"
-PROXY_UPSTREAM_DEFAULT = "default"
-PROXY_UPSTREAM_BENEFIT = "idiot"
-_SUPPORTED_PROXY_SOURCES = frozenset({PROXY_SOURCE_DEFAULT, PROXY_SOURCE_BENEFIT, PROXY_SOURCE_CUSTOM})
-_OFFICIAL_PROXY_SOURCES = frozenset({PROXY_SOURCE_DEFAULT, PROXY_SOURCE_BENEFIT})
+_SUPPORTED_PROXY_SOURCES = frozenset({PROXY_SOURCE_CUSTOM})
 
 _config_lock = threading.Lock()
 _proxy_api_url_override: Optional[str] = None
 _proxy_area_code_override: Optional[str] = None
-_current_proxy_source: str = PROXY_SOURCE_DEFAULT
+_current_proxy_source: str = PROXY_SOURCE_CUSTOM
 _proxy_occupy_minute: int = 1
 
 _ORDINARY_POOL_PROVINCE_CODES: Set[str] = {
@@ -64,7 +49,7 @@ def normalize_proxy_source(source: Optional[str]) -> str:
         cleaned = ""
     if cleaned in _SUPPORTED_PROXY_SOURCES:
         return cleaned
-    return PROXY_SOURCE_DEFAULT
+    return PROXY_SOURCE_CUSTOM
 
 
 def set_proxy_source(source: str) -> None:
@@ -85,24 +70,8 @@ def is_custom_proxy_source(source: Optional[str] = None) -> bool:
     return current == PROXY_SOURCE_CUSTOM
 
 
-def is_official_proxy_source(source: Optional[str] = None) -> bool:
-    current = get_proxy_source() if source is None else normalize_proxy_source(source)
-    return current in _OFFICIAL_PROXY_SOURCES
-
-
-def source_supports_quota_session(source: Optional[str] = None) -> bool:
-    return is_official_proxy_source(source)
-
-
 def source_uses_custom_api_override(source: Optional[str] = None) -> bool:
     return is_custom_proxy_source(source)
-
-
-def get_proxy_upstream(source: Optional[str] = None) -> str:
-    current = get_proxy_source() if source is None else normalize_proxy_source(source)
-    if current == PROXY_SOURCE_BENEFIT:
-        return PROXY_UPSTREAM_BENEFIT
-    return PROXY_UPSTREAM_DEFAULT
 
 
 
@@ -139,41 +108,6 @@ def get_proxy_minute_by_answer_seconds(
     if minute not in PROXY_MINUTE_OPTIONS:
         return 1
     return minute
-
-
-def get_quota_cost_by_minute(minute: int) -> int:
-    safe_minute = int(minute) if int(minute) in PROXY_MINUTE_OPTIONS else 1
-    return int(PROXY_QUOTA_COST_MAP.get(safe_minute, 1))
-
-
-def get_random_ip_limit() -> float:
-    snapshot = get_session_snapshot()
-    total_quota = float(snapshot.get("total_quota") or 0.0)
-    return max(0.0, total_quota)
-
-
-def get_random_ip_counter_snapshot_local() -> tuple[float, float, bool]:
-    if is_custom_proxy_source():
-        return 0, 0, True
-
-    if has_authenticated_session():
-        snapshot = get_quota_snapshot()
-        return float(snapshot["used_quota"]), float(snapshot["total_quota"]), False
-
-    return 0.0, 0.0, False
-
-
-def normalize_random_ip_enabled_value(desired_enabled: bool) -> bool:
-    if not desired_enabled:
-        return False
-    if is_custom_proxy_source():
-        return True
-    if not has_authenticated_session():
-        return False
-    snapshot = get_session_snapshot()
-    if has_unknown_local_quota(snapshot):
-        return True
-    return not is_quota_exhausted(snapshot)
 
 
 def set_proxy_occupy_minute_by_answer_duration(
@@ -262,11 +196,7 @@ def get_default_proxy_area_code() -> str:
 
 def get_effective_proxy_api_url() -> str:
     with _config_lock:
-        override = (_proxy_api_url_override or "").strip()
-        source = normalize_proxy_source(_current_proxy_source)
-    if source_uses_custom_api_override(source):
-        return override
-    return IP_EXTRACT_ENDPOINT
+        return (_proxy_api_url_override or "").strip()
 
 
 def get_custom_proxy_api_override() -> str:

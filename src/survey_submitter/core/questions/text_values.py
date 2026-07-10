@@ -34,7 +34,6 @@ async def resolve_option_fill_text_from_config(
     question_number: int = 0,
     option_text: Optional[str] = None,
     ctx: Optional[ExecutionState] = None,
-    thread_name: str = "",
     allow_ai_placeholder: bool = False,
     ai_placeholder_text: str = DEFAULT_FILL_TEXT,
 ) -> Optional[str]:
@@ -46,10 +45,6 @@ async def resolve_option_fill_text_from_config(
         return None
     if text != OPTION_FILL_AI_TOKEN:
         return resolve_dynamic_text_token(text)
-    if ctx is not None:
-        cached = ctx.get_free_ai_option_fill_prefill_answer(thread_name, question_number, option_index)
-        if cached:
-            return cached
     if allow_ai_placeholder:
         return str(ai_placeholder_text or "").strip() or DEFAULT_FILL_TEXT
 

@@ -43,3 +43,4 @@ __pycache__/
 /CI/worker/node_modules/
 /CI/worker/.wrangler/
 /CI/worker/tsconfig.tsbuildinfo
+*.egg-info/

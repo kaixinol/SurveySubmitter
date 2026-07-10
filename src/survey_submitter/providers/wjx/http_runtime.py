@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 
 import survey_submitter.network.http as http_client
 from survey_submitter.constants import DEFAULT_HTTP_HEADERS, DEFAULT_USER_AGENT, USER_AGENT_PRESETS
-from survey_submitter.core.ai.batch_runtime import assert_no_free_ai_placeholders_in_actions, prefill_free_ai_answers_for_questions
+from survey_submitter.core.ai.batch_runtime import assert_no_ai_placeholders_in_actions, prefill_ai_answers_for_questions
 from survey_submitter.core.config.codec import UserAgentProfile
 from survey_submitter.core.modes.duration_control import sample_answer_duration_seconds
 from survey_submitter.core.persona.context import record_answer
@@ -420,7 +420,7 @@ async def _build_action_plan(
         build_action=_build_action,
     )
     actions = list(plan.actions)
-    await prefill_free_ai_answers_for_questions(
+    await prefill_ai_answers_for_questions(
         questions,
         actions,
         ctx,
@@ -483,7 +483,7 @@ async def brush_wjx_http(
         actions = list(plan.actions)
         if not actions:
             return False
-        assert_no_free_ai_placeholders_in_actions(actions, provider_label="问卷星")
+        assert_no_ai_placeholders_in_actions(actions, provider_label="问卷星")
         for action in actions:
             _record_action(ctx, action)
         submitdata = _submitdata_from_actions(
@@ -565,7 +565,7 @@ async def brush_wjx_http(
         mark_submit_proxy_success(ctx, submit_proxy_address)
         return True
     finally:
-        ctx.clear_free_ai_prefill_answers(thread_name)
+        pass
 
 
 __all__ = [
