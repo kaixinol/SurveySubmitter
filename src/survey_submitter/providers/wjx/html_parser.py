@@ -16,6 +16,7 @@ except ImportError:
 from .html_parser_choice import (
     _extract_choice_attached_selects,
     _extract_force_select_option,
+    _extract_location_verify_type,
     _extract_rating_option_texts,
     _soup_question_is_location,
     _text_looks_meaningful,
@@ -243,6 +244,7 @@ def parse_survey_questions_from_html(html: str) -> List[Dict[str, Any]]:
             elif type_code == TypeCode.LOCATION and not is_location:
                 if question_div.find("textarea"):
                     type_code = TypeCode.TEXT
+            location_verify_type = _extract_location_verify_type(question_div) if is_location else ""
             display_num = _extract_display_question_number(raw_heading_text)
             if display_num is None:
                 display_num = current_display_num
@@ -335,6 +337,7 @@ def parse_survey_questions_from_html(html: str) -> List[Dict[str, Any]]:
                 "attached_option_selects": attached_option_selects,
                 "has_attached_option_select": bool(attached_option_selects),
                 "is_location": is_location,
+                "location_verify_type": location_verify_type,
                 "is_rating": is_rating,
                 "is_description": is_description,
                 "rating_max": rating_max,

@@ -213,6 +213,7 @@ class TextQuestionMeta(_QuestionMetaBase):
     text_inputs: int = 0
     text_input_labels: list[str] | None = None
     is_location: bool = False
+    location_verify_type: str = ""
 
 
 class SliderQuestionMeta(_QuestionMetaBase):
@@ -348,6 +349,7 @@ def _build_text_kwargs(normalized: dict[str, Any], type_code: TypeCode = TypeCod
         "text_inputs": text_inputs,
         "text_input_labels": text_input_labels,
         "is_location": bool(normalized.get("is_location")) or type_code == TypeCode.LOCATION,
+        "location_verify_type": str(normalized.get("location_verify_type") or "").strip(),
     }
 
 
