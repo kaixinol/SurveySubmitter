@@ -1,6 +1,6 @@
 from __future__ import annotations
 from unittest.mock import patch
-import software.app.runtime_paths as runtime_paths
+import survey_submitter.app.runtime_paths as runtime_paths
 
 class RuntimePathsTests:
 

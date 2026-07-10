@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from software.core.engine.async_events import AsyncRunContext, ThreadEventProxy
-from software.core.engine.async_status_bus import AsyncStatusBus
+from survey_submitter.core.engine.async_events import AsyncRunContext, ThreadEventProxy
+from survey_submitter.core.engine.async_status_bus import AsyncStatusBus
 
 
 class AsyncStatusBusTests:

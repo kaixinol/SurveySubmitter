@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from software.network.proxy.areas import service
+from survey_submitter.network.proxy.areas import service
 
 
 def _reset_area_caches() -> None:

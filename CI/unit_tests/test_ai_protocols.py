@@ -4,9 +4,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from software.integrations.ai.client import AI_MODE_PROVIDER, FREE_QUESTION_TYPE_FILL, save_ai_settings
-import software.integrations.ai.protocols as protocols
-from software.integrations.ai.protocols import _extract_chat_completion_text, _extract_responses_text, _resolve_custom_endpoint
+from survey_submitter.integrations.ai.client import AI_MODE_PROVIDER, FREE_QUESTION_TYPE_FILL, save_ai_settings
+import survey_submitter.integrations.ai.protocols as protocols
+from survey_submitter.integrations.ai.protocols import _extract_chat_completion_text, _extract_responses_text, _resolve_custom_endpoint
 
 class AIProtocolTests:
 
@@ -124,7 +124,7 @@ class AIProtocolTests:
             await protocols.acall_chat_completions("https://api/chat", "k", "m", "问题", "系统")
 
     def test_generate_answer_tries_chat_then_falls_back_to_responses_in_auto_mode(self) -> None:
-        import software.integrations.ai.client as client_module
+        import survey_submitter.integrations.ai.client as client_module
         original_chat = client_module.acall_chat_completions
         original_responses = client_module.acall_responses_api
         save_ai_settings(api_protocol='auto')

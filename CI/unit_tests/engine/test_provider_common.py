@@ -1,9 +1,9 @@
 from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import patch
-from software.core.engine.provider_common import _build_grouped_runtime_items, build_psychometric_plan_for_run, ensure_joint_psychometric_answer_plan, provider_run_context
-from software.core.questions.config import GLOBAL_RELIABILITY_DIMENSION
-from software.core.task import ExecutionConfig
+from survey_submitter.core.engine.provider_common import _build_grouped_runtime_items, build_psychometric_plan_for_run, ensure_joint_psychometric_answer_plan, provider_run_context
+from survey_submitter.core.questions.config import GLOBAL_RELIABILITY_DIMENSION
+from survey_submitter.core.task import ExecutionConfig
 
 class _FakeBlueprintItem:
 

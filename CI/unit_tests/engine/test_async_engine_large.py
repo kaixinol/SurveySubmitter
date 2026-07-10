@@ -6,9 +6,9 @@ from types import SimpleNamespace
 
 import pytest
 
-import software.core.engine.async_engine as async_engine
-from software.core.engine.async_engine import AsyncEngineClient, AsyncRuntimeEngine
-from software.core.task import ExecutionConfig, ExecutionState, ProxyLease
+import survey_submitter.core.engine.async_engine as async_engine
+from survey_submitter.core.engine.async_engine import AsyncEngineClient, AsyncRuntimeEngine
+from survey_submitter.core.task import ExecutionConfig, ExecutionState, ProxyLease
 
 
 class _FakeLoop:

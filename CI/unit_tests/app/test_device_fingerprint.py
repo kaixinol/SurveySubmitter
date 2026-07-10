@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import software.system.device_fingerprint as device_fingerprint
+import survey_submitter.system.device_fingerprint as device_fingerprint
 
 
 class _Secret:

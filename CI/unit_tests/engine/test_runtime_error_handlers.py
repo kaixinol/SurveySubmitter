@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import threading
 
-from software.core.ai.runtime import AIRuntimeError
-from software.core.engine import runtime_error_handlers
-from software.core.engine.failure_reason import FailureReason
-from software.core.engine.run_stop_policy import RunStopPolicy
-from software.core.task import ExecutionConfig, ExecutionState
-from software.providers.errors import SubmissionVerificationRequiredError
+from survey_submitter.core.ai.runtime import AIRuntimeError
+from survey_submitter.core.engine import runtime_error_handlers
+from survey_submitter.core.engine.failure_reason import FailureReason
+from survey_submitter.core.engine.run_stop_policy import RunStopPolicy
+from survey_submitter.core.task import ExecutionConfig, ExecutionState
+from survey_submitter.providers.errors import SubmissionVerificationRequiredError
 
 
 class RuntimeErrorHandlerTests:

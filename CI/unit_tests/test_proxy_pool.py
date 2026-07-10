@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import time
 
-from software.core.task import ProxyLease
-from software.network.proxy.pool import pool
-from software.providers.common import SURVEY_PROVIDER_WJX
+from survey_submitter.core.task import ProxyLease
+from survey_submitter.network.proxy.pool import pool
+from survey_submitter.providers.common import SURVEY_PROVIDER_WJX
 
 
 class _Response:

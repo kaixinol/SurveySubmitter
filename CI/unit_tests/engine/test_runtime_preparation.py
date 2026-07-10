@@ -1,10 +1,10 @@
 from __future__ import annotations
 import pytest
 from unittest.mock import patch
-from software.core.questions.config import QuestionEntry
-from software.core.config.schema import RuntimeConfig
-from software.core.reverse_fill.schema import ReverseFillSpec
-from software.core.engine.execution_builder import PreparedExecutionArtifacts, RuntimePreparationError, prepare_execution_artifacts
+from survey_submitter.core.questions.config import QuestionEntry
+from survey_submitter.core.config.schema import RuntimeConfig
+from survey_submitter.core.reverse_fill.schema import ReverseFillSpec
+from survey_submitter.core.engine.execution_builder import PreparedExecutionArtifacts, RuntimePreparationError, prepare_execution_artifacts
 
 class _FakeHttpResponse:
 

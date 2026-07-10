@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from software.core.task import ExecutionState
-from software.integrations.ai import free_api
+from survey_submitter.core.task import ExecutionState
+from survey_submitter.integrations.ai import free_api
 
 
 class _FakeResponse:

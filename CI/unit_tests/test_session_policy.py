@@ -3,8 +3,8 @@ import asyncio
 from collections import deque
 import time
 from unittest.mock import patch
-from software.core.task import ExecutionConfig, ExecutionState, ProxyLease
-from software.network import session_policy
+from survey_submitter.core.task import ExecutionConfig, ExecutionState, ProxyLease
+from survey_submitter.network import session_policy
 
 class SessionPolicyTests:
 

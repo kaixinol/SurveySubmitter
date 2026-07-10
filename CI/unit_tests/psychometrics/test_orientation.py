@@ -1,7 +1,7 @@
 from __future__ import annotations
 import math
 from types import SimpleNamespace
-from software.core.psychometrics.orientation import infer_dimension_orientation, infer_item_orientation, normalize_probability_list
+from survey_submitter.core.psychometrics.orientation import infer_dimension_orientation, infer_item_orientation, normalize_probability_list
 
 class OrientationTests:
 

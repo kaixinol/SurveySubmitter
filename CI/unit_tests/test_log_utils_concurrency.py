@@ -5,7 +5,7 @@ import threading
 import time
 import tempfile
 from unittest.mock import patch
-from software.logging.log_utils import AsyncFileHandler, LogBufferHandler, setup_logging
+from survey_submitter.logging.log_utils import AsyncFileHandler, LogBufferHandler, setup_logging
 
 class LogBufferHandlerConcurrencyTests:
 

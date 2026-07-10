@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from software.core.engine.async_engine import AsyncEngineClient
+from survey_submitter.core.engine.async_engine import AsyncEngineClient
 
 
 def test_submit_ui_task_runs_on_background_loop() -> None:

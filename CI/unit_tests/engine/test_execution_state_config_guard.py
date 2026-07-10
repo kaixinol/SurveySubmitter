@@ -1,6 +1,6 @@
 from __future__ import annotations
 import pytest
-from software.core.task import ExecutionConfig, ExecutionState
+from survey_submitter.core.task import ExecutionConfig, ExecutionState
 
 class ExecutionStateConfigGuardTests:
 

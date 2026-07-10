@@ -1,5 +1,5 @@
 from __future__ import annotations
-from software.providers.common import SURVEY_PROVIDER_WJX, detect_survey_provider, ensure_question_provider_fields, ensure_questions_provider_fields, is_supported_survey_url, is_wjx_domain, is_wjx_survey_url, normalize_survey_provider
+from survey_submitter.providers.common import SURVEY_PROVIDER_WJX, detect_survey_provider, ensure_question_provider_fields, ensure_questions_provider_fields, is_supported_survey_url, is_wjx_domain, is_wjx_survey_url, normalize_survey_provider
 
 class ProviderCommonTests:
 

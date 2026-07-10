@@ -4,11 +4,11 @@ from contextlib import contextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from software.core.task import ExecutionConfig, ExecutionState
-from software.providers import registry
-from software.providers.common import SURVEY_PROVIDER_WJX
-from software.providers.contracts import SurveyDefinition
-from software.providers.hooks import build_fill_http_hook, build_parse_hook
+from survey_submitter.core.task import ExecutionConfig, ExecutionState
+from survey_submitter.providers import registry
+from survey_submitter.providers.common import SURVEY_PROVIDER_WJX
+from survey_submitter.providers.contracts import SurveyDefinition
+from survey_submitter.providers.hooks import build_fill_http_hook, build_parse_hook
 
 
 async def test_parse_survey_routes_detected_provider_directly() -> None:

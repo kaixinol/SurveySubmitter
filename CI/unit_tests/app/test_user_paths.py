@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import software.app.user_paths as user_paths
+import survey_submitter.app.user_paths as user_paths
 
 
 class _FakeSettings:

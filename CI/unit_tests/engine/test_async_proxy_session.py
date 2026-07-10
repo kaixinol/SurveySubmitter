@@ -4,9 +4,9 @@ import asyncio
 import threading
 from types import SimpleNamespace
 
-import software.core.engine.async_proxy_session as proxy_session_module
-from software.core.engine.async_proxy_session import AsyncProxySession
-from software.core.task import ExecutionConfig, ExecutionState
+import survey_submitter.core.engine.async_proxy_session as proxy_session_module
+from survey_submitter.core.engine.async_proxy_session import AsyncProxySession
+from survey_submitter.core.task import ExecutionConfig, ExecutionState
 
 
 class AsyncProxySessionTests:

@@ -2,8 +2,8 @@ from __future__ import annotations
 from collections import Counter
 import pytest
 
-from software.app.config import DEFAULT_USER_AGENT, USER_AGENT_PRESETS
-from software.core.config.codec import (
+from survey_submitter.constants import DEFAULT_USER_AGENT, USER_AGENT_PRESETS
+from survey_submitter.core.config.codec import (
     CURRENT_CONFIG_SCHEMA_VERSION,
     UserAgentProfile,
     _ensure_supported_config_payload,
@@ -15,10 +15,10 @@ from software.core.config.codec import (
     serialize_question_entry,
     serialize_runtime_config,
 )
-from software.core.config.schema import RuntimeConfig
-from software.core.questions.schema import QuestionEntry
-from software.core.reverse_fill.schema import REVERSE_FILL_FORMAT_WJX_SEQUENCE
-from software.providers.contracts import SurveyQuestionMeta
+from survey_submitter.core.config.schema import RuntimeConfig
+from survey_submitter.core.questions.schema import QuestionEntry
+from survey_submitter.core.reverse_fill.schema import REVERSE_FILL_FORMAT_WJX_SEQUENCE
+from survey_submitter.providers.contracts import SurveyQuestionMeta
 
 class ConfigCodecTests:
 

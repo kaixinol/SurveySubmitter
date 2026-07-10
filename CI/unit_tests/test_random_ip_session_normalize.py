@@ -1,7 +1,7 @@
 from __future__ import annotations
 import pytest
-from software.network.proxy.session.models import RandomIPAuthError, RandomIPSession
-from software.network.proxy.session.normalize import _build_quota_snapshot, _normalize_quota_state, _require_valid_user_id, _resolve_quota_from_payload, format_quota_value
+from survey_submitter.network.proxy.session.models import RandomIPAuthError, RandomIPSession
+from survey_submitter.network.proxy.session.normalize import _build_quota_snapshot, _normalize_quota_state, _require_valid_user_id, _resolve_quota_from_payload, format_quota_value
 
 class RandomIPSessionNormalizeTests:
 

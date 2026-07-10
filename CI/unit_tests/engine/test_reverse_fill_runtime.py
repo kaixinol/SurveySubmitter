@@ -1,7 +1,7 @@
 from __future__ import annotations
-from software.core.reverse_fill.runtime import resolve_current_reverse_fill_answer
-from software.core.reverse_fill.schema import REVERSE_FILL_KIND_CHOICE, ReverseFillAnswer, ReverseFillSampleRow, ReverseFillSpec
-from software.core.task import ExecutionConfig, ExecutionState
+from survey_submitter.core.reverse_fill.runtime import resolve_current_reverse_fill_answer
+from survey_submitter.core.reverse_fill.schema import REVERSE_FILL_KIND_CHOICE, ReverseFillAnswer, ReverseFillSampleRow, ReverseFillSpec
+from survey_submitter.core.task import ExecutionConfig, ExecutionState
 
 class ReverseFillRuntimeStateTests:
 

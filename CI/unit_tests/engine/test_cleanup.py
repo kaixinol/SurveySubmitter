@@ -1,6 +1,6 @@
 from __future__ import annotations
 from unittest.mock import patch
-from software.core.engine.cleanup import CleanupRunner
+from survey_submitter.core.engine.cleanup import CleanupRunner
 
 class _FakeThread:
 

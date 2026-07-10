@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from software.network.proxy.session import client
-from software.network.proxy.session.models import RandomIPAuthError, RandomIPSession
+from survey_submitter.network.proxy.session import client
+from survey_submitter.network.proxy.session.models import RandomIPAuthError, RandomIPSession
 
 
 class _Response:

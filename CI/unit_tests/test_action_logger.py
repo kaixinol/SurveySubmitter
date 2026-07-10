@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from unittest.mock import patch
 
-from software.logging.action_logger import log_action
+from survey_submitter.logging.action_logger import log_action
 
 
 def test_log_action_suppresses_low_value_info_clicks() -> None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from bs4 import BeautifulSoup
 
-from wjx.provider import html_parser_matrix
+from survey_submitter.providers.wjx import html_parser_matrix
 
 
 class WjxHtmlParserMatrixTests:

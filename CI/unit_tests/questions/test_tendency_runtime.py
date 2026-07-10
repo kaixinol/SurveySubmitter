@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from software.core.questions import tendency
+from survey_submitter.core.questions import tendency
 
 
 class _Plan:
@@ -41,7 +41,7 @@ class TendencyRuntimeTests:
                 lambda *_args, **_kwargs: None,
             ),
         )
-        import software.core.persona.generator as generator
+        import survey_submitter.core.persona.generator as generator
 
         patch_attrs((generator, "get_current_persona", lambda: SimpleNamespace(satisfaction_tendency=0.8)))
 

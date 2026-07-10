@@ -1,7 +1,7 @@
 from __future__ import annotations
 from unittest.mock import patch
-from software.core.psychometrics.joint_optimizer import build_joint_psychometric_answer_plan, build_psychometric_blueprint
-from software.core.task import ExecutionConfig
+from survey_submitter.core.psychometrics.joint_optimizer import build_joint_psychometric_answer_plan, build_psychometric_blueprint
+from survey_submitter.core.task import ExecutionConfig
 
 class JointOptimizerTests:
 
