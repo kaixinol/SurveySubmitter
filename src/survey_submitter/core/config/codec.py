@@ -159,6 +159,28 @@ def _coerce_int(value: Any, default: int = 0) -> int:
         return default
 
 
+def _as_str(value: Any, default: str = "") -> str:
+    text = str(value or default).strip()
+    return text or default
+
+
+def _as_bool(value: Any, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in {"1", "true", "yes", "on"}:
+            return True
+        if text in {"0", "false", "no", "off", ""}:
+            return False
+        return default
+    return bool(value)
+
+
 def _normalize_user_agent_ratios(raw_ratios: Any) -> dict[str, int]:
     if not isinstance(raw_ratios, dict):
         return dict(_DEFAULT_RANDOM_UA_RATIOS)
@@ -463,86 +485,53 @@ def build_runtime_config_snapshot(
 
 
 def normalize_runtime_config_payload(raw: dict[str, Any]) -> RuntimeConfig:
-    
-
-    def _as_int(value: Any, default: int = 0) -> int:
-        try:
-            return int(value)
-        except (ValueError, TypeError):
-            return default
-
-    def _as_float(value: Any, default: float = 0.0) -> float:
-        try:
-            return float(value)
-        except (ValueError, TypeError):
-            return default
-
-    def _as_bool(value: Any, default: bool = False) -> bool:
-        if value is None:
-            return default
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, (int, float)):
-            return bool(value)
-        if isinstance(value, str):
-            text = value.strip().lower()
-            if text in {"1", "true", "yes", "on"}:
-                return True
-            if text in {"0", "false", "no", "off", ""}:
-                return False
-            return default
-        return bool(value)
-
-    def _tuple_pair(value: Any) -> tuple[int, int]:
-        try:
-            if isinstance(value, (list, tuple)) and len(value) >= 2:
-                return int(value[0]), int(value[1])
-        except (ValueError, TypeError) as exc:
-            log_suppressed_exception("_tuple_pair failure", exc, level=logging.WARNING)
-        return 0, 0
-
-    def _reverse_fill_format(value: Any) -> str:
-        normalized = str(value or REVERSE_FILL_FORMAT_AUTO).strip().lower()
-        return normalized if normalized in _REVERSE_FILL_FORMATS else REVERSE_FILL_FORMAT_AUTO
-
     config = RuntimeConfig()
     unknown_keys = set(raw or {}) - _RUNTIME_CONFIG_FIELDS
     if unknown_keys:
         raise ValueError(f"{_CONFIG_CORRUPTED_MESSAGE}：配置包含不支持的字段（{', '.join(sorted(unknown_keys))}）")
-    config.url = str(raw.get("url") or "")
-    config.survey_title = str(raw.get("survey_title") or "")
+    config.url = _as_str(raw.get("url"))
+    config.survey_title = _as_str(raw.get("survey_title"))
     config.survey_provider = normalize_survey_provider(
         raw.get("survey_provider"),
         default=detect_survey_provider(config.url),
     )
-    config.target = _as_int(raw.get("target"), 1)
-    config.threads = _as_int(raw.get("threads"), 1)
-    config.submit_interval = _tuple_pair(raw.get("submit_interval"))
+    config.target = _coerce_int(raw.get("target"), 1)
+    config.threads = _coerce_int(raw.get("threads"), 1)
+    try:
+        _si_raw = raw.get("submit_interval")
+        if isinstance(_si_raw, (list, tuple)) and len(_si_raw) >= 2:
+            config.submit_interval = int(_si_raw[0]), int(_si_raw[1])
+        else:
+            config.submit_interval = (0, 0)
+    except (ValueError, TypeError) as exc:
+        log_suppressed_exception("_tuple_pair failure", exc, level=logging.WARNING)
+        config.submit_interval = (0, 0)
     config.answer_duration = _normalize_answer_duration_range(raw.get("answer_duration"))
     config.answer_datetime_window = normalize_answer_datetime_window(
         raw.get("answer_datetime_window")
     )
-    custom_proxy_api = str(raw.get("custom_proxy_api") or "").strip()
-    proxy_source = str(raw.get("proxy_source") or "default").strip().lower()
+    custom_proxy_api = _as_str(raw.get("custom_proxy_api"))
+    proxy_source = _as_str(raw.get("proxy_source"), "default").lower()
     if proxy_source not in ("default", "benefit", "custom"):
         proxy_source = "default"
     config.proxy_source = proxy_source
     config.custom_proxy_api = custom_proxy_api
-    config.random_ip_enabled = _as_bool(raw.get("random_ip_enabled"), False)
+    config.random_ip_enabled = _as_bool(raw.get("random_ip_enabled"))
     raw_area_code = raw.get("proxy_area_code")
     config.proxy_area_code = None if raw_area_code is None else str(raw_area_code)
-    config.random_ua_enabled = _as_bool(raw.get("random_ua_enabled"), False)
+    config.random_ua_enabled = _as_bool(raw.get("random_ua_enabled"))
     config.random_ua_ratios = _normalize_user_agent_ratios(raw.get("random_ua_ratios"))
 
     config.fail_stop_enabled = bool(raw.get("fail_stop_enabled", True))
     config.pause_on_aliyun_captcha = bool(raw.get("pause_on_aliyun_captcha", True))
     config.reliability_mode_enabled = bool(raw.get("reliability_mode_enabled", True))
     config.psycho_target_alpha = normalize_target_alpha(raw.get("psycho_target_alpha"))
-    config.reverse_fill_enabled = _as_bool(raw.get("reverse_fill_enabled", False), False)
-    config.reverse_fill_source_path = str(raw.get("reverse_fill_source_path") or "")
-    config.reverse_fill_format = _reverse_fill_format(raw.get("reverse_fill_format"))
-    config.reverse_fill_start_row = max(1, _as_int(raw.get("reverse_fill_start_row"), 1))
-    config.reverse_fill_threads = max(1, _as_int(raw.get("reverse_fill_threads"), config.threads or 1))
+    config.reverse_fill_enabled = _as_bool(raw.get("reverse_fill_enabled"))
+    config.reverse_fill_source_path = _as_str(raw.get("reverse_fill_source_path"))
+    _rff = _as_str(raw.get("reverse_fill_format"), REVERSE_FILL_FORMAT_AUTO).lower()
+    config.reverse_fill_format = _rff if _rff in _REVERSE_FILL_FORMATS else REVERSE_FILL_FORMAT_AUTO
+    config.reverse_fill_start_row = max(1, _coerce_int(raw.get("reverse_fill_start_row"), 1))
+    config.reverse_fill_threads = max(1, _coerce_int(raw.get("reverse_fill_threads"), config.threads or 1))
     config.answer_rules = []
     config.dimension_groups = _normalize_dimension_groups(raw.get("dimension_groups"))
     raw_rules = raw.get("answer_rules")
@@ -561,11 +550,11 @@ def normalize_runtime_config_payload(raw: dict[str, Any]) -> RuntimeConfig:
     }
     has_ai_keys = any(key in raw for key in ai_keys)
     if has_ai_keys:
-        config.ai_api_key = str(raw.get("ai_api_key") or "")
-        config.ai_base_url = str(raw.get("ai_base_url") or "")
-        config.ai_api_protocol = str(raw.get("ai_api_protocol") or "auto")
-        config.ai_model = str(raw.get("ai_model") or "")
-        config.ai_system_prompt = str(raw.get("ai_system_prompt") or "")
+        config.ai_api_key = _as_str(raw.get("ai_api_key"))
+        config.ai_base_url = _as_str(raw.get("ai_base_url"))
+        config.ai_api_protocol = _as_str(raw.get("ai_api_protocol"), "auto")
+        config.ai_model = _as_str(raw.get("ai_model"))
+        config.ai_system_prompt = _as_str(raw.get("ai_system_prompt"))
 
     entries_data = raw.get("question_entries") or []
     config.question_entries = []

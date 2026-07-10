@@ -359,18 +359,11 @@ async def _build_wjx_score_like_action(
     )
 
 
-async def _build_wjx_multiple_action(
+def _resolve_multiple_selection_bounds(
     question: SurveyQuestionMeta,
-    config_index: int,
-    ctx: ExecutionState,
-    *,
-    thread_name: str = "",
-    allow_ai_placeholder: bool = False,
-) -> AnswerAction | None:
-    config = ctx.config
-    current = int(question.num or 0)
-    option_texts = await _resolve_runtime_option_texts(question)
-    option_count = max(1, len(option_texts))
+    option_count: int,
+) -> tuple[int, int]:
+    """Return (min_required, max_allowed) selection counts for a multiple-choice question."""
     from survey_submitter.providers.contracts import MultipleChoiceQuestionMeta
     multi_min_limit = question.multi_min_limit if isinstance(question, MultipleChoiceQuestionMeta) else None
     multi_max_limit = question.multi_max_limit if isinstance(question, MultipleChoiceQuestionMeta) else None
@@ -378,73 +371,77 @@ async def _build_wjx_multiple_action(
     max_allowed = max(1, min(_coerce_positive_int(multi_max_limit, option_count) or option_count, option_count))
     if min_required > max_allowed:
         min_required = max_allowed
+    return min_required, max_allowed
 
+
+def _resolve_multiple_rule_constraints(
+    current: int,
+    option_count: int,
+) -> tuple[list[int], list[int]]:
+    """Return (required_indices, blocked_indices) from multiple-choice rule constraints."""
     must_select_indices, must_not_select_indices, _ = get_multiple_rule_constraint(current, option_count)
     required_indices = _normalize_selected_indices(sorted(must_select_indices or []), option_count)
     blocked_indices = _normalize_selected_indices(sorted(must_not_select_indices or []), option_count)
+    return required_indices, blocked_indices
 
-    async def _finalize(selected_indices: Sequence[int]) -> AnswerAction | None:
-        selected = _normalize_selected_indices(list(selected_indices), option_count)
-        if not selected:
-            return None
-        fill_entries = config.multiple_option_fill_texts[config_index] if config_index < len(config.multiple_option_fill_texts) else None
-        fill_texts: list[tuple[int, str]] = []
-        selected_texts: list[str] = []
-        for option_idx in selected:
-            selected_text = option_texts[option_idx] if option_idx < len(option_texts) else ""
-            fill_value = await resolve_option_fill_text_from_config(
-                fill_entries,
-                option_idx,
-                question_title=str(question.title or ""),
-                question_number=current,
-                option_text=selected_text,
-                ctx=ctx,
-                allow_ai_placeholder=allow_ai_placeholder,
-                ai_placeholder_text=build_ai_option_fill_placeholder(current, option_idx),
-            )
-            fill_value = default_missing_option_fill(question, option_idx, fill_value)
-            if fill_value:
-                fill_texts.append((option_idx, fill_value))
-                selected_text = f"{selected_text} / {fill_value}" if selected_text else fill_value
-            selected_texts.append(selected_text)
-        return AnswerAction(
-            question_num=current,
-            kind="choice",
-            input_type="checkbox",
-            selected_indices=tuple(selected),
-            option_fill_texts=tuple(fill_texts),
-            selected_texts=tuple(selected_texts),
-            record_type="multiple",
+
+async def _build_multiple_answer_action(
+    selected_indices: Sequence[int],
+    *,
+    option_texts: list[str],
+    option_count: int,
+    config: Any,
+    config_index: int,
+    question: SurveyQuestionMeta,
+    current: int,
+    ctx: ExecutionState,
+    allow_ai_placeholder: bool,
+) -> AnswerAction | None:
+    """Build the final AnswerAction from a list of selected option indices."""
+    selected = _normalize_selected_indices(list(selected_indices), option_count)
+    if not selected:
+        return None
+    fill_entries = config.multiple_option_fill_texts[config_index] if config_index < len(config.multiple_option_fill_texts) else None
+    fill_texts: list[tuple[int, str]] = []
+    selected_texts: list[str] = []
+    for option_idx in selected:
+        selected_text = option_texts[option_idx] if option_idx < len(option_texts) else ""
+        fill_value = await resolve_option_fill_text_from_config(
+            fill_entries,
+            option_idx,
+            question_title=str(question.title or ""),
+            question_number=current,
+            option_text=selected_text,
+            ctx=ctx,
+            allow_ai_placeholder=allow_ai_placeholder,
+            ai_placeholder_text=build_ai_option_fill_placeholder(current, option_idx),
         )
-
-    reverse_fill_answer = resolve_current_reverse_fill_answer(
-        ctx,
-        current,
-        thread_name=thread_name,
+        fill_value = default_missing_option_fill(question, option_idx, fill_value)
+        if fill_value:
+            fill_texts.append((option_idx, fill_value))
+            selected_text = f"{selected_text} / {fill_value}" if selected_text else fill_value
+        selected_texts.append(selected_text)
+    return AnswerAction(
+        question_num=current,
+        kind="choice",
+        input_type="checkbox",
+        selected_indices=tuple(selected),
+        option_fill_texts=tuple(fill_texts),
+        selected_texts=tuple(selected_texts),
+        record_type="multiple",
     )
-    if reverse_fill_answer is not None and reverse_fill_answer.kind == REVERSE_FILL_KIND_CHOICE:
-        forced_index = reverse_fill_answer.choice_index
-        if forced_index is not None:
-            return await _finalize(_normalize_selected_indices([forced_index], option_count))
 
-    selection_probabilities = config.multiple_prob[config_index] if config_index < len(config.multiple_prob) else [DEFAULT_MULTIPLE_PROBABILITY] * option_count
-    if selection_probabilities == -1 or (
-        isinstance(selection_probabilities, list)
-        and len(selection_probabilities) == 1
-        and selection_probabilities[0] == -1
-    ):
-        available_pool = [idx for idx in range(option_count) if idx not in blocked_indices and idx not in required_indices]
-        min_total = max(min_required, len(required_indices))
-        max_total = min(max_allowed, len(required_indices) + len(available_pool))
-        if min_total > max_total:
-            min_total = max_total
-        extra_min = max(0, min_total - len(required_indices))
-        extra_max = max(0, max_total - len(required_indices))
-        extra_count = random.randint(extra_min, extra_max) if extra_max >= extra_min else 0
-        sampled = random.sample(available_pool, extra_count) if extra_count > 0 else []
-        return await _finalize(list(required_indices) + sampled)
 
-    sanitized_probabilities: list[float] = []
+def _sanitize_multiple_probabilities(
+    selection_probabilities: Any,
+    option_count: int,
+    blocked_indices: list[int],
+    required_indices: list[int],
+    option_texts: list[str],
+    strict_ratio: bool,
+) -> list[float]:
+    """Sanitize raw probabilities, apply persona boost, and zero out blocked/required indices."""
+    sanitized: list[float] = []
     for raw_prob in selection_probabilities:
         try:
             prob_value = float(raw_prob)
@@ -452,44 +449,83 @@ async def _build_wjx_multiple_action(
             prob_value = 0.0
         if math.isnan(prob_value) or math.isinf(prob_value):
             prob_value = 0.0
-        sanitized_probabilities.append(max(0.0, min(PROBABILITY_CEILING, prob_value)))
-    if len(sanitized_probabilities) < option_count:
-        sanitized_probabilities.extend([0.0] * (option_count - len(sanitized_probabilities)))
-    elif len(sanitized_probabilities) > option_count:
-        sanitized_probabilities = sanitized_probabilities[:option_count]
+        sanitized.append(max(0.0, min(PROBABILITY_CEILING, prob_value)))
+    if len(sanitized) < option_count:
+        sanitized.extend([0.0] * (option_count - len(sanitized)))
+    elif len(sanitized) > option_count:
+        sanitized = sanitized[:option_count]
 
-    strict_ratio = is_strict_ratio_question(ctx, current)
     if not strict_ratio:
-        boosted = apply_persona_boost(option_texts, sanitized_probabilities)
-        sanitized_probabilities = [min(PROBABILITY_CEILING, prob) for prob in boosted]
+        boosted = apply_persona_boost(option_texts, sanitized)
+        sanitized = [min(PROBABILITY_CEILING, prob) for prob in boosted]
     for idx in blocked_indices:
-        sanitized_probabilities[idx] = 0.0
+        sanitized[idx] = 0.0
     for idx in required_indices:
-        sanitized_probabilities[idx] = 0.0
+        sanitized[idx] = 0.0
+    return sanitized
 
-    if strict_ratio:
-        positive_optional = [
-            idx for idx, prob in enumerate(sanitized_probabilities)
-            if prob > 0 and idx not in blocked_indices and idx not in required_indices
-        ]
-        required_selected = _normalize_selected_indices(required_indices, option_count)
-        if len(required_selected) > max_allowed:
-            required_selected = required_selected[:max_allowed]
-        min_total = max(min_required, len(required_selected))
-        max_total = min(max_allowed, len(required_selected) + len(positive_optional))
-        if min_total > max_total:
-            min_total = max_total
-        expected_optional = sum(sanitized_probabilities[idx] for idx in positive_optional) / PROBABILITY_CEILING
-        total_target = len(required_selected) + stochastic_round(expected_optional)
-        total_target = max(min_total, min(max_total, total_target))
-        optional_target = max(0, total_target - len(required_selected))
-        sampled_optional = weighted_sample_without_replacement(
-            positive_optional,
-            [sanitized_probabilities[idx] for idx in positive_optional],
-            optional_target,
-        )
-        return await _finalize(required_selected + sampled_optional)
 
+def _select_multiple_uniform(
+    option_count: int,
+    required_indices: list[int],
+    blocked_indices: list[int],
+    min_required: int,
+    max_allowed: int,
+) -> list[int]:
+    """Select options uniformly at random when probabilities are set to -1."""
+    available_pool = [idx for idx in range(option_count) if idx not in blocked_indices and idx not in required_indices]
+    min_total = max(min_required, len(required_indices))
+    max_total = min(max_allowed, len(required_indices) + len(available_pool))
+    if min_total > max_total:
+        min_total = max_total
+    extra_min = max(0, min_total - len(required_indices))
+    extra_max = max(0, max_total - len(required_indices))
+    extra_count = random.randint(extra_min, extra_max) if extra_max >= extra_min else 0
+    sampled = random.sample(available_pool, extra_count) if extra_count > 0 else []
+    return list(required_indices) + sampled
+
+
+def _select_multiple_strict_ratio(
+    sanitized_probabilities: list[float],
+    option_count: int,
+    required_indices: list[int],
+    blocked_indices: list[int],
+    min_required: int,
+    max_allowed: int,
+) -> list[int]:
+    """Select options using strict-ratio weighted sampling without replacement."""
+    positive_optional = [
+        idx for idx, prob in enumerate(sanitized_probabilities)
+        if prob > 0 and idx not in blocked_indices and idx not in required_indices
+    ]
+    required_selected = _normalize_selected_indices(required_indices, option_count)
+    if len(required_selected) > max_allowed:
+        required_selected = required_selected[:max_allowed]
+    min_total = max(min_required, len(required_selected))
+    max_total = min(max_allowed, len(required_selected) + len(positive_optional))
+    if min_total > max_total:
+        min_total = max_total
+    expected_optional = sum(sanitized_probabilities[idx] for idx in positive_optional) / PROBABILITY_CEILING
+    total_target = len(required_selected) + stochastic_round(expected_optional)
+    total_target = max(min_total, min(max_total, total_target))
+    optional_target = max(0, total_target - len(required_selected))
+    sampled_optional = weighted_sample_without_replacement(
+        positive_optional,
+        [sanitized_probabilities[idx] for idx in positive_optional],
+        optional_target,
+    )
+    return required_selected + sampled_optional
+
+
+def _select_multiple_probabilistic(
+    sanitized_probabilities: list[float],
+    option_count: int,
+    required_indices: list[int],
+    blocked_indices: list[int],
+    min_required: int,
+    max_allowed: int,
+) -> list[int] | None:
+    """Select options via independent Bernoulli trials with min/max enforcement."""
     positive_indices = [idx for idx, prob in enumerate(sanitized_probabilities) if prob > 0]
     if not positive_indices and not required_indices:
         return None
@@ -508,7 +544,82 @@ async def _build_wjx_multiple_action(
         missing = [idx for idx in positive_indices if idx not in selected and idx not in blocked_indices]
         while len(selected) < min_required and missing:
             selected.append(missing.pop(0))
-    return await _finalize(selected[:max_allowed])
+    return selected[:max_allowed]
+
+
+async def _build_wjx_multiple_action(
+    question: SurveyQuestionMeta,
+    config_index: int,
+    ctx: ExecutionState,
+    *,
+    thread_name: str = "",
+    allow_ai_placeholder: bool = False,
+) -> AnswerAction | None:
+    config = ctx.config
+    current = int(question.num or 0)
+    option_texts = await _resolve_runtime_option_texts(question)
+    option_count = max(1, len(option_texts))
+
+    min_required, max_allowed = _resolve_multiple_selection_bounds(question, option_count)
+    required_indices, blocked_indices = _resolve_multiple_rule_constraints(current, option_count)
+
+    async def _finalize(selected_indices: Sequence[int]) -> AnswerAction | None:
+        return await _build_multiple_answer_action(
+            selected_indices,
+            option_texts=option_texts,
+            option_count=option_count,
+            config=config,
+            config_index=config_index,
+            question=question,
+            current=current,
+            ctx=ctx,
+            allow_ai_placeholder=allow_ai_placeholder,
+        )
+
+    # 1. Reverse-fill override
+    reverse_fill_answer = resolve_current_reverse_fill_answer(
+        ctx, current, thread_name=thread_name,
+    )
+    if reverse_fill_answer is not None and reverse_fill_answer.kind == REVERSE_FILL_KIND_CHOICE:
+        forced_index = reverse_fill_answer.choice_index
+        if forced_index is not None:
+            return await _finalize(_normalize_selected_indices([forced_index], option_count))
+
+    # 2. Read raw selection probabilities
+    selection_probabilities = config.multiple_prob[config_index] if config_index < len(config.multiple_prob) else [DEFAULT_MULTIPLE_PROBABILITY] * option_count
+
+    # 3. Uniform random selection (probabilities = -1)
+    if selection_probabilities == -1 or (
+        isinstance(selection_probabilities, list)
+        and len(selection_probabilities) == 1
+        and selection_probabilities[0] == -1
+    ):
+        return await _finalize(_select_multiple_uniform(
+            option_count, required_indices, blocked_indices, min_required, max_allowed,
+        ))
+
+    # 4. Sanitize probabilities
+    strict_ratio = is_strict_ratio_question(ctx, current)
+    sanitized_probabilities = _sanitize_multiple_probabilities(
+        selection_probabilities, option_count, blocked_indices, required_indices,
+        option_texts, strict_ratio,
+    )
+
+    # 5a. Strict-ratio weighted sampling
+    if strict_ratio:
+        return await _finalize(_select_multiple_strict_ratio(
+            sanitized_probabilities, option_count, required_indices, blocked_indices,
+            min_required, max_allowed,
+        ))
+
+    # 5b. Bernoulli-trial probabilistic selection
+    selected = _select_multiple_probabilistic(
+        sanitized_probabilities, option_count, required_indices, blocked_indices,
+        min_required, max_allowed,
+    )
+    if selected is None:
+        return None
+    return await _finalize(selected)
 
 
 async def _build_wjx_matrix_action(
