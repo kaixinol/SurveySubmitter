@@ -178,6 +178,166 @@ def _question_div_has_question_ancestor(question_div, fieldset) -> bool:
     return False
 
 
+def _resolve_question_type(question_div, raw_type_code: str) -> dict[str, Any]:
+    """Determine the effective question type and related flags from the HTML div."""
+    type_code = convert_wire_type_code(raw_type_code)
+    if type_code != TypeCode.ORDER and _soup_question_looks_like_reorder(question_div):
+        type_code = TypeCode.ORDER
+    is_description = _soup_question_looks_like_description(question_div, type_code)
+    is_required = _soup_question_is_required(question_div)
+    is_rating = False
+    rating_max = 0
+    if type_code == TypeCode.SCORE:
+        is_rating = _soup_question_looks_like_rating(question_div)
+        if is_rating:
+            rating_max = _extract_rating_option_count(question_div)
+            type_code = TypeCode.SCALE
+    is_location = type_code in {TypeCode.TEXT, TypeCode.LOCATION} and _soup_question_is_location(question_div)
+    if is_location:
+        type_code = TypeCode.LOCATION
+    elif type_code == TypeCode.LOCATION and not is_location:
+        if question_div.find("textarea"):
+            type_code = TypeCode.TEXT
+    location_verify_type = _extract_location_verify_type(question_div) if is_location else ""
+    return {
+        "type_code": type_code,
+        "is_description": is_description,
+        "is_required": is_required,
+        "is_rating": is_rating,
+        "rating_max": rating_max,
+        "is_location": is_location,
+        "location_verify_type": location_verify_type,
+    }
+
+
+def _resolve_display_number(
+    raw_heading_text: str,
+    question_div,
+    current_display_num: int | None,
+    visible_question_counter: int,
+) -> tuple[int | None, int | None, int]:
+    """Compute display number for a question, updating running counters."""
+    display_num = _extract_display_question_number(raw_heading_text)
+    if display_num is None:
+        display_num = current_display_num
+    elif display_num > 0:
+        current_display_num = display_num
+    if not _question_div_or_ancestors_are_hidden(question_div):
+        visible_question_counter += 1
+        if display_num is None or display_num != visible_question_counter:
+            display_num = visible_question_counter
+            current_display_num = display_num
+    return display_num, current_display_num, visible_question_counter
+
+
+def _apply_rating_scale_option_texts(
+    type_code: str,
+    question_div,
+    option_texts: list[str],
+    option_count: int,
+    is_rating: bool,
+    rating_max: int,
+) -> tuple[list[str], int]:
+    """Override option texts for rating/scale question types."""
+    if is_rating:
+        rating_texts = _extract_rating_option_texts(question_div)
+        if rating_texts:
+            option_texts = rating_texts
+        option_count = max(option_count, rating_max, len(option_texts))
+        if option_count > 0:
+            has_meaningful = any(_text_looks_meaningful(text) for text in option_texts)
+            if not option_texts or not has_meaningful:
+                option_texts = [str(i + 1) for i in range(option_count)]
+    elif type_code in {TypeCode.SCORE, TypeCode.SCALE}:
+        scale_texts = _extract_rating_option_texts(question_div)
+        if scale_texts:
+            option_texts = scale_texts
+            option_count = len(scale_texts)
+    return option_texts, option_count
+
+
+def _extract_question_features(
+    soup,
+    question_div,
+    question_number: int,
+    type_code: str,
+    option_texts: list[str],
+    option_count: int,
+    title_text: str,
+    is_location: bool,
+) -> dict[str, Any]:
+    """Extract jump rules, display conditions, slider range, text inputs, and other features."""
+    attached_option_selects: list[dict[str, Any]] = []
+    if type_code in {TypeCode.SINGLE, TypeCode.MULTIPLE}:
+        attached_option_selects = _extract_choice_attached_selects(question_div)
+    has_jump, jump_rules = _extract_jump_rules_from_html(question_div, question_number, option_texts)
+    has_display_condition, display_conditions = _extract_display_conditions_from_html(question_div, question_number)
+    is_slider_matrix = _question_div_looks_like_slider_matrix(question_div)
+    slider_min, slider_max, slider_step = (None, None, None)
+    if type_code == TypeCode.SLIDER or is_slider_matrix:
+        slider_min, slider_max, slider_step = _extract_slider_range(question_div, question_number)
+    text_input_count = _count_text_inputs_in_soup(question_div)
+    text_input_labels = _extract_text_input_labels(question_div) if text_input_count > 1 else []
+    has_gapfill = str(question_div.get("gapfill") or "").strip() == "1"
+    is_text_like_question = _should_treat_question_as_text_like(
+        type_code,
+        option_count,
+        text_input_count,
+        has_slider_matrix=is_slider_matrix,
+        is_location=is_location,
+    )
+    is_multi_text = _should_mark_as_multi_text(
+        type_code,
+        option_count,
+        text_input_count,
+        is_location,
+        has_gapfill,
+        has_slider_matrix=is_slider_matrix,
+    )
+    if is_multi_text and type_code == TypeCode.MATRIX:
+        type_code = TypeCode.MULTI_TEXT
+    forced_option_index: int | None = None
+    forced_option_text: str | None = None
+    if type_code in {TypeCode.SINGLE, TypeCode.SCORE, TypeCode.SCALE, TypeCode.DROPDOWN}:
+        forced_option_index, forced_option_text = _extract_force_select_option(
+            question_div,
+            title_text,
+            option_texts,
+        )
+    return {
+        "attached_option_selects": attached_option_selects,
+        "has_jump": has_jump,
+        "jump_rules": jump_rules,
+        "has_display_condition": has_display_condition,
+        "display_conditions": display_conditions,
+        "is_slider_matrix": is_slider_matrix,
+        "slider_min": slider_min,
+        "slider_max": slider_max,
+        "slider_step": slider_step,
+        "text_input_count": text_input_count,
+        "text_input_labels": text_input_labels,
+        "is_text_like": is_text_like_question,
+        "is_multi_text": is_multi_text,
+        "type_code": type_code,
+        "forced_option_index": forced_option_index,
+        "forced_option_text": forced_option_text,
+    }
+
+
+def _finalize_logic_parse_status(questions_info: list[dict[str, Any]]) -> None:
+    """Set logic_parse_status based on whether each question has any logic."""
+    _attach_display_condition_metadata(questions_info)
+    for question in questions_info:
+        has_logic = (
+            bool(question.get("has_jump"))
+            or bool(question.get("has_display_condition"))
+            or bool(question.get("has_dependent_display_logic"))
+        )
+        question["logic_parse_status"] = (
+            LOGIC_PARSE_STATUS_COMPLETE if has_logic else LOGIC_PARSE_STATUS_NONE
+        )
+
+
 def parse_survey_questions_from_html(html: str) -> list[dict[str, Any]]:
     
     if not BeautifulSoup:
@@ -206,36 +366,18 @@ def parse_survey_questions_from_html(html: str) -> list[dict[str, Any]]:
                 if heading_num is not None:
                     current_display_num = heading_num
                 continue
-            type_code = str(question_div.get("type") or "").strip() or "0"
-            type_code = convert_wire_type_code(type_code)
-            if type_code != TypeCode.ORDER and _soup_question_looks_like_reorder(question_div):
-                type_code = TypeCode.ORDER
-            is_description = _soup_question_looks_like_description(question_div, type_code)
-            is_required = _soup_question_is_required(question_div)
-            is_rating = False
-            rating_max = 0
-            if type_code == TypeCode.SCORE:
-                is_rating = _soup_question_looks_like_rating(question_div)
-                if is_rating:
-                    rating_max = _extract_rating_option_count(question_div)
-                    type_code = TypeCode.SCALE
-            is_location = type_code in {TypeCode.TEXT, TypeCode.LOCATION} and _soup_question_is_location(question_div)
-            if is_location:
-                type_code = TypeCode.LOCATION
-            elif type_code == TypeCode.LOCATION and not is_location:
-                if question_div.find("textarea"):
-                    type_code = TypeCode.TEXT
-            location_verify_type = _extract_location_verify_type(question_div) if is_location else ""
-            display_num = _extract_display_question_number(raw_heading_text)
-            if display_num is None:
-                display_num = current_display_num
-            elif display_num > 0:
-                current_display_num = display_num
-            if not _question_div_or_ancestors_are_hidden(question_div):
-                visible_question_counter += 1
-                if display_num is None or display_num != visible_question_counter:
-                    display_num = visible_question_counter
-                    current_display_num = display_num
+            raw_type_code = str(question_div.get("type") or "").strip() or "0"
+            resolved = _resolve_question_type(question_div, raw_type_code)
+            type_code = resolved["type_code"]
+            is_description = resolved["is_description"]
+            is_required = resolved["is_required"]
+            is_rating = resolved["is_rating"]
+            rating_max = resolved["rating_max"]
+            is_location = resolved["is_location"]
+            location_verify_type = resolved["location_verify_type"]
+            display_num, current_display_num, visible_question_counter = _resolve_display_number(
+                raw_heading_text, question_div, current_display_num, visible_question_counter
+            )
             title_text = _extract_question_title(question_div, question_number)
             (
                 option_texts,
@@ -246,62 +388,15 @@ def parse_survey_questions_from_html(html: str) -> list[dict[str, Any]]:
                 multi_min_limit,
                 multi_max_limit,
             ) = _extract_question_metadata_from_html(soup, question_div, question_number, type_code)
-            if is_rating:
-                rating_texts = _extract_rating_option_texts(question_div)
-                if rating_texts:
-                    option_texts = rating_texts
-                option_count = max(option_count, rating_max, len(option_texts))
-                if option_count > 0:
-                    has_meaningful = any(_text_looks_meaningful(text) for text in option_texts)
-                    if not option_texts or not has_meaningful:
-                        option_texts = [str(i + 1) for i in range(option_count)]
-            
-            elif type_code in {TypeCode.SCORE, TypeCode.SCALE}:
-                scale_texts = _extract_rating_option_texts(question_div)
-                if scale_texts:
-                    option_texts = scale_texts
-                    option_count = len(scale_texts)
-            attached_option_selects: list[dict[str, Any]] = []
-            if type_code in {TypeCode.SINGLE, TypeCode.MULTIPLE}:
-                attached_option_selects = _extract_choice_attached_selects(question_div)
-            has_jump, jump_rules = _extract_jump_rules_from_html(question_div, question_number, option_texts)
-            has_display_condition, display_conditions = _extract_display_conditions_from_html(question_div, question_number)
-            is_slider_matrix = _question_div_looks_like_slider_matrix(question_div)
-            slider_min, slider_max, slider_step = (None, None, None)
-            if type_code == TypeCode.SLIDER:
-                slider_min, slider_max, slider_step = _extract_slider_range(question_div, question_number)
-            elif is_slider_matrix:
-                slider_min, slider_max, slider_step = _extract_slider_range(question_div, question_number)
-            text_input_count = _count_text_inputs_in_soup(question_div)
-            text_input_labels = _extract_text_input_labels(question_div) if text_input_count > 1 else []
-            has_gapfill = str(question_div.get("gapfill") or "").strip() == "1"
-            is_text_like_question = _should_treat_question_as_text_like(
-                type_code,
-                option_count,
-                text_input_count,
-                has_slider_matrix=is_slider_matrix,
-                is_location=is_location,
-            )
-            is_multi_text = _should_mark_as_multi_text(
-                type_code,
-                option_count,
-                text_input_count,
-                is_location,
-                has_gapfill,
-                has_slider_matrix=is_slider_matrix,
+            option_texts, option_count = _apply_rating_scale_option_texts(
+                type_code, question_div, option_texts, option_count, is_rating, rating_max
             )
             if is_description:
                 type_code = TypeCode.DESCRIPTION
-            elif is_multi_text and type_code == TypeCode.MATRIX:
-                type_code = TypeCode.MULTI_TEXT
-            forced_option_index: int | None = None
-            forced_option_text: str | None = None
-            if type_code in {TypeCode.SINGLE, TypeCode.SCORE, TypeCode.SCALE, TypeCode.DROPDOWN}:
-                forced_option_index, forced_option_text = _extract_force_select_option(
-                    question_div,
-                    title_text,
-                    option_texts,
-                )
+            features = _extract_question_features(
+                soup, question_div, question_number, type_code, option_texts, option_count, title_text, is_location
+            )
+            type_code = features["type_code"]
             questions_info.append({
                 "num": question_number,
                 "display_num": display_num,
@@ -312,42 +407,33 @@ def parse_survey_questions_from_html(html: str) -> list[dict[str, Any]]:
                 "row_texts": row_texts,
                 "page": page_index,
                 "option_texts": option_texts,
-                "forced_option_index": forced_option_index,
-                "forced_option_text": forced_option_text,
+                "forced_option_index": features["forced_option_index"],
+                "forced_option_text": features["forced_option_text"],
                 "fillable_options": fillable_indices,
-                "attached_option_selects": attached_option_selects,
-                "has_attached_option_select": bool(attached_option_selects),
+                "attached_option_selects": features["attached_option_selects"],
+                "has_attached_option_select": bool(features["attached_option_selects"]),
                 "is_location": is_location,
                 "location_verify_type": location_verify_type,
                 "is_rating": is_rating,
                 "is_description": is_description,
                 "rating_max": rating_max,
-                "text_inputs": text_input_count,
-                "text_input_labels": text_input_labels,
-                "is_multi_text": is_multi_text,
-                "is_text_like": is_text_like_question,
-                "is_slider_matrix": is_slider_matrix,
-                "has_jump": has_jump,
-                "jump_rules": jump_rules,
-                "has_display_condition": has_display_condition,
-                "display_conditions": display_conditions,
+                "text_inputs": features["text_input_count"],
+                "text_input_labels": features["text_input_labels"],
+                "is_multi_text": features["is_multi_text"],
+                "is_text_like": features["is_text_like"],
+                "is_slider_matrix": features["is_slider_matrix"],
+                "has_jump": features["has_jump"],
+                "jump_rules": features["jump_rules"],
+                "has_display_condition": features["has_display_condition"],
+                "display_conditions": features["display_conditions"],
                 "logic_parse_status": LOGIC_PARSE_STATUS_NONE,
                 "question_media": _collect_question_media(question_div, row_texts, option_texts),
-                "slider_min": slider_min,
-                "slider_max": slider_max,
-                "slider_step": slider_step,
+                "slider_min": features["slider_min"],
+                "slider_max": features["slider_max"],
+                "slider_step": features["slider_step"],
                 "multi_min_limit": multi_min_limit,
                 "multi_max_limit": multi_max_limit,
                 "required": is_required,
             })
-    _attach_display_condition_metadata(questions_info)
-    for question in questions_info:
-        has_logic = (
-            bool(question.get("has_jump"))
-            or bool(question.get("has_display_condition"))
-            or bool(question.get("has_dependent_display_logic"))
-        )
-        question["logic_parse_status"] = (
-            LOGIC_PARSE_STATUS_COMPLETE if has_logic else LOGIC_PARSE_STATUS_NONE
-        )
+    _finalize_logic_parse_status(questions_info)
     return questions_info
