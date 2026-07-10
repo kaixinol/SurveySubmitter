@@ -20,8 +20,6 @@ from .regexes import (
 
 _TEXT_INPUT_ALLOWED_TYPES = {"", "text", "search", "tel", "number"}
 
-_KNOWN_NON_TEXT_QUESTION_TYPES = {"3", "4", "5", "6", "7", "8", "11"}
-
 
 def _normalize_force_select_text(value: Any) -> str:
     text = normalize_match_text(value)

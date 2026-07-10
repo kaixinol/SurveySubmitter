@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from survey_submitter.core.persona.generator import get_current_persona
+from survey_submitter.core.questions.types import QuestionType
 
 
 
@@ -126,7 +127,7 @@ def build_ai_context_prompt() -> str:
         if recent:
             summary_lines = []
             for q_num, record in recent:
-                if record.question_type == "text" and record.text_answer:
+                if record.question_type == QuestionType.TEXT and record.text_answer:
                     summary_lines.append(f"  第{q_num}题(填空): {record.text_answer[:50]}")
                 elif record.selected_texts:
                     texts = "、".join(record.selected_texts[:3])

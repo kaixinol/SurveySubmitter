@@ -23,6 +23,7 @@ from survey_submitter.network.proxy.session import (
     get_session_snapshot,
 )
 from survey_submitter.core.task import ExecutionState
+from survey_submitter.core.questions.types import QuestionType
 
 logger = logging.getLogger(__name__)
 
@@ -292,7 +293,7 @@ def _extract_free_answers(data: Dict[str, Any], question_type: str, blank_count:
             raise RuntimeError("免费 AI 返回格式异常：answers 内含空字符串")
         answers.append(text)
 
-    if question_type == "fill_blank":
+    if question_type == QuestionType.FILL_BLANK:
         if len(answers) != 1:
             raise RuntimeError(f"免费 AI 返回格式异常：fill_blank 期望 1 个答案，实际 {len(answers)} 个")
         return answers
@@ -329,9 +330,9 @@ def _normalize_batch_items(items: Iterable[FreeAIBatchItem]) -> List[FreeAIBatch
             raise RuntimeError(_format_free_ai_error("duplicate_item_id", 400))
         if not question_content:
             raise RuntimeError(_format_free_ai_error("question_content_required", 400))
-        if question_type not in {"fill_blank", "multi_fill_blank"}:
+        if question_type not in {QuestionType.FILL_BLANK, QuestionType.MULTI_FILL_BLANK}:
             raise RuntimeError(_format_free_ai_error("invalid_question_type", 400))
-        if question_type == "multi_fill_blank":
+        if question_type == QuestionType.MULTI_FILL_BLANK:
             if normalized_blank_count is None:
                 raise RuntimeError(_format_free_ai_error("blank_count_required", 400))
             if normalized_blank_count <= 0:
@@ -371,7 +372,7 @@ def _build_batch_submit_payload(
             "question_type": item.question_type,
             "question_content": item.question_content,
         }
-        if item.question_type == "multi_fill_blank":
+        if item.question_type == QuestionType.MULTI_FILL_BLANK:
             payload_item["blank_count"] = int(item.blank_count or 0)
         if item.system_prompt:
             payload_item["system_prompt"] = item.system_prompt
@@ -564,7 +565,7 @@ async def call_free_ai_api_async(
     normalized_system_prompt = str(system_prompt or "").strip()
     if normalized_system_prompt:
         payload["system_prompt"] = normalized_system_prompt
-    if question_type == "multi_fill_blank":
+    if question_type == QuestionType.MULTI_FILL_BLANK:
         payload["blank_count"] = int(blank_count or 0)
 
     async def _send_request():

@@ -5,6 +5,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from survey_submitter.core.questions.schema import QuestionEntry
 from survey_submitter.core.questions.meta_helpers import infer_question_entry_type
+from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.reverse_fill.schema import (
     REVERSE_FILL_FORMAT_WJX_SCORE,
     REVERSE_FILL_FORMAT_WJX_SEQUENCE,
@@ -89,9 +90,9 @@ def supports_reverse_fill_runtime(question_type: str, info: SurveyQuestionMeta |
     normalized = str(question_type or "").strip().lower()
     if normalized not in REVERSE_FILL_RUNTIME_SUPPORTED_TYPES:
         return False
-    if normalized == "text" and bool(info.get("is_location")):
+    if normalized == QuestionType.TEXT and bool(info.get("is_location")):
         return False
-    if normalized in {"single", "dropdown"}:
+    if normalized in {QuestionType.SINGLE, QuestionType.DROPDOWN}:
         if list(info.get("fillable_options") or []) or list(info.get("attached_option_selects") or []):
             return False
     return True
@@ -280,7 +281,7 @@ def parse_matrix_answer(
     for raw_value in values:
         parsed = parse_choice_answer(
             question_num=question_num,
-            question_type="matrix",
+            question_type=QuestionType.MATRIX,
             raw_value=raw_value,
             export_format=export_format,
             option_texts=option_texts,

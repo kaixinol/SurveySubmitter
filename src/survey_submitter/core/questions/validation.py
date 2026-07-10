@@ -9,9 +9,12 @@ from survey_submitter.core.questions.meta_helpers import (
     find_all_zero_matrix_rows,
 )
 from survey_submitter.core.questions.schema import QuestionEntry
+from survey_submitter.core.questions.types import QuestionType, CHOICE_TYPES, TEXT_TYPES
 from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_survey_question_meta
 
 __all__ = ["validate_question_config"]
+
+MAX_DISPLAYED_UNSUPPORTED_ITEMS = 12
 
 
 _TEXT_MIN_LENGTH_PATTERNS = (
@@ -38,9 +41,9 @@ def _extract_text_min_length(*fragments: Any) -> Optional[int]:
 
 def _is_text_ai_enabled(entry: QuestionEntry) -> bool:
     question_type = str(getattr(entry, "question_type", "") or "").strip()
-    if question_type == "text":
+    if question_type == QuestionType.TEXT:
         return bool(getattr(entry, "ai_enabled", False))
-    if question_type == "multi_text":
+    if question_type == QuestionType.MULTI_TEXT:
         blank_flags = getattr(entry, "multi_text_blank_ai_flags", []) or []
         return bool(getattr(entry, "ai_enabled", False)) or (bool(blank_flags) and all(bool(flag) for flag in blank_flags))
     return False
@@ -101,14 +104,14 @@ def validate_question_config(
 
     if unsupported_questions:
         lines = ["当前问卷包含暂不支持的题型，已禁止启动："]
-        for item in unsupported_questions[:12]:
+        for item in unsupported_questions[:MAX_DISPLAYED_UNSUPPORTED_ITEMS]:
             title = str(item.title or f"第{item.num}题").strip()
             provider_type = str(item.provider_type or item.type_code or "未知类型").strip()
             reason = str(item.unsupported_reason or "").strip()
             suffix = f"（{provider_type}，{reason}）" if reason else f"（{provider_type}）"
             lines.append(f"  - 第 {item.num} 题：{title}{suffix}")
-        if len(unsupported_questions) > 12:
-            lines.append(f"  - 其余 {len(unsupported_questions) - 12} 道暂不支持题目已省略")
+        if len(unsupported_questions) > MAX_DISPLAYED_UNSUPPORTED_ITEMS:
+            lines.append(f"  - 其余 {len(unsupported_questions) - MAX_DISPLAYED_UNSUPPORTED_ITEMS} 道暂不支持题目已省略")
         return "\n".join(lines)
 
     for idx, entry in enumerate(entries):
@@ -122,7 +125,7 @@ def validate_question_config(
         question_info = question_info_map.get(normalized_question_num)
         display_question_num = _display_question_num(question_num, question_info)
 
-        if question_type == "multiple":
+        if question_type == QuestionType.MULTIPLE:
             multi_min_limit: Optional[int] = None
             if question_info:
                 multi_min_limit = question_info.multi_min_limit
@@ -149,11 +152,11 @@ def validate_question_config(
                 
                 
 
-        if question_type in ("text", "multi_text") and question_info and not _is_text_ai_enabled(entry):
+        if question_type in TEXT_TYPES and question_info and not _is_text_ai_enabled(entry):
             min_text_length = _extract_text_min_length(question_info.title, question_info.description)
             if min_text_length is not None and min_text_length > 0:
                 text_random_mode = str(getattr(entry, "text_random_mode", "") or "").strip().lower()
-                if question_type == "text" and text_random_mode not in ("", "none"):
+                if question_type == QuestionType.TEXT and text_random_mode not in ("", "none"):
                     errors.append(
                         f"第 {display_question_num} 题（填空题）配置冲突：\n"
                         f"  - 题目要求答案最少 {min_text_length} 字\n"
@@ -177,7 +180,7 @@ def validate_question_config(
                         )
 
         configured_weights = _pick_config_weights(entry)
-        if question_type in ("single", "dropdown", "scale", "score") and isinstance(configured_weights, list):
+        if question_type in CHOICE_TYPES and isinstance(configured_weights, list):
             if configured_weights and count_positive_weights(configured_weights) <= 0:
                 errors.append(
                     f"第 {display_question_num} 题（{question_type}）配置无效：\n"
@@ -185,7 +188,7 @@ def validate_question_config(
                     "  - 请至少将 1 个选项的配比设为大于 0"
                 )
 
-        if question_type == "matrix":
+        if question_type == QuestionType.MATRIX:
             invalid_rows = find_all_zero_matrix_rows(configured_weights)
             if invalid_rows == [0]:
                 errors.append(

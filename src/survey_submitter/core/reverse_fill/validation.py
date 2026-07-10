@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from survey_submitter.core.questions.default_builder import build_default_question_entries
 from survey_submitter.core.questions.schema import QuestionEntry, _infer_option_count
+from survey_submitter.core.questions.types import CHOICE_TYPES, QuestionType, TEXT_TYPES
 from survey_submitter.core.questions.validation import validate_question_config
 from survey_submitter.core.reverse_fill.parser import (
     infer_reverse_fill_question_type,
@@ -34,6 +35,8 @@ from survey_submitter.io.spreadsheets.wjx_excel import load_wjx_excel_export
 from survey_submitter.core.config.schema import RuntimeConfig
 from survey_submitter.providers.common import SURVEY_PROVIDER_WJX, normalize_survey_provider
 from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_survey_question_meta
+
+MAX_DISPLAYED_BLOCKING_ISSUES = 12
 
 
 def _detail_from_columns(columns: List[Any]) -> str:
@@ -248,7 +251,7 @@ def build_reverse_fill_spec(
             )
             continue
 
-        if question_type == "order":
+        if question_type == QuestionType.ORDER:
             reason = "排序题目前不参与反填覆盖"
             issues.append(
                 _question_issue(
@@ -326,7 +329,7 @@ def build_reverse_fill_spec(
             continue
 
         ordered_columns = columns
-        if question_type in {"single", "dropdown", "scale", "score", "text"} and len(columns) != 1:
+        if question_type in CHOICE_TYPES | TEXT_TYPES and len(columns) != 1:
             reason = "这道题在 Excel 中对应了多列，V1 无法确认唯一答案列"
             issues.append(
                 _question_issue(
@@ -351,7 +354,7 @@ def build_reverse_fill_spec(
             )
             continue
 
-        if question_type == "matrix":
+        if question_type == QuestionType.MATRIX:
             row_texts = list(info.row_texts or [])
             if row_texts and len(columns) != len(row_texts):
                 reason = f"矩阵题解析出 {len(row_texts)} 行，但 Excel 里只有 {len(columns)} 列"
@@ -379,7 +382,7 @@ def build_reverse_fill_spec(
                 continue
             ordered_columns = resolve_ordered_columns(columns, row_texts)
 
-        if question_type == "multi_text":
+        if question_type == QuestionType.MULTI_TEXT:
             blank_labels = list(info.text_input_labels or [])
             if blank_labels and len(columns) != len(blank_labels):
                 reason = f"多项填空解析出 {len(blank_labels)} 个空，但 Excel 里只有 {len(columns)} 列"
@@ -410,7 +413,7 @@ def build_reverse_fill_spec(
         parse_errors: List[int] = []
         for raw_row in selected_rows:
             try:
-                if question_type in {"single", "dropdown", "scale", "score"}:
+                if question_type in CHOICE_TYPES:
                     answer = parse_choice_answer(
                         question_num=question_num,
                         question_type=question_type,
@@ -418,18 +421,18 @@ def build_reverse_fill_spec(
                         export_format=export.selected_format,
                         option_texts=list(info.option_texts or []),
                     )
-                elif question_type == "text":
+                elif question_type == QuestionType.TEXT:
                     answer = parse_text_answer(
                         question_num=question_num,
                         raw_value=(raw_row.values_by_column or {}).get(int(ordered_columns[0].column_index)),
                     )
-                elif question_type == "multi_text":
+                elif question_type == QuestionType.MULTI_TEXT:
                     answer = parse_multi_text_answer(
                         question_num=question_num,
                         ordered_columns=ordered_columns,
                         raw_row=raw_row,
                     )
-                elif question_type == "matrix":
+                elif question_type == QuestionType.MATRIX:
                     answer = parse_matrix_answer(
                         question_num=question_num,
                         ordered_columns=ordered_columns,
@@ -446,7 +449,7 @@ def build_reverse_fill_spec(
                 break
 
         if parse_errors:
-            if question_type in {"single", "dropdown", "scale", "score", "matrix"}:
+            if question_type in CHOICE_TYPES | {QuestionType.MATRIX}:
                 if export.selected_format == REVERSE_FILL_FORMAT_WJX_SEQUENCE:
                     reason = "这道题在样本中出现了超范围序号或 V1 不支持的复合值"
                 else:
@@ -523,13 +526,13 @@ def format_reverse_fill_blocking_message(spec: ReverseFillSpec) -> str:
     lines = [
         f"反填配置校验失败（{reverse_fill_format_label(spec.detected_format)}）：",
     ]
-    for issue in blocking[:12]:
+    for issue in blocking[:MAX_DISPLAYED_BLOCKING_ISSUES]:
         prefix = "样本数量" if int(issue.question_num or 0) <= 0 else f"第 {issue.question_num} 题"
         lines.append(f"  - {prefix}：{issue.reason}")
         if issue.suggestion:
             lines.append(f"    {issue.suggestion}")
-    if len(blocking) > 12:
-        lines.append(f"  - 其余 {len(blocking) - 12} 个阻塞项已省略")
+    if len(blocking) > MAX_DISPLAYED_BLOCKING_ISSUES:
+        lines.append(f"  - 其余 {len(blocking) - MAX_DISPLAYED_BLOCKING_ISSUES} 个阻塞项已省略")
     return "\n".join(lines)
 
 

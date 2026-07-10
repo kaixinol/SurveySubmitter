@@ -12,6 +12,7 @@ from survey_submitter.core.questions.meta_helpers import (
 )
 from survey_submitter.core.questions.schema import QuestionEntry
 from survey_submitter.core.questions.schema import _TEXT_RANDOM_ID_CARD, _TEXT_RANDOM_MOBILE, _TEXT_RANDOM_NAME, _TEXT_RANDOM_NONE
+from survey_submitter.core.questions.types import QuestionType, CHOICE_TYPES, TEXT_TYPES, CHOICE_LIKE_TYPES
 from survey_submitter.providers.contracts import SurveyQuestionMeta
 from survey_submitter.providers.common import (
     SURVEY_PROVIDER_WJX,
@@ -20,6 +21,9 @@ from survey_submitter.providers.common import (
 )
 
 __all__ = ["build_default_question_entries"]
+
+DEFAULT_MULTIPLE_PROBABILITY = 50.0
+DEFAULT_SLIDER_MAX = 100.0
 
 
 def _as_float(val: Any, default: float) -> float:
@@ -178,7 +182,7 @@ def build_default_question_entries(
         q_type = infer_question_entry_type(q)
 
         base_option_count = max(option_count, rating_max, 1)
-        if q_type in ("text", "multi_text"):
+        if q_type in TEXT_TYPES:
             option_count = max(base_option_count, text_inputs, 1)
         else:
             option_count = base_option_count
@@ -210,40 +214,40 @@ def build_default_question_entries(
             distribution = existing_config.distribution_mode or "random"
             custom_weights = copy.deepcopy(existing_config.custom_weights)
             texts = copy.deepcopy(existing_config.texts)
-            ai_enabled_from_existing = getattr(existing_config, "ai_enabled", False) if q_type in ("text", "multi_text") else False
+            ai_enabled_from_existing = getattr(existing_config, "ai_enabled", False) if q_type in TEXT_TYPES else False
             text_random_mode_from_existing = (
                 str(getattr(existing_config, "text_random_mode", "none") or "none")
-                if q_type == "text"
+                if q_type == QuestionType.TEXT
                 else "none"
             )
             text_random_int_range_from_existing = (
                 copy.deepcopy(getattr(existing_config, "text_random_int_range", []))
-                if q_type == "text"
+                if q_type == QuestionType.TEXT
                 else []
             )
             multi_text_blank_modes_from_existing = (
                 copy.deepcopy(getattr(existing_config, "multi_text_blank_modes", []))
-                if q_type == "multi_text"
+                if q_type == QuestionType.MULTI_TEXT
                 else []
             )
             multi_text_blank_ai_flags_from_existing = (
                 copy.deepcopy(getattr(existing_config, "multi_text_blank_ai_flags", []))
-                if q_type == "multi_text"
+                if q_type == QuestionType.MULTI_TEXT
                 else []
             )
             multi_text_blank_int_ranges_from_existing = (
                 copy.deepcopy(getattr(existing_config, "multi_text_blank_int_ranges", []))
-                if q_type == "multi_text"
+                if q_type == QuestionType.MULTI_TEXT
                 else []
             )
             option_fill_texts_from_existing = (
                 copy.deepcopy(getattr(existing_config, "option_fill_texts", None))
-                if q_type in ("single", "multiple", "dropdown")
+                if q_type in CHOICE_LIKE_TYPES
                 else None
             )
             fillable_indices_from_existing = (
                 copy.deepcopy(getattr(existing_config, "fillable_option_indices", None))
-                if q_type in ("single", "multiple", "dropdown")
+                if q_type in CHOICE_LIKE_TYPES
                 else None
             )
             attached_selects_from_existing = copy.deepcopy(getattr(existing_config, "attached_option_selects", []) or [])
@@ -253,7 +257,7 @@ def build_default_question_entries(
             text_random_int_range_from_existing = []
             multi_text_blank_modes_from_existing = (
                 _infer_multi_text_blank_modes(q, text_inputs)
-                if q_type == "multi_text"
+                if q_type == QuestionType.MULTI_TEXT
                 else []
             )
             multi_text_blank_ai_flags_from_existing = []
@@ -261,38 +265,38 @@ def build_default_question_entries(
             option_fill_texts_from_existing = None
             fillable_indices_from_existing = None
             attached_selects_from_existing = []
-            if q_type in ("single", "dropdown", "scale"):
+            if q_type in {QuestionType.SINGLE, QuestionType.DROPDOWN, QuestionType.SCALE}:
                 probabilities = -1
                 distribution = "random"
                 custom_weights = None
                 texts = None
-            elif q_type == "score":
+            elif q_type == QuestionType.SCORE:
                 option_count = max(option_count, 2)
                 weights = _build_mid_bias_weights(option_count)
                 probabilities = list(weights)
                 distribution = "custom"
                 custom_weights = list(weights)
                 texts = None
-            elif q_type == "multiple":
-                probabilities = [50.0] * option_count
+            elif q_type == QuestionType.MULTIPLE:
+                probabilities = [DEFAULT_MULTIPLE_PROBABILITY] * option_count
                 distribution = "random"
                 custom_weights = None
                 texts = None
-            elif q_type == "matrix":
+            elif q_type == QuestionType.MATRIX:
                 probabilities = -1
                 distribution = "random"
                 custom_weights = None
                 texts = None
-            elif q_type == "order":
+            elif q_type == QuestionType.ORDER:
                 probabilities = -1
                 distribution = "random"
                 custom_weights = None
                 texts = None
-            elif q_type == "slider":
+            elif q_type == QuestionType.SLIDER:
                 min_val = _as_float(slider_min, 0.0)
-                max_val = _as_float(slider_max, 100.0 if slider_max is None else slider_max)
+                max_val = _as_float(slider_max, DEFAULT_SLIDER_MAX if slider_max is None else slider_max)
                 if max_val <= min_val:
-                    max_val = min_val + 100.0
+                    max_val = min_val + DEFAULT_SLIDER_MAX
                 midpoint = min_val + (max_val - min_val) / 2.0
                 probabilities = [midpoint]
                 distribution = "custom"
@@ -305,8 +309,8 @@ def build_default_question_entries(
                 custom_weights = None
                 texts = [DEFAULT_FILL_TEXT]
 
-        if forced_option_index is not None and q_type in ("single", "dropdown", "scale", "score"):
-            if q_type == "score":
+        if forced_option_index is not None and q_type in CHOICE_TYPES:
+            if q_type == QuestionType.SCORE:
                 option_count = max(option_count, 2)
                 forced_option_index = min(forced_option_index, option_count - 1)
             forced_weights = _build_forced_single_weights(option_count, forced_option_index)
@@ -319,7 +323,7 @@ def build_default_question_entries(
                 forced_option_index + 1,
                 forced_option_text or "无文本",
             )
-        if forced_texts and q_type in ("text", "multi_text"):
+        if forced_texts and q_type in TEXT_TYPES:
             texts = list(forced_texts)
             logging.info("题号%s检测到指定填空内容，已自动填入固定答案", q.get("num"))
 
@@ -329,7 +333,7 @@ def build_default_question_entries(
                 option_count,
                 fillable_indices_from_existing,
             )
-            if q_type in ("single", "multiple", "dropdown")
+            if q_type in CHOICE_LIKE_TYPES
             else []
         )
         option_fill_texts = (
@@ -338,7 +342,7 @@ def build_default_question_entries(
                 option_count,
                 fillable_option_indices,
             )
-            if q_type in ("single", "multiple", "dropdown")
+            if q_type in CHOICE_LIKE_TYPES
             else None
         )
         entries.append(
@@ -355,20 +359,20 @@ def build_default_question_entries(
                 survey_provider=survey_provider,
                 provider_question_id=provider_question_id or None,
                 provider_page_id=provider_page_id or None,
-                ai_enabled=ai_enabled_from_existing if q_type in ("text", "multi_text") else False,
-                multi_text_blank_modes=multi_text_blank_modes_from_existing if q_type == "multi_text" else [],
-                multi_text_blank_ai_flags=multi_text_blank_ai_flags_from_existing if q_type == "multi_text" else [],
-                multi_text_blank_int_ranges=multi_text_blank_int_ranges_from_existing if q_type == "multi_text" else [],
-                text_random_mode=text_random_mode_from_existing if q_type == "text" else "none",
-                text_random_int_range=text_random_int_range_from_existing if q_type == "text" else [],
+                ai_enabled=ai_enabled_from_existing if q_type in TEXT_TYPES else False,
+                multi_text_blank_modes=multi_text_blank_modes_from_existing if q_type == QuestionType.MULTI_TEXT else [],
+                multi_text_blank_ai_flags=multi_text_blank_ai_flags_from_existing if q_type == QuestionType.MULTI_TEXT else [],
+                multi_text_blank_int_ranges=multi_text_blank_int_ranges_from_existing if q_type == QuestionType.MULTI_TEXT else [],
+                text_random_mode=text_random_mode_from_existing if q_type == QuestionType.TEXT else "none",
+                text_random_int_range=text_random_int_range_from_existing if q_type == QuestionType.TEXT else [],
                 option_fill_texts=option_fill_texts,
                 fillable_option_indices=fillable_option_indices,
                 attached_option_selects=(
                     normalize_attached_option_selects(
                         attached_option_selects,
-                        attached_selects_from_existing if q_type == "single" else None,
+                        attached_selects_from_existing if q_type == QuestionType.SINGLE else None,
                     )
-                    if q_type == "single"
+                    if q_type == QuestionType.SINGLE
                     else []
                 ),
                 is_location=is_location,

@@ -33,6 +33,7 @@ from survey_submitter.providers.errors import (
     SurveyProviderUnavailableAtRuntimeError,
     SurveyStoppedError,
 )
+from survey_submitter.core.questions.types import TypeCode
 from survey_submitter.providers.wjx.answering_builders import build_answer_action
 from survey_submitter.providers.wjx.parser import _parse_wjx_html, _raise_wjx_page_state_errors
 from survey_submitter.providers.wjx.regexes import WJX_SCENE_ID_PATTERNS
@@ -234,13 +235,13 @@ def _skipped_submitdata_answer(question: SurveyQuestionMeta) -> str:
     type_code = str(getattr(question, "type_code", "") or "").strip()
     option_count = max(1, int(getattr(question, "options", 0) or 0))
     rows = max(1, int(getattr(question, "rows", 1) or 1))
-    if type_code in {"3", "4", "5", "7"}:
+    if type_code in {TypeCode.RADIO, TypeCode.CHECKBOX, TypeCode.RATING, TypeCode.DROPDOWN}:
         return "-3"
-    if type_code == "11":
+    if type_code == TypeCode.ORDER:
         return ",".join("-3" for _ in range(option_count))
-    if type_code == "6":
+    if type_code == TypeCode.MATRIX:
         return ",".join(f"{row_index + 1}!-3" for row_index in range(rows))
-    if type_code in {"1", "2", "8", "9", "33", "34"}:
+    if type_code in {TypeCode.GAPFILL, TypeCode.LOCATION_TEXT, TypeCode.SLIDER, TypeCode.MATRIX_TEXT, TypeCode.CAPTCHA, TypeCode.SIGNATURE}:
         return "(跳过)"
     return "-3"
 
@@ -407,7 +408,6 @@ async def _build_action_plan(
         if stop_signal is not None and stop_signal.is_set():
             return None
         return await build_answer_action(
-            None,
             question,
             ctx,
             psycho_plan=psycho_plan,

@@ -1,0 +1,88 @@
+from __future__ import annotations
+
+from typing import Any
+
+from .models import RandomIPAuthError
+
+_SESSION_PERSIST_FAILED_DETAIL = "session_persist_failed"
+
+
+def format_random_ip_error(exc: BaseException) -> str:
+    if not isinstance(exc, RandomIPAuthError):
+        return str(exc or "\u8bf7\u6c42\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5")
+    detail = exc.detail
+    if detail in {"bonus_already_claimed", "easter_egg_already_claimed"}:
+        return "\u5f69\u86cb\u5df2\u89e6\u53d1\uff0c\u65e0\u9700\u91cd\u590d\u9886\u53d6"
+    if detail in {"bonus_claim_not_available", "easter_egg_not_available"}:
+        return "\u5f53\u524d\u6682\u65f6\u65e0\u6cd5\u9886\u53d6\u5f69\u86cb\u5956\u52b1\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5"
+    if detail == "device_id_required":
+        return "\u8bbe\u5907\u6807\u8bc6\u7f3a\u5931\uff0c\u8bf7\u91cd\u542f\u8f6f\u4ef6\u540e\u91cd\u8bd5"
+    if detail == "invalid_request_body":
+        return "\u8bf7\u6c42\u683c\u5f0f\u4e0d\u6b63\u786e\uff0c\u8bf7\u66f4\u65b0\u5ba2\u6237\u7aef\u540e\u91cd\u8bd5"
+    if detail in {"trial_already_claimed", "trial_already_used", "device_trial_already_claimed"}:
+        return "\u5f53\u524d\u8bbe\u5907\u5df2\u9886\u53d6\u8fc7\u514d\u8d39\u8bd5\u7528\uff0c\u8bf7\u524d\u5f80\u7533\u8bf7\u968f\u673aIP\u989d\u5ea6"
+    if detail == "trial_ip_rate_limited":
+        return "\u5f53\u524d\u7f51\u7edc\u9886\u53d6\u8bd5\u7528\u8fc7\u4e8e\u9891\u7e41\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5"
+    if detail == "trial_activate_failed":
+        return "\u670d\u52a1\u7aef\u521b\u5efa\u8bd5\u7528\u8d26\u53f7\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5"
+    if detail == "trial_rate_limited":
+        if exc.retry_after_seconds > 0:
+            return f"\u9886\u53d6\u8bd5\u7528\u8fc7\u4e8e\u9891\u7e41\uff0c\u8bf7 {exc.retry_after_seconds} \u79d2\u540e\u518d\u8bd5"
+        return "\u9886\u53d6\u8bd5\u7528\u8fc7\u4e8e\u9891\u7e41\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5"
+    if detail.startswith(_SESSION_PERSIST_FAILED_DETAIL):
+        return "\u968f\u673aIP\u8d26\u53f7\u4fe1\u606f\u6ca1\u80fd\u5b89\u5168\u4fdd\u5b58\u5230\u672c\u673a\uff0c\u5f53\u524d\u4f1a\u8bdd\u5df2\u505c\u6b62\u4f7f\u7528\u3002\u8bf7\u91cd\u65b0\u9886\u53d6\u8bd5\u7528\u6216\u8054\u7cfb\u5f00\u53d1\u8005\u3002"
+    if detail == "device_banned":
+        return "\u5f53\u524d\u8bbe\u5907\u5df2\u88ab\u5c01\u7981\uff0c\u8bf7\u8054\u7cfb\u5f00\u53d1\u8005"
+    if detail == "user_banned":
+        return "\u5f53\u524d\u8d26\u53f7\u5df2\u88ab\u5c01\u7981\uff0c\u8bf7\u8054\u7cfb\u5f00\u53d1\u8005"
+    if detail == "user_expired":
+        return "\u968f\u673aIP\u8d26\u53f7\u5df2\u8fc7\u671f\uff0c\u8bf7\u8054\u7cfb\u5f00\u53d1\u8005\u8865\u989d\u5ea6\u6216\u91cd\u65b0\u5f00\u901a"
+    if detail == "device_owned_by_other_user":
+        return "\u5f53\u524d\u8bbe\u5907\u7ed1\u5b9a\u7684\u968f\u673aIP\u8d26\u53f7\u4e0e\u672c\u673a\u8bb0\u5f55\u4e0d\u4e00\u81f4\uff0c\u8bf7\u8054\u7cfb\u5f00\u53d1\u8005\u5904\u7406"
+    if detail == "user_id_required":
+        return "\u672c\u673a\u7f3a\u5c11\u968f\u673aIP\u7528\u6237ID\uff0c\u8bf7\u91cd\u65b0\u9886\u53d6\u8bd5\u7528\u540e\u518d\u8bd5"
+    if detail == "invalid_user_id":
+        return "\u672c\u673a\u4fdd\u5b58\u7684\u968f\u673aIP\u7528\u6237ID\u65e0\u6548\uff0c\u8bf7\u91cd\u65b0\u9886\u53d6\u8bd5\u7528\u6216\u8054\u7cfb\u5f00\u53d1\u8005"
+    if detail == "unauthorized":
+        return "\u968f\u673aIP\u8d26\u53f7\u6821\u9a8c\u5931\u8d25\uff0c\u8bf7\u91cd\u65b0\u9886\u53d6\u8bd5\u7528\u6216\u8054\u7cfb\u5f00\u53d1\u8005"
+    if detail == "minute_not_allowed":
+        return "\u4ee3\u7406\u65f6\u957f\u53c2\u6570\u4e0d\u88ab\u540e\u7aef\u63a5\u53d7\uff0c\u8bf7\u66f4\u65b0\u5ba2\u6237\u7aef"
+    if detail == "pool_not_allowed":
+        return "\u4ee3\u7406\u6c60\u53c2\u6570\u4e0d\u88ab\u540e\u7aef\u63a5\u53d7\uff0c\u8bf7\u66f4\u65b0\u5ba2\u6237\u7aef"
+    if detail == "area_not_allowed":
+        return "\u5730\u533a\u53c2\u6570\u4e0d\u88ab\u540e\u7aef\u63a5\u53d7\uff0c\u8bf7\u66f4\u65b0\u5ba2\u6237\u7aef\u6216\u68c0\u67e5\u5730\u533a\u914d\u7f6e"
+    if detail == "invalid_area":
+        return "\u6307\u5b9a\u5730\u533a\u65e0\u6548\uff0c\u8bf7\u91cd\u65b0\u9009\u62e9\u5730\u533a\u540e\u518d\u8bd5"
+    if detail == "invalid_upstream":
+        return "\u4ee3\u7406\u4e0a\u6e38\u53c2\u6570\u4e0d\u88ab\u540e\u7aef\u63a5\u53d7\uff0c\u8bf7\u66f4\u65b0\u5ba2\u6237\u7aef"
+    if detail == "minute_not_supported_for_idiot":
+        return "\u9650\u65f6\u798f\u5229\u4ee3\u7406\u6e90\u53ea\u652f\u6301 1 \u5206\u949f\u4ee3\u7406\uff0c\u8bf7\u5207\u56de\u9ed8\u8ba4\u4ee3\u7406\u6e90"
+    if detail == "invalid_area_for_idiot":
+        return "\u9650\u65f6\u798f\u5229\u4ee3\u7406\u6e90\u7684\u5730\u533a\u683c\u5f0f\u4e0d\u6b63\u786e\uff0c\u8bf7\u91cd\u65b0\u9009\u62e9\u5177\u4f53\u57ce\u5e02\u540e\u518d\u8bd5"
+    if detail == "insufficient_quota":
+        return "\u968f\u673aIP\u5df2\u7528\u989d\u5ea6\u5df2\u8fbe\u5230\u4e0a\u9650\uff0c\u8bf7\u5148\u8865\u5145\u989d\u5ea6"
+    if detail == "token_rate_limited":
+        return "\u5f53\u524d\u8d26\u53f7\u8bf7\u6c42\u8fc7\u4e8e\u9891\u7e41\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5"
+    if detail == "device_rate_limited":
+        return "\u5f53\u524d\u8bbe\u5907\u8bf7\u6c42\u8fc7\u4e8e\u9891\u7e41\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5"
+    if detail == "ip_rate_limited":
+        return "\u5f53\u524d\u7f51\u7edc\u8bf7\u6c42\u8fc7\u4e8e\u9891\u7e41\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5"
+    if detail == "user_daily_limit_exceeded":
+        return "\u4eca\u65e5\u968f\u673aIP\u989d\u5ea6\u5df2\u8fbe\u5230\u4e0a\u9650"
+    if detail == "site_daily_limit_exceeded":
+        return "\u670d\u52a1\u7aef\u4eca\u65e5\u989d\u5ea6\u5df2\u8fbe\u4e0a\u9650\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5"
+    if detail == "upstream_surplus_exhausted":
+        return "\u4e0a\u6e38\u4ee3\u7406\u4f59\u989d\u4e0d\u8db3\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5"
+    if detail == "upstream_rejected":
+        return "\u4e0a\u6e38\u4ee3\u7406\u670d\u52a1\u62d2\u7edd\u4e86\u8bf7\u6c42\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5"
+    if detail == "not_authenticated":
+        return "\u8bf7\u5148\u9886\u53d6\u514d\u8d39\u8bd5\u7528\u6216\u5151\u6362\u989d\u5ea6\u540e\u518d\u4f7f\u7528\u968f\u673aIP"
+    if detail.startswith("network_error:"):
+        return f"\u7f51\u7edc\u8bf7\u6c42\u5931\u8d25\uff1a{detail.split(':', 1)[1].strip()}"
+    if detail == "invalid_response:user_id_invalid":
+        return "\u670d\u52a1\u7aef\u8fd4\u56de\u4e86\u65e0\u6548\u7684\u968f\u673aIP\u7528\u6237ID\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5"
+    if detail.startswith("invalid_response"):
+        return "\u670d\u52a1\u7aef\u8fd4\u56de\u683c\u5f0f\u5f02\u5e38\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5"
+    if detail.startswith("http_"):
+        return f"\u670d\u52a1\u7aef\u6682\u65f6\u4e0d\u53ef\u7528\uff08{detail[5:]}\uff09"
+    return detail or "\u8bf7\u6c42\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5"

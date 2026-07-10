@@ -8,6 +8,7 @@ try:
 except ImportError:
     BeautifulSoup = None
 
+from survey_submitter.core.questions.types import TypeCode
 from survey_submitter.core.questions.utils import _normalize_question_type_code
 from survey_submitter.logging.log_utils import log_suppressed_exception
 from survey_submitter.providers.match_utils import normalize_match_text
@@ -15,7 +16,11 @@ from survey_submitter.providers.match_utils import normalize_match_text
 from .regexes import WJX_MODLEN_CLASS_RE, WJX_QUESTION_PREFIX_RE, WJX_TITLE_SUFFIX_RE
 
 _TEXT_INPUT_ALLOWED_TYPES = {"text", "tel", "email", "number", "search", "url", "password"}
-_KNOWN_NON_TEXT_QUESTION_TYPES = {"3", "4", "5", "6", "7", "8", "11", "12", "13", "15", "16", "17"}
+_KNOWN_NON_TEXT_QUESTION_TYPES = {
+    TypeCode.RADIO, TypeCode.CHECKBOX, TypeCode.RATING, TypeCode.MATRIX,
+    TypeCode.DROPDOWN, TypeCode.SLIDER, TypeCode.ORDER,
+    "12", "13", "15", "16", "17",
+}
 _SELECT_PLACEHOLDER_PREFIXES = ("请选择", "请先选择")
 _LOCATION_VERIFY_MARKERS = ("地图", "省市", "省份", "城市", "地区", "map", "city", "province", "area")
 _DISPLAY_SPACE_RE = re.compile(r"\s+")
@@ -419,7 +424,7 @@ def _soup_question_looks_like_description(question_div, type_code: str) -> bool:
     except Exception:
         pass
     
-    if type_code not in {"3", "4"}:
+    if type_code not in {TypeCode.RADIO, TypeCode.CHECKBOX}:
         return False
     try:
         
