@@ -1,7 +1,10 @@
 import logging
+import re
 import threading
 from dataclasses import dataclass
 from typing import Any, Optional, Set, Tuple
+
+from pydantic import ConfigDict, field_validator
 
 from survey_submitter.constants import (
     PROXY_MINUTE_OPTIONS,
@@ -9,6 +12,7 @@ from survey_submitter.constants import (
     PROXY_SOURCE_CUSTOM,
     PROXY_TTL_GRACE_SECONDS,
 )
+from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.providers.common import (
     SURVEY_PROVIDER_WJX,
 )
@@ -29,15 +33,34 @@ _ORDINARY_POOL_PROVINCE_CODES: Set[str] = {
 }
 
 
-@dataclass(frozen=True)
-class ProxySettings:
-    
-
+class ProxySettings(BaseConfigModel):
+    model_config = ConfigDict(frozen=True)
     source: str
     custom_api_url: str
     area_code: Optional[str]
     default_area_code: str
     occupy_minute: int
+
+    @field_validator("source")
+    @classmethod
+    def validate_source(cls, v: str) -> str:
+        if v not in _SUPPORTED_PROXY_SOURCES:
+            raise ValueError(f"不支持的代理源: {v}")
+        return v
+
+    @field_validator("area_code", "default_area_code")
+    @classmethod
+    def validate_area_code(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not re.match(r"^\d{6}$", v):
+            raise ValueError(f"地区代码必须是6位数字: {v}")
+        return v
+
+    @field_validator("occupy_minute")
+    @classmethod
+    def validate_occupy_minute(cls, v: int) -> int:
+        if v not in PROXY_MINUTE_OPTIONS:
+            raise ValueError(f"占用分钟数必须是 {PROXY_MINUTE_OPTIONS} 之一")
+        return v
 
 
 

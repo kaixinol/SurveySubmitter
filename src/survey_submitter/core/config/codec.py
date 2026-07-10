@@ -6,8 +6,11 @@ import random
 from dataclasses import asdict, dataclass, fields
 from typing import Any, Dict, List, Optional, Tuple
 
+from pydantic import ConfigDict
+
 from survey_submitter.core.reverse_fill import REVERSE_FILL_FORMAT_AUTO, REVERSE_FILL_FORMAT_WJX_SCORE, REVERSE_FILL_FORMAT_WJX_SEQUENCE, REVERSE_FILL_FORMAT_WJX_TEXT
 from survey_submitter.core.config.answer_datetime_window import normalize_answer_datetime_window
+from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.config.schema import RuntimeConfig
 from survey_submitter.core.psychometrics.psychometric import normalize_target_alpha
 from survey_submitter.core.questions.consistency import normalize_rule_dict, sanitize_answer_rules
@@ -44,8 +47,8 @@ _USER_AGENT_DEVICE_TO_PRESET_KEYS = {
 }
 
 
-@dataclass(frozen=True)
-class UserAgentProfile:
+class UserAgentProfile(BaseConfigModel):
+    model_config = ConfigDict(frozen=True)
     category: str
     preset_key: str
     ua: str
@@ -146,9 +149,7 @@ _SURVEY_QUESTION_META_FIELDS = {
     "required",
 }
 
-_RUNTIME_CONFIG_FIELDS = {
-    field.name for field in fields(RuntimeConfig) if not field.name.startswith("_")
-}
+_RUNTIME_CONFIG_FIELDS = set(RuntimeConfig.model_fields.keys())
 _RUNTIME_CONFIG_FIELDS.update({"question_entries", "questions_info"})
 
 
@@ -611,7 +612,7 @@ def _ensure_supported_config_payload(payload: Dict[str, Any], *, config_path: st
 
 
 def serialize_runtime_config(config: RuntimeConfig) -> Dict[str, Any]:
-    payload: Dict[str, Any] = asdict(config)
+    payload: Dict[str, Any] = config.model_dump()
     payload["question_entries"] = [
         serialize_question_entry(entry) for entry in list(config.question_entries or [])
     ]

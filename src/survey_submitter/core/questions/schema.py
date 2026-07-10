@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, List, Optional, Union
 
+from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.logging.log_utils import log_suppressed_exception
 
@@ -80,8 +81,7 @@ def _infer_option_count(entry: "QuestionEntry") -> int:
     return 0
 
 
-@dataclass
-class QuestionEntry:
+class QuestionEntry(BaseConfigModel):
     question_type: str
     probabilities: Union[List[float], List[List[float]], int, None]
     texts: Optional[List[str]] = None
@@ -95,15 +95,15 @@ class QuestionEntry:
     provider_question_id: Optional[str] = None
     provider_page_id: Optional[str] = None
     ai_enabled: bool = False
-    multi_text_blank_modes: List[str] = field(default_factory=list)
-    multi_text_blank_ai_flags: List[bool] = field(default_factory=list)
-    multi_text_blank_int_ranges: List[List[int]] = field(default_factory=list)
+    multi_text_blank_modes: List[str] = []
+    multi_text_blank_ai_flags: List[bool] = []
+    multi_text_blank_int_ranges: List[List[int]] = []
     text_random_mode: str = _TEXT_RANDOM_NONE
-    text_random_int_range: List[int] = field(default_factory=list)
+    text_random_int_range: List[int] = []
     option_fill_texts: Optional[List[Optional[str]]] = None
     fillable_option_indices: Optional[List[int]] = None
-    attached_option_selects: List[dict] = field(default_factory=list)
+    attached_option_selects: List[dict] = []
     is_location: bool = False
-    location_parts: List[str] = field(default_factory=list)
+    location_parts: List[str] = []
     dimension: Optional[str] = None
-    psycho_bias: str = "custom"
+    psycho_bias: Union[str, List[str]] = "custom"

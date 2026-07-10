@@ -4,6 +4,7 @@ from unittest.mock import patch
 from survey_submitter.core.engine.provider_common import _build_grouped_runtime_items, build_psychometric_plan_for_run, ensure_joint_psychometric_answer_plan, provider_run_context
 from survey_submitter.core.questions.config import GLOBAL_RELIABILITY_DIMENSION
 from survey_submitter.core.task import ExecutionConfig
+from survey_submitter.providers.contracts import SurveyQuestionMeta
 
 class _FakeBlueprintItem:
 
@@ -57,7 +58,7 @@ class ProviderCommonTests:
         set_persona_mock.assert_called_once_with({'name': 'p'})
         reset_context_mock.assert_called_once()
         reset_tendency_mock.assert_called_once()
-        reset_consistency_mock.assert_called_once_with(config.answer_rules, [{'title': 'Q1'}])
+        reset_consistency_mock.assert_called_once_with(config.answer_rules, [SurveyQuestionMeta(title='Q1')])
         reset_persona_mock.assert_called_once()
 
     def test_provider_run_context_combines_joint_sample_plan_with_fallback(self) -> None:

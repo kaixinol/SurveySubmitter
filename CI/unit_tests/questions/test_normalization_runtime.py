@@ -25,40 +25,40 @@ class NormalizationRuntimeTests:
         ctx = SimpleNamespace()
         entries = [
             QuestionEntry(
-                "single",
-                [0, 3, 0],
+                question_type="single",
+                probabilities=[0, 3, 0],
                 option_count=3,
                 question_num=1,
                 option_fill_texts=["", "补充", None],
                 attached_option_selects=[{"option_index": 1, "weights": [1, 0]}],
             ),
             QuestionEntry(
-                "dropdown",
-                [1, 1],
+                question_type="dropdown",
+                probabilities=[1, 1],
                 option_count=2,
                 question_num=2,
                 dimension="满意度",
                 psycho_bias="positive",
             ),
-            QuestionEntry("multiple", [25, 75], option_count=2, question_num=3, option_fill_texts=["A", "B"]),
+            QuestionEntry(question_type="multiple", probabilities=[25, 75], option_count=2, question_num=3, option_fill_texts=["A", "B"]),
             QuestionEntry(
-                "matrix",
-                [[1, 0, 0], [0, 2, 0]],
+                question_type="matrix",
+                probabilities=[[1, 0, 0], [0, 2, 0]],
                 rows=3,
                 option_count=3,
                 question_num=4,
                 dimension="态度",
                 psycho_bias=["positive", "negative"],
             ),
-            QuestionEntry("scale", [1, 3], option_count=2, question_num=5, psycho_bias="negative"),
-            QuestionEntry("score", [2, 2], option_count=2, question_num=6),
-            QuestionEntry("slider", [75], option_count=1, question_num=7, distribution_mode="custom"),
-            QuestionEntry("slider", -1, option_count=1, question_num=8, distribution_mode="random"),
-            QuestionEntry("order", -1, question_num=9),
-            QuestionEntry("text", [1, 3], texts=["甲", "乙"], question_num=10, ai_enabled=True, question_title="填空"),
+            QuestionEntry(question_type="scale", probabilities=[1, 3], option_count=2, question_num=5, psycho_bias="negative"),
+            QuestionEntry(question_type="score", probabilities=[2, 2], option_count=2, question_num=6),
+            QuestionEntry(question_type="slider", probabilities=[75], option_count=1, question_num=7, distribution_mode="custom"),
+            QuestionEntry(question_type="slider", probabilities=-1, option_count=1, question_num=8, distribution_mode="random"),
+            QuestionEntry(question_type="order", probabilities=-1, question_num=9),
+            QuestionEntry(question_type="text", probabilities=[1, 3], texts=["甲", "乙"], question_num=10, ai_enabled=True, question_title="填空"),
             QuestionEntry(
-                "multi_text",
-                -1,
+                question_type="multi_text",
+                probabilities=-1,
                 texts=[],
                 question_num=11,
                 ai_enabled=False,
@@ -67,8 +67,8 @@ class NormalizationRuntimeTests:
                 multi_text_blank_int_ranges=[[9, 3], []],
             ),
             QuestionEntry(
-                "text",
-                -1,
+                question_type="text",
+                probabilities=-1,
                 texts=["位置"],
                 question_num=12,
                 is_location=True,
@@ -108,20 +108,20 @@ class NormalizationRuntimeTests:
         ctx = SimpleNamespace()
         entries = [
             QuestionEntry(
-                "scale",
-                [1, 2, 3],
+                question_type="scale",
+                probabilities=[1, 2, 3],
                 option_count=3,
                 question_num=2,
-                survey_provider="credamo",
+                survey_provider="wjx",
                 provider_page_id="4",
                 provider_question_id="question-1",
             ),
             QuestionEntry(
-                "scale",
-                [3, 2, 1],
+                question_type="scale",
+                probabilities=[3, 2, 1],
                 option_count=3,
                 question_num=2,
-                survey_provider="credamo",
+                survey_provider="wjx",
                 provider_page_id="5",
                 provider_question_id="question-1",
             ),
@@ -131,15 +131,15 @@ class NormalizationRuntimeTests:
 
         assert ctx.question_config_index_map[2] == ("scale", 1)
         assert ctx.provider_question_config_index_map == {
-            "credamo:4:question-1": ("scale", 0),
-            "credamo:5:question-1": ("scale", 1),
+            "wjx:4:question-1": ("scale", 0),
+            "wjx:5:question-1": ("scale", 1),
         }
 
     def test_configure_probabilities_assigns_global_reliability_dimension_when_none_explicit(self) -> None:
         ctx = SimpleNamespace()
         entries = [
-            QuestionEntry("dropdown", [1, 1], option_count=2, question_num=1),
-            QuestionEntry("scale", [1, 1], option_count=2, question_num=2),
+            QuestionEntry(question_type="dropdown", probabilities=[1, 1], option_count=2, question_num=1),
+            QuestionEntry(question_type="scale", probabilities=[1, 1], option_count=2, question_num=2),
         ]
 
         configure_probabilities(entries, ctx)
@@ -169,8 +169,8 @@ class NormalizationRuntimeTests:
             }
         )
         entries = [
-            QuestionEntry("single", [1, 1, 1, 1, 1], option_count=5, question_num=1),
-            QuestionEntry("single", [1, 1], option_count=2, question_num=2),
+            QuestionEntry(question_type="single", probabilities=[1, 1, 1, 1, 1], option_count=5, question_num=1),
+            QuestionEntry(question_type="single", probabilities=[1, 1], option_count=2, question_num=2),
         ]
 
         configure_probabilities(entries, ctx)
@@ -191,7 +191,7 @@ class NormalizationRuntimeTests:
             }
         )
         entries = [
-            QuestionEntry("single", [1, 1, 1, 1, 1], option_count=5, question_num=4),
+            QuestionEntry(question_type="single", probabilities=[1, 1, 1, 1, 1], option_count=5, question_num=4),
         ]
 
         configure_probabilities(entries, ctx)
@@ -202,16 +202,16 @@ class NormalizationRuntimeTests:
     @pytest.mark.parametrize(
         ("entry", "message"),
         [
-            (QuestionEntry("single", [0, 0], option_count=2, question_num=1), "所有选项配比均为 0"),
-            (QuestionEntry("dropdown", [0, 0], option_count=2, question_num=2), "所有选项配比均为 0"),
-            (QuestionEntry("matrix", [[1, 0], [0, 0]], rows=2, option_count=2, question_num=3), "第 2 行配比全部为 0"),
-            (QuestionEntry("matrix", [0, 0], rows=1, option_count=2, question_num=4), "矩阵题"),
-            (QuestionEntry("multiple", -1, option_count=2, question_num=5), "多选题必须提供概率列表"),
-            (QuestionEntry("text", -1, texts=[], question_num=6), "填空题至少需要一个候选答案"),
+            (QuestionEntry(question_type="single", probabilities=[0, 0], option_count=2, question_num=1), "所有选项配比均为 0"),
+            (QuestionEntry(question_type="dropdown", probabilities=[0, 0], option_count=2, question_num=2), "所有选项配比均为 0"),
+            (QuestionEntry(question_type="matrix", probabilities=[[1, 0], [0, 0]], rows=2, option_count=2, question_num=3), "第 2 行配比全部为 0"),
+            (QuestionEntry(question_type="matrix", probabilities=[0, 0], rows=1, option_count=2, question_num=4), "矩阵题"),
+            (QuestionEntry(question_type="multiple", probabilities=-1, option_count=2, question_num=5), "多选题必须提供概率列表"),
+            (QuestionEntry(question_type="text", probabilities=-1, texts=[], question_num=6), "填空题至少需要一个候选答案"),
             (
                 QuestionEntry(
-                    "text",
-                    -1,
+                    question_type="text",
+                    probabilities=-1,
                     texts=[],
                     question_num=7,
                     text_random_mode=_TEXT_RANDOM_INTEGER,
@@ -221,8 +221,8 @@ class NormalizationRuntimeTests:
             ),
             (
                 QuestionEntry(
-                    "multi_text",
-                    -1,
+                    question_type="multi_text",
+                    probabilities=-1,
                     texts=["x"],
                     question_num=8,
                     multi_text_blank_modes=[_TEXT_RANDOM_INTEGER],
@@ -232,8 +232,8 @@ class NormalizationRuntimeTests:
             ),
             (
                 QuestionEntry(
-                    "single",
-                    [1, 1],
+                    question_type="single",
+                    probabilities=[1, 1],
                     option_count=2,
                     question_num=9,
                     attached_option_selects=[{"option_text": "A", "weights": [0, 0]}],
@@ -257,7 +257,7 @@ class NormalizationRuntimeTests:
     def test_text_random_modes_override_ai_and_candidate_text(self, mode: str, expected: str) -> None:
         ctx = SimpleNamespace()
         configure_probabilities(
-            [QuestionEntry("text", -1, texts=["原值"], question_num=1, ai_enabled=True, text_random_mode=mode)],
+            [QuestionEntry(question_type="text", probabilities=-1, texts=["原值"], question_num=1, ai_enabled=True, text_random_mode=mode)],
             ctx,
         )
 
@@ -270,8 +270,8 @@ class NormalizationRuntimeTests:
         configure_probabilities(
             [
                 QuestionEntry(
-                    "text",
-                    -1,
+                    question_type="text",
+                    probabilities=-1,
                     texts=["原值"],
                     question_num=1,
                     text_random_mode=_TEXT_RANDOM_INTEGER,

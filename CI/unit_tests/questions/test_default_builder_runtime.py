@@ -55,8 +55,8 @@ class DefaultBuilderRuntimeTests:
 
     def test_build_default_question_entries_reuses_existing_by_provider_num_and_title(self) -> None:
         existing_by_provider = QuestionEntry(
-            "single",
-            [0, 1],
+            question_type="single",
+            probabilities=[0, 1],
             option_count=2,
             question_num=99,
             question_title="旧标题",
@@ -69,8 +69,8 @@ class DefaultBuilderRuntimeTests:
             attached_option_selects=[{"option_index": 1, "weights": [1, 0]}],
         )
         existing_by_num = QuestionEntry(
-            "multiple",
-            [10, 90],
+            question_type="multiple",
+            probabilities=[10, 90],
             option_count=2,
             question_num=2,
             question_title="多选题",
@@ -78,8 +78,8 @@ class DefaultBuilderRuntimeTests:
             custom_weights=[10, 90],
         )
         existing_by_title = QuestionEntry(
-            "text",
-            [1],
+            question_type="text",
+            probabilities=[1],
             texts=["旧答案"],
             question_num=88,
             question_title="标题匹配",
@@ -119,8 +119,8 @@ class DefaultBuilderRuntimeTests:
 
     def test_build_default_question_entries_drops_stale_option_fill_texts(self) -> None:
         existing = QuestionEntry(
-            "single",
-            [1, 0],
+            question_type="single",
+            probabilities=[1, 0],
             option_count=2,
             question_num=1,
             question_title="单选题",
@@ -137,8 +137,8 @@ class DefaultBuilderRuntimeTests:
 
     def test_build_default_question_entries_does_not_reuse_mismatched_title_or_type(self) -> None:
         existing = QuestionEntry(
-            "single",
-            [0, 1],
+            question_type="single",
+            probabilities=[0, 1],
             option_count=2,
             question_num=1,
             question_title="旧标题",

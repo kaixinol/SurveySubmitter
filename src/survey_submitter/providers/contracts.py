@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
+from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.providers.common import SURVEY_PROVIDER_WJX, normalize_survey_provider
 
 __all__ = [
@@ -30,41 +31,40 @@ _VALID_LOGIC_PARSE_STATUSES = {
 }
 
 
-@dataclass
-class SurveyQuestionMeta:
-    num: int
-    title: str
+class SurveyQuestionMeta(BaseConfigModel):
+    num: int = 0
+    title: str = ""
     display_num: Optional[int] = None
     description: str = ""
     type_code: str = "0"
     options: int = 0
     rows: int = 1
-    row_texts: List[str] = field(default_factory=list)
+    row_texts: List[str] = []
     page: int = 1
-    option_texts: List[str] = field(default_factory=list)
+    option_texts: List[str] = []
     forced_option_index: Optional[int] = None
     forced_option_text: str = ""
-    forced_texts: List[str] = field(default_factory=list)
-    fillable_options: List[int] = field(default_factory=list)
-    attached_option_selects: List[Dict[str, Any]] = field(default_factory=list)
+    forced_texts: List[str] = []
+    fillable_options: List[int] = []
+    attached_option_selects: List[Dict[str, Any]] = []
     has_attached_option_select: bool = False
     is_location: bool = False
     is_rating: bool = False
     is_description: bool = False
     rating_max: int = 0
     text_inputs: int = 0
-    text_input_labels: List[str] = field(default_factory=list)
+    text_input_labels: List[str] = []
     is_multi_text: bool = False
     is_text_like: bool = False
     is_slider_matrix: bool = False
     has_jump: bool = False
-    jump_rules: List[Dict[str, Any]] = field(default_factory=list)
+    jump_rules: List[Dict[str, Any]] = []
     has_display_condition: bool = False
-    display_conditions: List[Dict[str, Any]] = field(default_factory=list)
+    display_conditions: List[Dict[str, Any]] = []
     has_dependent_display_logic: bool = False
-    controls_display_targets: List[Dict[str, Any]] = field(default_factory=list)
+    controls_display_targets: List[Dict[str, Any]] = []
     logic_parse_status: str = LOGIC_PARSE_STATUS_UNKNOWN
-    question_media: List[Dict[str, Any]] = field(default_factory=list)
+    question_media: List[Dict[str, Any]] = []
     slider_min: Any = None
     slider_max: Any = None
     slider_step: Any = None
@@ -78,30 +78,6 @@ class SurveyQuestionMeta:
     unsupported: bool = False
     unsupported_reason: str = ""
     required: bool = False
-
-    def get(self, key: str, default: Any = None) -> Any:
-        return getattr(self, str(key or ""), default)
-
-    def __getitem__(self, key: str) -> Any:
-        return getattr(self, str(key or ""))
-
-    def keys(self):
-        return self.to_dict().keys()
-
-    def items(self):
-        return self.to_dict().items()
-
-    def values(self):
-        return self.to_dict().values()
-
-    def __iter__(self):
-        return iter(self.to_dict().items())
-
-    def __len__(self) -> int:
-        return len(self.to_dict())
-
-    def to_dict(self) -> Dict[str, Any]:
-        return survey_question_meta_to_dict(self)
 
 
 @dataclass(frozen=True)
@@ -238,54 +214,7 @@ def _survey_question_input_to_dict(question: Any) -> Optional[Dict[str, Any]]:
 
 
 def survey_question_meta_to_dict(question: SurveyQuestionMeta) -> Dict[str, Any]:
-    return {
-        "num": int(question.num),
-        "title": str(question.title or "").strip(),
-        "display_num": question.display_num,
-        "description": str(question.description or "").strip(),
-        "type_code": str(question.type_code or "0").strip() or "0",
-        "options": int(question.options or 0),
-        "rows": int(question.rows or 1),
-        "row_texts": list(question.row_texts or []),
-        "page": int(question.page or 1),
-        "option_texts": list(question.option_texts or []),
-        "forced_option_index": question.forced_option_index,
-        "forced_option_text": str(question.forced_option_text or "").strip(),
-        "forced_texts": list(question.forced_texts or []),
-        "fillable_options": list(question.fillable_options or []),
-        "attached_option_selects": _normalize_dict_list(question.attached_option_selects),
-        "has_attached_option_select": bool(question.has_attached_option_select),
-        "is_location": bool(question.is_location),
-        "is_rating": bool(question.is_rating),
-        "is_description": bool(question.is_description),
-        "rating_max": int(question.rating_max or 0),
-        "text_inputs": int(question.text_inputs or 0),
-        "text_input_labels": list(question.text_input_labels or []),
-        "is_multi_text": bool(question.is_multi_text),
-        "is_text_like": bool(question.is_text_like),
-        "is_slider_matrix": bool(question.is_slider_matrix),
-        "has_jump": bool(question.has_jump),
-        "jump_rules": _normalize_jump_rules(question.jump_rules),
-        "has_display_condition": bool(question.has_display_condition),
-        "display_conditions": _normalize_dict_list(question.display_conditions),
-        "has_dependent_display_logic": bool(question.has_dependent_display_logic),
-        "controls_display_targets": _normalize_dict_list(question.controls_display_targets),
-        "logic_parse_status": _normalize_logic_parse_status(question.logic_parse_status),
-        "question_media": _normalize_question_media_list(question.question_media),
-        "slider_min": question.slider_min,
-        "slider_max": question.slider_max,
-        "slider_step": question.slider_step,
-        "multi_min_limit": question.multi_min_limit,
-        "multi_max_limit": question.multi_max_limit,
-        "provider": normalize_survey_provider(question.provider, default=SURVEY_PROVIDER_WJX),
-        "provider_question_id": str(question.provider_question_id or "").strip(),
-        "provider_page_id": str(question.provider_page_id or "").strip(),
-        "provider_type": str(question.provider_type or "").strip(),
-        "provider_page_raw": question.provider_page_raw,
-        "unsupported": bool(question.unsupported),
-        "unsupported_reason": str(question.unsupported_reason or "").strip(),
-        "required": bool(question.required),
-    }
+    return question.model_dump()
 
 
 def _normalize_question(question: SurveyQuestionInput, provider: str, index: int) -> SurveyQuestionMeta:

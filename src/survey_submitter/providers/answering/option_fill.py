@@ -12,7 +12,7 @@ from survey_submitter.core.questions.utils import (
 
 def option_requires_fill(question: Any, option_index: int) -> bool:
     try:
-        fillable_indices = list(getattr(question, "fillable_options", None) or question.get("fillable_options") or [])
+        fillable_indices = list(getattr(question, "fillable_options", None) or [])
     except Exception:
         fillable_indices = []
     for raw_index in fillable_indices:

@@ -90,21 +90,25 @@ def supports_reverse_fill_runtime(question_type: str, info: SurveyQuestionMeta |
     normalized = str(question_type or "").strip().lower()
     if normalized not in REVERSE_FILL_RUNTIME_SUPPORTED_TYPES:
         return False
-    if normalized == QuestionType.TEXT and bool(info.get("is_location")):
+    is_location = getattr(info, "is_location", None) if isinstance(info, SurveyQuestionMeta) else info.get("is_location")
+    if normalized == QuestionType.TEXT and bool(is_location):
         return False
     if normalized in {QuestionType.SINGLE, QuestionType.DROPDOWN}:
-        if list(info.get("fillable_options") or []) or list(info.get("attached_option_selects") or []):
+        fillable = getattr(info, "fillable_options", None) if isinstance(info, SurveyQuestionMeta) else info.get("fillable_options")
+        attached = getattr(info, "attached_option_selects", None) if isinstance(info, SurveyQuestionMeta) else info.get("attached_option_selects")
+        if list(fillable or []) or list(attached or []):
             return False
     return True
 
 
 def resolve_question_entry(info: SurveyQuestionMeta | Dict[str, Any], entries: List[QuestionEntry]) -> Optional[QuestionEntry]:
-    raw_question_num = info.get("num")
+    raw_question_num = getattr(info, "num", None) if isinstance(info, SurveyQuestionMeta) else info.get("num")
     try:
         question_num = int(raw_question_num) if raw_question_num is not None else None
     except Exception:
         question_num = None
-    title_key = normalize_reverse_fill_key(info.get("title"))
+    raw_title = getattr(info, "title", None) if isinstance(info, SurveyQuestionMeta) else info.get("title")
+    title_key = normalize_reverse_fill_key(raw_title)
     matched_by_title: Optional[QuestionEntry] = None
     for entry in list(entries or []):
         try:
