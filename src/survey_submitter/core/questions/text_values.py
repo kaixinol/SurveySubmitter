@@ -33,13 +33,11 @@ async def resolve_option_fill_text_from_config(
     question_title: str = "",
     question_number: int = 0,
     option_text: Optional[str] = None,
-    driver: Any = None,
     ctx: Optional[ExecutionState] = None,
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
     ai_placeholder_text: str = DEFAULT_FILL_TEXT,
 ) -> Optional[str]:
-    del driver
     raw_value = get_fill_text_from_config(fill_entries, option_index)
     if raw_value is None:
         return None
