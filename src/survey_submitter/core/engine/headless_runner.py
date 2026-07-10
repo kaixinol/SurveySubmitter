@@ -65,11 +65,12 @@ class HeadlessRunner:
     @staticmethod
     def _log_parsed_questions(definition: SurveyDefinition) -> None:
         """Output parsed question details for --parse-only mode."""
+        from survey_submitter.core.questions.types import TypeCode
         for q in definition.questions:
-            if q.get("is_description"):
+            if q.type_code == TypeCode.DESCRIPTION:
                 continue
-            unsupported = " [不支持]" if q.get("unsupported") else ""
-            location = " [地址题]" if q.get("is_location") else ""
+            unsupported = " [不支持]" if q.unsupported else ""
+            location = " [地址题]" if q.type_code == TypeCode.LOCATION else ""
             logger.info(
                 "  Q%s: %s (%s)%s%s",
                 q.num,

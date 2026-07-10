@@ -240,6 +240,9 @@ def parse_survey_questions_from_html(html: str) -> List[Dict[str, Any]]:
             is_location = type_code in {TypeCode.TEXT, TypeCode.LOCATION} and _soup_question_is_location(question_div)
             if is_location:
                 type_code = TypeCode.LOCATION
+            elif type_code == TypeCode.LOCATION and not is_location:
+                if question_div.find("textarea"):
+                    type_code = TypeCode.TEXT
             display_num = _extract_display_question_number(raw_heading_text)
             if display_num is None:
                 display_num = current_display_num
