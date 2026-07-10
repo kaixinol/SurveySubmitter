@@ -49,169 +49,210 @@ def _extract_matrix_header_texts(table) -> list[str]:
             best_texts = non_empty_texts
     return best_texts
 
-def _collect_matrix_option_texts(soup, question_div, question_number: int) -> tuple[int, list[str], list[str]]:
-    option_texts: list[str] = []
-    matrix_rows = 0
-    row_texts: list[str] = []
-    def _extract_attr_text(node) -> str:
-        if node is None:
-            return ""
-        keys = (
-            "title",
-            "data-title",
-            "data-text",
-            "data-label",
-            "aria-label",
-            "alt",
-            "htitle",
-            "data-original-title",
-        )
-        for key in keys:
-            raw = node.get(key)
-            if raw is None:
-                continue
-            text_value = _normalize_html_text(str(raw))
-            if text_value:
-                return text_value
+def _extract_attr_text(node) -> str:
+    if node is None:
         return ""
+    keys = (
+        "title",
+        "data-title",
+        "data-text",
+        "data-label",
+        "aria-label",
+        "alt",
+        "htitle",
+        "data-original-title",
+    )
+    for key in keys:
+        raw = node.get(key)
+        if raw is None:
+            continue
+        text_value = _normalize_html_text(str(raw))
+        if text_value:
+            return text_value
+    return ""
 
-    def _extract_row_label(row, cells) -> str:
-        label_text = ""
-        if cells:
-            label_text = _normalize_html_text(cells[0].get_text(" ", strip=True))
-            if not label_text:
-                label_text = _extract_attr_text(cells[0])
+
+def _extract_row_label(row, cells) -> str:
+    label_text = ""
+    if cells:
+        label_text = _normalize_html_text(cells[0].get_text(" ", strip=True))
         if not label_text:
-            label_text = _extract_attr_text(row)
-        if not label_text:
-            for selector in (
-                ".label",
-                ".row-title",
-                ".rowtitle",
-                ".row",
-                ".item-title",
-                ".itemTitle",
-                ".itemTitleSpan",
-                ".stitle",
-            ):
-                node = row.select_one(selector)
-                if node:
-                    label_text = _normalize_html_text(node.get_text(" ", strip=True))
-                    if label_text:
-                        break
-        if not label_text:
-            for child in row.find_all(["label", "span", "div", "p"], limit=10):
-                label_text = _extract_attr_text(child)
+            label_text = _extract_attr_text(cells[0])
+    if not label_text:
+        label_text = _extract_attr_text(row)
+    if not label_text:
+        for selector in (
+            ".label",
+            ".row-title",
+            ".rowtitle",
+            ".row",
+            ".item-title",
+            ".itemTitle",
+            ".itemTitleSpan",
+            ".stitle",
+        ):
+            node = row.select_one(selector)
+            if node:
+                label_text = _normalize_html_text(node.get_text(" ", strip=True))
                 if label_text:
                     break
-                label_text = _normalize_html_text(child.get_text(" ", strip=True))
-                if label_text:
-                    break
-        return label_text
+    if not label_text:
+        for child in row.find_all(["label", "span", "div", "p"], limit=10):
+            label_text = _extract_attr_text(child)
+            if label_text:
+                break
+            label_text = _normalize_html_text(child.get_text(" ", strip=True))
+            if label_text:
+                break
+    return label_text
+
+
+def _find_matrix_table(soup, question_div, question_number: int):
     table = None
     if question_div is not None:
         table = question_div.find(id=f"divRefTab{question_number}")
     if table is None and soup:
         table = soup.find(id=f"divRefTab{question_number}")
-    if table:
-        
-        
-        for row in table.find_all("tr"):
-            row_index = str(row.get("rowindex") or "").strip()
-            if row_index and str(row_index).isdigit():
-                matrix_rows += 1
-                cells = row.find_all(["td", "th"])
-                if cells:
-                    label_text = _extract_row_label(row, cells)
-                    
-                    row_texts.append(label_text)
-    if matrix_rows > 0:
-        
-        pass
-    elif table:
-        
-        data_rows = []
-        header_id = f"drv{question_number}_1"
-        for row in table.find_all("tr"):
-            row_id = str(row.get("id") or "")
-            if row_id == header_id:
-                continue
+    return table
+
+
+def _collect_rowindex_rows(table) -> tuple[int, list[str]]:
+    matrix_rows = 0
+    row_texts: list[str] = []
+    for row in table.find_all("tr"):
+        row_index = str(row.get("rowindex") or "").strip()
+        if row_index and str(row_index).isdigit():
+            matrix_rows += 1
             cells = row.find_all(["td", "th"])
-            if len(cells) <= 1:
-                continue
-            first_text = _extract_row_label(row, cells)
-            other_texts = [_normalize_html_text(cell.get_text(" ", strip=True)) for cell in cells[1:]]
-            
-            if not first_text and any(other_texts):
-                continue
-            data_rows.append((first_text, cells))
-        matrix_rows = len(data_rows)
-        row_texts = [label for label, _ in data_rows]
-        if not option_texts and data_rows:
-            max_cols = 0
-            for _, cells in data_rows:
-                max_cols = max(max_cols, max(0, len(cells) - 1))
-            if max_cols > 0:
-                option_texts = [str(i + 1) for i in range(max_cols)]
-    if matrix_rows == 0 and question_div is not None:
-        
-        inputs = question_div.find_all("input")
-        row_indices: list[int] = []
-        col_indices: list[int] = []
-        name_pattern = re.compile(rf"q{question_number}[_-](\d+)(?:[_-](\d+))?")
-        for item in inputs:
-            raw_name = str(item.get("name") or item.get("id") or "")
-            if not raw_name:
-                continue
-            match = name_pattern.search(raw_name)
-            if not match:
-                continue
+            if cells:
+                label_text = _extract_row_label(row, cells)
+                row_texts.append(label_text)
+    return matrix_rows, row_texts
+
+
+def _collect_data_rows(table, question_number: int) -> tuple[int, list[str], list[str]]:
+    data_rows = []
+    header_id = f"drv{question_number}_1"
+    for row in table.find_all("tr"):
+        row_id = str(row.get("id") or "")
+        if row_id == header_id:
+            continue
+        cells = row.find_all(["td", "th"])
+        if len(cells) <= 1:
+            continue
+        first_text = _extract_row_label(row, cells)
+        other_texts = [_normalize_html_text(cell.get_text(" ", strip=True)) for cell in cells[1:]]
+        if not first_text and any(other_texts):
+            continue
+        data_rows.append((first_text, cells))
+    matrix_rows = len(data_rows)
+    row_texts = [label for label, _ in data_rows]
+    option_texts: list[str] = []
+    if data_rows:
+        max_cols = 0
+        for _, cells in data_rows:
+            max_cols = max(max_cols, max(0, len(cells) - 1))
+        if max_cols > 0:
+            option_texts = [str(i + 1) for i in range(max_cols)]
+    return matrix_rows, option_texts, row_texts
+
+
+def _collect_from_input_names(
+    question_div, question_number: int,
+) -> tuple[int, list[str], list[str]]:
+    inputs = question_div.find_all("input")
+    row_indices: list[int] = []
+    col_indices: list[int] = []
+    name_pattern = re.compile(rf"q{question_number}[_-](\d+)(?:[_-](\d+))?")
+    for item in inputs:
+        raw_name = str(item.get("name") or item.get("id") or "")
+        if not raw_name:
+            continue
+        match = name_pattern.search(raw_name)
+        if not match:
+            continue
+        try:
+            row_idx = int(match.group(1))
+            row_indices.append(row_idx)
+        except (ValueError, TypeError):
+            pass
+        if match.group(2):
             try:
-                row_idx = int(match.group(1))
-                row_indices.append(row_idx)
+                col_idx = int(match.group(2))
+                col_indices.append(col_idx)
             except (ValueError, TypeError):
                 pass
-            if match.group(2):
-                try:
-                    col_idx = int(match.group(2))
-                    col_indices.append(col_idx)
-                except (ValueError, TypeError):
-                    pass
-        if row_indices:
-            matrix_rows = max(row_indices)
-            row_texts = [""] * matrix_rows
-        if not option_texts and col_indices:
-            max_cols = max(col_indices)
-            if max_cols > 0:
-                option_texts = [str(i + 1) for i in range(max_cols)]
+    matrix_rows = 0
+    row_texts: list[str] = []
+    option_texts: list[str] = []
+    if row_indices:
+        matrix_rows = max(row_indices)
+        row_texts = [""] * matrix_rows
+    if col_indices:
+        max_cols = max(col_indices)
+        if max_cols > 0:
+            option_texts = [str(i + 1) for i in range(max_cols)]
+    return matrix_rows, option_texts, row_texts
+
+
+def _fill_row_texts_from_selectors(question_div, matrix_rows: int, row_texts: list[str]) -> tuple[int, list[str]]:
+    candidates = []
+    for selector in (".itemTitleSpan", ".itemTitle", ".item-title", ".row-title"):
+        nodes = question_div.select(selector)
+        if nodes:
+            candidates = [_normalize_html_text(node.get_text(" ", strip=True)) for node in nodes]
+            candidates = [text for text in candidates if text]
+            if candidates:
+                break
+    if not candidates:
+        return matrix_rows, row_texts
+    if matrix_rows <= 0:
+        matrix_rows = len(candidates)
+        row_texts = list(candidates)
+    else:
+        merged: list[str] = list(row_texts)
+        for idx in range(min(len(candidates), len(merged))):
+            if not merged[idx]:
+                merged[idx] = candidates[idx]
+        row_texts = merged
+    return matrix_rows, row_texts
+
+
+def _collect_matrix_option_texts(soup, question_div, question_number: int) -> tuple[int, list[str], list[str]]:
+    table = _find_matrix_table(soup, question_div, question_number)
+
+    matrix_rows = 0
+    option_texts: list[str] = []
+    row_texts: list[str] = []
+
+    if table:
+        matrix_rows, row_texts = _collect_rowindex_rows(table)
+
+    if matrix_rows > 0:
+        pass
+    elif table:
+        matrix_rows, option_texts, row_texts = _collect_data_rows(table, question_number)
+
+    if matrix_rows == 0 and question_div is not None:
+        matrix_rows, option_texts, row_texts = _collect_from_input_names(
+            question_div, question_number,
+        )
+
     if question_div is not None and (not row_texts or any(not text for text in row_texts)):
-        candidates = []
-        for selector in (".itemTitleSpan", ".itemTitle", ".item-title", ".row-title"):
-            nodes = question_div.select(selector)
-            if nodes:
-                candidates = [_normalize_html_text(node.get_text(" ", strip=True)) for node in nodes]
-                candidates = [text for text in candidates if text]
-                if candidates:
-                    break
-        if candidates:
-            if matrix_rows <= 0:
-                matrix_rows = len(candidates)
-                row_texts = list(candidates)
-            else:
-                merged: list[str] = list(row_texts)
-                for idx in range(min(len(candidates), len(merged))):
-                    if not merged[idx]:
-                        merged[idx] = candidates[idx]
-                row_texts = merged
+        matrix_rows, row_texts = _fill_row_texts_from_selectors(
+            question_div, matrix_rows, row_texts,
+        )
+
     if not option_texts and table:
         option_texts = _extract_matrix_header_texts(table)
+
     raw_option_texts = list(option_texts)
     option_texts = _postprocess_matrix_option_texts(option_texts)
-    
     if not option_texts:
         fallback_columns = len([text for text in raw_option_texts if _normalize_html_text(text)])
         if fallback_columns > 0:
             option_texts = [str(i + 1) for i in range(fallback_columns)]
+
     return matrix_rows, option_texts, row_texts
 
 def _extract_slider_range(question_div, question_number: int) -> tuple[float | None, float | None, float | None]:
