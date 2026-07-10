@@ -5,17 +5,6 @@ from survey_submitter.core.psychometrics.psychometric import (
     PsychometricPlan,
     PsychometricItem,
 )
-from survey_submitter.core.psychometrics.joint_optimizer import (
-    CombinedPsychometricPlan,
-    JOINT_PSYCHOMETRIC_SUPPORTED_TYPES,
-    JointPsychometricAnswerPlan,
-    JointPsychometricDimensionDiagnostic,
-    JointPsychometricSamplePlan,
-    PsychometricBlueprintItem,
-    build_joint_psychometric_answer_plan,
-    build_psychometric_blueprint,
-    build_psychometric_choice_key,
-)
 from survey_submitter.core.psychometrics.orientation import (
     PsychometricDimensionOrientation,
     PsychometricItemOrientation,
@@ -38,15 +27,6 @@ __all__ = [
     "DimensionPsychometricPlan",
     "PsychometricPlan",
     "PsychometricItem",
-    "CombinedPsychometricPlan",
-    "JOINT_PSYCHOMETRIC_SUPPORTED_TYPES",
-    "JointPsychometricAnswerPlan",
-    "JointPsychometricDimensionDiagnostic",
-    "JointPsychometricSamplePlan",
-    "PsychometricBlueprintItem",
-    "build_joint_psychometric_answer_plan",
-    "build_psychometric_blueprint",
-    "build_psychometric_choice_key",
     "PsychometricDimensionOrientation",
     "PsychometricItemOrientation",
     "infer_dimension_orientation",

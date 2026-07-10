@@ -83,10 +83,6 @@ class RunStopPolicy:
                 logging.warning("已连续失败%s次（失败止损已关闭）", consecutive_failures)
         if thread_name:
             try:
-                self.state.release_joint_sample(thread_name)
-            except Exception:
-                logging.debug("失败后释放联合信效度样本槽位失败", exc_info=True)
-            try:
                 if consume_reverse_fill_attempt:
                     row_number, discarded = self.state.mark_reverse_fill_submission_failed(
                         thread_name,
@@ -167,10 +163,6 @@ class RunStopPolicy:
                 should_break = True
 
         if record_thread_success and thread_name:
-            try:
-                self.state.commit_joint_sample(thread_name)
-            except Exception:
-                logging.debug("提交成功后核销联合信效度样本槽位失败", exc_info=True)
             try:
                 self.state.commit_reverse_fill_sample(thread_name)
             except Exception:
