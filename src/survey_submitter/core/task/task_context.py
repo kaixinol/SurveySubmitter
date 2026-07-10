@@ -72,7 +72,6 @@ class ExecutionConfig:
         default_factory=lambda: {"wechat": 33, "mobile": 33, "pc": 34}
     )
     pause_on_aliyun_captcha: bool = True
-    ai_mode: str = "free"
     ai_system_prompt: str = ""
 
 
@@ -90,16 +89,12 @@ class ExecutionState(
     cur_num: int = 0
     cur_fail: int = 0
     proxy_unavailable_fail_count: int = 0
-    device_quota_fail_count: int = 0
     terminal_stop_category: str = ""
     terminal_failure_reason: str = ""
     terminal_stop_message: str = ""
     thread_progress: Dict[str, ThreadProgressState] = field(default_factory=dict)
     distribution_runtime_stats: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     distribution_pending_by_thread: Dict[str, List[Tuple[str, int, int]]] = field(default_factory=dict)
-    free_ai_prefill_by_thread: Dict[str, Dict[int, Tuple[str, ...]]] = field(default_factory=dict)
-    free_ai_option_fill_prefill_by_thread: Dict[str, Dict[Tuple[int, int], str]] = field(default_factory=dict)
-    free_ai_request_timestamps: Deque[float] = field(default_factory=deque)
     joint_reserved_sample_by_thread: Dict[str, int] = field(default_factory=dict)
     joint_reserved_sample_started_at_by_thread: Dict[str, float] = field(default_factory=dict)
     joint_committed_sample_indexes: set[int] = field(default_factory=set)
@@ -120,8 +115,6 @@ class ExecutionState(
     _target_reached_stop_triggered: bool = False
     _target_reached_stop_lock: threading.Lock = field(default_factory=threading.Lock)
     _terminal_stop_lock: threading.Lock = field(default_factory=threading.Lock)
-    _free_ai_rate_limit_async_lock: Any = field(default=None, init=False, repr=False)
-    _free_ai_rate_limit_async_lock_loop: Any = field(default=None, init=False, repr=False)
     _runtime_condition: threading.Condition = field(default_factory=threading.Condition, repr=False)
     _runtime_async_event: Any = field(default=None, init=False, repr=False)
     _runtime_async_event_loop: Any = field(default=None, init=False, repr=False)
@@ -164,101 +157,6 @@ class ExecutionState(
                 str(self.terminal_failure_reason or ""),
                 str(self.terminal_stop_message or ""),
             )
-
-    @staticmethod
-    def _normalize_free_ai_thread_key(thread_name: str) -> str:
-        return str(thread_name or "").strip() or "__default__"
-
-    def set_free_ai_prefill_answers(
-        self,
-        thread_name: str,
-        answers_by_question_num: Dict[int, Tuple[str, ...]],
-    ) -> None:
-        normalized: Dict[int, Tuple[str, ...]] = {}
-        for question_num, answers in dict(answers_by_question_num or {}).items():
-            try:
-                normalized_question_num = int(question_num)
-            except Exception:
-                continue
-            normalized_answers = tuple(
-                str(item or "").strip()
-                for item in tuple(answers or ())
-                if str(item or "").strip()
-            )
-            if normalized_question_num > 0 and normalized_answers:
-                normalized[normalized_question_num] = normalized_answers
-        key = self._normalize_free_ai_thread_key(thread_name)
-        with self.lock:
-            if normalized:
-                self.free_ai_prefill_by_thread[key] = normalized
-            else:
-                self.free_ai_prefill_by_thread.pop(key, None)
-
-    def get_free_ai_prefill_answer(
-        self,
-        thread_name: str,
-        question_num: int,
-    ) -> Optional[Tuple[str, ...]]:
-        try:
-            normalized_question_num = int(question_num)
-        except Exception:
-            return None
-        if normalized_question_num <= 0:
-            return None
-        key = self._normalize_free_ai_thread_key(thread_name)
-        with self.lock:
-            answers_by_question_num = self.free_ai_prefill_by_thread.get(key) or {}
-            result = answers_by_question_num.get(normalized_question_num)
-            return tuple(result) if result else None
-
-    def clear_free_ai_prefill_answers(self, thread_name: str) -> None:
-        key = self._normalize_free_ai_thread_key(thread_name)
-        with self.lock:
-            self.free_ai_prefill_by_thread.pop(key, None)
-            self.free_ai_option_fill_prefill_by_thread.pop(key, None)
-
-    def set_free_ai_option_fill_prefill_answers(
-        self,
-        thread_name: str,
-        answers_by_option: Dict[Tuple[int, int], str],
-    ) -> None:
-        normalized: Dict[Tuple[int, int], str] = {}
-        for raw_key, raw_value in dict(answers_by_option or {}).items():
-            try:
-                question_num, option_index = raw_key
-                normalized_question_num = int(question_num)
-                normalized_option_index = int(option_index)
-            except Exception:
-                continue
-            normalized_value = str(raw_value or "").strip()
-            if normalized_question_num <= 0 or normalized_option_index < 0 or not normalized_value:
-                continue
-            normalized[(normalized_question_num, normalized_option_index)] = normalized_value
-        key = self._normalize_free_ai_thread_key(thread_name)
-        with self.lock:
-            if normalized:
-                self.free_ai_option_fill_prefill_by_thread[key] = normalized
-            else:
-                self.free_ai_option_fill_prefill_by_thread.pop(key, None)
-
-    def get_free_ai_option_fill_prefill_answer(
-        self,
-        thread_name: str,
-        question_num: int,
-        option_index: int,
-    ) -> Optional[str]:
-        try:
-            normalized_question_num = int(question_num)
-            normalized_option_index = int(option_index)
-        except Exception:
-            return None
-        if normalized_question_num <= 0 or normalized_option_index < 0:
-            return None
-        key = self._normalize_free_ai_thread_key(thread_name)
-        with self.lock:
-            answers_by_option = self.free_ai_option_fill_prefill_by_thread.get(key) or {}
-            result = answers_by_option.get((normalized_question_num, normalized_option_index))
-            return str(result or "").strip() or None
 
 
 _EXECUTION_CONFIG_FIELD_NAMES = frozenset(ExecutionConfig.__dataclass_fields__.keys())

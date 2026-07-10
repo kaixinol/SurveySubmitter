@@ -9,15 +9,12 @@ from survey_submitter.core.task import ProxyLease
 from survey_submitter.constants import (
     PROXY_HEALTH_CHECK_TIMEOUT,
     PROXY_HEALTH_CHECK_URL,
-    PROXY_SOURCE_DEFAULT,
     PROXY_TTL_GRACE_SECONDS,
 )
 from survey_submitter.logging.log_utils import log_suppressed_exception
 from survey_submitter.network.proxy.policy.source import (
     _to_non_negative_int,
     get_proxy_minute_by_answer_seconds,
-    get_proxy_source,
-    is_official_proxy_source,
 )
 from survey_submitter.providers.common import (
     SURVEY_PROVIDER_WJX,
@@ -173,48 +170,9 @@ def proxy_lease_has_sufficient_ttl(lease: Optional[ProxyLease], *, required_ttl_
 
 
 
-def _build_default_proxy_lease(payload: dict, *, source: str = PROXY_SOURCE_DEFAULT) -> Optional[ProxyLease]:
-    if not isinstance(payload, dict):
-        return None
-    host = str(payload.get("host") or "").strip()
-    port = _to_non_negative_int(payload.get("port"), 0)
-    if not host or port <= 0:
-        return None
-    account = str(payload.get("account") or "").strip()
-    password = str(payload.get("password") or "").strip()
-    raw = f"{account}:{password}@{host}:{port}" if account and password else f"{host}:{port}"
-    expire_at = str(payload.get("expire_at") or "").strip()
-    poolable = True
-    if not expire_at:
-        logging.warning("默认随机IP响应缺少 expire_at，该代理仅允许立即使用，不会进入代理池")
-        poolable = False
-    return _build_proxy_lease(raw, expire_at=expire_at, poolable=poolable, source=source)
 
-
-def _build_default_proxy_leases_from_batch(payload: dict, *, source: str = PROXY_SOURCE_DEFAULT) -> List[ProxyLease]:
-    if not isinstance(payload, dict):
-        return []
-    raw_items = payload.get("items")
-    if not isinstance(raw_items, list):
-        return []
-    leases: List[ProxyLease] = []
-    for raw in raw_items:
-        if not isinstance(raw, dict):
-            continue
-        lease = _build_default_proxy_lease(raw, source=source)
-        if lease is None:
-            continue
-        leases.append(lease)
-        logging.info("获取到代理: %s", _mask_proxy_for_log(lease.address))
-    return leases
-
-
-
-
-def _proxy_is_responsive(proxy_address: str, skip_for_default: bool = True) -> bool:
+def _proxy_is_responsive(proxy_address: str) -> bool:
     masked_proxy = _mask_proxy_for_log(proxy_address)
-    if skip_for_default and is_official_proxy_source(get_proxy_source()):
-        return True
     proxy_address = _normalize_proxy_address(proxy_address) or ""
     if not proxy_address:
         return False
@@ -233,10 +191,8 @@ def _proxy_is_responsive(proxy_address: str, skip_for_default: bool = True) -> b
     return True
 
 
-async def _proxy_is_responsive_async(proxy_address: str, skip_for_default: bool = True) -> bool:
+async def _proxy_is_responsive_async(proxy_address: str) -> bool:
     masked_proxy = _mask_proxy_for_log(proxy_address)
-    if skip_for_default and is_official_proxy_source(get_proxy_source()):
-        return True
     proxy_address = _normalize_proxy_address(proxy_address) or ""
     if not proxy_address:
         return False
@@ -270,14 +226,14 @@ def coerce_proxy_lease(item: Any, *, source: str = "") -> Optional[ProxyLease]:
     return _coerce_proxy_lease(item, source=source)
 
 
-def is_proxy_responsive(proxy_address: str, *, skip_for_default: bool = True) -> bool:
+def is_proxy_responsive(proxy_address: str) -> bool:
     
-    return _proxy_is_responsive(proxy_address, skip_for_default=skip_for_default)
+    return _proxy_is_responsive(proxy_address)
 
 
-async def is_proxy_responsive_async(proxy_address: str, *, skip_for_default: bool = True) -> bool:
+async def is_proxy_responsive_async(proxy_address: str) -> bool:
     
-    return await _proxy_is_responsive_async(proxy_address, skip_for_default=skip_for_default)
+    return await _proxy_is_responsive_async(proxy_address)
 
 
 __all__ = [

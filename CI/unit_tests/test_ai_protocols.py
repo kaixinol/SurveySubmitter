@@ -4,14 +4,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from survey_submitter.integrations.ai.client import AI_MODE_PROVIDER, FREE_QUESTION_TYPE_FILL, save_ai_settings
+from survey_submitter.integrations.ai.client import save_ai_settings
 import survey_submitter.integrations.ai.protocols as protocols
 from survey_submitter.integrations.ai.protocols import _extract_chat_completion_text, _extract_responses_text, _resolve_custom_endpoint
 
 class AIProtocolTests:
 
     def setup_method(self, _method) -> None:
-        save_ai_settings(ai_mode=AI_MODE_PROVIDER, provider='custom', api_key='test-key', base_url='https://example.com/v1', api_protocol='responses', model='demo-model', system_prompt='测试提示词')
+        save_ai_settings(api_key='test-key', base_url='https://example.com/v1', api_protocol='responses', model='demo-model', system_prompt='测试提示词')
 
     def test_resolve_custom_endpoint_appends_protocol_suffix(self) -> None:
         protocol, url, explicit = _resolve_custom_endpoint('https://example.com/v1', 'responses')
@@ -143,7 +143,7 @@ class AIProtocolTests:
             answer = asyncio.run(
                 client_module.agenerate_answer(
                     '测试问题',
-                    question_type=FREE_QUESTION_TYPE_FILL,
+                    question_type='fill_blank',
                     blank_count=1,
                 )
             )

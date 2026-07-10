@@ -38,7 +38,7 @@ def handle_ai_runtime_error(
         status_text=status_text,
         log_message=log_message,
         threshold_override=AI_FILL_FAIL_THRESHOLD,
-        terminal_stop_category="free_ai_unstable",
+        terminal_stop_category="ai_unstable",
         force_stop_when_threshold_reached=True,
         consume_reverse_fill_attempt=False,
     )

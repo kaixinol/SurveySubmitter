@@ -167,7 +167,6 @@ class ConfigCodecTests:
                 "reverse_fill_start_row": "-2",
                 "reverse_fill_threads": "0",
                 "dimension_groups": ["服务", "服务", "未分组"],
-                "ai_mode": "bad",
                 "questions_info": "bad",
                 "question_entries": [{"question_type": "single", "rows": "bad"}],
             }
@@ -187,7 +186,6 @@ class ConfigCodecTests:
         assert cfg.reverse_fill_start_row == 1
         assert cfg.reverse_fill_threads == 1
         assert cfg.dimension_groups == ["服务"]
-        assert cfg.ai_mode == "free"
         assert cfg.questions_info == []
         assert len(cfg.question_entries) == 1
         assert cfg.question_entries[0].rows == 1

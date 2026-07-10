@@ -556,8 +556,6 @@ def normalize_runtime_config_payload(raw: Dict[str, Any]) -> RuntimeConfig:
                 config.answer_rules.append(normalized_rule)
 
     ai_keys = {
-        "ai_mode",
-        "ai_provider",
         "ai_api_key",
         "ai_base_url",
         "ai_api_protocol",
@@ -565,12 +563,7 @@ def normalize_runtime_config_payload(raw: Dict[str, Any]) -> RuntimeConfig:
         "ai_system_prompt",
     }
     has_ai_keys = any(key in raw for key in ai_keys)
-    config._ai_config_present = has_ai_keys
     if has_ai_keys:
-        config.ai_mode = str(raw.get("ai_mode") or "free").strip().lower()
-        if config.ai_mode not in {"free", "provider"}:
-            config.ai_mode = "free"
-        config.ai_provider = str(raw.get("ai_provider") or "deepseek")
         config.ai_api_key = str(raw.get("ai_api_key") or "")
         config.ai_base_url = str(raw.get("ai_base_url") or "")
         config.ai_api_protocol = str(raw.get("ai_api_protocol") or "auto")
@@ -623,7 +616,6 @@ def serialize_runtime_config(config: RuntimeConfig) -> Dict[str, Any]:
         serialize_question_entry(entry) for entry in list(config.question_entries or [])
     ]
     payload["questions_info"] = serialize_survey_question_metas(config.questions_info or [])
-    payload.pop("_ai_config_present", None)
     return payload
 
 

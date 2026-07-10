@@ -1,56 +1,11 @@
-import os
 import re
-import sys
-from typing import Any, cast
 
 AUTO_SAVE_LOGS_SETTING_KEY = "auto_save_logs"
 AUTO_SAVE_LOG_RETENTION_COUNT_SETTING_KEY = "auto_save_log_retention_count"
-SUBMISSION_REPORT_TELEMETRY_SETTING_KEY = "submission_report_telemetry"
 DEFAULT_AUTO_SAVE_LOGS = True
 DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT = 10
 AUTO_SAVE_LOG_RETENTION_OPTIONS = (3, 5, 10, 20, 30, 50)
 
-def _read_windows_env_var(key: str) -> str:
-    if sys.platform != "win32":
-        return ""
-    try:
-        import winreg
-    except Exception:
-        return ""
-    registry = cast(Any, winreg)
-    try:
-        with registry.OpenKey(registry.HKEY_CURRENT_USER, "Environment") as reg_key:
-            value, _ = registry.QueryValueEx(reg_key, key)
-    except FileNotFoundError:
-        return ""
-    except Exception:
-        return ""
-    if value is None:
-        return ""
-    try:
-        return str(value).strip()
-    except Exception:
-        return ""
-
-
-def _resolve_env_value(key: str, default: str) -> str:
-    env_value = os.environ.get(key)
-    if env_value:
-        return env_value
-    registry_value = _read_windows_env_var(key)
-    if registry_value:
-        return registry_value
-    return default
-
-
-_DEFAULT_CONTACT_API = "https://bot.hungrym0.com"
-_DEFAULT_AUTH_TRIAL = "https://api-wjx.hungrym0.com/api/auth/trial"
-_DEFAULT_AUTH_BONUS_CLAIM = "https://api-wjx.hungrym0.com/api/bonus"
-_DEFAULT_CARD_REDEEM_ENDPOINT = "https://api-wjx.hungrym0.com/api/cards/redeem"
-_DEFAULT_IP_EXTRACT_ENDPOINT = "https://api-wjx.hungrym0.com/api/ip/extract"
-_DEFAULT_SUBMISSION_REPORT_ENDPOINT = "https://api-wjx.hungrym0.com/api/submission/report"
-_DEFAULT_AI_FREE_ENDPOINT = "https://api-wjx.hungrym0.com/api/ai/free"
-_DEFAULT_STATUS_ENDPOINT = "https://api-wjx.hungrym0.com/api/status"
 
 
 
@@ -88,32 +43,11 @@ LOG_BUFFER_CAPACITY = 2000
 PROXY_MAX_PROXIES = 80
 PROXY_HEALTH_CHECK_URL = "https://www.wjx.cn"
 PROXY_HEALTH_CHECK_TIMEOUT = 15
-PROXY_STATUS_TIMEOUT_SECONDS = 5
 PROXY_TTL_GRACE_SECONDS = 20
 PROXY_MINUTE_OPTIONS = (1, 3, 5, 10, 15, 30)
-PROXY_QUOTA_COST_MAP = {
-    1: 1,
-    3: 2,
-    5: 3,
-    10: 5,
-    15: 8,
-    30: 20,
-}
-
-PROXY_SOURCE_DEFAULT = "default"
-PROXY_SOURCE_BENEFIT = "benefit"
 PROXY_SOURCE_CUSTOM = "custom"
 
 PROXY_POOL_QUALITY = "quality"
-
-CONTACT_API_URL = _resolve_env_value("CONTACT_API_URL", _DEFAULT_CONTACT_API)
-AUTH_TRIAL_ENDPOINT = _resolve_env_value("AUTH_TRIAL_ENDPOINT", _DEFAULT_AUTH_TRIAL)
-AUTH_BONUS_CLAIM_ENDPOINT = _resolve_env_value("AUTH_BONUS_CLAIM_ENDPOINT", _DEFAULT_AUTH_BONUS_CLAIM)
-CARD_REDEEM_ENDPOINT = _resolve_env_value("CARD_REDEEM_ENDPOINT", _DEFAULT_CARD_REDEEM_ENDPOINT)
-IP_EXTRACT_ENDPOINT = _resolve_env_value("IP_EXTRACT_ENDPOINT", _DEFAULT_IP_EXTRACT_ENDPOINT)
-SUBMISSION_REPORT_ENDPOINT = _resolve_env_value("SUBMISSION_REPORT_ENDPOINT", _DEFAULT_SUBMISSION_REPORT_ENDPOINT)
-AI_FREE_ENDPOINT = _resolve_env_value("AI_FREE_ENDPOINT", _DEFAULT_AI_FREE_ENDPOINT)
-STATUS_ENDPOINT = _resolve_env_value("STATUS_ENDPOINT", _DEFAULT_STATUS_ENDPOINT)
 
 DEFAULT_FILL_TEXT = "无"
 
