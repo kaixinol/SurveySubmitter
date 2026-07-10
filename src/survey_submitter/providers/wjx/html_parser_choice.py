@@ -436,6 +436,7 @@ def _verify_text_indicates_location(value: Optional[str]) -> bool:
         or ("省份" in text)
         or ("城市" in text)
         or ("地区" in text)
+        or ("高校" in text)
     )
 
 def _soup_question_is_location(question_div) -> bool:
@@ -455,6 +456,24 @@ def _soup_question_is_location(question_div) -> bool:
         if _verify_text_indicates_location(verify_value):
             return True
     return False
+
+
+def _extract_location_verify_type(question_div) -> str:
+    """Extract the verify attribute value from a location question to distinguish sub-types.
+
+    Returns the verify value string (e.g. '省市区' or '高校'), or empty string if not found.
+    """
+    if question_div is None:
+        return ""
+    try:
+        inputs = question_div.find_all("input")
+    except Exception:
+        inputs = []
+    for input_element in inputs:
+        verify_value = str(input_element.get("verify") or "").strip()
+        if verify_value:
+            return verify_value
+    return ""
 
 def _collect_select_option_texts(question_div, soup, question_number: int) -> List[str]:
     select = question_div.find("select")

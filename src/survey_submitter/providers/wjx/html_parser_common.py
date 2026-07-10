@@ -21,7 +21,7 @@ _KNOWN_NON_TEXT_QUESTION_TYPES = {
     TypeCode.DROPDOWN, TypeCode.SLIDER, TypeCode.ORDER,
 }
 _SELECT_PLACEHOLDER_PREFIXES = ("请选择", "请先选择")
-_LOCATION_VERIFY_MARKERS = ("地图", "省市", "省份", "城市", "地区", "map", "city", "province", "area")
+_LOCATION_VERIFY_MARKERS = ("地图", "省市", "省份", "城市", "地区", "高校", "map", "city", "province", "area")
 _DISPLAY_SPACE_RE = re.compile(r"\s+")
 
 
@@ -92,7 +92,7 @@ def _input_looks_like_location(input_element) -> bool:
         onclick_value = ""
     if not verify_value and "opencitybox" not in onclick_value:
         return False
-    if any(marker in verify_value for marker in _LOCATION_VERIFY_MARKERS if marker in {"地图", "省市", "省份", "城市", "地区"}):
+    if any(marker in verify_value for marker in _LOCATION_VERIFY_MARKERS if marker in {"地图", "省市", "省份", "城市", "地区", "高校"}):
         return True
     return "opencitybox" in onclick_value
 

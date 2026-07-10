@@ -305,6 +305,14 @@ def configure_probabilities(
             mapped_value = ("order", -1)
             target.question_config_index_map[question_num] = mapped_value
             _remember_provider_mapping(entry, mapped_value)
+        elif entry.question_type == QuestionType.LOCATION:
+            mapped_value = ("location", -1)
+            target.question_config_index_map[question_num] = mapped_value
+            _remember_provider_mapping(entry, mapped_value)
+            target.location_parts[question_num] = [
+                str(item or "").strip()
+                for item in list(getattr(entry, "location_parts", []) or [])[:3]
+            ]
         elif entry.question_type in TEXT_TYPES:
             if not getattr(entry, "is_location", False):
                 mapped_value = ("text", idx_text)

@@ -630,6 +630,40 @@ async def _build_wjx_order_action(
     )
 
 
+async def _build_wjx_location_action(
+    question: SurveyQuestionMeta,
+) -> Optional[AnswerAction]:
+    """Build an answer action for location-type questions (省市区 or 高校).
+
+    For 省市区: generates a random ``省-市-区`` string (e.g. ``北京-北京市-海淀区``).
+    For 高校: generates a random university name (e.g. ``北京大学``).
+    Falls back to 省市区 format when the verify type is ambiguous.
+    """
+    from survey_submitter.providers.contracts import TextQuestionMeta
+    from survey_submitter.providers.wjx.location_data import (
+        is_university_verify,
+        sample_location_text,
+        sample_university_text,
+    )
+
+    verify_type = ""
+    if isinstance(question, TextQuestionMeta):
+        verify_type = question.location_verify_type
+
+    if is_university_verify(verify_type):
+        text_value = sample_university_text()
+    else:
+        text_value = sample_location_text()
+
+    current = int(question.num or 0)
+    return AnswerAction(
+        question_num=current,
+        kind="text",
+        text_values=(text_value,),
+        record_type="location",
+    )
+
+
 async def build_answer_action(
     question: SurveyQuestionMeta,
     ctx: ExecutionState,
@@ -677,7 +711,7 @@ async def build_answer_action(
             allow_ai_placeholder=allow_ai_placeholder,
         )
     if entry_type == QuestionType.LOCATION:
-        return None
+        return await _build_wjx_location_action(question)
     if entry_type == QuestionType.MATRIX:
         return await _build_wjx_matrix_action(
             question,
