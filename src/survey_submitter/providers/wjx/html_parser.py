@@ -88,15 +88,9 @@ def _collect_question_media(question_div, row_texts: list[str], option_texts: li
 
     title_nodes: list[Any] = []
     for selector in (".topichtml", ".field-label"):
-        try:
-            title_nodes.extend(list(question_div.select(selector) or []))
-        except Exception:
-            continue
+        title_nodes.extend(list(question_div.select(selector) or []))
     for node in title_nodes:
-        try:
-            images = node.select("img")
-        except Exception:
-            images = []
+        images = node.select("img")
         for image in images:
             _append_media_item(
                 media,
@@ -108,10 +102,7 @@ def _collect_question_media(question_div, row_texts: list[str], option_texts: li
 
     option_nodes: list[Any] = []
     for selector in (".ui-controlgroup > div", "ul > li"):
-        try:
-            option_nodes = list(question_div.select(selector) or [])
-        except Exception:
-            option_nodes = []
+        option_nodes = list(question_div.select(selector) or [])
         if option_nodes:
             break
     for option_index, node in enumerate(option_nodes):
@@ -120,10 +111,7 @@ def _collect_question_media(question_div, row_texts: list[str], option_texts: li
             if option_index < len(option_texts)
             else f"选项 {option_index + 1}"
         )
-        try:
-            images = node.select("img")
-        except Exception:
-            images = []
+        images = node.select("img")
         for image in images:
             _append_media_item(
                 media,
@@ -135,10 +123,7 @@ def _collect_question_media(question_div, row_texts: list[str], option_texts: li
 
     row_nodes: list[Any] = []
     for selector in ("tr[rowindex]", "tr.rowtitletr", "tr[id^='drv']"):
-        try:
-            row_nodes = list(question_div.select(selector) or [])
-        except Exception:
-            row_nodes = []
+        row_nodes = list(question_div.select(selector) or [])
         if row_nodes:
             break
     for row_index, node in enumerate(row_nodes):
@@ -147,10 +132,7 @@ def _collect_question_media(question_div, row_texts: list[str], option_texts: li
             if row_index < len(row_texts)
             else f"第 {row_index + 1} 行"
         )
-        try:
-            images = node.select("img")
-        except Exception:
-            images = []
+        images = node.select("img")
         for image in images:
             _append_media_item(
                 media,
@@ -190,11 +172,8 @@ def _question_div_or_ancestors_are_hidden(question_div) -> bool:
 def _question_div_has_question_ancestor(question_div, fieldset) -> bool:
     current = getattr(question_div, "parent", None)
     while current is not None and current is not fieldset:
-        try:
-            if current.name == "div" and current.get("topic") is not None:
-                return True
-        except Exception:
-            return False
+        if current.name == "div" and current.get("topic") is not None:
+            return True
         current = getattr(current, "parent", None)
     return False
 

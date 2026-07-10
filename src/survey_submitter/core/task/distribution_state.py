@@ -39,7 +39,7 @@ class DistributionRuntimeMixin:
         for idx in range(min(len(raw_counts), count)):
             try:
                 normalized[idx] = max(0, int(raw_counts[idx] or 0))
-            except Exception:
+            except (ValueError, TypeError):
                 normalized[idx] = 0
         return normalized
 
@@ -169,10 +169,7 @@ class DistributionRuntimeMixin:
                 self.joint_reserved_sample_started_at_by_thread.pop(key, None)
                 self.joint_answering_threads.discard(key)
         for key in expired_keys:
-            try:
-                self.release_reverse_fill_sample(key, requeue=True)
-            except Exception:
-                pass
+            self.release_reverse_fill_sample(key, requeue=True)
         if expired_keys:
             self.notify_runtime_change()
         return len(expired_keys)

@@ -4,6 +4,8 @@ import asyncio
 import logging
 from typing import Any
 
+import httpx
+
 import survey_submitter.network.http as http_client
 from survey_submitter.constants import DEFAULT_HTTP_HEADERS
 from survey_submitter.providers.match_utils import normalize_match_text
@@ -41,7 +43,7 @@ def _format_not_open_time(match) -> str:
             second = int(second_text)
             return f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}"
         return f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}"
-    except Exception:
+    except (ValueError, TypeError):
         return ""
 
 
@@ -199,7 +201,9 @@ async def parse_wjx_survey(url: str) -> tuple[list[dict[str, Any]], str]:
         SurveyNotOpenError,
     ):
         raise
-    except Exception as exc:
+    except httpx.HTTPError as exc:
+        raise RuntimeError(f"无法获取问卷网页：{exc}") from exc
+    except OSError as exc:
         if getattr(exc, "winerror", None) == 10013:
             raise RuntimeError(f"无法获取问卷网页：WinError 10013：{exc}") from exc
         raise RuntimeError(f"无法获取问卷网页：{exc}") from exc

@@ -51,7 +51,7 @@ _VALID_LOGIC_PARSE_STATUSES = {
 def _as_int(value: Any, default: int, *, minimum: int | None = None) -> int:
     try:
         number = int(value)
-    except Exception:
+    except (ValueError, TypeError):
         number = default
     if minimum is not None:
         number = max(minimum, number)
@@ -139,7 +139,7 @@ def _normalize_question_media_list(raw: Any) -> list[QuestionMedia]:
                 continue
             try:
                 normalized_index = int(index)
-            except Exception:
+            except (ValueError, TypeError):
                 continue
             if normalized_index < 0:
                 continue
@@ -279,7 +279,7 @@ def _build_logic_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
     if raw_display_num not in (None, ""):
         try:
             display_number = int(raw_display_num)
-        except Exception:
+        except (ValueError, TypeError):
             display_number = None
     return {
         "display_num": display_number,
@@ -300,7 +300,7 @@ def _build_choice_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
     try:
         if forced_option_index is not None:
             forced_option_index = int(forced_option_index)
-    except Exception:
+    except (ValueError, TypeError):
         forced_option_index = None
     fillable_options_raw = normalized.get("fillable_options")
     fillable_options: list[int] = []
@@ -308,7 +308,7 @@ def _build_choice_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
         for raw in fillable_options_raw:
             try:
                 fillable_options.append(int(raw))
-            except Exception:
+            except (ValueError, TypeError):
                 continue
     attached = normalized.get("attached_option_selects")
     attached_list = _normalize_dict_list(attached) if isinstance(attached, list) else []

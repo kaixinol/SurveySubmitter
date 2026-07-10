@@ -9,8 +9,8 @@ class _FakeElement:
     def __init__(self, attributes: dict[str, str] | None = None) -> None:
         self.attributes = dict(attributes or {})
 
-    def get_attribute(self, name: str):
-        return self.attributes.get(name)
+    def get(self, name: str, default=None):
+        return self.attributes.get(name, default)
 
 
 class WjxMultipleLimitsTests:

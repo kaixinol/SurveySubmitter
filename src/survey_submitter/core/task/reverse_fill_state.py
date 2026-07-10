@@ -161,10 +161,7 @@ class ReverseFillRuntimeMixin:
         thread_name: str | None = None,
     ) -> ReverseFillAnswer | None:
         key = self._reverse_fill_thread_key(thread_name)
-        try:
-            normalized_question_num = int(question_num)
-        except Exception:
-            return None
+        normalized_question_num = int(question_num)
         with self.lock:
             runtime = self.reverse_fill_runtime
             if runtime is None:

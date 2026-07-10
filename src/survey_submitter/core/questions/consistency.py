@@ -31,7 +31,7 @@ class AnswerRule:
 def _to_int(value: Any, default: int = 0) -> int:
     try:
         return int(value)
-    except Exception:
+    except (ValueError, TypeError):
         return int(default)
 
 
@@ -50,10 +50,7 @@ def _to_int_list(values: Any) -> list[int]:
 
 
 def _normalize_question_type_code(value: Any) -> str:
-    try:
-        return str(value or "").strip()
-    except Exception:
-        return ""
+    return str(value or "").strip()
 
 
 def question_supports_answer_rule(question: Any) -> bool:
@@ -197,7 +194,7 @@ def _sanitize_probabilities(probabilities: Sequence[float]) -> list[float]:
     for value in probabilities:
         try:
             weight = float(value)
-        except Exception:
+        except (ValueError, TypeError):
             weight = 0.0
         if weight < 0:
             weight = 0.0

@@ -58,7 +58,7 @@ class ProxyApiFatalError(RuntimeError):
 def _normalize_expected_proxy_count(expected_count: Any) -> int:
     try:
         parsed = int(expected_count)
-    except Exception:
+    except (ValueError, TypeError):
         parsed = 1
     return max(1, min(PROXY_MAX_PROXIES, parsed))
 
@@ -179,7 +179,7 @@ def _extract_minute_from_url(url: str) -> int | None:
         for key, value in parse_qsl(split.query):
             if key.lower() == "minute":
                 return int(value)
-    except Exception:
+    except (ValueError, TypeError):
         pass
     return None
 
@@ -210,7 +210,7 @@ def test_custom_proxy_api(url: str) -> tuple[bool, str, list[str]]:
         return False, "连接失败，请检查API地址是否正确", []
     except http_client.HTTPError as e:
         return False, f"HTTP错误: {e.response.status_code}", []
-    except Exception as e:
+    except OSError as e:
         return False, f"请求失败: {e}", []
 
     try:
@@ -218,7 +218,7 @@ def test_custom_proxy_api(url: str) -> tuple[bool, str, list[str]]:
         error = _extract_custom_api_error(data)
         if error:
             return False, error, []
-    except Exception:
+    except (ValueError, KeyError):
         pass
 
     try:
@@ -229,7 +229,7 @@ def test_custom_proxy_api(url: str) -> tuple[bool, str, list[str]]:
         return True, warning or "", proxies
     except ValueError as e:
         return False, str(e), []
-    except Exception as e:
+    except (KeyError, TypeError) as e:
         return False, f"解析失败: {e}", []
 
 
@@ -271,7 +271,7 @@ async def fetch_proxy_batch_async(
                     raise ProxyApiFatalError(error)
             except (json.JSONDecodeError, ProxyApiFatalError):
                 raise
-            except Exception:
+            except (ValueError, KeyError, TypeError):
                 pass
 
             parsed = _parse_proxy_payload(resp.text)
@@ -280,7 +280,7 @@ async def fetch_proxy_batch_async(
                 break
         except ProxyApiFatalError:
             raise
-        except Exception as exc:
+        except (http_client.HTTPError, OSError) as exc:
             errors.append(str(exc))
             continue
     if not candidates:

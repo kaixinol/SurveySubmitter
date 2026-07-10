@@ -23,14 +23,11 @@ def _build_choice_key(question_index: int, row_index: int | None = None) -> str:
 
 def normalize_target_alpha(value: Any, default: float = DEFAULT_TARGET_ALPHA) -> float:
     
-    try:
-        fallback = float(default)
-    except Exception:
-        fallback = DEFAULT_TARGET_ALPHA
+    fallback = float(default)
 
     try:
         alpha = float(value)
-    except Exception:
+    except (ValueError, TypeError):
         alpha = fallback
 
     if alpha != alpha:
@@ -94,13 +91,13 @@ class PsychometricItem:
             return max(0, min(self.option_count - 1, int(score_index or 0)))
         try:
             target_score = int(score_index or 0)
-        except Exception:
+        except (ValueError, TypeError):
             target_score = 0
         for choice_index, mapped_score in enumerate(self.score_by_choice_index):
             try:
                 if int(mapped_score) == target_score:
                     return max(0, min(self.option_count - 1, choice_index))
-            except Exception:
+            except (ValueError, TypeError):
                 continue
         return max(0, min(self.option_count - 1, target_score))
 
@@ -109,12 +106,12 @@ class PsychometricItem:
             return max(0, min(self.option_count - 1, int(choice_index or 0)))
         try:
             index = int(choice_index or 0)
-        except Exception:
+        except (ValueError, TypeError):
             index = 0
         if 0 <= index < len(self.score_by_choice_index):
             try:
                 return max(0, min(self.option_count - 1, int(self.score_by_choice_index[index])))
-            except Exception:
+            except (ValueError, TypeError):
                 return max(0, min(self.option_count - 1, index))
         return max(0, min(self.option_count - 1, index))
 

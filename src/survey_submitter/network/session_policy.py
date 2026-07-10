@@ -220,7 +220,7 @@ async def _select_proxy_for_session_async(
                             expected_count=request_num,
                             stop_signal=ctx.stop_event,
                         )
-                    except Exception as exc:
+                    except (RuntimeError, OSError) as exc:
                         logging.warning(f"\u83b7\u53d6\u968f\u673a\u4ee3\u7406\u5931\u8d25\uff1a{exc}")
                         fetched = None
                     if fetched:
@@ -247,7 +247,7 @@ def _resolve_proxy_provider_for_thread(ctx: ExecutionState, thread_name: str) ->
         with ctx.lock:
             lease = ctx.proxy_in_use_by_thread.get(thread_name)
             return str(getattr(lease, "source", "") or "unknown").strip() or "unknown"
-    except Exception:
+    except (AttributeError, KeyError):
         logging.info("\u8bfb\u53d6\u4ee3\u7406\u6765\u6e90\u5931\u8d25", exc_info=True)
     return "unknown"
 
@@ -274,7 +274,7 @@ def release_submit_proxy(ctx: ExecutionState, thread_name: str, proxy_address: s
         return
     try:
         ctx.release_proxy_in_use(thread_name)
-    except Exception:
+    except (KeyError, AttributeError):
         logging.info("\u91ca\u653e\u63d0\u4ea4\u4ee3\u7406\u5360\u7528\u5931\u8d25", exc_info=True)
 
 
@@ -283,5 +283,5 @@ def mark_submit_proxy_success(ctx: ExecutionState, proxy_address: str | None) ->
         return
     try:
         ctx.mark_successful_proxy_address(proxy_address)
-    except Exception:
+    except (AttributeError, KeyError):
         logging.info("\u8bb0\u5f55\u6210\u529f\u4ee3\u7406\u5931\u8d25\uff1a%s", proxy_address, exc_info=True)

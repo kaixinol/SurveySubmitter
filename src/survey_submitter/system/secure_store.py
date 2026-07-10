@@ -112,7 +112,7 @@ def _read_secret_windows(name: str) -> SecretReadResult:
             encoded, _ = reg.QueryValueEx(reg_key, name)
     except FileNotFoundError:
         return SecretReadResult(status="not_found")
-    except Exception as exc:
+    except OSError as exc:
         return SecretReadResult(status="open_failed", error=str(exc))
     encoded_text = str(encoded or "").strip()
     if not encoded_text:
@@ -120,7 +120,7 @@ def _read_secret_windows(name: str) -> SecretReadResult:
     try:
         encrypted = base64.b64decode(encoded_text)
         value = _crypt_unprotect_data(encrypted).decode("utf-8")
-    except Exception as exc:
+    except (ValueError, OSError) as exc:
         return SecretReadResult(exists=True, status="backend_error", error=str(exc))
     return SecretReadResult(value=value, exists=True, status="ok")
 
@@ -191,7 +191,7 @@ def set_secret(key: str, value: str | None) -> None:
     except KeyringError as exc:
         logging.warning("安全存储写入失败：key=%s status=write_failed error=%s", name, exc)
         return
-    except Exception as exc:
+    except OSError as exc:
         logging.warning("安全存储写入失败：key=%s status=backend_error error=%s", name, exc)
         return
 
@@ -226,5 +226,3 @@ def delete_secret(key: str) -> None:
         logging.warning("安全存储删除失败：key=%s status=delete_failed error=%s", name, exc)
     except OSError:
         return
-    except Exception as exc:
-        logging.warning("安全存储删除失败：key=%s status=backend_error error=%s", name, exc)

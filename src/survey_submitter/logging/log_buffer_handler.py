@@ -86,7 +86,10 @@ class LogBufferHandler(logging.Handler):
 
                 
                 for record in batch:
-                    self._process_record(record)
+                    try:
+                        self._process_record(record)
+                    except Exception as exc:
+                        _safe_internal_log("LogBufferHandler _process_record failed", exc)
 
                 
                 with self._version_lock:
@@ -94,40 +97,35 @@ class LogBufferHandler(logging.Handler):
                     current_version = self._version
                 self._notify_listeners(current_version)
 
-            except Exception as exc:
+            except OSError as exc:
                 
                 _safe_internal_log("LogBufferHandler worker loop failed", exc)
 
     def _process_record(self, record: logging.LogRecord):
         
-        try:
-            original_level = record.levelname
-            message = self.format(record)
+        original_level = record.levelname
+        message = self.format(record)
 
-            
-            if self._should_filter_sensitive(message):
-                return
-            
-            if _should_filter_noise(message):
-                return
+        
+        if self._should_filter_sensitive(message):
+            return
+        
+        if _should_filter_noise(message):
+            return
 
-            
-            message = self._strip_ansi_codes(message)
+        
+        message = self._strip_ansi_codes(message)
 
-            
-            category = self._determine_category(record, message)
+        
+        category = self._determine_category(record, message)
 
-            
-            display_text = self._apply_category_label(message, original_level, category)
+        
+        display_text = self._apply_category_label(message, original_level, category)
 
-            
-            entry = LogBufferEntry(text=display_text, category=category)
-            with self._records_lock:
-                self._records.append(entry)
-
-        except Exception as exc:
-            
-            _safe_internal_log("LogBufferHandler process_record failed", exc)
+        
+        entry = LogBufferEntry(text=display_text, category=category)
+        with self._records_lock:
+            self._records.append(entry)
 
     def emit(self, record: logging.LogRecord):
         
@@ -137,7 +135,7 @@ class LogBufferHandler(logging.Handler):
         except queue.Full:
             
             _safe_internal_log("LogBufferHandler queue full, dropping log")
-        except Exception:
+        except OSError:
             self.handleError(record)
 
     def get_records(self, _try_lock: bool = False) -> list[LogBufferEntry]:
@@ -199,7 +197,7 @@ class LogBufferHandler(logging.Handler):
                     self._version += 1
                     current_version = self._version
                 self._notify_listeners(current_version)
-        except Exception as exc:
+        except OSError as exc:
             _safe_internal_log("LogBufferHandler flush_remaining failed", exc)
 
     @staticmethod

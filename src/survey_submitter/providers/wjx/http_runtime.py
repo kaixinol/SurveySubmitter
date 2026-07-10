@@ -293,7 +293,7 @@ def _record_action(ctx: ExecutionState, action: AnswerAction) -> None:
 def _question_error_label(config: ExecutionConfig, question_num: int) -> str:
     try:
         question = (config.questions_metadata or {}).get(int(question_num))
-    except Exception:
+    except (ValueError, TypeError):
         question = None
     if question is None:
         return f"第{int(question_num)}题"
@@ -347,7 +347,7 @@ def _raise_submit_rejected(
         raise RuntimeError(f"问卷星提交被拒绝：{text[:200]}")
     try:
         question_num = int(parts[1])
-    except Exception:
+    except (ValueError, TypeError):
         question_num = 0
     reason = parts[2] or text
     if question_num > 0:
@@ -442,7 +442,7 @@ def _sample_ktimes(config: ExecutionConfig) -> int:
             survey_provider="wjx",
             default_unconfigured_seconds=default_seconds,
         )
-    except Exception:
+    except (ValueError, TypeError, KeyError, AttributeError):
         sampled = float(default_seconds)
     if sampled and sampled > 0:
         return max(1, int(round(sampled)))

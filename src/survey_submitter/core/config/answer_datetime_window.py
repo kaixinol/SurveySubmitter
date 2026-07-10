@@ -13,7 +13,7 @@ def parse_answer_datetime_string(value: Any) -> datetime | None:
         return None
     try:
         return datetime.strptime(text, ANSWER_DATETIME_WINDOW_FORMAT)
-    except Exception:
+    except ValueError:
         return None
 
 

@@ -151,7 +151,7 @@ def _verify_wjx_survey_is_answerable(config: RuntimeConfig, survey_provider: str
 
         response = http_client.get(url, timeout=8, headers=DEFAULT_HTTP_HEADERS, proxies={})
         response.raise_for_status()
-    except Exception:
+    except (http_client.HTTPError, OSError, TimeoutError):
         logger.info("启动前问卷星状态复查失败，已放行到运行时处理", exc_info=True)
         return
     html = str(getattr(response, "text", "") or "")
@@ -168,7 +168,7 @@ def _build_questions_metadata(
     for item in questions_info:
         try:
             question_num = int(item.num or 0)
-        except Exception:
+        except (ValueError, TypeError):
             question_num = 0
         if question_num > 0:
             metadata[question_num] = item
@@ -202,7 +202,7 @@ def _build_execution_config_template(
 ) -> ExecutionConfig:
     try:
         psycho_target_alpha = normalize_target_alpha(config.psycho_target_alpha)
-    except Exception:
+    except (ValueError, TypeError):
         psycho_target_alpha = normalize_target_alpha(None)
 
     thread_limit = _resolve_thread_limit(config)

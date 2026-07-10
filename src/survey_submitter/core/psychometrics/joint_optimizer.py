@@ -63,7 +63,7 @@ def _infer_bias_from_probabilities(probability_config: Any, option_count: int) -
     for raw in probability_config:
         try:
             weights.append(max(0.0, float(raw)))
-        except Exception:
+        except (ValueError, TypeError):
             weights.append(0.0)
 
     total = sum(weights)
@@ -119,13 +119,13 @@ class PsychometricBlueprintItem:
             return max(0, min(self.option_count - 1, int(score_index or 0)))
         try:
             target_score = int(score_index or 0)
-        except Exception:
+        except (ValueError, TypeError):
             target_score = 0
         for choice_index, mapped_score in enumerate(self.score_by_choice_index):
             try:
                 if int(mapped_score) == target_score:
                     return max(0, min(self.option_count - 1, choice_index))
-            except Exception:
+            except (ValueError, TypeError):
                 continue
         return max(0, min(self.option_count - 1, target_score))
 
@@ -219,25 +219,16 @@ class CombinedPsychometricPlan:
 
     def get_choice(self, question_index: int, row_index: int | None = None) -> int | None:
         if self.primary is not None and hasattr(self.primary, "get_choice"):
-            try:
-                choice = self.primary.get_choice(question_index, row_index)
-            except Exception:
-                choice = None
+            choice = self.primary.get_choice(question_index, row_index)
             if choice is not None:
                 return choice
         if self.fallback is not None and hasattr(self.fallback, "get_choice"):
-            try:
-                return self.fallback.get_choice(question_index, row_index)
-            except Exception:
-                return None
+            return self.fallback.get_choice(question_index, row_index)
         return None
 
     def is_distribution_locked(self, question_index: int, row_index: int | None = None) -> bool:
         if self.primary is not None and hasattr(self.primary, "is_distribution_locked"):
-            try:
-                return bool(self.primary.is_distribution_locked(question_index, row_index))
-            except Exception:
-                return False
+            return bool(self.primary.is_distribution_locked(question_index, row_index))
         return False
 
 
@@ -497,7 +488,7 @@ def build_joint_psychometric_answer_plan(config: "ExecutionConfig") -> JointPsyc
 
     try:
         target_alpha = normalize_target_alpha(config.psycho_target_alpha)
-    except Exception:
+    except (ValueError, TypeError):
         target_alpha = normalize_target_alpha(None)
 
     answers_by_sample: dict[int, dict[str, int]] = {sample_index: {} for sample_index in range(sample_count)}

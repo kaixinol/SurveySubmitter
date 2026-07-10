@@ -53,11 +53,11 @@ def _safe_internal_log(message: str, exc: BaseException | None = None) -> None:
         if exc is not None:
             ORIGINAL_STDERR.write("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)))
         ORIGINAL_STDERR.flush()
-    except Exception:
+    except OSError:
         try:
             ORIGINAL_STDERR.write("[LogInternal] safe log failed\n")
             ORIGINAL_STDERR.flush()
-        except Exception:
+        except OSError:
             return
 
 
@@ -68,14 +68,10 @@ def log_suppressed_exception(
     level: int = logging.INFO,
 ) -> None:
     
-    try:
-        if exc is None:
-            logging.log(level, "[Suppressed] %s", context)
-        else:
-            logging.log(level, "[Suppressed] %s: %s", context, exc, exc_info=True)
-    except Exception as inner_exc:
-        
-        _safe_internal_log("log_suppressed_exception failed", inner_exc)
+    if exc is None:
+        logging.log(level, "[Suppressed] %s", context)
+    else:
+        logging.log(level, "[Suppressed] %s: %s", context, exc, exc_info=True)
 
 
 def log_deduped_message(
@@ -89,16 +85,12 @@ def log_deduped_message(
     normalized_message = str(message or "").strip()
     if not normalized_key or not normalized_message:
         return False
-    try:
-        with _DEDUPED_LOG_LOCK:
-            if _DEDUPED_LOG_STATE.get(normalized_key) == normalized_message:
-                return False
-            _DEDUPED_LOG_STATE[normalized_key] = normalized_message
-        logging.log(level, normalized_message)
-        return True
-    except Exception as inner_exc:
-        _safe_internal_log("log_deduped_message failed", inner_exc)
-        return False
+    with _DEDUPED_LOG_LOCK:
+        if _DEDUPED_LOG_STATE.get(normalized_key) == normalized_message:
+            return False
+        _DEDUPED_LOG_STATE[normalized_key] = normalized_message
+    logging.log(level, normalized_message)
+    return True
 
 
 def reset_deduped_log_message(key: str) -> None:
@@ -106,11 +98,8 @@ def reset_deduped_log_message(key: str) -> None:
     normalized_key = str(key or "").strip()
     if not normalized_key:
         return
-    try:
-        with _DEDUPED_LOG_LOCK:
-            _DEDUPED_LOG_STATE.pop(normalized_key, None)
-    except Exception as inner_exc:
-        _safe_internal_log("reset_deduped_log_message failed", inner_exc)
+    with _DEDUPED_LOG_LOCK:
+        _DEDUPED_LOG_STATE.pop(normalized_key, None)
 
 
 class AsyncFileHandler(logging.Handler):
@@ -140,7 +129,7 @@ class AsyncFileHandler(logging.Handler):
             self._queue.put_nowait(record)
         except queue.Full:
             _safe_internal_log("AsyncFileHandler queue full, dropping log")
-        except Exception:
+        except OSError:
             self.handleError(record)
 
     def _worker_loop(self) -> None:
@@ -165,10 +154,10 @@ class AsyncFileHandler(logging.Handler):
                             try:
                                 stream.write(self.format(record))
                                 stream.write("\n")
-                            except Exception as exc:
+                            except OSError as exc:
                                 _safe_internal_log("AsyncFileHandler write failed", exc)
                         stream.flush()
-        except Exception as exc:
+        except OSError as exc:
             _safe_internal_log("AsyncFileHandler worker failed", exc)
 
     def flush(self) -> None:
@@ -184,7 +173,7 @@ class AsyncFileHandler(logging.Handler):
         self._closed = True
         try:
             self._queue.put_nowait(self._STOP)
-        except Exception:
+        except (queue.Full, OSError):
             pass
         if self._worker_thread.is_alive():
             self._worker_thread.join(timeout=2.0)
@@ -305,15 +294,12 @@ def shutdown_logging():
         
         root_logger = logging.getLogger()
         for handler in root_logger.handlers[:]:
-            try:
-                handler.close()
-                root_logger.removeHandler(handler)
-            except Exception:
-                pass
+            handler.close()
+            root_logger.removeHandler(handler)
         if _session_log._DELETE_SESSION_LOG_ON_SHUTDOWN and session_log_path and os.path.isfile(session_log_path):
             try:
                 os.remove(session_log_path)
             except OSError as exc:
                 _safe_internal_log("shutdown_logging failed to remove session log", exc)
-    except Exception as exc:
+    except OSError as exc:
         _safe_internal_log("shutdown_logging failed", exc)

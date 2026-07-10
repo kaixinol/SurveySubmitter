@@ -5,7 +5,6 @@ from typing import Any
 
 from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.questions.types import QuestionType
-from survey_submitter.logging.log_utils import log_suppressed_exception
 
 # Default number of options for rating-type questions (scale / score)
 DEFAULT_RATING_OPTION_COUNT = 5
@@ -56,26 +55,14 @@ def _infer_option_count(entry: "QuestionEntry") -> int:
         if nested_len:
             return nested_len
 
-    try:
-        if entry.option_count and entry.option_count > 0:
-            return int(entry.option_count)
-    except Exception as exc:
-        log_suppressed_exception("questions.schema._infer_option_count option_count", exc)
-    try:
-        if entry.custom_weights and len(entry.custom_weights) > 0:
-            return len(entry.custom_weights)
-    except Exception as exc:
-        log_suppressed_exception("questions.schema._infer_option_count custom_weights", exc)
-    try:
-        if isinstance(entry.probabilities, (list, tuple)) and len(entry.probabilities) > 0:
-            return len(entry.probabilities)
-    except Exception as exc:
-        log_suppressed_exception("questions.schema._infer_option_count probabilities", exc)
-    try:
-        if entry.texts and len(entry.texts) > 0:
-            return len(entry.texts)
-    except Exception as exc:
-        log_suppressed_exception("questions.schema._infer_option_count texts", exc)
+    if entry.option_count and entry.option_count > 0:
+        return int(entry.option_count)
+    if entry.custom_weights and len(entry.custom_weights) > 0:
+        return len(entry.custom_weights)
+    if isinstance(entry.probabilities, (list, tuple)) and len(entry.probabilities) > 0:
+        return len(entry.probabilities)
+    if entry.texts and len(entry.texts) > 0:
+        return len(entry.texts)
     if entry.question_type in (QuestionType.SCALE, QuestionType.SCORE):
         return DEFAULT_RATING_OPTION_COUNT
     return 0

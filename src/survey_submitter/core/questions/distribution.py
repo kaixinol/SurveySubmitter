@@ -45,7 +45,7 @@ def _resolve_runtime_counts(
         return (0, [0] * max(0, int(option_count or 0)))
     try:
         total, counts = ctx.snapshot_distribution_stats(stat_key, option_count)
-    except Exception:
+    except (AttributeError, TypeError):
         return (0, [0] * max(0, int(option_count or 0)))
     return (max(0, int(total or 0)), list(counts or []))
 
@@ -53,12 +53,9 @@ def _resolve_runtime_counts(
 def _has_active_runtime_dimension(ctx: Any | None, question_index: int | None) -> bool:
     if ctx is None or question_index is None:
         return False
-    try:
-        config = getattr(ctx, "config", ctx)
-        dimension_map = getattr(config, "question_dimension_map", {})
-        dimension = dimension_map.get(question_index) if isinstance(dimension_map, dict) else None
-    except Exception:
-        return False
+    config = getattr(ctx, "config", ctx)
+    dimension_map = getattr(config, "question_dimension_map", {})
+    dimension = dimension_map.get(question_index) if isinstance(dimension_map, dict) else None
     return isinstance(dimension, str) and bool(str(dimension).strip())
 
 
@@ -71,7 +68,7 @@ def _psycho_plan_covers_question(
         return False
     try:
         return psycho_plan.get_choice(question_index, row_index) is not None
-    except Exception:
+    except AttributeError:
         return False
 
 
@@ -157,6 +154,6 @@ def record_pending_distribution_choice(
             option_index,
             option_count,
         )
-    except Exception:
+    except (AttributeError, TypeError):
         return
 

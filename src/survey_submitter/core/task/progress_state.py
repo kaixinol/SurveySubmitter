@@ -47,7 +47,7 @@ class ThreadProgressMixin:
             try:
                 value = int(suffix)
                 return value if value > 0 else 0
-            except Exception:
+            except (ValueError, TypeError):
                 return 0
         tail = []
         for ch in reversed(text):
@@ -59,7 +59,7 @@ class ThreadProgressMixin:
             return 0
         try:
             return int("".join(reversed(tail)))
-        except Exception:
+        except (ValueError, TypeError):
             return 0
 
     @staticmethod
