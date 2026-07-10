@@ -34,6 +34,8 @@ def get_element_attribute(element: Any, *names: str) -> Any:
         if callable(getter):
             try:
                 value = getter(attr_name)
+                if value is None:
+                    value = _get_attribute_case_insensitive(element, attr_name, getter)
             except Exception:
                 value = None
             if value is not None:
@@ -42,12 +44,39 @@ def get_element_attribute(element: Any, *names: str) -> Any:
         if callable(getter):
             try:
                 value = getter(attr_name)
+                if value is None:
+                    value = _get_dict_case_insensitive(element, attr_name)
             except Exception:
                 value = None
             if value is not None:
                 return value
-        if isinstance(element, dict) and attr_name in element:
-            return element.get(attr_name)
+        if isinstance(element, dict):
+            value = element.get(attr_name)
+            if value is None:
+                value = _get_dict_case_insensitive(element, attr_name)
+            if value is not None:
+                return value
+    return None
+
+
+def _get_attribute_case_insensitive(element: Any, attr_name: str, getter) -> Any:
+    attr_lower = attr_name.lower()
+    for attr in dir(element):
+        if attr.lower() == attr_lower:
+            try:
+                return getter(attr)
+            except Exception:
+                continue
+    return None
+
+
+def _get_dict_case_insensitive(element: Any, key: str) -> Any:
+    if not isinstance(element, dict):
+        return None
+    key_lower = key.lower()
+    for k, v in element.items():
+        if str(k).lower() == key_lower:
+            return v
     return None
 
 
