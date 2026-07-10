@@ -42,8 +42,53 @@ def _format_proxy_source(source: Any) -> str:
     return labels.get(normalized, normalized or "自定义")
 
 
+async def _run_proxy_prefetch(
+    state: ExecutionState,
+    stop_event: asyncio.Event,
+    runtime_bridge: RuntimeControlPort | None,
+) -> None:
+    while should_continue_proxy_prefetch(state) and not stop_event.is_set():
+        request_count = resolve_proxy_prefetch_request_count(state)
+        if request_count <= 0:
+            if await wait_for_proxy_prefetch_cycle(state, state.stop_event):
+                return
+            continue
+        on_random_ip_loading_changed(runtime_bridge, True, f"正在准备代理 0/{request_count}")
+        fetch_lock_acquired = False
+        try:
+            fetch_lock_acquired = await _acquire_proxy_fetch_lock_async(state, state.stop_event)
+            if not fetch_lock_acquired or state.stop_event.is_set() or stop_event.is_set():
+                return
+            request_count = resolve_proxy_prefetch_request_count(state)
+            if request_count <= 0:
+                continue
+            fetched = await fetch_proxy_batch_async(
+                expected_count=request_count,
+                stop_signal=state.stop_event,
+            )
+            if state.stop_event.is_set() or stop_event.is_set():
+                return
+            merged_count = merge_prefetched_proxy_leases(state, fetched)
+            if merged_count:
+                on_random_ip_loading_changed(
+                    runtime_bridge,
+                    True,
+                    f"正在准备代理 {min(merged_count, request_count)}/{request_count}",
+                )
+        except (http_client.TransportError, OSError, TimeoutError):
+            logging.debug("随机IP异步预热失败", exc_info=True)
+        finally:
+            if fetch_lock_acquired:
+                try:
+                    release_proxy_fetch_lock(state)
+                except Exception:
+                    logging.debug("释放随机IP异步预热锁失败", exc_info=True)
+            on_random_ip_loading_changed(runtime_bridge, False, "")
+        if await wait_for_proxy_prefetch_cycle(state, state.stop_event):
+            return
+
+
 class AsyncRuntimeEngine:
-    
 
     def __init__(self, *, status_bus: AsyncStatusBus | None = None) -> None:
         self._status_bus = status_bus or AsyncStatusBus()
@@ -142,63 +187,12 @@ class AsyncRuntimeEngine:
         stop_event = self._stop_event
         if stop_event is None:
             raise RuntimeError("AsyncRuntimeEngine stop_event 未初始化")
-
-        async def _prefetch_proxy_pool() -> None:
-            while should_continue_proxy_prefetch(state) and not stop_event.is_set():
-                request_count = resolve_proxy_prefetch_request_count(state)
-                if request_count <= 0:
-                    if await wait_for_proxy_prefetch_cycle(state, state.stop_event):
-                        return
-                    continue
-                on_random_ip_loading_changed(runtime_bridge, True, f"正在准备代理 0/{request_count}")
-                fetch_lock_acquired = False
-                try:
-                    fetch_lock_acquired = await _acquire_proxy_fetch_lock_async(state, state.stop_event)
-                    if not fetch_lock_acquired or state.stop_event.is_set() or stop_event.is_set():
-                        return
-                    request_count = resolve_proxy_prefetch_request_count(state)
-                    if request_count <= 0:
-                        continue
-                    fetched = await fetch_proxy_batch_async(
-                        expected_count=request_count,
-                        stop_signal=state.stop_event,
-                    )
-                    if state.stop_event.is_set() or stop_event.is_set():
-                        return
-                    merged_count = merge_prefetched_proxy_leases(state, fetched)
-                    if merged_count:
-                        on_random_ip_loading_changed(
-                            runtime_bridge,
-                            True,
-                            f"正在准备代理 {min(merged_count, request_count)}/{request_count}",
-                        )
-                except (http_client.TransportError, OSError, TimeoutError):
-                    logging.debug("随机IP异步预热失败", exc_info=True)
-                finally:
-                    if fetch_lock_acquired:
-                        try:
-                            release_proxy_fetch_lock(state)
-                        except Exception:
-                            logging.debug("释放随机IP异步预热锁失败", exc_info=True)
-                    on_random_ip_loading_changed(runtime_bridge, False, "")
-                if await wait_for_proxy_prefetch_cycle(state, state.stop_event):
-                    return
-
-        prefetch_task = asyncio.create_task(_prefetch_proxy_pool(), name="AsyncProxyPrefetch")
+        prefetch_task = asyncio.create_task(
+            _run_proxy_prefetch(state, stop_event, runtime_bridge),
+            name="AsyncProxyPrefetch",
+        )
         try:
-            async with asyncio.TaskGroup() as task_group:
-                for slot_index in range(worker_count):
-                    task_group.create_task(
-                        AsyncSlotRunner(
-                            slot_id=slot_index + 1,
-                            config=config,
-                            state=state,
-                            run_context=run_context,
-                            scheduler=scheduler,
-                            runtime_bridge=runtime_bridge,
-                        ).run(),
-                        name=f"AsyncSlotRunner-{slot_index + 1}",
-                    )
+            await self._run_slots(worker_count, config, state, run_context, scheduler, runtime_bridge)
         except* Exception as exc_group:
             errors = [exc for exc in exc_group.exceptions if not isinstance(exc, asyncio.CancelledError)]
             if not errors:
@@ -216,6 +210,29 @@ class AsyncRuntimeEngine:
             self._stop_event = None
             self._pause_event = None
             self._state = None
+
+    async def _run_slots(
+        self,
+        worker_count: int,
+        config: ExecutionConfig,
+        state: ExecutionState,
+        run_context: AsyncRunContext,
+        scheduler: AsyncScheduler,
+        runtime_bridge: RuntimeControlPort | None,
+    ) -> None:
+        async with asyncio.TaskGroup() as task_group:
+            for slot_index in range(worker_count):
+                task_group.create_task(
+                    AsyncSlotRunner(
+                        slot_id=slot_index + 1,
+                        config=config,
+                        state=state,
+                        run_context=run_context,
+                        scheduler=scheduler,
+                        runtime_bridge=runtime_bridge,
+                    ).run(),
+                    name=f"AsyncSlotRunner-{slot_index + 1}",
+                )
 
     def stop_run(self) -> None:
         stop_event = self._stop_event

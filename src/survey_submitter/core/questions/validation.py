@@ -73,22 +73,17 @@ def _display_question_num(raw_num: Any, question_info: SurveyQuestionMeta | None
     return raw_num
 
 
-def validate_question_config(
-    entries: list[QuestionEntry],
-    questions_info: list[SurveyQuestionMeta | dict[str, Any]] | None = None,
-) -> str | None:
-    
-    if not entries:
-        return "未配置任何题目"
+def _pick_config_weights(entry: QuestionEntry) -> Any:
+    distribution_mode = str(entry.distribution_mode or "").strip().lower()
+    custom_weights = entry.custom_weights
+    probabilities = entry.probabilities
+    return custom_weights if distribution_mode == "custom" and custom_weights not in (None, []) else probabilities
 
-    def _pick_config_weights(entry: QuestionEntry) -> Any:
-        distribution_mode = str(entry.distribution_mode or "").strip().lower()
-        custom_weights = entry.custom_weights
-        probabilities = entry.probabilities
-        return custom_weights if distribution_mode == "custom" and custom_weights not in (None, []) else probabilities
 
-    errors: list[str] = []
-    question_info_map = {}
+def _build_question_info_map(
+    questions_info: list[SurveyQuestionMeta | dict[str, Any]] | None,
+) -> tuple[dict[int, SurveyQuestionMeta], list[SurveyQuestionMeta]]:
+    question_info_map: dict[int, SurveyQuestionMeta] = {}
     unsupported_questions: list[SurveyQuestionMeta] = []
     for item in questions_info or []:
         if not isinstance(item, (dict, SurveyQuestionMeta)):
@@ -98,18 +93,151 @@ def validate_question_config(
             question_info_map[meta.num] = meta
         if bool(meta.unsupported):
             unsupported_questions.append(meta)
+    return question_info_map, unsupported_questions
+
+
+def _format_unsupported_error(unsupported_questions: list[SurveyQuestionMeta]) -> str:
+    lines = ["当前问卷包含暂不支持的题型，已禁止启动："]
+    for item in unsupported_questions[:MAX_DISPLAYED_UNSUPPORTED_ITEMS]:
+        title = str(item.title or f"第{item.num}题").strip()
+        provider_type = str(item.provider_type or item.type_code or "未知类型").strip()
+        reason = str(item.unsupported_reason or "").strip()
+        suffix = f"（{provider_type}，{reason}）" if reason else f"（{provider_type}）"
+        lines.append(f"  - 第 {item.num} 题：{title}{suffix}")
+    if len(unsupported_questions) > MAX_DISPLAYED_UNSUPPORTED_ITEMS:
+        lines.append(f"  - 其余 {len(unsupported_questions) - MAX_DISPLAYED_UNSUPPORTED_ITEMS} 道暂不支持题目已省略")
+    return "\n".join(lines)
+
+
+def _validate_multiple_choice(
+    entry: QuestionEntry,
+    display_question_num: Any,
+    question_info: SurveyQuestionMeta | None,
+    errors: list[str],
+) -> bool:
+    """Validate a multiple-choice entry. Returns True if the caller should skip remaining checks."""
+    multi_min_limit: int | None = None
+    if question_info:
+        multi_min_limit = getattr(question_info, 'multi_min_limit', None)
+
+    probs = entry.custom_weights or entry.probabilities
+    if isinstance(probs, list):
+        positive_count = count_positive_weights(probs)
+        if positive_count <= 0:
+            errors.append(
+                f"第 {display_question_num} 题（多选题）配置无效：\n"
+                "  - 当前所有选项概率都小于等于 0%\n"
+                "  - 请至少将 1 个选项的概率设为大于 0%"
+            )
+            return True
+        if multi_min_limit is not None and multi_min_limit > 0 and positive_count < multi_min_limit:
+            errors.append(
+                f"第 {display_question_num} 题（多选题）配置冲突：\n"
+                f"  - 题目要求最少选择 {multi_min_limit} 项\n"
+                f"  - 但只有 {positive_count} 个选项的概率大于 0%\n"
+                f"  - 请至少将 {multi_min_limit} 个选项的概率设为大于 0%"
+            )
+    return False
+
+
+def _validate_text_entry(
+    entry: QuestionEntry,
+    display_question_num: Any,
+    question_type: str,
+    question_info: SurveyQuestionMeta | None,
+    errors: list[str],
+) -> None:
+    if question_info is None or _is_text_ai_enabled(entry):
+        return
+    min_text_length = _extract_text_min_length(question_info.title, question_info.description)
+    if min_text_length is None or min_text_length <= 0:
+        return
+    text_random_mode = str(entry.text_random_mode or "").strip().lower()
+    if question_type == QuestionType.TEXT and text_random_mode not in ("", "none"):
+        errors.append(
+            f"第 {display_question_num} 题（填空题）配置冲突：\n"
+            f"  - 题目要求答案最少 {min_text_length} 字\n"
+            f"  - 当前选择的是{_text_random_mode_label(text_random_mode)}，无法保证达到字数要求\n"
+            "  - 请改用足够长的答案列表，或启用 AI 作答"
+        )
+    else:
+        short_indexes = _text_answer_too_short_indexes(entry, min_text_length)
+        if short_indexes:
+            detail = "、".join(
+                f"第 {answer_index} 个答案 {actual_length} 字"
+                for answer_index, actual_length in short_indexes[:5]
+            )
+            if len(short_indexes) > 5:
+                detail += f" 等 {len(short_indexes)} 个答案"
+            errors.append(
+                f"第 {display_question_num} 题（填空题）配置冲突：\n"
+                f"  - 题目要求答案最少 {min_text_length} 字\n"
+                f"  - 但答案列表里 {detail}，达不到要求\n"
+                "  - 请改长答案，或启用 AI 作答"
+            )
+
+
+def _validate_choice_weights(
+    display_question_num: Any,
+    question_type: str,
+    configured_weights: Any,
+    errors: list[str],
+) -> None:
+    if isinstance(configured_weights, list) and configured_weights and count_positive_weights(configured_weights) <= 0:
+        errors.append(
+            f"第 {display_question_num} 题（{question_type}）配置无效：\n"
+            "  - 当前所有选项配比都小于等于 0\n"
+            "  - 请至少将 1 个选项的配比设为大于 0"
+        )
+
+
+def _validate_matrix_entry(
+    display_question_num: Any,
+    configured_weights: Any,
+    errors: list[str],
+) -> None:
+    invalid_rows = find_all_zero_matrix_rows(configured_weights)
+    if invalid_rows == [0]:
+        errors.append(
+            f"第 {display_question_num} 题（矩阵题）配置无效：\n"
+            "  - 当前所有选项配比都小于等于 0\n"
+            "  - 请至少将 1 个选项的配比设为大于 0"
+        )
+    else:
+        for row_idx in invalid_rows:
+            errors.append(
+                f"第 {display_question_num} 题（矩阵题）配置无效：\n"
+                f"  - 第 {row_idx} 行所有选项配比都小于等于 0\n"
+                "  - 请至少将 1 个选项的配比设为大于 0"
+            )
+
+
+def _validate_attached_selects(
+    entry: QuestionEntry,
+    display_question_num: Any,
+    errors: list[str],
+) -> None:
+    for cfg_idx, option_text in find_all_zero_attached_selects(entry.attached_option_selects or []):
+        errors.append(
+            f"第 {display_question_num} 题（嵌入式下拉）配置无效：\n"
+            f"  - 第 {cfg_idx} 组（{option_text or '未命名选项'}）所有配比都小于等于 0\n"
+            "  - 请至少将 1 个选项的配比设为大于 0"
+        )
+
+
+def validate_question_config(
+    entries: list[QuestionEntry],
+    questions_info: list[SurveyQuestionMeta | dict[str, Any]] | None = None,
+) -> str | None:
+
+    if not entries:
+        return "未配置任何题目"
+
+    errors: list[str] = []
+    question_info_map, unsupported_questions = _build_question_info_map(questions_info)
 
     if unsupported_questions:
-        lines = ["当前问卷包含暂不支持的题型，已禁止启动："]
-        for item in unsupported_questions[:MAX_DISPLAYED_UNSUPPORTED_ITEMS]:
-            title = str(item.title or f"第{item.num}题").strip()
-            provider_type = str(item.provider_type or item.type_code or "未知类型").strip()
-            reason = str(item.unsupported_reason or "").strip()
-            suffix = f"（{provider_type}，{reason}）" if reason else f"（{provider_type}）"
-            lines.append(f"  - 第 {item.num} 题：{title}{suffix}")
-        if len(unsupported_questions) > MAX_DISPLAYED_UNSUPPORTED_ITEMS:
-            lines.append(f"  - 其余 {len(unsupported_questions) - MAX_DISPLAYED_UNSUPPORTED_ITEMS} 道暂不支持题目已省略")
-        return "\n".join(lines)
+        return _format_unsupported_error(unsupported_questions)
 
     for idx, entry in enumerate(entries):
         question_num = entry.question_num if entry.question_num is not None else idx + 1
@@ -123,90 +251,20 @@ def validate_question_config(
         display_question_num = _display_question_num(question_num, question_info)
 
         if question_type == QuestionType.MULTIPLE:
-            multi_min_limit: int | None = None
-            if question_info:
-                multi_min_limit = getattr(question_info, 'multi_min_limit', None)
+            if _validate_multiple_choice(entry, display_question_num, question_info, errors):
+                continue
 
-            probs = entry.custom_weights or entry.probabilities
-            if isinstance(probs, list):
-                positive_count = count_positive_weights(probs)
-                if positive_count <= 0:
-                    errors.append(
-                        f"第 {display_question_num} 题（多选题）配置无效：\n"
-                        "  - 当前所有选项概率都小于等于 0%\n"
-                        "  - 请至少将 1 个选项的概率设为大于 0%"
-                    )
-                    continue
-                if multi_min_limit is not None and multi_min_limit > 0 and positive_count < multi_min_limit:
-                    errors.append(
-                        f"第 {display_question_num} 题（多选题）配置冲突：\n"
-                        f"  - 题目要求最少选择 {multi_min_limit} 项\n"
-                        f"  - 但只有 {positive_count} 个选项的概率大于 0%\n"
-                        f"  - 请至少将 {multi_min_limit} 个选项的概率设为大于 0%"
-                    )
-                
-                
-                
-                
-
-        if question_type in TEXT_TYPES and question_info and not _is_text_ai_enabled(entry):
-            min_text_length = _extract_text_min_length(question_info.title, question_info.description)
-            if min_text_length is not None and min_text_length > 0:
-                text_random_mode = str(entry.text_random_mode or "").strip().lower()
-                if question_type == QuestionType.TEXT and text_random_mode not in ("", "none"):
-                    errors.append(
-                        f"第 {display_question_num} 题（填空题）配置冲突：\n"
-                        f"  - 题目要求答案最少 {min_text_length} 字\n"
-                        f"  - 当前选择的是{_text_random_mode_label(text_random_mode)}，无法保证达到字数要求\n"
-                        "  - 请改用足够长的答案列表，或启用 AI 作答"
-                    )
-                else:
-                    short_indexes = _text_answer_too_short_indexes(entry, min_text_length)
-                    if short_indexes:
-                        detail = "、".join(
-                            f"第 {answer_index} 个答案 {actual_length} 字"
-                            for answer_index, actual_length in short_indexes[:5]
-                        )
-                        if len(short_indexes) > 5:
-                            detail += f" 等 {len(short_indexes)} 个答案"
-                        errors.append(
-                            f"第 {display_question_num} 题（填空题）配置冲突：\n"
-                            f"  - 题目要求答案最少 {min_text_length} 字\n"
-                            f"  - 但答案列表里 {detail}，达不到要求\n"
-                            "  - 请改长答案，或启用 AI 作答"
-                        )
+        if question_type in TEXT_TYPES:
+            _validate_text_entry(entry, display_question_num, question_type, question_info, errors)
 
         configured_weights = _pick_config_weights(entry)
-        if question_type in CHOICE_TYPES and isinstance(configured_weights, list):
-            if configured_weights and count_positive_weights(configured_weights) <= 0:
-                errors.append(
-                    f"第 {display_question_num} 题（{question_type}）配置无效：\n"
-                    "  - 当前所有选项配比都小于等于 0\n"
-                    "  - 请至少将 1 个选项的配比设为大于 0"
-                )
+        if question_type in CHOICE_TYPES:
+            _validate_choice_weights(display_question_num, question_type, configured_weights, errors)
 
         if question_type == QuestionType.MATRIX:
-            invalid_rows = find_all_zero_matrix_rows(configured_weights)
-            if invalid_rows == [0]:
-                errors.append(
-                    f"第 {display_question_num} 题（矩阵题）配置无效：\n"
-                    "  - 当前所有选项配比都小于等于 0\n"
-                    "  - 请至少将 1 个选项的配比设为大于 0"
-                )
-            else:
-                for row_idx in invalid_rows:
-                    errors.append(
-                        f"第 {display_question_num} 题（矩阵题）配置无效：\n"
-                        f"  - 第 {row_idx} 行所有选项配比都小于等于 0\n"
-                        "  - 请至少将 1 个选项的配比设为大于 0"
-                    )
+            _validate_matrix_entry(display_question_num, configured_weights, errors)
 
-        for cfg_idx, option_text in find_all_zero_attached_selects(entry.attached_option_selects or []):
-            errors.append(
-                f"第 {display_question_num} 题（嵌入式下拉）配置无效：\n"
-                f"  - 第 {cfg_idx} 组（{option_text or '未命名选项'}）所有配比都小于等于 0\n"
-                "  - 请至少将 1 个选项的配比设为大于 0"
-            )
+        _validate_attached_selects(entry, display_question_num, errors)
 
     if errors:
         return "\n\n".join(errors)
