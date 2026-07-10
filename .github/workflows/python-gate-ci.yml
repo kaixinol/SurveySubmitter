@@ -47,57 +47,27 @@ jobs:
       - name: Run module import check
         run: uv run python -m CI.python_checks.import_check
 
-  window-smoke:
-    name: Window Smoke Test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, macos-latest]
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-        with:
-          python-version: "3.13.14"
-          enable-cache: true
-          cache-dependency-glob: |
-            pyproject.toml
-            uv.lock
-
-      - name: Install dependencies
-        run: uv sync --locked
-
-      - name: Run main window smoke check
-        run: uv run python -m CI.python_checks.window_smoke_check
-
-  import-and-window-smoke:
-    name: Import And Window Smoke
+  import-check-gate:
+    name: Import Check Gate
     if: ${{ always() }}
     needs:
       - import-check
-      - window-smoke
     runs-on: windows-latest
 
     steps:
-      - name: Verify import and window smoke checks
+      - name: Verify import checks
         shell: powershell
         run: |
           $importResult = "${{ needs.import-check.result }}"
-          $windowResult = "${{ needs.window-smoke.result }}"
           Write-Host "Import smoke result: $importResult"
-          Write-Host "Window smoke result: $windowResult"
-          if ($importResult -ne "success" -or $windowResult -ne "success") {
-            throw "Import or window smoke check did not pass."
+          if ($importResult -ne "success") {
+            throw "Import smoke check did not pass."
           }
 
   live-runtime-regression-matrix:
     name: Live Runtime Checks
     needs:
-      - import-and-window-smoke
+      - import-check-gate
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -107,8 +77,6 @@ jobs:
             survey_url: https://v.wjx.cn/vm/ei3sVrE.aspx
           - config_name: credamo
             survey_url: https://www.credamo.com/s/A73QR3ano
-          - config_name: tencent
-            survey_url: https://wj.qq.com/s2/26070328/fa89/
 
     steps:
       - name: Checkout repository
@@ -133,9 +101,9 @@ jobs:
 
   live-runtime-regression:
     name: Live Parser Regression
-    if: ${{ always() && needs.import-and-window-smoke.result == 'success' }}
+    if: ${{ always() && needs.import-check-gate.result == 'success' }}
     needs:
-      - import-and-window-smoke
+      - import-check-gate
       - live-runtime-regression-matrix
     runs-on: windows-latest
 

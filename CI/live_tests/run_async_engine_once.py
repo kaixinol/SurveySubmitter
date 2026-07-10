@@ -20,7 +20,7 @@ from software.core.engine.async_engine import AsyncEngineClient
 from software.core.questions.config import build_default_question_entries  
 from software.core.task import ExecutionState  
 from software.providers.registry import parse_survey  
-from software.ui.controller.run_controller_parts.runtime_preparation import prepare_execution_artifacts  
+from software.core.engine.execution_builder import prepare_execution_artifacts  
 
 
 def _iter_exception_messages(exc: BaseException) -> list[str]:

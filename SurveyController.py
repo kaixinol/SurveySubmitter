@@ -1,10 +1,12 @@
-from software.app.frozen_runtime import prepare_frozen_runtime
+"""SurveyController — CLI entry point.
 
-prepare_frozen_runtime()
+Use `python cli.py run config.yaml` to run survey submissions.
+"""
+from software.app.main import bootstrap
 
-from software.app.main import main
+bootstrap()
+
+from cli import main  # noqa: E402
 
 if __name__ == "__main__":
     main()
-    
-

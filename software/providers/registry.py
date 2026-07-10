@@ -7,8 +7,6 @@ from software.core.engine.runtime_actions import RuntimeActionResult
 from software.core.task import ExecutionConfig, ExecutionState
 from software.providers.adapter_base import CallableProviderAdapter, ProviderAdapterHooks
 from software.providers.common import (
-    SURVEY_PROVIDER_CREDAMO,
-    SURVEY_PROVIDER_QQ,
     SURVEY_PROVIDER_WJX,
     detect_survey_provider,
     normalize_survey_parse_url,
@@ -32,24 +30,12 @@ def _resolve_provider(*, provider: Optional[str] = None, ctx: Any = None) -> str
 
 
 _WJX_PARSE: HookTarget = ("wjx.provider.parser", "parse_wjx_survey")
-_QQ_PARSE: HookTarget = ("tencent.provider.parser", "parse_qq_survey")
-_CREDAMO_PARSE: HookTarget = ("credamo.provider.parser", "parse_credamo_survey")
 
 _WJX_FILL_HTTP: HookTarget = ("wjx.provider.http_runtime", "brush_wjx_http")
-_QQ_FILL_HTTP: HookTarget = ("tencent.provider.http_runtime", "brush_qq_http")
-_CREDAMO_FILL_HTTP: HookTarget = ("credamo.provider.http_runtime", "brush_credamo_http")
 
 
 async def _wjx_browser_runtime_removed(*_args: Any, **_kwargs: Any) -> bool:
     raise RuntimeError("问卷星已固化为纯 HTTP 提交链路，不再支持浏览器填答兜底")
-
-
-async def _qq_browser_runtime_removed(*_args: Any, **_kwargs: Any) -> bool:
-    raise RuntimeError("腾讯问卷已固化为纯 HTTP 提交链路，不再支持浏览器填答兜底")
-
-
-async def _credamo_browser_runtime_removed(*_args: Any, **_kwargs: Any) -> bool:
-    raise RuntimeError("见数已固化为纯 HTTP 提交链路，不再支持浏览器填答兜底")
 
 
 _PROVIDER_REGISTRY = {
@@ -59,22 +45,6 @@ _PROVIDER_REGISTRY = {
             parse_survey=build_parse_hook(SURVEY_PROVIDER_WJX, _WJX_PARSE),
             fill_survey_http=build_fill_http_hook(_WJX_FILL_HTTP),
             fill_survey=_wjx_browser_runtime_removed,
-        ),
-    ),
-    SURVEY_PROVIDER_QQ: CallableProviderAdapter(
-        SURVEY_PROVIDER_QQ,
-        ProviderAdapterHooks(
-            parse_survey=build_parse_hook(SURVEY_PROVIDER_QQ, _QQ_PARSE),
-            fill_survey=_qq_browser_runtime_removed,
-            fill_survey_http=build_fill_http_hook(_QQ_FILL_HTTP),
-        ),
-    ),
-    SURVEY_PROVIDER_CREDAMO: CallableProviderAdapter(
-        SURVEY_PROVIDER_CREDAMO,
-        ProviderAdapterHooks(
-            parse_survey=build_parse_hook(SURVEY_PROVIDER_CREDAMO, _CREDAMO_PARSE),
-            fill_survey=_credamo_browser_runtime_removed,
-            fill_survey_http=build_fill_http_hook(_CREDAMO_FILL_HTTP),
         ),
     ),
 }
@@ -247,8 +217,6 @@ async def is_device_quota_limit_page(driver: Any, provider: Optional[str] = None
 
 __all__ = [
     "SURVEY_PROVIDER_WJX",
-    "SURVEY_PROVIDER_QQ",
-    "SURVEY_PROVIDER_CREDAMO",
     "SurveyDefinition",
     "consume_submission_success_signal",
     "detect_survey_provider",
@@ -263,5 +231,3 @@ __all__ = [
     "submission_validation_message",
     "wait_for_submission_verification",
 ]
-
-

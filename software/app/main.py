@@ -1,77 +1,23 @@
+from __future__ import annotations
+
 import faulthandler
-import importlib
+import logging
 import os
 import sys
-from typing import Any, Optional, cast
+from typing import Optional
 
-from PySide6.QtCore import qInstallMessageHandler, QtMsgType
-from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QApplication
-
-from software.app.settings_store import configure_qt_application_metadata
 from software.app.user_paths import (
     ensure_user_data_directories,
     get_fatal_crash_log_path,
 )
 import software.network.http as http_client
-from software.logging.log_utils import setup_logging
-from software.ui.helpers.qfluent_compat import install_qfluentwidgets_animation_guards
+from software.logging.log_utils import setup_logging as _setup_logging
 
-_VELOPACK_MODULE_NAME = "velopack"
-
-
-_FAULT_HANDLER_STREAM = None
-
-
-def _get_velopack_module() -> Optional[Any]:
-    try:
-        return cast(Any, importlib.import_module(_VELOPACK_MODULE_NAME))
-    except Exception:
-        return None
-
-
-def _is_velopack_lifecycle_hook(args: list[str]) -> bool:
-    hook_args = {
-        "--veloapp-install",
-        "--veloapp-updated",
-        "--veloapp-obsolete",
-        "--veloapp-uninstall",
-    }
-    return any(str(arg).lower() in hook_args for arg in args[1:])
-
-
-def _run_velopack_startup() -> None:
-    
-    if not getattr(sys, "frozen", False):
-        return
-    velopack_module = _get_velopack_module()
-    if velopack_module is None:
-        return
-
-    try:
-        app = velopack_module.App()
-        app.set_auto_apply_on_startup(False)
-        app.run()
-    except Exception:
-        return
-
-
-def _should_run_update_test_probe() -> bool:
-    if "--ci-update-probe" not in sys.argv[1:]:
-        return False
-    if str(os.environ.get("SURVEYCONTROLLER_UPDATE_TEST_MODE", "") or "").strip() != "1":
-        return False
-    return bool(str(os.environ.get("SURVEYCONTROLLER_UPDATE_TEST_RESULT", "") or "").strip())
-
-
-def _run_update_test_probe() -> int:
-    from software.update.ci_probe import run as run_probe
-
-    return int(run_probe())
+_FAULT_HANDLER_STREAM: Optional[object] = None
 
 
 def _enable_fault_handler() -> None:
-    
+    """Enable the Python fault handler, directing output to the crash log if possible."""
     global _FAULT_HANDLER_STREAM
 
     if faulthandler.is_enabled():
@@ -108,57 +54,44 @@ def _disable_fault_handler() -> None:
             pass
 
 
-def _qt_message_handler(mode, context, message):
-    
-    _ = context
-    if "QFont::setPointSize" in message:
-        return
-    if mode == QtMsgType.QtWarningMsg:
-        print(f"Qt Warning: {message}")
-    elif mode == QtMsgType.QtCriticalMsg:
-        print(f"Qt Critical: {message}")
-    elif mode == QtMsgType.QtFatalMsg:
-        print(f"Qt Fatal: {message}")
+def setup_logging() -> None:
+    """Configure application logging."""
+    _setup_logging()
 
 
-def main():
-    _run_velopack_startup()
-    if _is_velopack_lifecycle_hook(sys.argv):
-        return 0
-    if _should_run_update_test_probe():
-        raise SystemExit(_run_update_test_probe())
+def prewarm_runtime() -> None:
+    """Pre-warm HTTP connection pools and other runtime resources."""
+    http_client.prewarm()
 
-    configure_qt_application_metadata()
+
+def bootstrap() -> None:
+    """Run common bootstrap steps (directories, fault handler, logging, HTTP prewarm).
+
+    This is intended to be called by the real entry point (e.g. ``cli.py``)
+    before any application logic runs.
+    """
     ensure_user_data_directories()
     _enable_fault_handler()
     setup_logging()
+    prewarm_runtime()
 
-    qInstallMessageHandler(_qt_message_handler)
-    app = QApplication(sys.argv)
-    install_qfluentwidgets_animation_guards()
 
-    
-    font = QFont("Microsoft YaHei UI" if sys.platform == "win32" else "Sans Serif", 9)
-    app.setFont(font)
-
-    
-    http_client.prewarm()
-
-    
-    from software.ui.shell.main_window import create_window
-    window = create_window()
-    window.show()
-
-    exit_code = int(app.exec())
-
-    
-    from software.logging.log_utils import shutdown_logging
-    shutdown_logging()
+def shutdown() -> None:
+    """Gracefully shut down logging and fault handler."""
+    try:
+        from software.logging.log_utils import shutdown_logging
+        shutdown_logging()
+    except Exception:
+        pass
     _disable_fault_handler()
-
-    return exit_code
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
-
+    # main.py is no longer the application entry point.
+    # Use software.cli (or the ``cli.py`` script) instead.
+    print(
+        "software.app.main is no longer the application entry point.\n"
+        "Use 'python -m software.cli' or the cli.py script instead.",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)

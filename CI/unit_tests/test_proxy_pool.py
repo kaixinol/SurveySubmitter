@@ -5,7 +5,7 @@ import time
 
 from software.core.task import ProxyLease
 from software.network.proxy.pool import pool
-from software.providers.common import SURVEY_PROVIDER_CREDAMO, SURVEY_PROVIDER_QQ, SURVEY_PROVIDER_WJX
+from software.providers.common import SURVEY_PROVIDER_WJX
 
 
 class _Response:
@@ -81,19 +81,7 @@ class ProxyPoolTests:
         assert pool.get_proxy_required_ttl_seconds(None) == pool.PROXY_TTL_GRACE_SECONDS
         assert pool.get_proxy_required_ttl_seconds((10, 20)) == 20 + pool.PROXY_TTL_GRACE_SECONDS
         assert (
-            pool.get_proxy_required_ttl_seconds((10, 20), survey_provider=SURVEY_PROVIDER_QQ)
-            == pool.HTTP_PROXY_MIN_REMAINING_TTL_SECONDS
-        )
-        assert (
-            pool.get_proxy_required_ttl_seconds((250, 250), survey_provider=SURVEY_PROVIDER_QQ)
-            == pool.HTTP_PROXY_MIN_REMAINING_TTL_SECONDS
-        )
-        assert (
             pool.get_proxy_required_ttl_seconds((250, 250), survey_provider=SURVEY_PROVIDER_WJX)
-            == pool.HTTP_PROXY_MIN_REMAINING_TTL_SECONDS
-        )
-        assert (
-            pool.get_proxy_required_ttl_seconds((250, 250), survey_provider=SURVEY_PROVIDER_CREDAMO)
             == pool.HTTP_PROXY_MIN_REMAINING_TTL_SECONDS
         )
         assert pool.proxy_lease_has_sufficient_ttl(None, required_ttl_seconds=1) is False

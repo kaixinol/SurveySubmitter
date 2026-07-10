@@ -13,8 +13,6 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 TARGET_DIRS = [
     ROOT_DIR / "wjx",
     ROOT_DIR / "software",
-    ROOT_DIR / "tencent",
-    ROOT_DIR / "credamo",
 ]
 ENTRY_FILES = [ROOT_DIR / "SurveyController.py"]
 
@@ -24,7 +22,6 @@ ENTRY_FILES = [ROOT_DIR / "SurveyController.py"]
 RUFF_SELECT = "F"
 CHILD_RESULT_PREFIX = "__WJX_CHECK__"
 IMPORT_TIMEOUT_SECONDS = 12
-WINDOW_SMOKE_TIMEOUT_SECONDS = 25
 UNIT_TEST_TIMEOUT_SECONDS = int(os.environ.get("SURVEY_CONTROLLER_UNIT_TEST_TIMEOUT_SECONDS", "120"))
 DEFAULT_UNIT_TEST_COVERAGE_FAIL_UNDER = "75"
 PYRIGHT_TIMEOUT_SECONDS = int(os.environ.get("SURVEY_CONTROLLER_PYRIGHT_TIMEOUT_SECONDS", "90"))
@@ -36,8 +33,6 @@ TYPE_IGNORE_PATTERNS = (
 TYPE_IGNORE_SCAN_ROOTS = (
     ROOT_DIR / "wjx",
     ROOT_DIR / "software",
-    ROOT_DIR / "tencent",
-    ROOT_DIR / "credamo",
 )
 UNICODE_ESCAPE_PATTERNS = (
     "\\" + "u",
@@ -100,42 +95,6 @@ sys.stderr.flush()
 os._exit(0)
 """
 
-WINDOW_SMOKE_CODE = r"""
-import json
-import os
-import sys
-import traceback
-
-PREFIX = "__WJX_CHECK__"
-os.environ.setdefault("QT_QPA_PLATFORM", "minimal")
-os.environ.setdefault("WJX_IMPORT_CHECK", "1")
-
-try:
-    from PySide6.QtWidgets import QApplication
-
-    from software.ui.shell.main_window import create_window
-
-    app = QApplication.instance() or QApplication([])
-    create_window()
-except BaseException as exc:
-    payload = {
-        "ok": False,
-        "kind": "window_smoke",
-        "error_type": type(exc).__name__,
-        "message": str(exc),
-        "traceback": traceback.format_exc(),
-    }
-    print(PREFIX + json.dumps(payload, ensure_ascii=False))
-    sys.stdout.flush()
-    sys.stderr.flush()
-    os._exit(1)
-
-print(PREFIX + json.dumps({"ok": True, "kind": "window_smoke"}, ensure_ascii=False))
-sys.stdout.flush()
-sys.stderr.flush()
-os._exit(0)
-"""
-
 
 def configure_console_encoding() -> None:
     
@@ -184,7 +143,7 @@ def iter_module_names(files: Iterable[Path]) -> list[str]:
 def ensure_target_dirs() -> list[Path]:
     target_dirs = iter_target_dirs()
     if not target_dirs:
-        print("[ERROR] No scan targets found. Expected at least one of wjx/, software/, or tencent/.")
+        print("[ERROR] No scan targets found. Expected at least one of wjx/ or software/.")
         raise SystemExit(2)
     return target_dirs
 
@@ -220,13 +179,6 @@ def make_child_env() -> dict[str, str]:
         "PYRIGHT_PYTHON_CACHE_DIR",
         str(Path(tempfile.gettempdir()) / "SurveyController-pyright-cache"),
     )
-    return env
-
-
-def make_window_smoke_env() -> dict[str, str]:
-    
-    env = make_child_env()
-    env["QT_QPA_PLATFORM"] = "minimal"
     return env
 
 
@@ -296,8 +248,6 @@ def build_unit_test_pytest_args(*, verbose_in_ci: bool) -> list[str]:
         [
             "--cov=software",
             "--cov=wjx",
-            "--cov=tencent",
-            "--cov=credamo",
             f"--cov-fail-under={DEFAULT_UNIT_TEST_COVERAGE_FAIL_UNDER}",
             "--cov-report=term-missing:skip-covered",
             "--cov-report=xml:coverage.xml",
@@ -564,36 +514,6 @@ def run_module_import_checks(modules: Iterable[str]) -> list[dict]:
     return list(issues_by_signature.values())
 
 
-def run_window_smoke_check() -> dict | None:
-    env = make_window_smoke_env()
-    try:
-        result = subprocess.run(
-            [sys.executable, "-c", WINDOW_SMOKE_CODE],
-            cwd=str(ROOT_DIR),
-            capture_output=True,
-            text=True,
-            env=env,
-            timeout=WINDOW_SMOKE_TIMEOUT_SECONDS,
-        )
-    except subprocess.TimeoutExpired:
-        return {
-            "phase": "window",
-            "message": f"Main window creation timed out (>{WINDOW_SMOKE_TIMEOUT_SECONDS}s).",
-        }
-
-    payload = extract_child_payload(result.stdout, result.stderr) or {}
-    if payload.get("kind") == "window_smoke" and payload.get("ok") is True:
-        return None
-
-    fallback_message = summarize_child_output(result.stdout, result.stderr)
-    return {
-        "phase": "window",
-        "message": payload.get("message") or fallback_message or "Main window creation failed.",
-        "error_type": payload.get("error_type", "RuntimeError"),
-        "traceback": payload.get("traceback", "").strip(),
-    }
-
-
 def extract_coverage_summary(stdout: str) -> str | None:
     lines = stdout.splitlines()
     start_index: int | None = None
@@ -685,17 +605,6 @@ def print_issues(title: str, issues: Iterable[dict]) -> None:
             traceback_text = item.get("traceback")
             if traceback_text:
                 print("   Import traceback:")
-                for line in traceback_text.splitlines():
-                    print(f"   {line}")
-            continue
-
-        if phase == "window":
-            error_type = item.get("error_type", "RuntimeError")
-            print(f"{index}. Main window creation  [{error_type}]")
-            print(f"   {item['message']}")
-            traceback_text = item.get("traceback")
-            if traceback_text:
-                print("   Runtime traceback:")
                 for line in traceback_text.splitlines():
                     print(f"   {line}")
             continue

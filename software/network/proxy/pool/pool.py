@@ -20,8 +20,6 @@ from software.network.proxy.policy.source import (
     is_official_proxy_source,
 )
 from software.providers.common import (
-    SURVEY_PROVIDER_CREDAMO,
-    SURVEY_PROVIDER_QQ,
     SURVEY_PROVIDER_WJX,
 )
 
@@ -151,7 +149,7 @@ def get_proxy_required_ttl_seconds(
         elif len(answer_duration_range_seconds) >= 1:
             max_seconds = _to_non_negative_int(answer_duration_range_seconds[0], 0)
     normalized_provider = str(survey_provider or "").strip().lower()
-    if normalized_provider in {SURVEY_PROVIDER_WJX, SURVEY_PROVIDER_QQ, SURVEY_PROVIDER_CREDAMO}:
+    if normalized_provider == SURVEY_PROVIDER_WJX:
         
         return HTTP_PROXY_MIN_REMAINING_TTL_SECONDS
     if normalized_provider:

@@ -1,0 +1,113 @@
+# SurveyController CLI - Example Configuration
+# Copy this file and edit to match your survey.
+#
+# Usage:
+#   python cli.py run config.yaml
+#   python cli.py run config.yaml --parse-only
+#   python cli.py run config.yaml --log-level DEBUG
+
+# ---------------------------------------------------------------------------
+# Survey basics
+# ---------------------------------------------------------------------------
+url: "https://www.wjx.cn/s/your-survey-id.aspx"
+survey_title: ""                       # Optional; auto-detected if blank
+survey_provider: "wjx"                 # "wjx" (default) or auto-detected from URL
+
+# ---------------------------------------------------------------------------
+# Targets & concurrency
+# ---------------------------------------------------------------------------
+target: 100                            # Number of submissions to collect
+threads: 4                             # Concurrent worker threads (max 64)
+
+# ---------------------------------------------------------------------------
+# Timing
+# ---------------------------------------------------------------------------
+submit_interval: [5, 15]              # Seconds between submissions (min, max)
+answer_duration: [60, 180]            # Simulated answer duration in seconds (min, max)
+
+# Optional: restrict submissions to a datetime window
+# answer_datetime_window: ["2025-01-01 09:00:00", "2025-12-31 18:00:00"]
+answer_datetime_window: ["", ""]
+
+# ---------------------------------------------------------------------------
+# Random IP / Proxy
+# ---------------------------------------------------------------------------
+random_ip_enabled: false
+proxy_source: "default"               # "default", "benefit", or "custom"
+custom_proxy_api: ""
+proxy_area_code: null                  # e.g. "110000" for Beijing, or null
+
+# ---------------------------------------------------------------------------
+# Random User-Agent
+# ---------------------------------------------------------------------------
+random_ua_enabled: false
+random_ua_ratios:                      # Must sum to 100
+  wechat: 33
+  mobile: 33
+  pc: 34
+
+# ---------------------------------------------------------------------------
+# Failure handling
+# ---------------------------------------------------------------------------
+fail_stop_enabled: true                # Stop on consecutive failures
+pause_on_aliyun_captcha: true          # Pause when Aliyun CAPTCHA is detected
+
+# ---------------------------------------------------------------------------
+# AI configuration (optional)
+# ---------------------------------------------------------------------------
+# ai_mode: "free"                      # "free" or "provider"
+# ai_provider: "deepseek"
+# ai_api_key: ""
+# ai_base_url: ""
+# ai_api_protocol: "auto"
+# ai_model: ""
+# ai_system_prompt: ""
+
+# ---------------------------------------------------------------------------
+# Psychometrics
+# ---------------------------------------------------------------------------
+reliability_mode_enabled: true
+psycho_target_alpha: 0.85
+
+# ---------------------------------------------------------------------------
+# Reverse fill (optional)
+# ---------------------------------------------------------------------------
+reverse_fill_enabled: false
+reverse_fill_source_path: ""
+reverse_fill_format: "auto"            # "auto", "wjx_sequence", "wjx_score", "wjx_text"
+reverse_fill_start_row: 1
+reverse_fill_threads: 1
+
+# ---------------------------------------------------------------------------
+# Answer rules (optional)
+# ---------------------------------------------------------------------------
+answer_rules: []
+
+# ---------------------------------------------------------------------------
+# Dimension groups (optional, for psychometric analysis)
+# ---------------------------------------------------------------------------
+dimension_groups: []
+
+# ---------------------------------------------------------------------------
+# Question configuration
+# ---------------------------------------------------------------------------
+# question_entries and questions_info are populated automatically when you
+# export a config from the GUI. Below is a minimal example structure.
+#
+# question_entries:
+#   - question_num: 1
+#     question_type: "single"
+#     probabilities: [0.25, 0.25, 0.25, 0.25]
+#     option_count: 4
+#     distribution_mode: "random"
+#     ...
+#
+# questions_info:
+#   - num: 1
+#     title: "Your gender"
+#     type_code: "single"
+#     options: ["Male", "Female", "Other", "Prefer not to say"]
+#     ...
+
+question_entries: []
+questions_info: []

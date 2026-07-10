@@ -24,18 +24,17 @@ from CI.python_checks.common import (
     run_type_ignore_check,
     run_unicode_escape_check,
     run_unit_tests,
-    run_window_smoke_check,
 )
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Check syntax, static imports, and startup-chain issues in wjx, software, and tencent."
+        description="Check syntax, static imports, and startup-chain issues in wjx and software."
     )
     parser.add_argument(
         "--full",
         action="store_true",
-        help="Enable module import and main window smoke checks. The default is quick mode.",
+        help="Enable module import checks. The default is quick mode.",
     )
     pyright_group = parser.add_mutually_exclusive_group()
     pyright_group.add_argument(
@@ -77,10 +76,8 @@ def main() -> int:
     print("[INFO] Unit tests: enabled")
     if quick_mode:
         print("[INFO] Module import checks: skipped (use --full to enable)")
-        print("[INFO] Main window smoke check: skipped (use --full to enable)")
     else:
         print(f"[INFO] Module import checks: {len(modules)}")
-        print("[INFO] Main window smoke check: enabled")
 
     compile_issues = run_compile_checks(compile_targets)
     ruff_issues, ruff_error = run_ruff_check(target_dirs)
@@ -89,7 +86,6 @@ def main() -> int:
     pyright_issues, pyright_error = run_pyright_check(target_dirs) if pyright_mode else ([], None)
     unit_test_issue, coverage_summary = run_unit_tests()
     import_issues = run_module_import_checks(modules) if args.full else []
-    window_issue = run_window_smoke_check() if args.full else None
 
     if ruff_error:
         print(f"[ERROR] {ruff_error}")
@@ -106,7 +102,6 @@ def main() -> int:
         + len(pyright_issues)
         + (1 if unit_test_issue else 0)
         + len(import_issues)
-        + (1 if window_issue else 0)
     )
     elapsed = time.perf_counter() - start_time
 
@@ -121,15 +116,14 @@ def main() -> int:
         print("[INFO] Coverage summary:")
         print(coverage_summary)
     print(f"[INFO] Module import failures: {len(import_issues)}")
-    print(f"[INFO] Main window smoke failures: {1 if window_issue else 0}")
     print(f"[INFO] Elapsed time: {elapsed:.2f}s")
 
     if total_issues == 0:
         if quick_mode:
             print("[PASS] Quick checks passed: compile, Ruff, Pyright, and unit tests all succeeded.")
-            print("[INFO] For import and main window smoke checks, run: python CI/python_ci.py --full")
+            print("[INFO] For module import checks, run: python CI/python_ci.py --full")
         else:
-            print("[PASS] Full checks passed: compile, Ruff, Pyright, unit tests, module import, and main window smoke checks all succeeded.")
+            print("[PASS] Full checks passed: compile, Ruff, Pyright, unit tests, and module import all succeeded.")
         return 0
 
     print(f"[FAIL] Found {total_issues} issue(s):")
@@ -142,8 +136,6 @@ def main() -> int:
     if unit_test_issue:
         print_issues("[Unit test failures]", [unit_test_issue])
     print_issues("[Module import failures]", import_issues)
-    if window_issue:
-        print_issues("[Main window smoke failures]", [window_issue])
 
     return 1
 
