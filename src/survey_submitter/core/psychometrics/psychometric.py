@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from survey_submitter.core.psychometrics.orientation import build_bias_target_probabilities, infer_dimension_orientation
 from survey_submitter.core.psychometrics.utils import randn, z_to_category
@@ -13,7 +15,7 @@ MIN_TARGET_ALPHA = 0.60
 MAX_TARGET_ALPHA = 0.95
 
 
-def _build_choice_key(question_index: int, row_index: Optional[int] = None) -> str:
+def _build_choice_key(question_index: int, row_index: int | None = None) -> str:
     if row_index is not None:
         return f"q:{question_index}:row:{row_index}"
     return f"q:{question_index}"
@@ -77,11 +79,11 @@ class PsychometricItem:
     
     kind: str  
     question_index: int  
-    row_index: Optional[int] = None  
+    row_index: int | None = None  
     option_count: int = 5  
     bias: str = "center"  
-    target_probabilities: Optional[List[float]] = None  
-    score_by_choice_index: Optional[List[int]] = None
+    target_probabilities: list[float] | None = None  
+    score_by_choice_index: list[int] | None = None
 
     @property
     def choice_key(self) -> str:
@@ -117,7 +119,7 @@ class PsychometricItem:
         return max(0, min(self.option_count - 1, index))
 
 
-def _coerce_psychometric_item(raw_item: Any) -> Optional[PsychometricItem]:
+def _coerce_psychometric_item(raw_item: Any) -> PsychometricItem | None:
     if isinstance(raw_item, PsychometricItem):
         probabilities = raw_item.target_probabilities
         if not isinstance(probabilities, list) or not probabilities:
@@ -179,17 +181,17 @@ def _coerce_psychometric_item(raw_item: Any) -> Optional[PsychometricItem]:
 @dataclass
 class PsychometricPlan:
     
-    items: List[PsychometricItem]  
+    items: list[PsychometricItem]  
     theta: float  
     sigma_e: float  
-    choices: Dict[str, int]  
+    choices: dict[str, int]  
     
-    def get_choice(self, question_index: int, row_index: Optional[int] = None) -> Optional[int]:
+    def get_choice(self, question_index: int, row_index: int | None = None) -> int | None:
         
         key = _build_choice_key(question_index, row_index)
         return self.choices.get(key)
 
-    def is_distribution_locked(self, question_index: int, row_index: Optional[int] = None) -> bool:
+    def is_distribution_locked(self, question_index: int, row_index: int | None = None) -> bool:
         _ = question_index, row_index
         return False
 
@@ -198,12 +200,12 @@ class PsychometricPlan:
 class DimensionPsychometricPlan:
     
 
-    plans: Dict[str, PsychometricPlan]
-    item_dimension_map: Dict[str, str]
-    skipped_dimensions: Dict[str, int]
-    items: List[PsychometricItem]
+    plans: dict[str, PsychometricPlan]
+    item_dimension_map: dict[str, str]
+    skipped_dimensions: dict[str, int]
+    items: list[PsychometricItem]
 
-    def get_choice(self, question_index: int, row_index: Optional[int] = None) -> Optional[int]:
+    def get_choice(self, question_index: int, row_index: int | None = None) -> int | None:
         key = _build_choice_key(question_index, row_index)
         dimension = self.item_dimension_map.get(key)
         if not dimension:
@@ -213,21 +215,22 @@ class DimensionPsychometricPlan:
             return None
         return plan.get_choice(question_index, row_index)
 
-    def is_distribution_locked(self, question_index: int, row_index: Optional[int] = None) -> bool:
+    def is_distribution_locked(self, question_index: int, row_index: int | None = None) -> bool:
         _ = question_index, row_index
         return False
 
 
 def build_psychometric_plan(
-    psycho_items: List[Any],
+    psycho_items: list[Any],
     target_alpha: float = 0.85,
-) -> Optional[PsychometricPlan]:
+) -> PsychometricPlan | None:
+    
     
     if not psycho_items:
         return None
     
     
-    items: List[PsychometricItem] = []
+    items: list[PsychometricItem] = []
     
     for raw_item in psycho_items:
         item = _coerce_psychometric_item(raw_item)
@@ -248,7 +251,7 @@ def build_psychometric_plan(
     theta = randn()
     
     
-    choices: Dict[str, int] = {}
+    choices: dict[str, int] = {}
     dimension_orientation = infer_dimension_orientation(items)
     reversed_keys = set(dimension_orientation.reversed_keys)
 
@@ -271,7 +274,7 @@ def build_psychometric_plan(
         k,
         theta,
         sigma_e,
-        getattr(dimension_orientation, "anchor_direction", "center"),
+        dimension_orientation.anchor_direction,
         len(reversed_keys),
     )
     
@@ -284,19 +287,19 @@ def build_psychometric_plan(
 
 
 def build_dimension_psychometric_plan(
-    grouped_items: Dict[str, List[Any]],
+    grouped_items: dict[str, list[Any]],
     target_alpha: float = 0.85,
-) -> Optional[DimensionPsychometricPlan]:
+) -> DimensionPsychometricPlan | None:
     
     if not grouped_items:
         return None
 
     target_alpha = normalize_target_alpha(target_alpha)
 
-    plans: Dict[str, PsychometricPlan] = {}
-    item_dimension_map: Dict[str, str] = {}
-    skipped_dimensions: Dict[str, int] = {}
-    merged_items: List[PsychometricItem] = []
+    plans: dict[str, PsychometricPlan] = {}
+    item_dimension_map: dict[str, str] = {}
+    skipped_dimensions: dict[str, int] = {}
+    merged_items: list[PsychometricItem] = []
 
     for dimension, items in grouped_items.items():
         normalized_dimension = str(dimension or "").strip()
@@ -328,5 +331,4 @@ def build_dimension_psychometric_plan(
         skipped_dimensions=skipped_dimensions,
         items=merged_items,
     )
-
 

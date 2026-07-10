@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import logging
 import os
 import shutil
 import threading
 from datetime import datetime
-from typing import List, Optional
 
 from survey_submitter.constants import LOG_FORMAT
 from survey_submitter.constants import (
@@ -19,7 +20,7 @@ from survey_submitter.system.paths import get_user_logs_directory
 import survey_submitter.logging.log_utils as _log_utils
 
 
-_SESSION_LOG_HANDLER: Optional[logging.Handler] = None
+_SESSION_LOG_HANDLER: logging.Handler | None = None
 _SESSION_LOG_PATH = ""
 _SESSION_LOG_LOCK = threading.Lock()
 _SESSION_LOG_BACKFILLED = False
@@ -55,7 +56,7 @@ def _backfill_session_log_from_buffer() -> None:
         _log_utils._safe_internal_log("backfill session log from buffer failed", exc)
 
 
-def _ensure_session_log_handler(root_logger: Optional[logging.Logger] = None) -> str:
+def _ensure_session_log_handler(root_logger: logging.Logger | None = None) -> str:
     global _SESSION_LOG_HANDLER, _SESSION_LOG_PATH
 
     logger = root_logger or logging.getLogger()
@@ -171,7 +172,7 @@ def finalize_session_log_persistence(runtime_directory: str) -> None:
 def save_log_records_to_file(
     records,
     runtime_directory: str,
-    file_path: Optional[str] = None,
+    file_path: str | None = None,
 ) -> str:
     from survey_submitter.logging.log_buffer_handler import LogBufferEntry
     if not runtime_directory:
@@ -192,7 +193,7 @@ def save_log_records_to_file(
 
 def export_full_log_to_file(
     runtime_directory: str,
-    file_path: Optional[str] = None,
+    file_path: str | None = None,
     *,
     fallback_records=None,
 ) -> str:

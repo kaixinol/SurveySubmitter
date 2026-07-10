@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any, Dict, Iterable, List
+from typing import Any, Iterable
 
 from python_calamine import CalamineWorkbook
 
@@ -35,15 +35,15 @@ def _normalize_cell_value(value: Any) -> Any:
     return value
 
 
-def _iter_question_values(raw_rows: Iterable[ReverseFillRawRow], question_columns: Dict[int, List[ReverseFillColumn]]) -> Iterable[Any]:
-    column_indexes: List[int] = []
+def _iter_question_values(raw_rows: Iterable[ReverseFillRawRow], question_columns: dict[int, list[ReverseFillColumn]]) -> Iterable[Any]:
+    column_indexes: list[int] = []
     for columns in question_columns.values():
         for column in columns:
             column_indexes.append(int(column.column_index))
     seen = set(column_indexes)
     if not seen:
         return []
-    collected: List[Any] = []
+    collected: list[Any] = []
     for row in raw_rows:
         values_by_column = row.values_by_column if isinstance(row.values_by_column, dict) else {}
         for column_index in column_indexes:
@@ -51,7 +51,7 @@ def _iter_question_values(raw_rows: Iterable[ReverseFillRawRow], question_column
     return collected
 
 
-def _detect_wjx_export_format(question_columns: Dict[int, List[ReverseFillColumn]], raw_rows: List[ReverseFillRawRow]) -> str:
+def _detect_wjx_export_format(question_columns: dict[int, list[ReverseFillColumn]], raw_rows: list[ReverseFillRawRow]) -> str:
     for columns in question_columns.values():
         if len(columns) <= 1:
             continue
@@ -104,7 +104,7 @@ def load_wjx_excel_export(source_path: str, *, preferred_format: str = REVERSE_F
     header_row = all_rows[0]
     data_rows = all_rows[1:]
 
-    question_columns: Dict[int, List[ReverseFillColumn]] = {}
+    question_columns: dict[int, list[ReverseFillColumn]] = {}
     for col_idx, value in enumerate(header_row):
         header = _cell_text(value)
         match = _QUESTION_HEADER_RE.match(header)
@@ -122,9 +122,9 @@ def load_wjx_excel_export(source_path: str, *, preferred_format: str = REVERSE_F
             )
         )
 
-    raw_rows: List[ReverseFillRawRow] = []
+    raw_rows: list[ReverseFillRawRow] = []
     for data_row_number, data_row in enumerate(data_rows, start=1):
-        values_by_column: Dict[int, Any] = {}
+        values_by_column: dict[int, Any] = {}
         for column_list in question_columns.values():
             for column in column_list:
                 position = int(column.column_index) - 1

@@ -1,16 +1,18 @@
+from __future__ import annotations
+
 import logging
 import re
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 from survey_submitter.logging.log_utils import log_suppressed_exception
 from .html_parser_common import _normalize_html_text
 
 
-def _postprocess_matrix_option_texts(option_texts: List[str]) -> List[str]:
+def _postprocess_matrix_option_texts(option_texts: list[str]) -> list[str]:
     
     if not option_texts:
         return []
-    cleaned: List[str] = []
+    cleaned: list[str] = []
     seen = set()
     for raw_text in option_texts:
         text = _normalize_html_text(raw_text)
@@ -24,12 +26,12 @@ def _postprocess_matrix_option_texts(option_texts: List[str]) -> List[str]:
     return cleaned
 
 
-def _extract_matrix_header_texts(table) -> List[str]:
+def _extract_matrix_header_texts(table) -> list[str]:
     
     if table is None:
         return []
 
-    best_texts: List[str] = []
+    best_texts: list[str] = []
     best_score = 0
     try:
         rows = table.find_all("tr")
@@ -55,10 +57,10 @@ def _extract_matrix_header_texts(table) -> List[str]:
             best_texts = non_empty_texts
     return best_texts
 
-def _collect_matrix_option_texts(soup, question_div, question_number: int) -> Tuple[int, List[str], List[str]]:
-    option_texts: List[str] = []
+def _collect_matrix_option_texts(soup, question_div, question_number: int) -> tuple[int, list[str], list[str]]:
+    option_texts: list[str] = []
     matrix_rows = 0
-    row_texts: List[str] = []
+    row_texts: list[str] = []
     def _extract_attr_text(node) -> str:
         if node is None:
             return ""
@@ -186,8 +188,8 @@ def _collect_matrix_option_texts(soup, question_div, question_number: int) -> Tu
             inputs = question_div.find_all("input")
         except Exception:
             inputs = []
-        row_indices: List[int] = []
-        col_indices: List[int] = []
+        row_indices: list[int] = []
+        col_indices: list[int] = []
         name_pattern = re.compile(rf"q{question_number}[_-](\d+)(?:[_-](\d+))?")
         for item in inputs:
             raw_name = str(item.get("name") or item.get("id") or "")
@@ -229,7 +231,7 @@ def _collect_matrix_option_texts(soup, question_div, question_number: int) -> Tu
                     matrix_rows = len(candidates)
                     row_texts = list(candidates)
                 else:
-                    merged: List[str] = list(row_texts)
+                    merged: list[str] = list(row_texts)
                     for idx in range(min(len(candidates), len(merged))):
                         if not merged[idx]:
                             merged[idx] = candidates[idx]
@@ -247,7 +249,7 @@ def _collect_matrix_option_texts(soup, question_div, question_number: int) -> Tu
             option_texts = [str(i + 1) for i in range(fallback_columns)]
     return matrix_rows, option_texts, row_texts
 
-def _extract_slider_range(question_div, question_number: int) -> Tuple[Optional[float], Optional[float], Optional[float]]:
+def _extract_slider_range(question_div, question_number: int) -> tuple[float | None, float | None, float | None]:
     
     try:
         slider_input = question_div.find("input", id=f"q{question_number}")
@@ -258,7 +260,7 @@ def _extract_slider_range(question_div, question_number: int) -> Tuple[Optional[
     except Exception:
         slider_input = None
 
-    def _parse(raw: Any) -> Optional[float]:
+    def _parse(raw: Any) -> float | None:
         try:
             return float(raw)
         except Exception:
@@ -293,8 +295,8 @@ def _format_slider_matrix_value(value: float) -> str:
         return str(int(round(value)))
     return f"{value:.6f}".rstrip("0").rstrip(".")
 
-def _build_slider_matrix_option_texts_from_input(slider_input) -> List[str]:
-    def _parse(raw: Any) -> Optional[float]:
+def _build_slider_matrix_option_texts_from_input(slider_input) -> list[str]:
+    def _parse(raw: Any) -> float | None:
         try:
             return float(raw)
         except Exception:
@@ -310,20 +312,20 @@ def _build_slider_matrix_option_texts_from_input(slider_input) -> List[str]:
     if max_value < min_value:
         min_value, max_value = max_value, min_value
     max_count = 200
-    values: List[str] = []
+    values: list[str] = []
     current = min_value
     while current <= max_value + 1e-9 and len(values) < max_count:
         values.append(_format_slider_matrix_value(current))
         current += step_value
     return values
 
-def _collect_slider_matrix_metadata(question_div) -> Tuple[int, List[str], List[str]]:
+def _collect_slider_matrix_metadata(question_div) -> tuple[int, list[str], list[str]]:
     
     if question_div is None:
         return 0, [], []
 
-    row_texts: List[str] = []
-    option_texts: List[str] = []
+    row_texts: list[str] = []
+    option_texts: list[str] = []
 
     try:
         row_titles = question_div.select("tr.rowtitletr .itemTitleSpan")

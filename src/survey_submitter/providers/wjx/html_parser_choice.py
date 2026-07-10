@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import re
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from survey_submitter.logging.log_utils import log_suppressed_exception
 from survey_submitter.providers.match_utils import normalize_match_text
@@ -27,7 +29,7 @@ def _normalize_force_select_text(value: Any) -> str:
         return ""
     return WJX_FORCE_SELECT_CLEAN_RE.sub("", text).lower()
 
-def _extract_force_select_option_label(option_text: Any) -> Optional[str]:
+def _extract_force_select_option_label(option_text: Any) -> str | None:
     text = normalize_match_text(option_text)
     if not text:
         return None
@@ -37,8 +39,8 @@ def _extract_force_select_option_label(option_text: Any) -> Optional[str]:
     label = str(match.group("label") or "").strip().upper()
     return label or None
 
-def _collect_force_select_fragments(question_div, title_text: str) -> List[str]:
-    fragments: List[str] = []
+def _collect_force_select_fragments(question_div, title_text: str) -> list[str]:
+    fragments: list[str] = []
     if title_text:
         cleaned_title = _normalize_html_text(title_text)
         if cleaned_title:
@@ -58,7 +60,7 @@ def _collect_force_select_fragments(question_div, title_text: str) -> List[str]:
             text = ""
         if text:
             fragments.append(text)
-    unique_fragments: List[str] = []
+    unique_fragments: list[str] = []
     seen: set = set()
     for fragment in fragments:
         key = _normalize_html_text(fragment)
@@ -71,13 +73,13 @@ def _collect_force_select_fragments(question_div, title_text: str) -> List[str]:
 def _extract_force_select_option(
     question_div,
     title_text: str,
-    option_texts: List[str],
-) -> Tuple[Optional[int], Optional[str]]:
+    option_texts: list[str],
+) -> tuple[int | None, str | None]:
     
     if not option_texts:
         return None, None
 
-    normalized_options: List[Tuple[int, str, str]] = []
+    normalized_options: list[tuple[int, str, str]] = []
     for idx, option_text in enumerate(option_texts):
         normalized = _normalize_force_select_text(option_text)
         if not normalized:
@@ -228,7 +230,7 @@ def _text_looks_meaningful(text: str) -> bool:
         return False
     return bool(re.search(r"[A-Za-z0-9\u4e00-\u9fff]", text))
 
-def _extract_rating_option_texts(question_div) -> List[str]:
+def _extract_rating_option_texts(question_div) -> list[str]:
     
     if question_div is None:
         return []
@@ -238,7 +240,7 @@ def _extract_rating_option_texts(question_div) -> List[str]:
         "ul[tp='d'] li a",
         "ul[class*='modlen'] li a",
     )
-    anchors: List[Any] = []
+    anchors: list[Any] = []
     for selector in selectors:
         try:
             anchors = question_div.select(selector)
@@ -248,7 +250,7 @@ def _extract_rating_option_texts(question_div) -> List[str]:
             break
     if not anchors:
         return []
-    texts: List[str] = []
+    texts: list[str] = []
     seen = set()
     for idx, anchor in enumerate(anchors):
         text = _extract_option_text_from_attrs(anchor)
@@ -275,10 +277,10 @@ def _extract_rating_option_texts(question_div) -> List[str]:
         texts.append(text)
     return texts
 
-def _collect_choice_option_texts(question_div) -> Tuple[List[str], List[int]]:
-    texts: List[str] = []
-    fillable_indices: List[int] = []
-    option_elements: List[Any] = []
+def _collect_choice_option_texts(question_div) -> tuple[list[str], list[int]]:
+    texts: list[str] = []
+    fillable_indices: list[int] = []
+    option_elements: list[Any] = []
     selectors = ['.ui-controlgroup > div', 'ul > li']
     for selector in selectors:
         try:
@@ -328,10 +330,10 @@ def _collect_choice_option_texts(question_div) -> Tuple[List[str], List[int]]:
     fillable_indices = sorted(set(fillable_indices))
     return texts, fillable_indices
 
-def _extract_select_option_texts_from_element(select_element) -> List[str]:
+def _extract_select_option_texts_from_element(select_element) -> list[str]:
     if select_element is None:
         return []
-    options: List[str] = []
+    options: list[str] = []
     try:
         option_elements = select_element.find_all("option")
     except Exception:
@@ -346,10 +348,10 @@ def _extract_select_option_texts_from_element(select_element) -> List[str]:
         options.append(text)
     return options
 
-def _extract_custom_select_option_texts(element) -> List[str]:
+def _extract_custom_select_option_texts(element) -> list[str]:
     if element is None:
         return []
-    raw_values: List[str] = []
+    raw_values: list[str] = []
     attr_keys = ("cusom", "custom", "data-custom", "data-cusom")
     for key in attr_keys:
         try:
@@ -358,14 +360,14 @@ def _extract_custom_select_option_texts(element) -> List[str]:
             raw = None
         if raw is not None:
             raw_values.append(str(raw))
-    options: List[str] = []
+    options: list[str] = []
     for raw in raw_values:
         for part in re.split(r"[,，\n\r|/]+", raw):
             text = _normalize_html_text(part)
             if not text or _text_looks_like_select_placeholder(text):
                 continue
             options.append(text)
-    deduped: List[str] = []
+    deduped: list[str] = []
     seen = set()
     for option in options:
         if option in seen:
@@ -374,10 +376,10 @@ def _extract_custom_select_option_texts(element) -> List[str]:
         deduped.append(option)
     return deduped
 
-def _extract_choice_attached_selects(question_div) -> List[Dict[str, Any]]:
+def _extract_choice_attached_selects(question_div) -> list[dict[str, Any]]:
     if question_div is None:
         return []
-    option_elements: List[Any] = []
+    option_elements: list[Any] = []
     for selector in ('.ui-controlgroup > div', 'ul > li'):
         try:
             option_elements = question_div.select(selector)
@@ -385,7 +387,7 @@ def _extract_choice_attached_selects(question_div) -> List[Dict[str, Any]]:
             option_elements = []
         if option_elements:
             break
-    attached_selects: List[Dict[str, Any]] = []
+    attached_selects: list[dict[str, Any]] = []
     for option_index, element in enumerate(option_elements):
         option_text = ""
         try:
@@ -424,7 +426,7 @@ def _extract_choice_attached_selects(question_div) -> List[Dict[str, Any]]:
         })
     return attached_selects
 
-def _verify_text_indicates_location(value: Optional[str]) -> bool:
+def _verify_text_indicates_location(value: str | None) -> bool:
     if not value:
         return False
     text = str(value).strip()
@@ -475,13 +477,13 @@ def _extract_location_verify_type(question_div) -> str:
             return verify_value
     return ""
 
-def _collect_select_option_texts(question_div, soup, question_number: int) -> List[str]:
+def _collect_select_option_texts(question_div, soup, question_number: int) -> list[str]:
     select = question_div.find("select")
     if not select and soup:
         select = soup.find("select", id=f"q{question_number}")
     if not select:
         return []
-    options: List[str] = []
+    options: list[str] = []
     option_elements = select.find_all("option")
     for idx, option in enumerate(option_elements):
         value = (option.get("value") or "").strip()

@@ -4,7 +4,6 @@ import ntpath
 import os
 import re
 import sys
-from typing import Optional, Union
 
 _WINDOWS_DRIVE_ABSOLUTE_RE = re.compile(r"^[A-Za-z]:[\\/]")
 _APP_NAME = "SurveyController"

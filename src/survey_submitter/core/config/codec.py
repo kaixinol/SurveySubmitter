@@ -3,8 +3,7 @@ from __future__ import annotations
 import copy
 import logging
 import random
-from dataclasses import asdict, dataclass, fields
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from pydantic import ConfigDict
 
@@ -160,11 +159,11 @@ def _coerce_int(value: Any, default: int = 0) -> int:
         return default
 
 
-def _normalize_user_agent_ratios(raw_ratios: Any) -> Dict[str, int]:
+def _normalize_user_agent_ratios(raw_ratios: Any) -> dict[str, int]:
     if not isinstance(raw_ratios, dict):
         return dict(_DEFAULT_RANDOM_UA_RATIOS)
 
-    ratios: Dict[str, int] = {}
+    ratios: dict[str, int] = {}
     for device_type in _DEFAULT_RANDOM_UA_RATIOS:
         value = _coerce_int(raw_ratios.get(device_type), 0)
         if value < 0 or value > 100:
@@ -177,13 +176,13 @@ def _normalize_user_agent_ratios(raw_ratios: Any) -> Dict[str, int]:
 
 
 def _select_user_agent_from_ratios(
-    ratios: Dict[str, int],
+    ratios: dict[str, int],
     *,
     rng: Any = None,
-) -> Optional[UserAgentProfile]:
+) -> UserAgentProfile | None:
     chooser = rng or random
-    devices: List[str] = []
-    weights: List[int] = []
+    devices: list[str] = []
+    weights: list[int] = []
     for device_type, ua_keys in _USER_AGENT_DEVICE_TO_PRESET_KEYS.items():
         if not ua_keys:
             continue
@@ -234,7 +233,7 @@ def _prob_config_is_unset(value: Any) -> bool:
 def _custom_weights_has_positive(weights: Any) -> bool:
     if not isinstance(weights, list) or not weights:
         return False
-    stack: List[Any] = list(weights)
+    stack: list[Any] = list(weights)
     while stack:
         item = stack.pop()
         if isinstance(item, list):
@@ -248,42 +247,42 @@ def _custom_weights_has_positive(weights: Any) -> bool:
     return False
 
 
-def _normalize_psycho_bias(data: Dict[str, Any]) -> str:
+def _normalize_psycho_bias(data: dict[str, Any]) -> str:
     bias = str(data.get("psycho_bias") or "custom")
     if bias in ("left", "center", "right"):
         return bias
     return "custom"
 
 
-def _normalize_multi_text_blank_modes(raw: Any) -> List[str]:
+def _normalize_multi_text_blank_modes(raw: Any) -> list[str]:
     if not isinstance(raw, list):
         return []
-    normalized: List[str] = []
+    normalized: list[str] = []
     for item in raw:
         mode = str(item or "none").strip().lower()
         normalized.append(mode if mode in _TEXT_RANDOM_MODES else "none")
     return normalized
 
 
-def _normalize_multi_text_blank_ai_flags(raw: Any) -> List[bool]:
+def _normalize_multi_text_blank_ai_flags(raw: Any) -> list[bool]:
     if not isinstance(raw, list):
         return []
     return [bool(item) for item in raw]
 
 
-def _normalize_random_int_range(raw: Any) -> List[int]:
+def _normalize_random_int_range(raw: Any) -> list[int]:
     if raw in (None, "", []):
         return []
     return serialize_random_int_range(raw)
 
 
-def _normalize_multi_text_blank_int_ranges(raw: Any) -> List[List[int]]:
+def _normalize_multi_text_blank_int_ranges(raw: Any) -> list[list[int]]:
     if not isinstance(raw, list):
         return []
     return [_normalize_random_int_range(item) for item in raw]
 
 
-def _legacy_answer_duration_to_range(value: int) -> Tuple[int, int]:
+def _legacy_answer_duration_to_range(value: int) -> tuple[int, int]:
     normalized = min(MAX_ANSWER_DURATION_SECONDS, max(0, int(value or 0)))
     if normalized <= 0:
         return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
@@ -292,7 +291,7 @@ def _legacy_answer_duration_to_range(value: int) -> Tuple[int, int]:
     return low, high
 
 
-def _normalize_answer_duration_range(value: Any) -> Tuple[int, int]:
+def _normalize_answer_duration_range(value: Any) -> tuple[int, int]:
     if value in (None, "", []):
         return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
     try:
@@ -318,7 +317,7 @@ def _normalize_answer_duration_range(value: Any) -> Tuple[int, int]:
         return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
 
 
-def _normalize_dimension_value(raw: Any) -> Optional[str]:
+def _normalize_dimension_value(raw: Any) -> str | None:
     try:
         text = str(raw or "").strip()
     except Exception:
@@ -328,10 +327,10 @@ def _normalize_dimension_value(raw: Any) -> Optional[str]:
     return text
 
 
-def _normalize_dimension_groups(raw: Any) -> List[str]:
+def _normalize_dimension_groups(raw: Any) -> list[str]:
     if not isinstance(raw, list):
         return []
-    groups: List[str] = []
+    groups: list[str] = []
     seen = set()
     for item in raw:
         normalized = _normalize_dimension_value(item)
@@ -342,10 +341,10 @@ def _normalize_dimension_groups(raw: Any) -> List[str]:
     return groups
 
 
-def serialize_question_entry(entry) -> Dict[str, Any]:
+def serialize_question_entry(entry) -> dict[str, Any]:
     probabilities = entry.probabilities
     if (
-        getattr(entry, "distribution_mode", None) == "custom"
+        entry.distribution_mode == "custom"
         and _prob_config_is_unset(probabilities)
         and _custom_weights_has_positive(entry.custom_weights)
     ):
@@ -359,27 +358,27 @@ def serialize_question_entry(entry) -> Dict[str, Any]:
         "distribution_mode": entry.distribution_mode,
         "custom_weights": entry.custom_weights,
         "question_num": entry.question_num,
-        "question_title": getattr(entry, "question_title", None),
-        "survey_provider": normalize_survey_provider(getattr(entry, "survey_provider", None)),
-        "provider_question_id": str(getattr(entry, "provider_question_id", None) or ""),
-        "provider_page_id": str(getattr(entry, "provider_page_id", None) or ""),
-        "ai_enabled": bool(getattr(entry, "ai_enabled", False)),
-        "multi_text_blank_modes": _normalize_multi_text_blank_modes(getattr(entry, "multi_text_blank_modes", [])),
-        "multi_text_blank_ai_flags": _normalize_multi_text_blank_ai_flags(getattr(entry, "multi_text_blank_ai_flags", [])),
-        "multi_text_blank_int_ranges": _normalize_multi_text_blank_int_ranges(getattr(entry, "multi_text_blank_int_ranges", [])),
-        "text_random_mode": str(getattr(entry, "text_random_mode", "none") or "none"),
-        "text_random_int_range": _normalize_random_int_range(getattr(entry, "text_random_int_range", [])),
+        "question_title": entry.question_title,
+        "survey_provider": normalize_survey_provider(entry.survey_provider),
+        "provider_question_id": str(entry.provider_question_id or ""),
+        "provider_page_id": str(entry.provider_page_id or ""),
+        "ai_enabled": bool(entry.ai_enabled),
+        "multi_text_blank_modes": _normalize_multi_text_blank_modes(entry.multi_text_blank_modes),
+        "multi_text_blank_ai_flags": _normalize_multi_text_blank_ai_flags(entry.multi_text_blank_ai_flags),
+        "multi_text_blank_int_ranges": _normalize_multi_text_blank_int_ranges(entry.multi_text_blank_int_ranges),
+        "text_random_mode": str(entry.text_random_mode or "none"),
+        "text_random_int_range": _normalize_random_int_range(entry.text_random_int_range),
         "option_fill_texts": entry.option_fill_texts,
         "fillable_option_indices": entry.fillable_option_indices,
-        "attached_option_selects": list(getattr(entry, "attached_option_selects", []) or []),
-        "is_location": getattr(entry, "is_location", False),
-        "location_parts": list(getattr(entry, "location_parts", []) or []),
-        "dimension": _normalize_dimension_value(getattr(entry, "dimension", None)),
-        "psycho_bias": str(getattr(entry, "psycho_bias", "custom") or "custom"),
+        "attached_option_selects": list(entry.attached_option_selects or []),
+        "is_location": entry.is_location,
+        "location_parts": list(entry.location_parts or []),
+        "dimension": _normalize_dimension_value(entry.dimension),
+        "psycho_bias": str(entry.psycho_bias or "custom"),
     }
 
 
-def deserialize_question_entry(data: Dict[str, Any]):
+def deserialize_question_entry(data: dict[str, Any]):
     from survey_submitter.core.questions.config import QuestionEntry
 
     def _as_int(value: Any, default: int = 0) -> int:
@@ -430,8 +429,8 @@ def deserialize_question_entry(data: Dict[str, Any]):
     )
 
 
-def clone_question_entries(entries: Any) -> List[Any]:
-    cloned: List[Any] = []
+def clone_question_entries(entries: Any) -> list[Any]:
+    cloned: list[Any] = []
     for item in list(entries or []):
         try:
             cloned.append(deserialize_question_entry(serialize_question_entry(item)))
@@ -440,7 +439,7 @@ def clone_question_entries(entries: Any) -> List[Any]:
     return cloned
 
 
-def clone_questions_info(questions: Any, *, default_provider: str = SURVEY_PROVIDER_WJX) -> List[SurveyQuestionMeta]:
+def clone_questions_info(questions: Any, *, default_provider: str = SURVEY_PROVIDER_WJX) -> list[SurveyQuestionMeta]:
     return clone_survey_question_metas(questions or [], default_provider=default_provider)
 
 
@@ -452,21 +451,21 @@ def build_runtime_config_snapshot(
 ) -> RuntimeConfig:
     snapshot = copy.deepcopy(config)
     default_provider = normalize_survey_provider(
-        getattr(snapshot, "survey_provider", None),
-        default=detect_survey_provider(getattr(snapshot, "url", "")),
+        snapshot.survey_provider,
+        default=detect_survey_provider(snapshot.url),
     )
     snapshot.survey_provider = default_provider
-    entry_source = question_entries if question_entries is not None else getattr(snapshot, "question_entries", [])
-    info_source = questions_info if questions_info is not None else getattr(snapshot, "questions_info", [])
+    entry_source = question_entries if question_entries is not None else snapshot.question_entries
+    info_source = questions_info if questions_info is not None else snapshot.questions_info
     snapshot.question_entries = clone_question_entries(entry_source)
     snapshot.questions_info = clone_questions_info(info_source, default_provider=default_provider)
-    snapshot.answer_rules = copy.deepcopy(list(getattr(snapshot, "answer_rules", []) or []))
-    snapshot.dimension_groups = copy.deepcopy(list(getattr(snapshot, "dimension_groups", []) or []))
-    snapshot.random_ua_ratios = copy.deepcopy(dict(getattr(snapshot, "random_ua_ratios", {}) or {}))
+    snapshot.answer_rules = copy.deepcopy(list(snapshot.answer_rules or []))
+    snapshot.dimension_groups = copy.deepcopy(list(snapshot.dimension_groups or []))
+    snapshot.random_ua_ratios = copy.deepcopy(dict(snapshot.random_ua_ratios or {}))
     return snapshot
 
 
-def normalize_runtime_config_payload(raw: Dict[str, Any]) -> RuntimeConfig:
+def normalize_runtime_config_payload(raw: dict[str, Any]) -> RuntimeConfig:
     
 
     def _as_int(value: Any, default: int = 0) -> int:
@@ -497,7 +496,7 @@ def normalize_runtime_config_payload(raw: Dict[str, Any]) -> RuntimeConfig:
             return default
         return bool(value)
 
-    def _tuple_pair(value: Any) -> Tuple[int, int]:
+    def _tuple_pair(value: Any) -> tuple[int, int]:
         try:
             if isinstance(value, (list, tuple)) and len(value) >= 2:
                 return int(value[0]), int(value[1])
@@ -577,8 +576,8 @@ def normalize_runtime_config_payload(raw: Dict[str, Any]) -> RuntimeConfig:
         entry = deserialize_question_entry(item)
         if (
             config.survey_provider != SURVEY_PROVIDER_WJX
-            and getattr(entry, "provider_question_id", None)
-            and normalize_survey_provider(getattr(entry, "survey_provider", None)) == SURVEY_PROVIDER_WJX
+            and entry.provider_question_id
+            and normalize_survey_provider(entry.survey_provider) == SURVEY_PROVIDER_WJX
         ):
             entry.survey_provider = config.survey_provider
         config.question_entries.append(entry)
@@ -606,13 +605,13 @@ def normalize_runtime_config_payload(raw: Dict[str, Any]) -> RuntimeConfig:
     return config
 
 
-def _ensure_supported_config_payload(payload: Dict[str, Any], *, config_path: str) -> Dict[str, Any]:
+def _ensure_supported_config_payload(payload: dict[str, Any], *, config_path: str) -> dict[str, Any]:
     del config_path
     return dict(payload)
 
 
-def serialize_runtime_config(config: RuntimeConfig) -> Dict[str, Any]:
-    payload: Dict[str, Any] = config.model_dump()
+def serialize_runtime_config(config: RuntimeConfig) -> dict[str, Any]:
+    payload: dict[str, Any] = config.model_dump()
     payload["question_entries"] = [
         serialize_question_entry(entry) for entry in list(config.question_entries or [])
     ]
@@ -620,7 +619,7 @@ def serialize_runtime_config(config: RuntimeConfig) -> Dict[str, Any]:
     return payload
 
 
-def deserialize_runtime_config(payload: Dict[str, Any]) -> RuntimeConfig:
+def deserialize_runtime_config(payload: dict[str, Any]) -> RuntimeConfig:
     return normalize_runtime_config_payload(payload)
 
 

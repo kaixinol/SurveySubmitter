@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 try:
     from bs4 import BeautifulSoup
@@ -32,12 +34,12 @@ def _extract_question_title(question_div, fallback_number: int) -> str:
             return title_text
     return f"第{fallback_number}题"
 
-def _collect_multi_limit_text_fragments(question_div) -> List[str]:
+def _collect_multi_limit_text_fragments(question_div) -> list[str]:
     
     if question_div is None:
         return []
 
-    fragments: List[str] = []
+    fragments: list[str] = []
     selectors = (
         ".qtypetip",
         ".topichtml",
@@ -85,7 +87,7 @@ def _collect_multi_limit_text_fragments(question_div) -> List[str]:
         except Exception:
             pass
 
-    deduped: List[str] = []
+    deduped: list[str] = []
     seen = set()
     for fragment in fragments:
         if not fragment or fragment in seen:
@@ -94,7 +96,7 @@ def _collect_multi_limit_text_fragments(question_div) -> List[str]:
         deduped.append(fragment)
     return deduped
 
-def _extract_multiple_choice_limits(question_div, question_number: int) -> Tuple[Optional[int], Optional[int]]:
+def _extract_multiple_choice_limits(question_div, question_number: int) -> tuple[int | None, int | None]:
     
     _ = question_number
     if question_div is None:
@@ -108,8 +110,8 @@ def _extract_multiple_choice_limits(question_div, question_number: int) -> Tuple
             _extract_range_from_possible_json,
         )
 
-        min_limit: Optional[int] = None
-        max_limit: Optional[int] = None
+        min_limit: int | None = None
+        max_limit: int | None = None
 
         
         attr_min, attr_max = _extract_min_max_from_attributes(question_div)
@@ -152,13 +154,13 @@ def _extract_multiple_choice_limits(question_div, question_number: int) -> Tuple
         return None, None
 
 def _extract_question_metadata_from_html(soup, question_div, question_number: int, type_code: str):
-    option_texts: List[str] = []
+    option_texts: list[str] = []
     option_count = 0
     matrix_rows = 0
-    row_texts: List[str] = []
-    fillable_indices: List[int] = []
-    multi_min_limit: Optional[int] = None
-    multi_max_limit: Optional[int] = None
+    row_texts: list[str] = []
+    fillable_indices: list[int] = []
+    multi_min_limit: int | None = None
+    multi_max_limit: int | None = None
 
     if type_code in {TypeCode.SINGLE, TypeCode.MULTIPLE, TypeCode.SCORE, TypeCode.SCALE, TypeCode.ORDER}:
         option_texts, fillable_indices = _collect_choice_option_texts(question_div)
@@ -181,14 +183,14 @@ def _extract_question_metadata_from_html(soup, question_div, question_number: in
         option_count = 1
     return option_texts, option_count, matrix_rows, row_texts, fillable_indices, multi_min_limit, multi_max_limit
 
-def _extract_jump_rules_from_html(question_div, question_number: int, option_texts: List[str]) -> Tuple[bool, List[Dict[str, Any]]]:
+def _extract_jump_rules_from_html(question_div, question_number: int, option_texts: list[str]) -> tuple[bool, list[dict[str, Any]]]:
     
     _ = question_number
     has_jump_attr = str(question_div.get("hasjump") or "").strip() == "1"
-    jump_rules: List[Dict[str, Any]] = []
+    jump_rules: list[dict[str, Any]] = []
     terminate_keywords = ("结束作答", "结束答题", "结束填写", "终止作答", "停止作答")
 
-    def _parse_jump_target(raw_value: Any) -> Optional[int]:
+    def _parse_jump_target(raw_value: Any) -> int | None:
         text_value = normalize_match_text(raw_value)
         if not text_value:
             return None
@@ -201,7 +203,7 @@ def _extract_jump_rules_from_html(question_div, question_number: int, option_tex
         except Exception:
             return None
 
-    def _jump_target_terminates(jumpto_num: int, option_text: Optional[str]) -> bool:
+    def _jump_target_terminates(jumpto_num: int, option_text: str | None) -> bool:
         if option_text and any(keyword in option_text for keyword in terminate_keywords):
             return True
         
@@ -256,15 +258,15 @@ def _extract_jump_rules_from_html(question_div, question_number: int, option_tex
             })
     return has_jump_attr or bool(jump_rules), jump_rules
 
-def _extract_display_conditions_from_html(question_div, question_number: int) -> Tuple[bool, List[Dict[str, Any]]]:
+def _extract_display_conditions_from_html(question_div, question_number: int) -> tuple[bool, list[dict[str, Any]]]:
     
     _ = question_number
     relation_raw = str(question_div.get("relation") or "").strip()
     if not relation_raw:
         return False, []
 
-    conditions: List[Dict[str, Any]] = []
-    seen: set[Tuple[int, Tuple[int, ...]]] = set()
+    conditions: list[dict[str, Any]] = []
+    seen: set[tuple[int, tuple[int, ...]]] = set()
     for chunk in re.split(r"\s*[|]\s*", relation_raw):
         text = normalize_match_text(chunk)
         if not text:
@@ -276,7 +278,7 @@ def _extract_display_conditions_from_html(question_div, question_number: int) ->
             source_question_num = int(match.group("source"))
         except Exception:
             continue
-        option_indices: List[int] = []
+        option_indices: list[int] = []
         seen_indices = set()
         option_text = str(match.group("options") or "")
         for raw_option in option_text.split(","):
@@ -305,9 +307,9 @@ def _extract_display_conditions_from_html(question_div, question_number: int) ->
         })
     return bool(conditions), conditions
 
-def _attach_display_condition_metadata(questions_info: List[Dict[str, Any]]) -> None:
+def _attach_display_condition_metadata(questions_info: list[dict[str, Any]]) -> None:
     
-    by_num: Dict[int, Dict[str, Any]] = {}
+    by_num: dict[int, dict[str, Any]] = {}
     for info in questions_info:
         try:
             question_num = int(info.get("num") or 0)
@@ -341,7 +343,7 @@ def _attach_display_condition_metadata(questions_info: List[Dict[str, Any]]) -> 
             if not isinstance(targets, list):
                 targets = []
                 source_info["controls_display_targets"] = targets
-            normalized_indices: List[int] = []
+            normalized_indices: list[int] = []
             seen_indices = set()
             for raw_index in option_indices:
                 try:

@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from typing import Optional, Protocol
+from typing import Protocol
 
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 
 
 class RuntimeControlPort(Protocol):
-    def wait_if_paused(self, stop_signal: Optional[StopSignalLike]) -> None: ...
+    def wait_if_paused(self, stop_signal: StopSignalLike | None) -> None: ...
 
-    def on_random_ip_submission(self, stop_signal: Optional[StopSignalLike] = None) -> None: ...
+    def on_random_ip_submission(self, stop_signal: StopSignalLike | None = None) -> None: ...
 
     def on_random_ip_loading_changed(self, loading: bool, message: str = "") -> None: ...
 
 
-def wait_if_paused(runtime_port: RuntimeControlPort | None, stop_signal: Optional[StopSignalLike]) -> None:
+def wait_if_paused(runtime_port: RuntimeControlPort | None, stop_signal: StopSignalLike | None) -> None:
     if runtime_port is None:
         return
     runtime_port.wait_if_paused(stop_signal)
@@ -21,7 +21,7 @@ def wait_if_paused(runtime_port: RuntimeControlPort | None, stop_signal: Optiona
 
 def on_random_ip_submission(
     runtime_port: RuntimeControlPort | None,
-    stop_signal: Optional[StopSignalLike],
+    stop_signal: StopSignalLike | None,
 ) -> None:
     if runtime_port is None:
         return

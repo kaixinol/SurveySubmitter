@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Optional
 
 from survey_submitter.core.config.yaml_loader import load_yaml_config
 from survey_submitter.core.engine.async_engine import AsyncRuntimeEngine
@@ -25,10 +24,10 @@ logger = logging.getLogger(__name__)
 class _HeadlessControlPort:
     """No-op RuntimeControlPort for headless operation."""
 
-    def wait_if_paused(self, stop_signal: Optional[StopSignalLike] = None) -> None:
+    def wait_if_paused(self, stop_signal: StopSignalLike | None = None) -> None:
         pass
 
-    def on_random_ip_submission(self, stop_signal: Optional[StopSignalLike] = None) -> None:
+    def on_random_ip_submission(self, stop_signal: StopSignalLike | None = None) -> None:
         pass
 
     def on_random_ip_loading_changed(self, loading: bool, message: str = "") -> None:
@@ -41,7 +40,7 @@ class HeadlessRunner:
     def __init__(self, config_path: str, *, parse_only: bool = False) -> None:
         self._config_path = config_path
         self._parse_only = parse_only
-        self._engine: Optional[AsyncRuntimeEngine] = None
+        self._engine: AsyncRuntimeEngine | None = None
         self._stop_requested = False
 
     def request_stop(self) -> None:

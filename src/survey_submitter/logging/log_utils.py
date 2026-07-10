@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import atexit
 import logging
 import os
@@ -6,14 +8,14 @@ import sys
 import threading
 import traceback
 from datetime import datetime
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable
 
 from survey_submitter.constants import LOG_BUFFER_CAPACITY, LOG_FORMAT
 
 ORIGINAL_STDOUT = sys.stdout
 ORIGINAL_STDERR = sys.stderr
 ORIGINAL_EXCEPTHOOK = sys.excepthook
-_popup_handler: Optional[Callable[[str, str, str], Any]] = None
+_popup_handler: Callable[[str, str, str], Any] | None = None
 _NOISY_LOG_PATTERNS = (
     "QFluentWidgets Pro is now released",
     "https://qfluentwidgets.com/pages/pro",
@@ -44,7 +46,7 @@ def _should_filter_noise(message: str) -> bool:
     )
 
 
-def _safe_internal_log(message: str, exc: Optional[BaseException] = None) -> None:
+def _safe_internal_log(message: str, exc: BaseException | None = None) -> None:
     
     try:
         ORIGINAL_STDERR.write(f"[LogInternal] {message}\n")
@@ -61,7 +63,7 @@ def _safe_internal_log(message: str, exc: Optional[BaseException] = None) -> Non
 
 def log_suppressed_exception(
     context: str,
-    exc: Optional[BaseException] = None,
+    exc: BaseException | None = None,
     *,
     level: int = logging.INFO,
 ) -> None:
@@ -247,7 +249,7 @@ def setup_logging():
         setattr(setup_logging, "_streams_hooked", True)
 
 
-def register_popup_handler(handler: Optional[Callable[[str, str, str], Any]]) -> None:
+def register_popup_handler(handler: Callable[[str, str, str], Any] | None) -> None:
     
     global _popup_handler
     _popup_handler = handler

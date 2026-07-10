@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Any, Optional
+from typing import Any
 
 
 def coerce_positive_int(value: Any, default: int) -> int:
@@ -13,7 +13,7 @@ def coerce_positive_int(value: Any, default: int) -> int:
     return max(0, number)
 
 
-def valid_forced_choice_index(raw_value: Any, option_count: int) -> Optional[int]:
+def valid_forced_choice_index(raw_value: Any, option_count: int) -> int | None:
     try:
         candidate = int(raw_value)
     except Exception:
@@ -70,8 +70,8 @@ def positive_multiple_indexes_with_limits(
     weights: Any,
     option_count: int,
     *,
-    min_limit: Optional[int] = None,
-    max_limit: Optional[int] = None,
+    min_limit: int | None = None,
+    max_limit: int | None = None,
 ) -> list[int]:
     count = max(0, int(option_count or 0))
     if count <= 0:

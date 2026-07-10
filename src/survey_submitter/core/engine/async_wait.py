@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Optional
+from typing import Any
 
 
 def is_stop_requested(stop_signal: Any) -> bool:
@@ -16,7 +16,7 @@ def is_stop_requested(stop_signal: Any) -> bool:
     return False
 
 
-def _resolve_async_event(stop_signal: Any) -> Optional[asyncio.Event]:
+def _resolve_async_event(stop_signal: Any) -> asyncio.Event | None:
     if isinstance(stop_signal, asyncio.Event):
         return stop_signal
     event = getattr(stop_signal, "_event", None)

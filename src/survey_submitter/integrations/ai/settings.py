@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import field_validator
 
@@ -92,7 +92,7 @@ class AISettings(BaseConfigModel):
         return prompt or DEFAULT_SYSTEM_PROMPT
 
 
-_RUNTIME_AI_SETTINGS: Optional[AISettings] = None
+_RUNTIME_AI_SETTINGS: AISettings | None = None
 
 
 def get_default_system_prompt() -> str:
@@ -127,17 +127,17 @@ def _persist_ai_settings(settings: AISettings) -> None:
     store.sync()
 
 
-def get_ai_settings() -> Dict[str, Any]:
+def get_ai_settings() -> dict[str, Any]:
     settings = _ensure_runtime_settings()
     return settings.model_dump()
 
 
 def save_ai_settings(
-    api_key: Optional[str] = None,
-    base_url: Optional[str] = None,
-    api_protocol: Optional[str] = None,
-    model: Optional[str] = None,
-    system_prompt: Optional[str] = None,
+    api_key: str | None = None,
+    base_url: str | None = None,
+    api_protocol: str | None = None,
+    model: str | None = None,
+    system_prompt: str | None = None,
 ):
     settings = _ensure_runtime_settings()
     update_data = {}
@@ -172,13 +172,13 @@ def reset_ai_settings() -> None:
     _RUNTIME_AI_SETTINGS = AISettings()
 
 
-def get_ai_readiness_error(config: Optional[Dict[str, Any]] = None) -> str:
+def get_ai_readiness_error(config: dict[str, Any] | None = None) -> str:
     if config is None:
         settings = _ensure_runtime_settings()
     else:
         settings = AISettings.model_validate(config)
 
-    missing_fields: List[str] = []
+    missing_fields: list[str] = []
     if not settings.api_key.strip():
         missing_fields.append("API Key")
     if not settings.base_url.strip():

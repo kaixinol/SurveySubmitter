@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import threading
-from typing import List, Optional
 
 from survey_submitter.core.task import ProxyLease
 from survey_submitter.network.proxy.policy.source import get_effective_proxy_api_url
@@ -10,9 +9,9 @@ from survey_submitter.network.proxy.policy.source import get_effective_proxy_api
 
 def prefetch_proxy_pool(
     expected_count: int,
-    proxy_api_url: Optional[str] = None,
-    stop_signal: Optional[threading.Event] = None,
-) -> List[ProxyLease]:
+    proxy_api_url: str | None = None,
+    stop_signal: threading.Event | None = None,
+) -> list[ProxyLease]:
     
     from survey_submitter.network.proxy.api import fetch_proxy_batch_async
 

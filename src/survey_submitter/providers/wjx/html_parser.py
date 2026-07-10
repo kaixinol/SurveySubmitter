@@ -1,4 +1,6 @@
-from typing import Any, Dict, List, Optional
+from __future__ import annotations
+
+from typing import Any
 
 from survey_submitter.providers.contracts import (
     LOGIC_PARSE_STATUS_COMPLETE,
@@ -58,10 +60,10 @@ def _normalize_media_source_url(raw: Any) -> str:
 
 
 def _append_media_item(
-    media: List[Dict[str, Any]],
+    media: list[dict[str, Any]],
     *,
     scope: str,
-    index: Optional[int],
+    index: int | None,
     source_url: Any,
     label: str,
 ) -> None:
@@ -79,12 +81,12 @@ def _append_media_item(
         media.append(item)
 
 
-def _collect_question_media(question_div, row_texts: List[str], option_texts: List[str]) -> List[Dict[str, Any]]:
+def _collect_question_media(question_div, row_texts: list[str], option_texts: list[str]) -> list[dict[str, Any]]:
     if question_div is None:
         return []
-    media: List[Dict[str, Any]] = []
+    media: list[dict[str, Any]] = []
 
-    title_nodes: List[Any] = []
+    title_nodes: list[Any] = []
     for selector in (".topichtml", ".field-label"):
         try:
             title_nodes.extend(list(question_div.select(selector) or []))
@@ -104,7 +106,7 @@ def _collect_question_media(question_div, row_texts: List[str], option_texts: Li
                 label="题干图",
             )
 
-    option_nodes: List[Any] = []
+    option_nodes: list[Any] = []
     for selector in (".ui-controlgroup > div", "ul > li"):
         try:
             option_nodes = list(question_div.select(selector) or [])
@@ -131,7 +133,7 @@ def _collect_question_media(question_div, row_texts: List[str], option_texts: Li
                 label=option_label or f"选项 {option_index + 1}",
             )
 
-    row_nodes: List[Any] = []
+    row_nodes: list[Any] = []
     for selector in ("tr[rowindex]", "tr.rowtitletr", "tr[id^='drv']"):
         try:
             row_nodes = list(question_div.select(selector) or [])
@@ -197,7 +199,7 @@ def _question_div_has_question_ancestor(question_div, fieldset) -> bool:
     return False
 
 
-def parse_survey_questions_from_html(html: str) -> List[Dict[str, Any]]:
+def parse_survey_questions_from_html(html: str) -> list[dict[str, Any]]:
     
     if not BeautifulSoup:
         raise RuntimeError("BeautifulSoup is required for HTML parsing")
@@ -208,14 +210,14 @@ def parse_survey_questions_from_html(html: str) -> List[Dict[str, Any]]:
     fieldsets = container.find_all("fieldset")
     if not fieldsets:
         fieldsets = [container]
-    questions_info: List[Dict[str, Any]] = []
+    questions_info: list[dict[str, Any]] = []
     for page_index, fieldset in enumerate(fieldsets, 1):
         question_divs = [
             item
             for item in fieldset.find_all("div", attrs={"topic": True})
             if not _question_div_has_question_ancestor(item, fieldset)
         ]
-        current_display_num: Optional[int] = None
+        current_display_num: int | None = None
         visible_question_counter = 0
         for question_div in question_divs:
             raw_heading_text = _extract_display_heading_text(question_div)
@@ -280,7 +282,7 @@ def parse_survey_questions_from_html(html: str) -> List[Dict[str, Any]]:
                 if scale_texts:
                     option_texts = scale_texts
                     option_count = len(scale_texts)
-            attached_option_selects: List[Dict[str, Any]] = []
+            attached_option_selects: list[dict[str, Any]] = []
             if type_code in {TypeCode.SINGLE, TypeCode.MULTIPLE}:
                 attached_option_selects = _extract_choice_attached_selects(question_div)
             has_jump, jump_rules = _extract_jump_rules_from_html(question_div, question_number, option_texts)
@@ -313,8 +315,8 @@ def parse_survey_questions_from_html(html: str) -> List[Dict[str, Any]]:
                 type_code = TypeCode.DESCRIPTION
             elif is_multi_text and type_code == TypeCode.MATRIX:
                 type_code = TypeCode.MULTI_TEXT
-            forced_option_index: Optional[int] = None
-            forced_option_text: Optional[str] = None
+            forced_option_index: int | None = None
+            forced_option_text: str | None = None
             if type_code in {TypeCode.SINGLE, TypeCode.SCORE, TypeCode.SCALE, TypeCode.DROPDOWN}:
                 forced_option_index, forced_option_text = _extract_force_select_option(
                     question_div,

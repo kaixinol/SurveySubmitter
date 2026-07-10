@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Protocol
+from typing import Protocol
 
 
 class StopSignalLike(Protocol):
@@ -8,7 +8,7 @@ class StopSignalLike(Protocol):
 
     def set(self) -> None: ...
 
-    def wait(self, timeout: Optional[float] = None) -> bool: ...
+    def wait(self, timeout: float | None = None) -> bool: ...
 
 
 __all__ = ["StopSignalLike"]

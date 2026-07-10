@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Sequence
+from typing import Any, Sequence
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.ai.runtime import AIRuntimeError, agenerate_ai_answer, build_ai_option_fill_prompt
@@ -27,16 +27,16 @@ from survey_submitter.core.questions.utils import (
 
 
 async def resolve_option_fill_text_from_config(
-    fill_entries: Optional[Sequence[Optional[str]]],
+    fill_entries: Sequence[str | None] | None,
     option_index: int,
     *,
     question_title: str = "",
     question_number: int = 0,
-    option_text: Optional[str] = None,
-    ctx: Optional[ExecutionState] = None,
+    option_text: str | None = None,
+    ctx: ExecutionState | None = None,
     allow_ai_placeholder: bool = False,
     ai_placeholder_text: str = DEFAULT_FILL_TEXT,
-) -> Optional[str]:
+) -> str | None:
     raw_value = get_fill_text_from_config(fill_entries, option_index)
     if raw_value is None:
         return None
@@ -62,13 +62,13 @@ async def resolve_option_fill_text_from_config(
 
 
 def resolve_text_values_from_config(
-    answer_candidates: Optional[Sequence[Any]],
-    probabilities: Optional[Sequence[Any]],
+    answer_candidates: Sequence[Any] | None,
+    probabilities: Sequence[Any] | None,
     *,
     blank_count: int = 1,
     entry_type: str = "text",
-    blank_modes: Optional[Sequence[Any]] = None,
-    blank_int_ranges: Optional[Sequence[Any]] = None,
+    blank_modes: Sequence[Any] | None = None,
+    blank_int_ranges: Sequence[Any] | None = None,
 ) -> list[str]:
     candidates = [str(item).strip() for item in list(answer_candidates or []) if str(item).strip()]
     if not candidates:

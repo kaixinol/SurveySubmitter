@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import threading
-from typing import TYPE_CHECKING, Any, Optional, Protocol, Tuple
+from typing import TYPE_CHECKING, Any, Protocol
 
 from survey_submitter.core.reverse_fill import (
     ReverseFillAcquireResult,
@@ -10,26 +10,24 @@ from survey_submitter.core.reverse_fill import (
     create_reverse_fill_runtime_state,
 )
 
-
 if TYPE_CHECKING:
     class _ReverseFillRuntimeHost(Protocol):
         lock: threading.Lock
         config: Any
         cur_num: int
-        reverse_fill_runtime: Optional[ReverseFillRuntimeState]
+        reverse_fill_runtime: ReverseFillRuntimeState | None
 
-        def _reverse_fill_thread_key(self, thread_name: Optional[str] = None) -> str: ...
+        def _reverse_fill_thread_key(self, thread_name: str | None = None) -> str: ...
         def _reverse_fill_possible_total_locked(self) -> int: ...
-        def acquire_reverse_fill_sample(self, thread_name: Optional[str] = None) -> ReverseFillAcquireResult: ...
+        def acquire_reverse_fill_sample(self, thread_name: str | None = None) -> ReverseFillAcquireResult: ...
 
         def notify_runtime_change(self) -> None: ...
         def wait_for_runtime_change(
             self,
             *,
-            stop_signal: Optional[threading.Event] = None,
-            timeout: Optional[float] = None,
+            stop_signal: threading.Event | None = None,
+            timeout: float | None = None,
         ) -> bool: ...
-
 
 class ReverseFillRuntimeMixin:
     def initialize_reverse_fill_runtime(self: "_ReverseFillRuntimeHost") -> None:
@@ -37,7 +35,7 @@ class ReverseFillRuntimeMixin:
             self.reverse_fill_runtime = create_reverse_fill_runtime_state(getattr(self.config, "reverse_fill_spec", None))
         self.notify_runtime_change()
 
-    def _reverse_fill_thread_key(self, thread_name: Optional[str] = None) -> str:
+    def _reverse_fill_thread_key(self, thread_name: str | None = None) -> str:
         key = str(thread_name or threading.current_thread().name or "Worker-?").strip()
         return key or "Worker-?"
 
@@ -53,7 +51,7 @@ class ReverseFillRuntimeMixin:
 
     def acquire_reverse_fill_sample(
         self: "_ReverseFillRuntimeHost",
-        thread_name: Optional[str] = None,
+        thread_name: str | None = None,
     ) -> ReverseFillAcquireResult:
         key = self._reverse_fill_thread_key(thread_name)
         with self.lock:
@@ -80,10 +78,10 @@ class ReverseFillRuntimeMixin:
 
     def release_reverse_fill_sample(
         self: "_ReverseFillRuntimeHost",
-        thread_name: Optional[str] = None,
+        thread_name: str | None = None,
         *,
         requeue: bool = True,
-    ) -> Optional[int]:
+    ) -> int | None:
         key = self._reverse_fill_thread_key(thread_name)
         with self.lock:
             runtime = self.reverse_fill_runtime
@@ -100,8 +98,8 @@ class ReverseFillRuntimeMixin:
 
     def commit_reverse_fill_sample(
         self: "_ReverseFillRuntimeHost",
-        thread_name: Optional[str] = None,
-    ) -> Optional[int]:
+        thread_name: str | None = None,
+    ) -> int | None:
         key = self._reverse_fill_thread_key(thread_name)
         with self.lock:
             runtime = self.reverse_fill_runtime
@@ -118,10 +116,10 @@ class ReverseFillRuntimeMixin:
 
     def mark_reverse_fill_submission_failed(
         self: "_ReverseFillRuntimeHost",
-        thread_name: Optional[str] = None,
+        thread_name: str | None = None,
         *,
         max_retries: int = 1,
-    ) -> Tuple[Optional[int], bool]:
+    ) -> tuple[int | None, bool]:
         key = self._reverse_fill_thread_key(thread_name)
         with self.lock:
             runtime = self.reverse_fill_runtime
@@ -144,8 +142,8 @@ class ReverseFillRuntimeMixin:
     def wait_for_reverse_fill_sample(
         self: "_ReverseFillRuntimeHost",
         *,
-        thread_name: Optional[str] = None,
-        stop_signal: Optional[threading.Event] = None,
+        thread_name: str | None = None,
+        stop_signal: threading.Event | None = None,
         timeout_seconds: float = 0.5,
     ) -> ReverseFillAcquireResult:
         while True:
@@ -160,8 +158,8 @@ class ReverseFillRuntimeMixin:
     def get_reverse_fill_answer(
         self: "_ReverseFillRuntimeHost",
         question_num: int,
-        thread_name: Optional[str] = None,
-    ) -> Optional[ReverseFillAnswer]:
+        thread_name: str | None = None,
+    ) -> ReverseFillAnswer | None:
         key = self._reverse_fill_thread_key(thread_name)
         try:
             normalized_question_num = int(question_num)

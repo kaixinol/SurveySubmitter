@@ -5,7 +5,7 @@ from survey_submitter.logging.log_utils import log_suppressed_exception
 import threading
 import time
 from collections import deque
-from typing import Callable, Deque, Optional, Tuple
+from typing import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +15,8 @@ class CleanupRunner:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._queue: Deque[Tuple[Callable[[], None], float]] = deque()
-        self._thread: Optional[threading.Thread] = None
+        self._queue: deque[tuple[Callable[[], None], float]] = deque()
+        self._thread: threading.Thread | None = None
 
     def submit(self, task: Callable[[], None], delay_seconds: float = 0.0) -> None:
         

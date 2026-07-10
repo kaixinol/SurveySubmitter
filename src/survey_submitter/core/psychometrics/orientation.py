@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any, Dict, List, Set
+from typing import Any
 
 _LEFT_DIRECTION_THRESHOLD = 0.4
 _RIGHT_DIRECTION_THRESHOLD = 0.6
@@ -10,8 +10,8 @@ _ANCHOR_DOMINANCE_MULTIPLIER = 1.15
 _MIN_ANCHOR_STRENGTH = 0.2
 
 
-def normalize_probability_list(values: List[float]) -> List[float]:
-    cleaned: List[float] = []
+def normalize_probability_list(values: list[float]) -> list[float]:
+    cleaned: list[float] = []
     for raw in values:
         try:
             value = max(0.0, float(raw))
@@ -29,7 +29,7 @@ def normalize_probability_list(values: List[float]) -> List[float]:
     return [item / total for item in cleaned]
 
 
-def build_bias_target_probabilities(option_count: int, bias: str) -> List[float]:
+def build_bias_target_probabilities(option_count: int, bias: str) -> list[float]:
     
     count = max(2, int(option_count or 2))
     if count == 2:
@@ -68,7 +68,7 @@ def _resolve_option_count(item: Any) -> int:
     return max(2, option_count)
 
 
-def _resolve_target_probabilities(item: Any) -> List[float]:
+def _resolve_target_probabilities(item: Any) -> list[float]:
     raw_values = getattr(item, "target_probabilities", None)
     if isinstance(raw_values, list) and raw_values:
         return normalize_probability_list(raw_values)
@@ -79,7 +79,7 @@ def _resolve_target_probabilities(item: Any) -> List[float]:
     return build_bias_target_probabilities(_resolve_option_count(item), bias)
 
 
-def _compute_mean_ratio(probabilities: List[float], option_count: int) -> float:
+def _compute_mean_ratio(probabilities: list[float], option_count: int) -> float:
     if not probabilities:
         return 0.5
     denom = max(1, int(option_count) - 1)
@@ -106,12 +106,12 @@ class PsychometricItemOrientation:
 
 @dataclass(frozen=True)
 class PsychometricDimensionOrientation:
-    item_orientations: Dict[str, PsychometricItemOrientation]
+    item_orientations: dict[str, PsychometricItemOrientation]
     anchor_direction: str
     anchor_strength: float
     left_strength: float
     right_strength: float
-    reversed_keys: Set[str]
+    reversed_keys: set[str]
     ambiguous_anchor: bool
 
 
@@ -129,8 +129,8 @@ def infer_item_orientation(item: Any) -> PsychometricItemOrientation:
     )
 
 
-def infer_dimension_orientation(items: List[Any]) -> PsychometricDimensionOrientation:
-    item_orientations: Dict[str, PsychometricItemOrientation] = {}
+def infer_dimension_orientation(items: list[Any]) -> PsychometricDimensionOrientation:
+    item_orientations: dict[str, PsychometricItemOrientation] = {}
     left_strength = 0.0
     right_strength = 0.0
 
@@ -161,7 +161,7 @@ def infer_dimension_orientation(items: List[Any]) -> PsychometricDimensionOrient
         or anchor_strength <= weaker_strength * _ANCHOR_DOMINANCE_MULTIPLIER
     )
 
-    reversed_keys: Set[str] = set()
+    reversed_keys: set[str] = set()
     if not ambiguous_anchor:
         reversed_keys = {
             orientation.choice_key

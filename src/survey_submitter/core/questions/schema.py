@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, List, Optional, Union
+from typing import Any
 
 from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.questions.types import QuestionType
@@ -39,20 +39,20 @@ __all__ = [
 def _infer_option_count(entry: "QuestionEntry") -> int:
     
 
-    def _nested_length(raw: Any) -> Optional[int]:
+    def _nested_length(raw: Any) -> int | None:
         if not isinstance(raw, list):
             return None
-        lengths: List[int] = []
+        lengths: list[int] = []
         for item in raw:
             if isinstance(item, (list, tuple)):
                 lengths.append(len(item))
         return max(lengths) if lengths else None
 
-    if getattr(entry, "question_type", "") == QuestionType.MATRIX:
-        nested_len = _nested_length(getattr(entry, "custom_weights", None))
+    if entry.question_type == QuestionType.MATRIX:
+        nested_len = _nested_length(entry.custom_weights)
         if nested_len:
             return nested_len
-        nested_len = _nested_length(getattr(entry, "probabilities", None))
+        nested_len = _nested_length(entry.probabilities)
         if nested_len:
             return nested_len
 
@@ -76,34 +76,34 @@ def _infer_option_count(entry: "QuestionEntry") -> int:
             return len(entry.texts)
     except Exception as exc:
         log_suppressed_exception("questions.schema._infer_option_count texts", exc)
-    if getattr(entry, "question_type", "") in (QuestionType.SCALE, QuestionType.SCORE):
+    if entry.question_type in (QuestionType.SCALE, QuestionType.SCORE):
         return DEFAULT_RATING_OPTION_COUNT
     return 0
 
 
 class QuestionEntry(BaseConfigModel):
     question_type: str
-    probabilities: Union[List[float], List[List[float]], int, None]
-    texts: Optional[List[str]] = None
+    probabilities: list[float] | list[list[float]] | int | None
+    texts: list[str] | None = None
     rows: int = 1
     option_count: int = 0
     distribution_mode: str = "random"
-    custom_weights: Union[List[float], List[List[float]], None] = None
-    question_num: Optional[int] = None
-    question_title: Optional[str] = None
+    custom_weights: list[float] | list[list[float]] | None = None
+    question_num: int | None = None
+    question_title: str | None = None
     survey_provider: str = "wjx"
-    provider_question_id: Optional[str] = None
-    provider_page_id: Optional[str] = None
+    provider_question_id: str | None = None
+    provider_page_id: str | None = None
     ai_enabled: bool = False
-    multi_text_blank_modes: List[str] = []
-    multi_text_blank_ai_flags: List[bool] = []
-    multi_text_blank_int_ranges: List[List[int]] = []
+    multi_text_blank_modes: list[str] = []
+    multi_text_blank_ai_flags: list[bool] = []
+    multi_text_blank_int_ranges: list[list[int]] = []
     text_random_mode: str = _TEXT_RANDOM_NONE
-    text_random_int_range: List[int] = []
-    option_fill_texts: Optional[List[Optional[str]]] = None
-    fillable_option_indices: Optional[List[int]] = None
-    attached_option_selects: List[dict] = []
+    text_random_int_range: list[int] = []
+    option_fill_texts: list[str | None] | None = None
+    fillable_option_indices: list[int] | None = None
+    attached_option_selects: list[dict] = []
     is_location: bool = False
-    location_parts: List[str] = []
-    dimension: Optional[str] = None
-    psycho_bias: Union[str, List[str]] = "custom"
+    location_parts: list[str] = []
+    dimension: str | None = None
+    psycho_bias: str | list[str] = "custom"

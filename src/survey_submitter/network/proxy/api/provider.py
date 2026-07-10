@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import json
 import logging
 import re
 import threading
 from urllib.parse import parse_qsl, urlsplit
-from typing import Any, List, Optional, Set
+from typing import Any
 
 import survey_submitter.network.http as http_client
 from survey_submitter.core.task import ProxyLease
@@ -61,7 +63,7 @@ def _normalize_expected_proxy_count(expected_count: Any) -> int:
     return max(1, min(PROXY_MAX_PROXIES, parsed))
 
 
-def _extract_proxy_from_string(s: str) -> Optional[str]:
+def _extract_proxy_from_string(s: str) -> str | None:
     if not isinstance(s, str):
         return None
     m = _IP_PORT_RE.search(s.strip())
@@ -71,7 +73,7 @@ def _extract_proxy_from_string(s: str) -> Optional[str]:
     return f"{user}:{pwd}@{ip}:{port}" if user and pwd else f"{ip}:{port}"
 
 
-def _extract_proxy_from_dict(obj: dict) -> Optional[str]:
+def _extract_proxy_from_dict(obj: dict) -> str | None:
     if not isinstance(obj, dict):
         return None
     ip = str(obj.get("ip") or obj.get("IP") or obj.get("host") or "").strip()
@@ -88,7 +90,7 @@ def _extract_proxy_from_dict(obj: dict) -> Optional[str]:
     return None
 
 
-def _recursive_find_proxies(data: Any, results: List[str], depth: int = 0) -> None:
+def _recursive_find_proxies(data: Any, results: list[str], depth: int = 0) -> None:
     if depth > 10:
         return
     if isinstance(data, dict):
@@ -112,17 +114,17 @@ def _recursive_find_proxies(data: Any, results: List[str], depth: int = 0) -> No
             results.append(proxy)
 
 
-def _parse_proxy_payload(text: str) -> List[str]:
+def _parse_proxy_payload(text: str) -> list[str]:
     try:
         data = json.loads(text)
     except json.JSONDecodeError as e:
         raise ValueError(f"JSON解析失败: {e}")
-    candidates: List[str] = []
+    candidates: list[str] = []
     _recursive_find_proxies(data, candidates)
     if not candidates:
         raise ValueError("返回数据中无有效代理地址")
-    seen: Set[str] = set()
-    unique: List[str] = []
+    seen: set[str] = set()
+    unique: list[str] = []
     for addr in candidates:
         if addr not in seen:
             seen.add(addr)
@@ -133,7 +135,7 @@ def _parse_proxy_payload(text: str) -> List[str]:
 
 
 
-def _extract_custom_api_error(data: Any) -> Optional[str]:
+def _extract_custom_api_error(data: Any) -> str | None:
     
     if not isinstance(data, dict):
         return None
@@ -151,7 +153,7 @@ def _extract_custom_api_error(data: Any) -> Optional[str]:
 
 
 
-def _proxy_api_candidates(proxy_url: Optional[str]) -> List[str]:
+def _proxy_api_candidates(proxy_url: str | None) -> list[str]:
     url = proxy_url or get_effective_proxy_api_url()
     if not url:
         raise RuntimeError("自定义代理API地址不能为空，请先在设置中填写API地址")
@@ -170,7 +172,7 @@ def _warn_custom_api_returned_large_batch(returned_count: int, requested_count: 
     )
 
 
-def _extract_minute_from_url(url: str) -> Optional[int]:
+def _extract_minute_from_url(url: str) -> int | None:
     
     try:
         split = urlsplit(url)
@@ -182,7 +184,7 @@ def _extract_minute_from_url(url: str) -> Optional[int]:
     return None
 
 
-def _check_minute_conflict(url: str) -> Optional[str]:
+def _check_minute_conflict(url: str) -> str | None:
     
     minute = _extract_minute_from_url(url)
     if minute is None:
@@ -193,7 +195,7 @@ def _check_minute_conflict(url: str) -> Optional[str]:
     return None
 
 
-def test_custom_proxy_api(url: str) -> tuple[bool, str, List[str]]:
+def test_custom_proxy_api(url: str) -> tuple[bool, str, list[str]]:
     if not url or not url.strip():
         return False, "API地址不能为空", []
     url = url.strip()
@@ -236,9 +238,9 @@ def test_custom_proxy_api(url: str) -> tuple[bool, str, List[str]]:
 async def fetch_proxy_batch_async(
     expected_count: int = 1,
     *,
-    proxy_url: Optional[str] = None,
-    stop_signal: Optional[threading.Event] = None,
-) -> List[ProxyLease]:
+    proxy_url: str | None = None,
+    stop_signal: threading.Event | None = None,
+) -> list[ProxyLease]:
     expected_count = _normalize_expected_proxy_count(expected_count)
 
     if not has_custom_proxy_api_override():
@@ -248,8 +250,8 @@ async def fetch_proxy_batch_async(
         raise RuntimeError("自定义代理API地址未配置，请在设置中填写API地址")
     logging.info(f"使用自定义代理API: {url}")
 
-    candidates: List[str] = []
-    errors: List[str] = []
+    candidates: list[str] = []
+    errors: list[str] = []
     for candidate_url in _proxy_api_candidates(url):
         try:
             resp = await http_client.aget(
@@ -283,8 +285,8 @@ async def fetch_proxy_batch_async(
             continue
     if not candidates:
         raise RuntimeError(f"获取随机IP失败: {'; '.join(errors) if errors else '无可用接口'}")
-    seen: Set[str] = set()
-    normalized: List[ProxyLease] = []
+    seen: set[str] = set()
+    normalized: list[ProxyLease] = []
     for item in candidates:
         lease = _build_proxy_lease(item, source=PROXY_SOURCE_CUSTOM)
         if lease is None:

@@ -167,10 +167,6 @@ class SurveyQuestionMeta(BaseConfigModel):
     unsupported_reason: str | None = None
     provider_question_id: str = ""
     provider_page_id: str = ""
-
-
-class _QuestionMetaBase(SurveyQuestionMeta):
-    display_num: int | None = None
     has_jump: bool = False
     jump_rules: list[JumpRule] | None = None
     has_display_condition: bool = False
@@ -178,6 +174,10 @@ class _QuestionMetaBase(SurveyQuestionMeta):
     has_dependent_display_logic: bool = False
     controls_display_targets: list[DisplayCondition] | None = None
     logic_parse_status: str = LOGIC_PARSE_STATUS_UNKNOWN
+
+
+class _QuestionMetaBase(SurveyQuestionMeta):
+    display_num: int | None = None
     question_media: list[QuestionMedia] | None = None
 
 

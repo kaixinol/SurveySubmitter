@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Sequence
 
 
 def has_positive_weight_values(raw: Any) -> bool:
@@ -17,7 +17,7 @@ def has_positive_weight_values(raw: Any) -> bool:
     if not isinstance(raw, (list, tuple)):
         return False
 
-    stack: List[Any] = list(raw)
+    stack: list[Any] = list(raw)
     while stack:
         item = stack.pop()
         if isinstance(item, (list, tuple)):
@@ -71,12 +71,12 @@ def weighted_sample_without_replacement(
     indices: Sequence[int],
     weights: Sequence[float],
     count: int,
-) -> List[int]:
+) -> list[int]:
     
     if count <= 0:
         return []
 
-    pool: List[List[float]] = []
+    pool: list[list[float]] = []
     for idx, raw_weight in zip(indices, weights):
         try:
             weight = float(raw_weight)
@@ -89,7 +89,7 @@ def weighted_sample_without_replacement(
     if not pool:
         return []
 
-    selected: List[int] = []
+    selected: list[int] = []
     target_count = min(int(count), len(pool))
     while pool and len(selected) < target_count:
         total = sum(item[1] for item in pool)
@@ -107,9 +107,9 @@ def weighted_sample_without_replacement(
     return selected
 
 
-def build_rank_groups(probabilities: Sequence[float]) -> List[List[int]]:
+def build_rank_groups(probabilities: Sequence[float]) -> list[list[int]]:
     
-    buckets: Dict[float, List[int]] = {}
+    buckets: dict[float, list[int]] = {}
     for idx, raw_weight in enumerate(probabilities):
         try:
             weight = float(raw_weight)
@@ -124,14 +124,14 @@ def build_rank_groups(probabilities: Sequence[float]) -> List[List[int]]:
 def enforce_reference_rank_order(
     probabilities: Sequence[float],
     reference: Sequence[float],
-) -> List[float]:
+) -> list[float]:
     
     adjusted = [max(0.0, float(value)) if isinstance(value, (int, float)) else 0.0 for value in probabilities]
     groups = build_rank_groups(reference)
     if len(groups) <= 1:
         return adjusted
 
-    previous_floor: Optional[float] = None
+    previous_floor: float | None = None
     for group in groups:
         group_values = [adjusted[idx] for idx in group if 0 <= idx < len(adjusted)]
         if not group_values:

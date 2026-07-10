@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from survey_submitter.core.ai.runtime import AIRuntimeError
 from survey_submitter.core.engine.async_events import AsyncRunContext, ThreadEventProxy
@@ -144,7 +144,7 @@ class AsyncSlotRunner:
     def _release_round_resources(self, *, requeue_reverse_fill: bool) -> None:
         self.round_resources.release_round_resources(requeue_reverse_fill=requeue_reverse_fill)
 
-    async def _select_session_proxy_and_ua(self) -> tuple[Optional[str], Optional[str]]:
+    async def _select_session_proxy_and_ua(self) -> tuple[str | None, str | None]:
         return None, await self.proxy_session.select_user_agent()
 
     def _release_session_proxy(self) -> None:

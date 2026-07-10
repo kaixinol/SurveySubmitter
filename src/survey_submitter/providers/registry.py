@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from survey_submitter.core.engine.provider_common import provider_run_context
 from survey_submitter.providers.adapter_base import CallableProviderAdapter, ProviderAdapterHooks
@@ -16,7 +16,7 @@ from survey_submitter.providers.hooks import (
     build_fill_http_hook,
     build_parse_hook,
 )
-def _resolve_provider(*, provider: Optional[str] = None, ctx: Any = None) -> str:
+def _resolve_provider(*, provider: str | None = None, ctx: Any = None) -> str:
     if provider is not None:
         return normalize_survey_provider(provider, default=SURVEY_PROVIDER_WJX)
     if ctx is not None:
@@ -43,7 +43,7 @@ _PROVIDER_REGISTRY = {
 }
 
 
-def _get_provider_adapter(*, provider: Optional[str] = None, ctx: Any = None, url: Optional[str] = None):
+def _get_provider_adapter(*, provider: str | None = None, ctx: Any = None, url: str | None = None):
     resolved = _resolve_provider(provider=provider, ctx=ctx)
     if url:
         resolved = detect_survey_provider(url)
@@ -66,7 +66,7 @@ async def fill_survey_http(
     stop_signal: Any = None,
     thread_name: str = "",
     psycho_plan: Any = None,
-    provider: Optional[str] = None,
+    provider: str | None = None,
     proxy_address: str | None = None,
     user_agent: str | None = None,
     user_agent_profile: Any = None,
@@ -98,7 +98,7 @@ async def fill_survey_http(
         )
 
 
-async def is_completion_page(driver: Any, provider: Optional[str] = None) -> bool:
+async def is_completion_page(driver: Any, provider: str | None = None) -> bool:
 
     return bool(await _get_provider_adapter(provider=provider).is_completion_page_async(driver))
 

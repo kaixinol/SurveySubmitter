@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import json
 import re
-from typing import Any, Optional, Tuple
+from typing import Any
 
 from survey_submitter.providers.match_utils import get_element_attribute, normalize_match_text
 
@@ -116,7 +118,7 @@ def _compile_key_value_patterns(keys) -> tuple[re.Pattern[str], ...]:
 _MULTI_MIN_VALUE_PATTERNS = _compile_key_value_patterns(_MULTI_MIN_LIMIT_VALUE_KEYSET)
 _MULTI_MAX_VALUE_PATTERNS = _compile_key_value_patterns(_MULTI_LIMIT_VALUE_KEYSET)
 
-def _safe_positive_int(value: Any) -> Optional[int]:
+def _safe_positive_int(value: Any) -> int | None:
     
     if value is None:
         return None
@@ -137,10 +139,10 @@ def _safe_positive_int(value: Any) -> Optional[int]:
         return int_value if int_value > 0 else None
     return None
 
-def _extract_range_from_json_obj(obj: Any) -> Tuple[Optional[int], Optional[int]]:
+def _extract_range_from_json_obj(obj: Any) -> tuple[int | None, int | None]:
     
-    min_limit: Optional[int] = None
-    max_limit: Optional[int] = None
+    min_limit: int | None = None
+    max_limit: int | None = None
     if isinstance(obj, dict):
         for key, value in obj.items():
             normalized_key = str(key).lower()
@@ -170,10 +172,10 @@ def _extract_range_from_json_obj(obj: Any) -> Tuple[Optional[int], Optional[int]
                 break
     return min_limit, max_limit
 
-def _extract_range_from_possible_json(text: Optional[str]) -> Tuple[Optional[int], Optional[int]]:
+def _extract_range_from_possible_json(text: str | None) -> tuple[int | None, int | None]:
     
-    min_limit: Optional[int] = None
-    max_limit: Optional[int] = None
+    min_limit: int | None = None
+    max_limit: int | None = None
     if not text:
         return min_limit, max_limit
     normalized = normalize_match_text(text)
@@ -212,7 +214,7 @@ def _extract_range_from_possible_json(text: Optional[str]) -> Tuple[Optional[int
                     return min_limit, max_limit
     return min_limit, max_limit
 
-def _extract_min_max_from_attributes(element) -> Tuple[Optional[int], Optional[int]]:
+def _extract_min_max_from_attributes(element) -> tuple[int | None, int | None]:
     
     min_limit = None
     max_limit = None
@@ -230,7 +232,7 @@ def _extract_min_max_from_attributes(element) -> Tuple[Optional[int], Optional[i
             break
     return min_limit, max_limit
 
-def _extract_multi_limit_range_from_text(text: Optional[str]) -> Tuple[Optional[int], Optional[int]]:
+def _extract_multi_limit_range_from_text(text: str | None) -> tuple[int | None, int | None]:
     
     if not text:
         return None, None
@@ -238,8 +240,8 @@ def _extract_multi_limit_range_from_text(text: Optional[str]) -> Tuple[Optional[
     if not normalized:
         return None, None
     normalized_lower = normalized.lower()
-    min_limit: Optional[int] = None
-    max_limit: Optional[int] = None
+    min_limit: int | None = None
+    max_limit: int | None = None
     contains_cn_keyword = any(keyword in normalized for keyword in _SELECTION_KEYWORDS_CN)
     contains_en_keyword = any(keyword in normalized_lower for keyword in _SELECTION_KEYWORDS_EN)
     contains_cn_min_hint = any(keyword in normalized for keyword in ("至少", "最少", "不少于"))

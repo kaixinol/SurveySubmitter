@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import Any, Optional, Tuple
+from typing import Any
 
 from survey_submitter.core.engine.async_wait import sleep_or_stop
 from survey_submitter.logging.log_utils import log_suppressed_exception
@@ -22,15 +22,13 @@ _NAVIGATION_TRANSIENT_ERRORS = (
     "most likely because of a navigation",
 )
 
-
 def _is_navigation_transient_error(exc: BaseException) -> bool:
     
 
     message = str(exc or "").lower()
     return any(pattern in message for pattern in _NAVIGATION_TRANSIENT_ERRORS)
 
-
-def has_configured_answer_duration(answer_duration_range_seconds: Tuple[int, int] = (0, 0)) -> bool:
+def has_configured_answer_duration(answer_duration_range_seconds: tuple[int, int] = (0, 0)) -> bool:
     
 
     try:
@@ -39,11 +37,10 @@ def has_configured_answer_duration(answer_duration_range_seconds: Tuple[int, int
         return False
     return max(0, int(raw_min), int(raw_max)) > 0
 
-
 def sample_answer_duration_seconds(
-    answer_duration_range_seconds: Tuple[int, int] = (0, 0),
+    answer_duration_range_seconds: tuple[int, int] = (0, 0),
     *,
-    survey_provider: Optional[str] = None,
+    survey_provider: str | None = None,
     default_unconfigured_seconds: int = 0,
 ) -> float:
     
@@ -76,9 +73,8 @@ def sample_answer_duration_seconds(
 
     return max(min_delay, min(max_delay, wait_seconds))
 
-
 async def wait_answer_duration_seconds(
-    stop_signal: Optional[Any] = None,
+    stop_signal: Any | None = None,
     seconds: float = 0.0,
 ) -> bool:
     
@@ -92,15 +88,11 @@ async def wait_answer_duration_seconds(
     )
     return bool(await sleep_or_stop(stop_signal, wait_seconds))
 
-
-
-
-
 async def simulate_answer_duration_delay(
-    stop_signal: Optional[Any] = None,
-    answer_duration_range_seconds: Tuple[int, int] = (0, 0),
+    stop_signal: Any | None = None,
+    answer_duration_range_seconds: tuple[int, int] = (0, 0),
     *,
-    survey_provider: Optional[str] = None,
+    survey_provider: str | None = None,
 ) -> bool:
     
 
@@ -110,8 +102,7 @@ async def simulate_answer_duration_delay(
     )
     return await wait_answer_duration_seconds(stop_signal, wait_seconds)
 
-
-async def is_survey_completion_page(driver: Any, provider: Optional[str] = None) -> bool:
+async def is_survey_completion_page(driver: Any, provider: str | None = None) -> bool:
     
     try:
         current_url = str(await driver.current_url() or "")
@@ -201,6 +192,4 @@ async def is_survey_completion_page(driver: Any, provider: Optional[str] = None)
                 log_suppressed_exception("is_survey_completion_page: page_text", exc, level=logging.WARNING)
                 break
     return bool(detected)
-
-
 

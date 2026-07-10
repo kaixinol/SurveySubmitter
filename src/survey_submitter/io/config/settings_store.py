@@ -4,13 +4,13 @@ from __future__ import annotations
 import json
 import os
 import threading
-from typing import Any, Optional
+from typing import Any
 
 from survey_submitter.system.paths import get_user_config_root
 
 _SETTINGS_FILE_NAME = "app_settings.json"
 _settings_lock = threading.RLock()
-_settings_cache: Optional[dict] = None
+_settings_cache: dict | None = None
 
 
 def _settings_file_path() -> str:

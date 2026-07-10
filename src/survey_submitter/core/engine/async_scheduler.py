@@ -6,7 +6,6 @@ import heapq
 import itertools
 import time
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass(order=True)
@@ -26,7 +25,7 @@ class AsyncScheduler:
         self._order = itertools.count()
         self._condition = asyncio.Condition()
         self._closed = False
-        self._waker_task: Optional[asyncio.Task[None]] = None
+        self._waker_task: asyncio.Task[None] | None = None
         for token_id in range(self._concurrency):
             self._ready.append(token_id)
 
@@ -34,7 +33,7 @@ class AsyncScheduler:
         if self._waker_task is None:
             self._waker_task = asyncio.create_task(self._wake_delayed_tokens(), name="AsyncSchedulerWake")
 
-    async def acquire(self) -> Optional[int]:
+    async def acquire(self) -> int | None:
         await self.start()
         async with self._condition:
             while True:

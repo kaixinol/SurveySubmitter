@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Any, Deque, Dict, List, Optional
+from typing import Any
 
 from survey_submitter.core.questions.types import CHOICE_TYPES, QuestionType, TEXT_TYPES
 
@@ -59,7 +59,7 @@ class ReverseFillColumn:
 class ReverseFillRawRow:
     data_row_number: int
     worksheet_row_number: int
-    values_by_column: Dict[int, Any] = field(default_factory=dict)
+    values_by_column: dict[int, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -69,25 +69,25 @@ class WjxExcelExport:
     selected_format: str
     header_row_number: int
     total_data_rows: int
-    question_columns: Dict[int, List[ReverseFillColumn]] = field(default_factory=dict)
-    raw_rows: List[ReverseFillRawRow] = field(default_factory=list)
+    question_columns: dict[int, list[ReverseFillColumn]] = field(default_factory=dict)
+    raw_rows: list[ReverseFillRawRow] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
 class ReverseFillAnswer:
     question_num: int
     kind: str
-    choice_index: Optional[int] = None
+    choice_index: int | None = None
     text_value: str = ""
-    text_values: List[str] = field(default_factory=list)
-    matrix_choice_indexes: List[int] = field(default_factory=list)
+    text_values: list[str] = field(default_factory=list)
+    matrix_choice_indexes: list[int] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
 class ReverseFillSampleRow:
     data_row_number: int
     worksheet_row_number: int
-    answers: Dict[int, ReverseFillAnswer] = field(default_factory=dict)
+    answers: dict[int, ReverseFillAnswer] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -98,7 +98,7 @@ class ReverseFillIssue:
     category: str
     reason: str
     suggestion: str
-    sample_rows: List[int] = field(default_factory=list)
+    sample_rows: list[int] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -107,7 +107,7 @@ class ReverseFillQuestionPlan:
     title: str
     question_type: str
     status: str
-    column_headers: List[str] = field(default_factory=list)
+    column_headers: list[str] = field(default_factory=list)
     detail: str = ""
     fallback_ready: bool = False
     fallback_resolved: bool = False
@@ -122,12 +122,12 @@ class ReverseFillSpec:
     total_samples: int
     available_samples: int
     target_num: int
-    question_plans: List[ReverseFillQuestionPlan] = field(default_factory=list)
-    issues: List[ReverseFillIssue] = field(default_factory=list)
-    samples: List[ReverseFillSampleRow] = field(default_factory=list)
+    question_plans: list[ReverseFillQuestionPlan] = field(default_factory=list)
+    issues: list[ReverseFillIssue] = field(default_factory=list)
+    samples: list[ReverseFillSampleRow] = field(default_factory=list)
 
     @property
-    def blocking_issues(self) -> List[ReverseFillIssue]:
+    def blocking_issues(self) -> list[ReverseFillIssue]:
         return [issue for issue in self.issues if str(issue.severity or "").strip().lower() == "block"]
 
     @property
@@ -138,10 +138,10 @@ class ReverseFillSpec:
 @dataclass
 class ReverseFillRuntimeState:
     spec: ReverseFillSpec
-    queued_row_numbers: Deque[int] = field(default_factory=deque)
-    samples_by_row_number: Dict[int, ReverseFillSampleRow] = field(default_factory=dict)
-    reserved_row_by_thread: Dict[str, int] = field(default_factory=dict)
-    failure_count_by_row: Dict[int, int] = field(default_factory=dict)
+    queued_row_numbers: deque[int] = field(default_factory=deque)
+    samples_by_row_number: dict[int, ReverseFillSampleRow] = field(default_factory=dict)
+    reserved_row_by_thread: dict[str, int] = field(default_factory=dict)
+    failure_count_by_row: dict[int, int] = field(default_factory=dict)
     committed_row_numbers: set[int] = field(default_factory=set)
     discarded_row_numbers: set[int] = field(default_factory=set)
 
@@ -149,5 +149,5 @@ class ReverseFillRuntimeState:
 @dataclass(frozen=True)
 class ReverseFillAcquireResult:
     status: str
-    sample: Optional[ReverseFillSampleRow] = None
+    sample: ReverseFillSampleRow | None = None
     message: str = ""

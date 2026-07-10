@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import html as html_lib
 import logging
 import re
-from typing import Any, List, Optional
+from typing import Any
 
 try:
     from bs4 import BeautifulSoup
@@ -25,7 +27,7 @@ _LOCATION_VERIFY_MARKERS = ("地图", "省市", "省份", "城市", "地区", "�
 _DISPLAY_SPACE_RE = re.compile(r"\s+")
 
 
-def _normalize_html_text(value: Optional[str]) -> str:
+def _normalize_html_text(value: str | None) -> str:
     if value is None:
         return ""
     try:
@@ -39,7 +41,7 @@ def _normalize_html_text(value: Optional[str]) -> str:
     return text.strip()
 
 
-def _extract_prefixed_question_number(raw_title: Any) -> Optional[int]:
+def _extract_prefixed_question_number(raw_title: Any) -> int | None:
     text = normalize_match_text(raw_title)
     if not text:
         return None
@@ -145,7 +147,7 @@ def _soup_question_is_required(question_div) -> bool:
         return True
     return False
 
-def extract_survey_title_from_html(html: str) -> Optional[str]:
+def extract_survey_title_from_html(html: str) -> str | None:
     
 
 
@@ -168,7 +170,7 @@ def extract_survey_title_from_html(html: str) -> Optional[str]:
         "#htitle",
         "#lbTitle",
     ]
-    candidates: List[str] = []
+    candidates: list[str] = []
     for selector in selectors:
         element = soup.select_one(selector)
         if element:
@@ -200,7 +202,7 @@ def extract_survey_title_from_html(html: str) -> Optional[str]:
             return cleaned
     return None
 
-def _extract_question_number_from_div(question_div) -> Optional[int]:
+def _extract_question_number_from_div(question_div) -> int | None:
     topic_attr = question_div.get("topic")
     if topic_attr and topic_attr.isdigit():
         return int(topic_attr)
@@ -218,7 +220,7 @@ def _cleanup_question_title(raw_title: str) -> str:
     title = title.replace("【单选题】", "").replace("【多选题】", "")
     return title.strip()
 
-def _extract_display_question_number(raw_title: Any) -> Optional[int]:
+def _extract_display_question_number(raw_title: Any) -> int | None:
     return _extract_prefixed_question_number(raw_title)
 
 def _extract_display_heading_text(question_div) -> str:
@@ -229,7 +231,7 @@ def _extract_display_heading_text(question_div) -> str:
     except Exception:
         field_label = None
     if field_label is not None:
-        parts: List[str] = []
+        parts: list[str] = []
         for class_name in ("topicnumber", "topichtml"):
             try:
                 element = field_label.find(class_=class_name)
@@ -334,12 +336,12 @@ def _count_text_inputs_in_soup(question_div) -> int:
             count += 1
     return count
 
-def _extract_text_input_labels(question_div) -> List[str]:
+def _extract_text_input_labels(question_div) -> list[str]:
     
     labels = []
 
     def _label_before_node(node) -> str:
-        parts: List[str] = []
+        parts: list[str] = []
         current = getattr(node, "previous_sibling", None)
         while current is not None:
             name = str(getattr(current, "name", "") or "").lower()
@@ -473,7 +475,7 @@ def _soup_question_looks_like_numeric_scale(question_div) -> bool:
         anchors = question_div.select("ul[tp='d'] li a, .scale-rating ul li a, .scale-rating a[val]")
     except Exception:
         anchors = []
-    texts: List[str] = []
+    texts: list[str] = []
     for anchor in anchors:
         text = _normalize_html_text(anchor.get_text(" ", strip=True))
         if not text:

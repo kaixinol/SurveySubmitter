@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 import time
 from collections import defaultdict
-from typing import Any, Callable, DefaultDict, Optional
+from typing import Any, Callable
 
 
 class AsyncStatusBus:
@@ -12,13 +12,13 @@ class AsyncStatusBus:
     def __init__(
         self,
         *,
-        dispatcher: Optional[Callable[[Callable[[], Any]], Any]] = None,
+        dispatcher: Callable[[Callable[[], Any]], Any] | None = None,
         throttle_seconds: float = 0.075,
     ) -> None:
         self._dispatcher = dispatcher
         self._throttle_seconds = max(0.0, float(throttle_seconds or 0.0))
         self._lock = threading.Lock()
-        self._sequence_by_slot: DefaultDict[str, int] = defaultdict(int)
+        self._sequence_by_slot: defaultdict[str, int] = defaultdict(int)
         self._last_emit_by_slot: dict[str, float] = {}
 
     def emit(self, event: dict[str, Any]) -> None:

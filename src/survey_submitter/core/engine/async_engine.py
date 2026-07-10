@@ -4,7 +4,7 @@ import asyncio
 import concurrent.futures
 import logging
 import threading
-from typing import Any, Optional
+from typing import Any
 
 from survey_submitter.version import __VERSION__
 from survey_submitter.core.engine.async_events import AsyncRunContext
@@ -44,20 +44,20 @@ def _format_proxy_source(source: Any) -> str:
 class AsyncRuntimeEngine:
     
 
-    def __init__(self, *, status_bus: Optional[AsyncStatusBus] = None) -> None:
+    def __init__(self, *, status_bus: AsyncStatusBus | None = None) -> None:
         self._status_bus = status_bus or AsyncStatusBus()
-        self._thread: Optional[threading.Thread] = None
-        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._thread: threading.Thread | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
         self._loop_ready = threading.Event()
         self._start_lock = threading.Lock()
-        self._run_future: Optional[concurrent.futures.Future[Any]] = None
-        self._stop_event: Optional[asyncio.Event] = None
-        self._pause_event: Optional[asyncio.Event] = None
+        self._run_future: concurrent.futures.Future[Any] | None = None
+        self._stop_event: asyncio.Event | None = None
+        self._pause_event: asyncio.Event | None = None
         self._closed = False
-        self._state: Optional[ExecutionState] = None
+        self._state: ExecutionState | None = None
 
     @property
-    def thread(self) -> Optional[threading.Thread]:
+    def thread(self) -> threading.Thread | None:
         return self._thread
 
     def start(self) -> None:

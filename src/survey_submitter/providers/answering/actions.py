@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -13,13 +13,13 @@ class AnswerAction:
     input_type: str = ""
     selected_indices: tuple[int, ...] = ()
     matrix_indices: tuple[int, ...] = ()
-    scalar_value: Optional[int] = None
+    scalar_value: int | None = None
     text_values: tuple[str, ...] = ()
-    slider_value: Optional[float] = None
+    slider_value: float | None = None
     option_fill_texts: tuple[tuple[int, str], ...] = ()
     selected_texts: tuple[str, ...] = ()
     record_type: str = ""
-    pending_distribution_choices: tuple[tuple[int, int, Optional[int]], ...] = ()
+    pending_distribution_choices: tuple[tuple[int, int, int | None], ...] = ()
 
 
 @dataclass(frozen=True)

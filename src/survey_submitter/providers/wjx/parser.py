@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import survey_submitter.network.http as http_client
 from survey_submitter.constants import DEFAULT_HTTP_HEADERS
@@ -121,7 +121,7 @@ def is_enterprise_unavailable_survey_page(html: str) -> bool:
     return "暂时不能被填写" in normalized or "暂时不能填写" in normalized
 
 
-def build_not_open_survey_message(html: str) -> Optional[str]:
+def build_not_open_survey_message(html: str) -> str | None:
     
     text = normalize_match_text(html)
     if not text:
@@ -165,15 +165,15 @@ def _raise_wjx_page_state_errors(html: str) -> None:
         raise SurveyNotOpenError(not_open_message)
 
 
-def _parse_wjx_html(html: str) -> Tuple[List[Dict[str, Any]], str]:
+def _parse_wjx_html(html: str) -> tuple[list[dict[str, Any]], str]:
     _raise_wjx_page_state_errors(html)
     return parse_survey_questions_from_html(html), extract_survey_title_from_html(html) or ""
 
 
-async def parse_wjx_survey(url: str) -> Tuple[List[Dict[str, Any]], str]:
+async def parse_wjx_survey(url: str) -> tuple[list[dict[str, Any]], str]:
     resp = None
     try:
-        info: List[Dict[str, Any]] = []
+        info: list[dict[str, Any]] = []
         title = ""
         for attempt in range(1, _PARSE_RETRY_ATTEMPTS + 1):
             resp = await http_client.aget(url, timeout=12, headers=DEFAULT_HTTP_HEADERS, proxies={})

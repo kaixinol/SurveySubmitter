@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Iterable, Optional, Tuple
+from typing import Iterable
 
 
 class RuntimeActionKind(str, Enum):
@@ -20,12 +20,12 @@ class RuntimeActionRequest:
     message: str = ""
     level: str = "info"
     reason: str = ""
-    enabled: Optional[bool] = None
+    enabled: bool | None = None
 
 
 @dataclass(frozen=True)
 class RuntimeActionResult:
-    actions: Tuple[RuntimeActionRequest, ...] = ()
+    actions: tuple[RuntimeActionRequest, ...] = ()
     should_stop: bool = False
 
     @classmethod

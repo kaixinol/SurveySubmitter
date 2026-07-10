@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import random
 import threading
 import math
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 import logging
 from survey_submitter.logging.log_utils import log_suppressed_exception
 
@@ -22,7 +24,7 @@ def reset_tendency() -> None:
 
 def _generate_base_ratio(
     option_count: int,
-    probabilities: Union[List[float], int, None],
+    probabilities: list[float] | int | None,
 ) -> float:
     
     if probabilities == -1 or probabilities is None:
@@ -45,12 +47,12 @@ def _generate_base_ratio(
     return random.random()
 
 
-def _is_ungrouped(dimension: Optional[str]) -> bool:
+def _is_ungrouped(dimension: str | None) -> bool:
     
     return dimension is None or dimension == DIMENSION_UNGROUPED
 
 
-def _random_by_probabilities(option_count: int, probabilities: Union[List[float], int, None]) -> int:
+def _random_by_probabilities(option_count: int, probabilities: list[float] | int | None) -> int:
     
     if isinstance(probabilities, list) and len(probabilities) == option_count:
         return weighted_index(probabilities)
@@ -59,13 +61,13 @@ def _random_by_probabilities(option_count: int, probabilities: Union[List[float]
 
 def _normalize_probabilities_for_zero_guard(
     option_count: int,
-    probabilities: Union[List[float], int, None],
-) -> Optional[List[float]]:
+    probabilities: list[float] | int | None,
+) -> list[float] | None:
     
     if option_count <= 0 or not isinstance(probabilities, list):
         return None
 
-    normalized: List[float] = []
+    normalized: list[float] = []
     for idx in range(option_count):
         raw = probabilities[idx] if idx < len(probabilities) else 0.0
         try:
@@ -81,8 +83,8 @@ def _normalize_probabilities_for_zero_guard(
 def _enforce_zero_weight_guard(
     selected_index: int,
     option_count: int,
-    probabilities: Union[List[float], int, None],
-    anchor_index: Optional[int] = None,
+    probabilities: list[float] | int | None,
+    anchor_index: int | None = None,
 ) -> int:
     
     if option_count <= 0:
@@ -126,7 +128,7 @@ def _enforce_zero_weight_guard(
 def _blend_psychometric_choice(
     anchor_index: int,
     option_count: int,
-    probabilities: Union[List[float], int, None],
+    probabilities: list[float] | int | None,
 ) -> int:
     anchor = max(0, min(option_count - 1, int(anchor_index)))
     if option_count <= 0 or not isinstance(probabilities, list) or len(probabilities) != option_count:
@@ -139,7 +141,7 @@ def _blend_psychometric_choice(
 
     low = max(0, anchor - fluctuation_window)
     high = min(option_count - 1, anchor + fluctuation_window)
-    adjusted_probs: List[float] = []
+    adjusted_probs: list[float] = []
     for idx in range(option_count):
         try:
             weight = float(probabilities[idx])
@@ -163,18 +165,18 @@ def _blend_psychometric_choice(
 
 def get_tendency_index(
     option_count: int,
-    probabilities: Union[List[float], int, None],
-    dimension: Optional[str] = None,
+    probabilities: list[float] | int | None,
+    dimension: str | None = None,
     
-    psycho_plan: Optional[Any] = None,
-    question_index: Optional[int] = None,
-    row_index: Optional[int] = None,
+    psycho_plan: Any | None = None,
+    question_index: int | None = None,
+    row_index: int | None = None,
 ) -> int:
     
     if option_count <= 0:
         return 0
 
-    def _finalize_choice(choice: int, anchor: Optional[int] = None) -> int:
+    def _finalize_choice(choice: int, anchor: int | None = None) -> int:
         return _enforce_zero_weight_guard(
             choice,
             option_count,
@@ -207,7 +209,7 @@ def get_tendency_index(
 
     
     assert dimension is not None  
-    bases: Dict[str, float] = getattr(_thread_local, 'dimension_bases', {})
+    bases: dict[str, float] = getattr(_thread_local, 'dimension_bases', {})
     if not isinstance(bases, dict):
         bases = {}
         _thread_local.dimension_bases = bases
@@ -230,7 +232,7 @@ def get_tendency_index(
 def _apply_consistency(
     base: int,
     option_count: int,
-    probabilities: Union[List[float], int, None],
+    probabilities: list[float] | int | None,
 ) -> int:
     
     
@@ -309,9 +311,9 @@ def _window_decay(distance: int, window: int) -> float:
 def _get_psychometric_answer(
     plan: Any,
     question_index: int,
-    row_index: Optional[int],
+    row_index: int | None,
     option_count: int,
-) -> Optional[int]:
+) -> int | None:
     
     try:
         choice = plan.get_choice(question_index, row_index)
@@ -334,7 +336,7 @@ def _get_psychometric_answer(
 def _is_distribution_locked_plan(
     plan: Any,
     question_index: int,
-    row_index: Optional[int],
+    row_index: int | None,
 ) -> bool:
     if plan is None or not hasattr(plan, "is_distribution_locked"):
         return False

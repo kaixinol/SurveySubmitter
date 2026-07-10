@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Union
 
 from survey_submitter.core.task import ExecutionState
 from survey_submitter.integrations.ai.protocols import (
@@ -41,21 +40,21 @@ async def agenerate_answer(
     question_title: str,
     *,
     question_type: str = "fill_blank",
-    blank_count: Optional[int] = None,
+    blank_count: int | None = None,
     ctx: ExecutionState | None = None,
-) -> Union[str, List[str]]:
+) -> str | list[str]:
 
     config = get_ai_settings()
     readiness_error = get_ai_readiness_error(config)
     if readiness_error:
         raise RuntimeError(f"AI 配置不完整：{readiness_error}")
 
-    api_key = str(config.get("api_key") or "")
-    base_url = str(config.get("base_url") or "")
-    model = str(config.get("model") or "")
-    system_prompt = str(config.get("system_prompt") or "").strip() or get_default_system_prompt()
+    api_key = str(config["api_key"] or "")
+    base_url = str(config["base_url"] or "")
+    model = str(config["model"] or "")
+    system_prompt = str(config["system_prompt"] or "").strip() or get_default_system_prompt()
 
-    api_protocol = _normalize_custom_api_protocol(config.get("api_protocol"))
+    api_protocol = _normalize_custom_api_protocol(config["api_protocol"])
     resolved_protocol, request_url, has_explicit_endpoint = _resolve_custom_endpoint(base_url, api_protocol)
 
     if resolved_protocol == "responses":

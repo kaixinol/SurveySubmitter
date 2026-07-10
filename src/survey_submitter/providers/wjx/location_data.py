@@ -5,12 +5,12 @@ from __future__ import annotations
 import json
 import os
 import random
-from typing import Any, Optional
+from typing import Any
 
 _ASSETS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "assets")
 
-_LOCATION_TREE: Optional[list[dict[str, Any]]] = None
-_UNIVERSITY_LIST: Optional[list[list[str]]] = None
+_LOCATION_TREE: list[dict[str, Any]] | None = None
+_UNIVERSITY_LIST: list[list[str]] | None = None
 
 # Suffixes to strip from province full names to get short names,
 # ordered longest-first to avoid partial matches.

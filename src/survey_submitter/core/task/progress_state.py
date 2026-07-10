@@ -3,8 +3,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 import threading
-from typing import TYPE_CHECKING, Any, Dict, List, Protocol
-
+from typing import TYPE_CHECKING, Any, Protocol
 
 @dataclass
 class ThreadProgressState:
@@ -21,7 +20,6 @@ class ThreadProgressState:
     running: bool = False
     last_update_ts: float = 0.0
 
-
 if TYPE_CHECKING:
     class _ThreadProgressHost(Protocol):
         lock: threading.Lock
@@ -35,7 +33,6 @@ if TYPE_CHECKING:
 
         def _get_or_create_thread_state_locked(self, thread_name: str) -> ThreadProgressState: ...
         def notify_runtime_change(self) -> None: ...
-
 
 class ThreadProgressMixin:
     @staticmethod
@@ -205,7 +202,7 @@ class ThreadProgressMixin:
             state.last_update_ts = now
         self.notify_runtime_change()
 
-    def snapshot_thread_progress(self: "_ThreadProgressHost") -> List[Dict[str, Any]]:
+    def snapshot_thread_progress(self: "_ThreadProgressHost") -> list[dict[str, Any]]:
         with self.lock:
             rows = []
             for state in self.thread_progress.values():

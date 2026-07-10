@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 from survey_submitter.core.psychometrics.orientation import (
     build_bias_target_probabilities,
@@ -41,7 +41,7 @@ _MICRO_JITTER_SIGMA = 0.03
 DEFAULT_SCALE_OPTION_COUNT = 5
 
 
-def build_psychometric_choice_key(question_index: int, row_index: Optional[int] = None) -> str:
+def build_psychometric_choice_key(question_index: int, row_index: int | None = None) -> str:
     if row_index is None:
         return f"q:{int(question_index)}"
     return f"q:{int(question_index)}:row:{int(row_index)}"
@@ -59,7 +59,7 @@ def _infer_bias_from_probabilities(probability_config: Any, option_count: int) -
     if not isinstance(probability_config, list) or not probability_config:
         return "center"
 
-    weights: List[float] = []
+    weights: list[float] = []
     for raw in probability_config:
         try:
             weights.append(max(0.0, float(raw)))
@@ -92,7 +92,7 @@ def _resolve_target_probabilities(
     probability_config: Any,
     option_count: int,
     bias: str,
-) -> List[float]:
+) -> list[float]:
     if probability_config == -1 or probability_config is None:
         if bias in _PSYCHO_BIAS_CHOICES:
             return build_bias_target_probabilities(option_count, bias)
@@ -106,9 +106,9 @@ class PsychometricBlueprintItem:
     question_type: str
     option_count: int
     bias: str
-    target_probabilities: List[float]
-    row_index: Optional[int] = None
-    score_by_choice_index: Optional[List[int]] = None
+    target_probabilities: list[float]
+    row_index: int | None = None
+    score_by_choice_index: list[int] | None = None
 
     @property
     def choice_key(self) -> str:
@@ -169,37 +169,37 @@ class JointPsychometricDimensionDiagnostic:
 @dataclass
 class JointPsychometricSamplePlan:
     sample_index: int
-    choices: Dict[str, int]
-    diagnostics_by_dimension: Dict[str, JointPsychometricDimensionDiagnostic]
-    items: List[PsychometricItem] = field(default_factory=list)
+    choices: dict[str, int]
+    diagnostics_by_dimension: dict[str, JointPsychometricDimensionDiagnostic]
+    items: list[PsychometricItem] = field(default_factory=list)
 
-    def get_choice(self, question_index: int, row_index: Optional[int] = None) -> Optional[int]:
+    def get_choice(self, question_index: int, row_index: int | None = None) -> int | None:
         return self.choices.get(build_psychometric_choice_key(question_index, row_index))
 
-    def is_distribution_locked(self, question_index: int, row_index: Optional[int] = None) -> bool:
+    def is_distribution_locked(self, question_index: int, row_index: int | None = None) -> bool:
         return build_psychometric_choice_key(question_index, row_index) in self.choices
 
 
 @dataclass
 class JointPsychometricAnswerPlan:
-    answers_by_sample: Dict[int, Dict[str, int]]
-    diagnostics_by_dimension: Dict[str, JointPsychometricDimensionDiagnostic]
-    item_dimension_map: Dict[str, str]
-    items: List[PsychometricItem]
+    answers_by_sample: dict[int, dict[str, int]]
+    diagnostics_by_dimension: dict[str, JointPsychometricDimensionDiagnostic]
+    item_dimension_map: dict[str, str]
+    items: list[PsychometricItem]
     sample_count: int
 
     def get_choice(
         self,
         sample_index: int,
         question_index: int,
-        row_index: Optional[int] = None,
-    ) -> Optional[int]:
+        row_index: int | None = None,
+    ) -> int | None:
         bucket = self.answers_by_sample.get(int(sample_index))
         if not isinstance(bucket, dict):
             return None
         return bucket.get(build_psychometric_choice_key(question_index, row_index))
 
-    def build_sample_plan(self, sample_index: int) -> Optional[JointPsychometricSamplePlan]:
+    def build_sample_plan(self, sample_index: int) -> JointPsychometricSamplePlan | None:
         key = int(sample_index)
         if key < 0 or key >= self.sample_count:
             return None
@@ -214,10 +214,10 @@ class JointPsychometricAnswerPlan:
 
 @dataclass
 class CombinedPsychometricPlan:
-    primary: Optional[Any] = None
-    fallback: Optional[Any] = None
+    primary: Any | None = None
+    fallback: Any | None = None
 
-    def get_choice(self, question_index: int, row_index: Optional[int] = None) -> Optional[int]:
+    def get_choice(self, question_index: int, row_index: int | None = None) -> int | None:
         if self.primary is not None and hasattr(self.primary, "get_choice"):
             try:
                 choice = self.primary.get_choice(question_index, row_index)
@@ -232,7 +232,7 @@ class CombinedPsychometricPlan:
                 return None
         return None
 
-    def is_distribution_locked(self, question_index: int, row_index: Optional[int] = None) -> bool:
+    def is_distribution_locked(self, question_index: int, row_index: int | None = None) -> bool:
         if self.primary is not None and hasattr(self.primary, "is_distribution_locked"):
             try:
                 return bool(self.primary.is_distribution_locked(question_index, row_index))
@@ -241,8 +241,8 @@ class CombinedPsychometricPlan:
         return False
 
 
-def build_psychometric_blueprint(config: "ExecutionConfig") -> Dict[str, List[PsychometricBlueprintItem]]:
-    grouped_items: Dict[str, List[PsychometricBlueprintItem]] = {}
+def build_psychometric_blueprint(config: "ExecutionConfig") -> dict[str, list[PsychometricBlueprintItem]]:
+    grouped_items: dict[str, list[PsychometricBlueprintItem]] = {}
 
     for question_num in sorted(config.question_config_index_map.keys()):
         config_entry = config.question_config_index_map.get(question_num)
@@ -260,7 +260,7 @@ def build_psychometric_blueprint(config: "ExecutionConfig") -> Dict[str, List[Ps
         raw_question_meta = config.questions_metadata.get(question_num) or {}
         question_meta = ensure_survey_question_meta(
             raw_question_meta,
-            default_provider=getattr(config, "survey_provider", "wjx"),
+            default_provider=config.survey_provider,
             index=question_num,
         )
         from survey_submitter.providers.contracts import ChoiceQuestionMeta
@@ -269,7 +269,7 @@ def build_psychometric_blueprint(config: "ExecutionConfig") -> Dict[str, List[Ps
 
         if question_type in {QuestionType.SINGLE, QuestionType.SCALE, QuestionType.SCORE}:
             if question_type == QuestionType.SINGLE:
-                score_map = list((getattr(config, "question_ordinal_score_map", {}) or {}).get(question_num) or [])
+                score_map = list((config.question_ordinal_score_map or {}).get(question_num) or [])
                 if not score_map:
                     continue
                 probability_config = config.single_prob[start_index] if start_index < len(config.single_prob) else -1
@@ -345,7 +345,7 @@ def build_psychometric_blueprint(config: "ExecutionConfig") -> Dict[str, List[Ps
     return grouped_items
 
 
-def _build_integer_quotas(target_probabilities: List[float], sample_count: int) -> List[int]:
+def _build_integer_quotas(target_probabilities: list[float], sample_count: int) -> list[int]:
     if sample_count <= 0:
         return [0] * len(target_probabilities)
 
@@ -372,9 +372,9 @@ def _build_integer_quotas(target_probabilities: List[float], sample_count: int) 
     return quotas
 
 
-def _assign_choices_from_scores(scores: List[float], quotas: List[int]) -> List[int]:
+def _assign_choices_from_scores(scores: list[float], quotas: list[int]) -> list[int]:
     sample_count = len(scores)
-    ordered_choices: List[int] = []
+    ordered_choices: list[int] = []
     for option_index, quota in enumerate(quotas):
         ordered_choices.extend([option_index] * max(0, int(quota or 0)))
     if len(ordered_choices) < sample_count:
@@ -389,7 +389,7 @@ def _assign_choices_from_scores(scores: List[float], quotas: List[int]) -> List[
     return assigned
 
 
-def _build_sigma_candidates(target_alpha: float, item_count: int) -> List[float]:
+def _build_sigma_candidates(target_alpha: float, item_count: int) -> list[float]:
     base_sigma = max(0.0, float(compute_sigma_e_from_alpha(target_alpha, item_count)))
     candidates = [
         base_sigma * 1.5,
@@ -402,7 +402,7 @@ def _build_sigma_candidates(target_alpha: float, item_count: int) -> List[float]
         0.1,
         0.05,
     ]
-    normalized: List[float] = []
+    normalized: list[float] = []
     seen: set[float] = set()
     for raw in candidates:
         sigma = round(max(0.0, float(raw)), 6)
@@ -413,7 +413,7 @@ def _build_sigma_candidates(target_alpha: float, item_count: int) -> List[float]
     return normalized
 
 
-def _build_noise_matrix(item_count: int, sample_count: int) -> List[List[float]]:
+def _build_noise_matrix(item_count: int, sample_count: int) -> list[list[float]]:
     return [[randn() for _ in range(sample_count)] for _ in range(item_count)]
 
 
@@ -424,15 +424,15 @@ def _alpha_fit_key(alpha: float, target_alpha: float) -> tuple[float, int]:
 
 
 def _build_refined_sigma_candidates(
-    evaluated_candidates: List[tuple[float, float]],
+    evaluated_candidates: list[tuple[float, float]],
     target_alpha: float,
-) -> List[float]:
+) -> list[float]:
     if len(evaluated_candidates) < 2:
         return []
 
     ordered = sorted(evaluated_candidates, key=lambda item: item[0], reverse=True)
     seen = {round(float(sigma), 6) for sigma, _ in ordered}
-    refined: List[float] = []
+    refined: list[float] = []
     for index in range(len(ordered) - 1):
         left_sigma, left_alpha = ordered[index]
         right_sigma, right_alpha = ordered[index + 1]
@@ -453,15 +453,15 @@ def _build_refined_sigma_candidates(
 
 
 def _evaluate_dimension_plan(
-    items: List[PsychometricBlueprintItem],
+    items: list[PsychometricBlueprintItem],
     sample_count: int,
     sigma_e: float,
-    theta: List[float],
+    theta: list[float],
     reversed_keys: set[str],
-    standard_noise: List[List[float]],
-    micro_jitter_noise: List[List[float]],
-) -> tuple[float, Dict[str, List[int]]]:
-    choices_by_item: Dict[str, List[int]] = {}
+    standard_noise: list[list[float]],
+    micro_jitter_noise: list[list[float]],
+) -> tuple[float, dict[str, list[int]]]:
+    choices_by_item: dict[str, list[int]] = {}
     response_rows = [[0.0] * len(items) for _ in range(sample_count)]
 
     for item_index, item in enumerate(items):
@@ -486,8 +486,8 @@ def _evaluate_dimension_plan(
     return cronbach_alpha(response_rows), choices_by_item
 
 
-def build_joint_psychometric_answer_plan(config: "ExecutionConfig") -> Optional[JointPsychometricAnswerPlan]:
-    sample_count = max(0, int(getattr(config, "target_num", 0) or 0))
+def build_joint_psychometric_answer_plan(config: "ExecutionConfig") -> JointPsychometricAnswerPlan | None:
+    sample_count = max(0, int(config.target_num or 0))
     if sample_count <= 0:
         return None
 
@@ -496,14 +496,14 @@ def build_joint_psychometric_answer_plan(config: "ExecutionConfig") -> Optional[
         return None
 
     try:
-        target_alpha = normalize_target_alpha(getattr(config, "psycho_target_alpha", 0.85))
+        target_alpha = normalize_target_alpha(config.psycho_target_alpha)
     except Exception:
         target_alpha = normalize_target_alpha(None)
 
-    answers_by_sample: Dict[int, Dict[str, int]] = {sample_index: {} for sample_index in range(sample_count)}
-    diagnostics_by_dimension: Dict[str, JointPsychometricDimensionDiagnostic] = {}
-    item_dimension_map: Dict[str, str] = {}
-    runtime_items: List[PsychometricItem] = []
+    answers_by_sample: dict[int, dict[str, int]] = {sample_index: {} for sample_index in range(sample_count)}
+    diagnostics_by_dimension: dict[str, JointPsychometricDimensionDiagnostic] = {}
+    item_dimension_map: dict[str, str] = {}
+    runtime_items: list[PsychometricItem] = []
     has_locked_items = False
 
     for dimension, items in grouped_items.items():
@@ -530,7 +530,7 @@ def build_joint_psychometric_answer_plan(config: "ExecutionConfig") -> Optional[
         micro_jitter_noise = _build_noise_matrix(item_count, sample_count)
         dimension_orientation = infer_dimension_orientation(items)
         reversed_keys = set(dimension_orientation.reversed_keys)
-        evaluated_candidates: List[tuple[float, float, Dict[str, List[int]]]] = []
+        evaluated_candidates: list[tuple[float, float, dict[str, list[int]]]] = []
         for sigma_e in _build_sigma_candidates(target_alpha, item_count):
             current_alpha, current_choices = _evaluate_dimension_plan(
                 items,

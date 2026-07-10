@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.questions.meta_helpers import (
@@ -40,12 +40,12 @@ def _as_float(val: Any, default: float) -> float:
         return default
 
 
-def _build_mid_bias_weights(option_count: int) -> List[float]:
+def _build_mid_bias_weights(option_count: int) -> list[float]:
     count = max(1, int(option_count or 1))
     return [1.0] * count
 
 
-def _normalize_question_num(raw: Any) -> Optional[int]:
+def _normalize_question_num(raw: Any) -> int | None:
     try:
         if raw is None:
             return None
@@ -64,7 +64,7 @@ def _normalize_title(raw: Any) -> str:
     return "".join(text.split())
 
 
-def _normalize_provider_key(raw_provider: Any, raw_question_id: Any) -> Optional[Tuple[str, str]]:
+def _normalize_provider_key(raw_provider: Any, raw_question_id: Any) -> tuple[str, str] | None:
     provider = normalize_survey_provider(raw_provider, default=SURVEY_PROVIDER_WJX)
     question_id = str(raw_question_id or "").strip()
     if not question_id:
@@ -72,7 +72,7 @@ def _normalize_provider_key(raw_provider: Any, raw_question_id: Any) -> Optional
     return provider, question_id
 
 
-def _normalize_forced_option_index(raw: Any, option_count: int) -> Optional[int]:
+def _normalize_forced_option_index(raw: Any, option_count: int) -> int | None:
     try:
         idx = int(raw)
     except Exception:
@@ -83,15 +83,15 @@ def _normalize_forced_option_index(raw: Any, option_count: int) -> Optional[int]
     return None
 
 
-def _build_forced_single_weights(option_count: int, forced_index: int) -> List[float]:
+def _build_forced_single_weights(option_count: int, forced_index: int) -> list[float]:
     total = max(1, int(option_count or 1))
     return [1.0 if idx == forced_index else 0.0 for idx in range(total)]
 
 
-def _infer_multi_text_blank_modes(q: SurveyQuestionMeta, blank_count: int) -> List[str]:
+def _infer_multi_text_blank_modes(q: SurveyQuestionMeta, blank_count: int) -> list[str]:
     labels = [str(item or "").strip() for item in list(q.text_input_labels if isinstance(q, TextQuestionMeta) and q.text_input_labels else [])]
     title = str(q.title or "").strip()
-    modes: List[str] = []
+    modes: list[str] = []
     for index in range(max(0, int(blank_count or 0))):
         text = labels[index] if index < len(labels) else ""
         if not text and blank_count <= 1:
@@ -111,8 +111,8 @@ def _infer_multi_text_blank_modes(q: SurveyQuestionMeta, blank_count: int) -> Li
 def _filter_option_fill_texts_to_fillable(
     option_fill_texts: Any,
     option_count: int,
-    fillable_indices: List[int],
-) -> Optional[List[Optional[str]]]:
+    fillable_indices: list[int],
+) -> list[str | None] | None:
     if not isinstance(option_fill_texts, list) or not fillable_indices:
         return None
     total = max(0, int(option_count or 0))
@@ -126,7 +126,7 @@ def _filter_option_fill_texts_to_fillable(
             fillable_set.add(option_index)
     if not fillable_set:
         return None
-    normalized: List[Optional[str]] = []
+    normalized: list[str | None] = []
     for option_index in range(total):
         raw_value = option_fill_texts[option_index] if option_index < len(option_fill_texts) else None
         text = str(raw_value or "").strip()
@@ -135,33 +135,33 @@ def _filter_option_fill_texts_to_fillable(
 
 
 def build_default_question_entries(
-    questions_info: List[SurveyQuestionMeta],
+    questions_info: list[SurveyQuestionMeta],
     *,
     survey_url: str = "",
-    existing_entries: Optional[List[QuestionEntry]] = None,
-) -> List[QuestionEntry]:
+    existing_entries: list[QuestionEntry] | None = None,
+) -> list[QuestionEntry]:
     
 
-    existing_by_num: Dict[int, QuestionEntry] = {}
-    existing_by_title: Dict[str, QuestionEntry] = {}
-    existing_by_provider: Dict[Tuple[str, str], QuestionEntry] = {}
+    existing_by_num: dict[int, QuestionEntry] = {}
+    existing_by_title: dict[str, QuestionEntry] = {}
+    existing_by_provider: dict[tuple[str, str], QuestionEntry] = {}
     if existing_entries:
         for entry in existing_entries:
-            q_num = _normalize_question_num(getattr(entry, "question_num", None))
+            q_num = _normalize_question_num(entry.question_num)
             if q_num is not None and q_num not in existing_by_num:
                 existing_by_num[q_num] = entry
-            title_key = _normalize_title(getattr(entry, "question_title", None))
+            title_key = _normalize_title(entry.question_title)
             if title_key and title_key not in existing_by_title:
                 existing_by_title[title_key] = entry
             provider_key = _normalize_provider_key(
-                getattr(entry, "survey_provider", None),
-                getattr(entry, "provider_question_id", None),
+                entry.survey_provider,
+                entry.provider_question_id,
             )
             if provider_key and provider_key not in existing_by_provider:
                 existing_by_provider[provider_key] = entry
 
     detected_provider = detect_survey_provider(survey_url)
-    entries: List[QuestionEntry] = []
+    entries: list[QuestionEntry] = []
     for q in questions_info:
         if q.type_code == TypeCode.DESCRIPTION or q.unsupported:
             continue
@@ -198,7 +198,7 @@ def build_default_question_entries(
         )
         parsed_title_key = _normalize_title(title_text)
 
-        existing_config: Optional[QuestionEntry] = None
+        existing_config: QuestionEntry | None = None
         provider_key = _normalize_provider_key(survey_provider, provider_question_id)
         if provider_key:
             candidate = existing_by_provider.get(provider_key)
@@ -208,7 +208,7 @@ def build_default_question_entries(
         if existing_config is None and parsed_question_num is not None:
             candidate = existing_by_num.get(parsed_question_num)
             if candidate and candidate.question_type == q_type:
-                candidate_title_key = _normalize_title(getattr(candidate, "question_title", None))
+                candidate_title_key = _normalize_title(candidate.question_title)
                 if parsed_title_key and candidate_title_key and candidate_title_key != parsed_title_key:
                     candidate = None
                 if candidate is not None:
@@ -223,43 +223,43 @@ def build_default_question_entries(
             distribution = existing_config.distribution_mode or "random"
             custom_weights = copy.deepcopy(existing_config.custom_weights)
             texts = copy.deepcopy(existing_config.texts)
-            ai_enabled_from_existing = getattr(existing_config, "ai_enabled", False) if q_type in TEXT_TYPES else False
+            ai_enabled_from_existing = existing_config.ai_enabled if q_type in TEXT_TYPES else False
             text_random_mode_from_existing = (
-                str(getattr(existing_config, "text_random_mode", "none") or "none")
+                str(existing_config.text_random_mode or "none")
                 if q_type == QuestionType.TEXT
                 else "none"
             )
             text_random_int_range_from_existing = (
-                copy.deepcopy(getattr(existing_config, "text_random_int_range", []))
+                copy.deepcopy(existing_config.text_random_int_range)
                 if q_type == QuestionType.TEXT
                 else []
             )
             multi_text_blank_modes_from_existing = (
-                copy.deepcopy(getattr(existing_config, "multi_text_blank_modes", []))
+                copy.deepcopy(existing_config.multi_text_blank_modes)
                 if q_type == QuestionType.MULTI_TEXT
                 else []
             )
             multi_text_blank_ai_flags_from_existing = (
-                copy.deepcopy(getattr(existing_config, "multi_text_blank_ai_flags", []))
+                copy.deepcopy(existing_config.multi_text_blank_ai_flags)
                 if q_type == QuestionType.MULTI_TEXT
                 else []
             )
             multi_text_blank_int_ranges_from_existing = (
-                copy.deepcopy(getattr(existing_config, "multi_text_blank_int_ranges", []))
+                copy.deepcopy(existing_config.multi_text_blank_int_ranges)
                 if q_type == QuestionType.MULTI_TEXT
                 else []
             )
             option_fill_texts_from_existing = (
-                copy.deepcopy(getattr(existing_config, "option_fill_texts", None))
+                copy.deepcopy(existing_config.option_fill_texts)
                 if q_type in CHOICE_LIKE_TYPES
                 else None
             )
             fillable_indices_from_existing = (
-                copy.deepcopy(getattr(existing_config, "fillable_option_indices", None))
+                copy.deepcopy(existing_config.fillable_option_indices)
                 if q_type in CHOICE_LIKE_TYPES
                 else None
             )
-            attached_selects_from_existing = copy.deepcopy(getattr(existing_config, "attached_option_selects", []) or [])
+            attached_selects_from_existing = copy.deepcopy(existing_config.attached_option_selects or [])
         else:
             ai_enabled_from_existing = False
             text_random_mode_from_existing = "none"
@@ -382,7 +382,7 @@ def build_default_question_entries(
                     else []
                 ),
                 is_location=is_location,
-                location_parts=list(getattr(existing_config, "location_parts", []) or []) if existing_config else [],
+                location_parts=list(existing_config.location_parts or []) if existing_config else [],
             )
         )
     return entries
