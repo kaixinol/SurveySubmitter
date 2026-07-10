@@ -287,7 +287,7 @@ class WjxHtmlParserHelperTests:
         assert html_parser_choice._soup_question_is_location(
             _soup("<div><input verify='省市区' onclick='openCityBox(this,3,event,1);' /></div>").div
         )
-        assert html_parser_choice._soup_question_is_location(
+        assert not html_parser_choice._soup_question_is_location(
             _soup("<div><input onclick='openCityBox(this,3,event,1);' /></div>").div
         )
         assert not html_parser_choice._soup_question_is_location(

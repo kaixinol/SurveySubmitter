@@ -454,9 +454,6 @@ def _soup_question_is_location(question_div) -> bool:
         verify_value = input_element.get("verify")
         if _verify_text_indicates_location(verify_value):
             return True
-        onclick_value = input_element.get("onclick")
-        if onclick_value and "opencitybox" in str(onclick_value).lower():
-            return True
     return False
 
 def _collect_select_option_texts(question_div, soup, question_number: int) -> List[str]:

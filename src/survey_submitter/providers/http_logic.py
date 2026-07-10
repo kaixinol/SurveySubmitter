@@ -254,7 +254,10 @@ async def build_http_logic_plan(
 
         action = await build_action(question)
         if action is None:
-            raise RuntimeError(f"第{question_num}题暂不支持纯 HTTP 提交")
+            import logging
+            logging.getLogger(__name__).warning("第%d题暂不支持纯 HTTP 提交，已跳过", question_num)
+            skipped_question_nums.append(question_num)
+            continue
         action_by_question_num[question_num] = action
         actions.append(action)
 
