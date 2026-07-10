@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import json
 import math
 import os
 import random
 from datetime import date, timedelta
 from functools import lru_cache
-from typing import Any, List, Optional, Sequence, Tuple, Union
+from typing import Any, Sequence
 import logging
 from survey_submitter.logging.log_utils import log_suppressed_exception
 
@@ -58,12 +60,12 @@ def _should_treat_question_as_text_like(
     return (option_count or 0) <= 1 and text_input_count > 0
 
 
-def weighted_index(probabilities: List[float]) -> int:
+def weighted_index(probabilities: list[float]) -> int:
     
 
     if not probabilities:
         raise ValueError("probabilities cannot be empty")
-    weights: List[float] = []
+    weights: list[float] = []
     total = 0.0
     for value in probabilities:
         try:
@@ -92,7 +94,7 @@ def weighted_index(probabilities: List[float]) -> int:
     return last_positive_index
 
 
-def normalize_probabilities(values: List[float]) -> List[float]:
+def normalize_probabilities(values: list[float]) -> list[float]:
     
     if not values:
         raise ValueError("概率列表不能为空")
@@ -152,7 +154,7 @@ def generate_random_mobile() -> str:
 
 
 @lru_cache(maxsize=1)
-def _load_id_card_area_codes() -> Tuple[str, ...]:
+def _load_id_card_area_codes() -> tuple[str, ...]:
     
     asset_path = get_resource_path(os.path.join("software", "assets", "area_codes_2022.json"))
     fallback_codes = ("110100", "310100", "440100", "330100", "510100")
@@ -163,7 +165,7 @@ def _load_id_card_area_codes() -> Tuple[str, ...]:
         log_suppressed_exception("questions.utils._load_id_card_area_codes open", exc, level=logging.ERROR)
         return fallback_codes
 
-    codes: List[str] = []
+    codes: list[str] = []
     seen = set()
     provinces = area_data.get("provinces", []) if isinstance(area_data, dict) else []
     for province in provinces:
@@ -244,10 +246,10 @@ def generate_random_generic_text() -> str:
     return f"{base}{suffix}"
 
 
-def try_parse_random_int_range(raw: Any) -> Optional[Tuple[int, int]]:
+def try_parse_random_int_range(raw: Any) -> tuple[int, int] | None:
     
 
-    def _coerce_int(value: Any) -> Optional[int]:
+    def _coerce_int(value: Any) -> int | None:
         try:
             text = str(value).strip()
         except Exception:
@@ -275,7 +277,7 @@ def try_parse_random_int_range(raw: Any) -> Optional[Tuple[int, int]]:
     return min_value, max_value
 
 
-def normalize_random_int_range(raw: Any) -> Tuple[int, int]:
+def normalize_random_int_range(raw: Any) -> tuple[int, int]:
     
     parsed = try_parse_random_int_range(raw)
     if parsed is None:
@@ -283,7 +285,7 @@ def normalize_random_int_range(raw: Any) -> Tuple[int, int]:
     return parsed
 
 
-def serialize_random_int_range(raw: Any) -> List[int]:
+def serialize_random_int_range(raw: Any) -> list[int]:
     
     parsed = try_parse_random_int_range(raw)
     if parsed is None:
@@ -307,7 +309,7 @@ def build_random_int_token(min_value: Any, max_value: Any) -> str:
     return f"{RANDOM_INT_TOKEN_PREFIX}{normalized_min}:{normalized_max}"
 
 
-def parse_random_int_token(token: Any) -> Optional[Tuple[int, int]]:
+def parse_random_int_token(token: Any) -> tuple[int, int] | None:
     
     if token is None:
         return None
@@ -362,7 +364,7 @@ def extract_text_from_element(element) -> str:
     return text
 
 
-def get_fill_text_from_config(fill_entries: Optional[Sequence[Optional[str]]], option_index: int) -> Optional[str]:
+def get_fill_text_from_config(fill_entries: Sequence[str | None] | None, option_index: int) -> str | None:
     
     if not fill_entries or option_index < 0 or option_index >= len(fill_entries):
         return None
@@ -373,14 +375,14 @@ def get_fill_text_from_config(fill_entries: Optional[Sequence[Optional[str]]], o
     return text or None
 
 
-def normalize_single_like_prob_config(prob_config: Union[List[float], int, float, None], option_count: int) -> Union[List[float], int]:
+def normalize_single_like_prob_config(prob_config: list[float] | int | float | None, option_count: int) -> list[float] | int:
     
     if prob_config == -1 or prob_config is None:
         return -1
     return normalize_droplist_probs(prob_config, option_count)
 
 
-def normalize_droplist_probs(prob_config: Union[List[float], int, float, None], option_count: int) -> List[float]:
+def normalize_droplist_probs(prob_config: list[float] | int | float | None, option_count: int) -> list[float]:
     
     if option_count <= 0:
         return []
@@ -409,12 +411,12 @@ def normalize_droplist_probs(prob_config: Union[List[float], int, float, None], 
         return [1.0 / option_count] * option_count
 
 
-def normalize_option_fill_texts(option_texts: Optional[List[Optional[str]]], option_count: int) -> Optional[List[Optional[str]]]:
+def normalize_option_fill_texts(option_texts: list[str | None] | None, option_count: int) -> list[str | None] | None:
     
     if not option_texts:
         return None
     normalized_count = option_count if option_count > 0 else len(option_texts)
-    normalized: List[Optional[str]] = []
+    normalized: list[str | None] = []
     for idx in range(normalized_count):
         raw = option_texts[idx] if idx < len(option_texts) else None
         if raw is None:
@@ -451,7 +453,7 @@ def _prob_config_is_unset(value: Any) -> bool:
 def _custom_weights_has_positive(weights: Any) -> bool:
     if not isinstance(weights, list) or not weights:
         return False
-    stack: List[Any] = list(weights)
+    stack: list[Any] = list(weights)
     while stack:
         item = stack.pop()
         if isinstance(item, list):

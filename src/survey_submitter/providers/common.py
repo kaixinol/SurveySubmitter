@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, Iterable, List
+from typing import Any, Iterable
 from urllib.parse import urlparse, urlsplit, urlunsplit
 
 SURVEY_PROVIDER_WJX = "wjx"
@@ -79,10 +79,10 @@ def normalize_survey_parse_url(url_value: str) -> str:
 
 
 def ensure_question_provider_fields(
-    item: Dict[str, Any],
+    item: dict[str, Any],
     *,
     default_provider: str = SURVEY_PROVIDER_WJX,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if not isinstance(item, dict):
         return {}
     normalized = dict(item)
@@ -98,11 +98,11 @@ def ensure_question_provider_fields(
 
 
 def ensure_questions_provider_fields(
-    items: Iterable[Dict[str, Any]],
+    items: Iterable[dict[str, Any]],
     *,
     default_provider: str = SURVEY_PROVIDER_WJX,
-) -> List[Dict[str, Any]]:
-    normalized_items: List[Dict[str, Any]] = []
+) -> list[dict[str, Any]]:
+    normalized_items: list[dict[str, Any]] = []
     for item in items or []:
         normalized = ensure_question_provider_fields(item, default_provider=default_provider)
         if normalized:

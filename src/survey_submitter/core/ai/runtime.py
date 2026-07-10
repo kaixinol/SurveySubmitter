@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import re
-from typing import List, Optional, Union
+from typing import Any
 
 from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.task import ExecutionState
@@ -51,7 +53,7 @@ def is_ai_timeout_runtime_error(error: object) -> bool:
 
 
 
-def _normalize_text(value: Optional[str]) -> str:
+def _normalize_text(value: str | None) -> str:
     if not value:
         return ""
     return _HTML_SPACE_RE.sub(" ", str(value)).strip()
@@ -134,11 +136,11 @@ async def agenerate_ai_answer(
     question_title: str,
     *,
     question_type: str = "fill_blank",
-    blank_count: Optional[int] = None,
+    blank_count: int | None = None,
     description: str = "",
     question_number: int = 0,
     ctx: ExecutionState | None = None,
-) -> Union[str, List[str]]:
+) -> str | list[str]:
     cleaned = build_ai_question_prompt(
         question_title,
         description=description,
@@ -161,7 +163,7 @@ async def agenerate_ai_answer(
                     if not answer or not str(answer).strip():
                         raise AIRuntimeError("AI 未返回有效答案")
                     return str(answer).strip()
-                cleaned_answers: List[str] = []
+                cleaned_answers: list[str] = []
                 for item in answer:
                     text = str(item or "").strip()
                     if not text:
@@ -188,6 +190,3 @@ async def agenerate_ai_answer(
     if last_error is not None:
         raise AIRuntimeError(f"AI 调用失败：{last_error}") from last_error
     raise AIRuntimeError("AI 调用失败：未知错误")
-
-
-

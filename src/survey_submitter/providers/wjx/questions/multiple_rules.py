@@ -1,13 +1,14 @@
+from __future__ import annotations
+
 import logging
 import random
-from typing import List, Optional, Set, Tuple
 
-_WARNED_PROB_MISMATCH: Set[int] = set()
+_WARNED_PROB_MISMATCH: set[int] = set()
 
-def _normalize_selected_indices(indices: List[int], option_count: int) -> List[int]:
+def _normalize_selected_indices(indices: list[int], option_count: int) -> list[int]:
     
-    normalized: List[int] = []
-    seen: Set[int] = set()
+    normalized: list[int] = []
+    seen: set[int] = set()
     for idx in indices:
         if idx in seen:
             continue
@@ -18,12 +19,12 @@ def _normalize_selected_indices(indices: List[int], option_count: int) -> List[i
     return normalized
 
 def _resolve_rule_sets(
-    must_select_indices: Set[int],
-    must_not_select_indices: Set[int],
+    must_select_indices: set[int],
+    must_not_select_indices: set[int],
     option_count: int,
     current: int,
-    rule_id: Optional[str],
-) -> Tuple[List[int], Set[int]]:
+    rule_id: str | None,
+) -> tuple[list[int], set[int]]:
     required = sorted(idx for idx in must_select_indices if 0 <= idx < option_count)
     blocked = {idx for idx in must_not_select_indices if 0 <= idx < option_count}
     overlap = blocked.intersection(required)
@@ -38,16 +39,16 @@ def _resolve_rule_sets(
     return required, blocked
 
 def _apply_rule_constraints(
-    selected_indices: List[int],
+    selected_indices: list[int],
     option_count: int,
     min_required: int,
     max_allowed: int,
-    required_indices: List[int],
-    blocked_indices: Set[int],
-    positive_priority_indices: Optional[List[int]],
+    required_indices: list[int],
+    blocked_indices: set[int],
+    positive_priority_indices: list[int] | None,
     current: int,
-    rule_id: Optional[str],
-) -> List[int]:
+    rule_id: str | None,
+) -> list[int]:
     required = _normalize_selected_indices(required_indices, option_count)
     if len(required) > max_allowed:
         logging.warning(
@@ -79,8 +80,8 @@ def _apply_rule_constraints(
 
     if len(resolved) < min_required:
         needed = min_required - len(resolved)
-        priority: List[int] = []
-        seen: Set[int] = set()
+        priority: list[int] = []
+        seen: set[int] = set()
         for idx in positive_priority_indices or []:
             if idx in seen or idx in required or idx in blocked_indices:
                 continue

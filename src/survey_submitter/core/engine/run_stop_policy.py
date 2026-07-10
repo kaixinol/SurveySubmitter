@@ -3,7 +3,6 @@ from __future__ import annotations
 import math
 import logging
 import time
-from typing import Optional
 
 from survey_submitter.core.engine.failure_reason import FailureReason
 from survey_submitter.core.engine.runtime_control_port import (
@@ -22,13 +21,13 @@ class RunStopPolicy:
         self,
         config: ExecutionConfig,
         state: ExecutionState,
-        runtime_bridge: Optional[RuntimeControlPort] = None,
+        runtime_bridge: RuntimeControlPort | None = None,
     ):
         self.config = config
         self.state = state
         self.runtime_bridge = runtime_bridge
 
-    def wait_if_paused(self, stop_signal: Optional[StopSignalLike]) -> None:
+    def wait_if_paused(self, stop_signal: StopSignalLike | None) -> None:
         try:
             runtime_wait_if_paused(self.runtime_bridge, stop_signal)
         except Exception:
@@ -49,13 +48,13 @@ class RunStopPolicy:
 
     def record_failure(
         self,
-        stop_signal: Optional[StopSignalLike],
-        thread_name: Optional[str] = None,
+        stop_signal: StopSignalLike | None,
+        thread_name: str | None = None,
         *,
         failure_reason: FailureReason = FailureReason.FILL_FAILED,
         status_text: str = "失败重试",
         log_message: str = "",
-        threshold_override: Optional[int] = None,
+        threshold_override: int | None = None,
         terminal_stop_category: str = "fail_threshold",
         force_stop_when_threshold_reached: bool = False,
         consume_reverse_fill_attempt: bool = True,
@@ -135,7 +134,7 @@ class RunStopPolicy:
     def record_success(
         self,
         stop_signal: StopSignalLike,
-        thread_name: Optional[str] = None,
+        thread_name: str | None = None,
         *,
         status_text: str = "提交成功",
         terminal_message: str = "目标份数已达成",
@@ -197,7 +196,7 @@ class RunStopPolicy:
 
     def trigger_target_reached_stop(
         self,
-        stop_signal: Optional[StopSignalLike],
+        stop_signal: StopSignalLike | None,
         *,
         message: str = "目标份数已达成",
     ) -> None:

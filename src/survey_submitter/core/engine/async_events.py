@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from survey_submitter.core.task import ExecutionState
 
@@ -16,7 +16,7 @@ class AsyncRunContext:
         state: ExecutionState,
         stop_event: asyncio.Event,
         pause_event: asyncio.Event,
-        status_sink: Optional[Callable[[dict[str, Any]], None]] = None,
+        status_sink: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
         self.state = state
         self.stop_event = stop_event
@@ -56,7 +56,7 @@ class ThreadEventProxy:
             return
         self._loop.call_soon_threadsafe(self._event.clear)
 
-    def wait(self, timeout: Optional[float] = None) -> bool:
+    def wait(self, timeout: float | None = None) -> bool:
         if self.is_set():
             return True
         try:
@@ -84,7 +84,7 @@ class ThreadEventProxy:
 class AsyncSlotResult:
     slot_id: int
     completed: bool
-    error: Optional[BaseException] = None
+    error: BaseException | None = None
 
 
 __all__ = ["AsyncRunContext", "AsyncSlotResult", "ThreadEventProxy"]

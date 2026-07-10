@@ -5,7 +5,7 @@ import logging
 import threading
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, Iterator, Literal, Optional, Tuple, Union, overload
+from typing import Any, Iterator, Literal, overload
 from urllib.parse import urlsplit
 
 import httpx
@@ -55,8 +55,8 @@ HTTPError = httpx.HTTPStatusError
 
 @dataclass(frozen=True)
 class _ClientKey:
-    proxy: Optional[str]
-    verify: Union[bool, str]
+    proxy: str | None
+    verify: bool | str
     follow_redirects: bool
     trust_env: bool
 
@@ -135,13 +135,13 @@ class _SyncClientManager:
 
     def __init__(self) -> None:
         self._lock = threading.RLock()
-        self._clients: Dict[_ClientKey, _ClientEntry] = {}
+        self._clients: dict[_ClientKey, _ClientEntry] = {}
 
     def _create_client(
         self,
         *,
-        proxy: Optional[str],
-        verify: Union[bool, str],
+        proxy: str | None,
+        verify: bool | str,
         follow_redirects: bool,
         trust_env: bool,
     ) -> httpx.Client:
@@ -168,7 +168,7 @@ class _SyncClientManager:
                 closed.append(entry.client)
         return closed
 
-    def _evict_oldest_idle_client_locked(self) -> Optional[httpx.Client]:
+    def _evict_oldest_idle_client_locked(self) -> httpx.Client | None:
         idle_items = [
             (key, entry)
             for key, entry in self._clients.items()
@@ -190,8 +190,8 @@ class _SyncClientManager:
     def acquire(
         self,
         *,
-        proxy: Optional[str],
-        verify: Union[bool, str],
+        proxy: str | None,
+        verify: bool | str,
         follow_redirects: bool,
         trust_env: bool,
     ) -> tuple[_ClientKey, _ClientEntry]:
@@ -254,9 +254,9 @@ class _SyncClientManager:
         allow_redirects: bool = True,
         proxies: Any = None,
         stream: bool = False,
-        verify: Union[bool, str] = True,
+        verify: bool | str = True,
         json: Any = None,
-    ) -> Union[httpx.Response, _StreamResponse]:
+    ) -> httpx.Response | _StreamResponse:
         proxy, trust_env = _resolve_proxy(proxies, url)
         key, entry = self.acquire(
             proxy=proxy,
@@ -310,7 +310,7 @@ class _SyncClientManager:
         self._close_clients(clients)
 
 
-def _resolve_proxy(proxies: Any, url: str) -> Tuple[Optional[str], bool]:
+def _resolve_proxy(proxies: Any, url: str) -> tuple[str | None, bool]:
     
     if proxies is None:
         return None, True

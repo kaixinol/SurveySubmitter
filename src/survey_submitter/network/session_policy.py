@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import asyncio
-from typing import Iterable, Optional
+from typing import Iterable
 import logging
 
 from survey_submitter.core.engine.stop_signal import StopSignalLike
@@ -54,7 +56,7 @@ def _resolve_proxy_fetch_max_batch_size(ctx: ExecutionState) -> int:
 
 def _record_bad_proxy_and_maybe_pause(
     ctx: ExecutionState,
-    runtime_bridge: Optional[RuntimeUiBridge],
+    runtime_bridge: RuntimeUiBridge | None,
 ) -> bool:
     
     _ = ctx, runtime_bridge
@@ -115,7 +117,7 @@ def should_continue_proxy_prefetch(ctx: ExecutionState) -> bool:
 
 def _should_stop_proxy_wait(
     ctx: ExecutionState,
-    stop_signal: Optional[StopSignalLike],
+    stop_signal: StopSignalLike | None,
 ) -> bool:
     if stop_signal is not None and stop_signal.is_set():
         return True
@@ -124,7 +126,7 @@ def _should_stop_proxy_wait(
 
 def _wait_for_next_proxy_cycle(
     ctx: ExecutionState,
-    stop_signal: Optional[StopSignalLike],
+    stop_signal: StopSignalLike | None,
     *,
     timeout: float = _PROXY_WAIT_POLL_SECONDS,
 ) -> bool:
@@ -133,7 +135,7 @@ def _wait_for_next_proxy_cycle(
 
 async def _wait_for_next_proxy_cycle_async(
     ctx: ExecutionState,
-    stop_signal: Optional[StopSignalLike],
+    stop_signal: StopSignalLike | None,
     *,
     timeout: float = _PROXY_WAIT_POLL_SECONDS,
 ) -> bool:
@@ -148,7 +150,7 @@ _PROXY_PREFETCH_IDLE_SECONDS = 0.35
 
 async def wait_for_proxy_prefetch_cycle(
     ctx: ExecutionState,
-    stop_signal: Optional[StopSignalLike],
+    stop_signal: StopSignalLike | None,
     *,
     timeout: float = _PROXY_PREFETCH_IDLE_SECONDS,
 ) -> bool:
@@ -157,7 +159,7 @@ async def wait_for_proxy_prefetch_cycle(
 
 async def _acquire_proxy_fetch_lock_async(
     ctx: ExecutionState,
-    stop_signal: Optional[StopSignalLike],
+    stop_signal: StopSignalLike | None,
 ) -> bool:
     lock = _get_proxy_fetch_async_lock(ctx)
     while not _should_stop_proxy_wait(ctx, stop_signal):
@@ -173,12 +175,12 @@ async def _select_proxy_for_session_async(
     ctx: ExecutionState,
     thread_name: str = "",
     *,
-    stop_signal: Optional[StopSignalLike] = None,
+    stop_signal: StopSignalLike | None = None,
     wait: bool = False,
-) -> Optional[str]:
+) -> str | None:
     if not ctx.config.random_proxy_ip_enabled:
         return None
-    selected: Optional[ProxyLease] = None
+    selected: ProxyLease | None = None
     with ctx.lock:
         selected = _pop_available_proxy_lease_locked(ctx)
     if selected is not None:
@@ -254,7 +256,7 @@ async def acquire_submit_proxy(
     ctx: ExecutionState,
     thread_name: str = "",
     *,
-    stop_signal: Optional[StopSignalLike] = None,
+    stop_signal: StopSignalLike | None = None,
     wait: bool = True,
 ) -> SubmitProxyLease:
     proxy_address = await _select_proxy_for_session_async(

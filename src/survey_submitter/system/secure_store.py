@@ -7,7 +7,7 @@ import logging
 import sys
 from ctypes import wintypes
 from dataclasses import dataclass
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 if sys.platform == "win32":
     import winreg
@@ -174,7 +174,7 @@ def _delete_secret_macos(name: str) -> None:
     keyring.delete_password(_KEYRING_SERVICE, name)
 
 
-def set_secret(key: str, value: Optional[str]) -> None:
+def set_secret(key: str, value: str | None) -> None:
     name = _normalize_key(key)
     if not name:
         return

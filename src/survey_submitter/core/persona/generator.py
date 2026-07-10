@@ -1,8 +1,8 @@
+from __future__ import annotations
+
 import random
 import threading
 from dataclasses import dataclass
-from typing import Dict, List, Optional
-
 
 @dataclass
 class Persona:
@@ -16,9 +16,9 @@ class Persona:
     has_children: bool = False
     satisfaction_tendency: float = 0.5  
 
-    def to_keyword_map(self) -> Dict[str, List[str]]:
+    def to_keyword_map(self) -> dict[str, list[str]]:
         
-        mapping: Dict[str, List[str]] = {}
+        mapping: dict[str, list[str]] = {}
         if self.gender:
             mapping["gender"] = (
                 ["男", "男性", "先生", "男生"]
@@ -103,10 +103,6 @@ class Persona:
         if not parts:
             return "一名普通用户"
         return "、".join(parts)
-
-
-
-
 
 def generate_persona() -> Persona:
     
@@ -200,21 +196,15 @@ def generate_persona() -> Persona:
 
     return p
 
-
-
-
 _thread_local = threading.local()
-
 
 def set_current_persona(persona: Persona) -> None:
     
     _thread_local.persona = persona
 
-
-def get_current_persona() -> Optional[Persona]:
+def get_current_persona() -> Persona | None:
     
     return getattr(_thread_local, "persona", None)
-
 
 def reset_persona() -> None:
     

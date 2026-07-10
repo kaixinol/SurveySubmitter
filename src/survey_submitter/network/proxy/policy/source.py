@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import logging
 import re
 import threading
 from dataclasses import dataclass
-from typing import Any, Optional, Set, Tuple
+from typing import Any
 
 from pydantic import ConfigDict, field_validator
 
@@ -20,12 +22,12 @@ from survey_submitter.providers.common import (
 _SUPPORTED_PROXY_SOURCES = frozenset({PROXY_SOURCE_CUSTOM})
 
 _config_lock = threading.Lock()
-_proxy_api_url_override: Optional[str] = None
-_proxy_area_code_override: Optional[str] = None
+_proxy_api_url_override: str | None = None
+_proxy_area_code_override: str | None = None
 _current_proxy_source: str = PROXY_SOURCE_CUSTOM
 _proxy_occupy_minute: int = 1
 
-_ORDINARY_POOL_PROVINCE_CODES: Set[str] = {
+_ORDINARY_POOL_PROVINCE_CODES: set[str] = {
     "110000", "120000", "130000", "140000", "150000", "210000", "220000",
     "230000", "320000", "330000", "340000", "350000", "360000", "370000",
     "410000", "420000", "430000", "440000", "460000", "500000", "510000",
@@ -37,7 +39,7 @@ class ProxySettings(BaseConfigModel):
     model_config = ConfigDict(frozen=True)
     source: str
     custom_api_url: str
-    area_code: Optional[str]
+    area_code: str | None
     default_area_code: str
     occupy_minute: int
 
@@ -50,7 +52,7 @@ class ProxySettings(BaseConfigModel):
 
     @field_validator("area_code", "default_area_code")
     @classmethod
-    def validate_area_code(cls, v: Optional[str]) -> Optional[str]:
+    def validate_area_code(cls, v: str | None) -> str | None:
         if v is not None and not re.match(r"^\d{6}$", v):
             raise ValueError(f"地区代码必须是6位数字: {v}")
         return v
@@ -65,7 +67,7 @@ class ProxySettings(BaseConfigModel):
 
 
 
-def normalize_proxy_source(source: Optional[str]) -> str:
+def normalize_proxy_source(source: str | None) -> str:
     try:
         cleaned = str(source or "").strip().lower()
     except Exception:
@@ -88,12 +90,12 @@ def get_proxy_source() -> str:
         return normalize_proxy_source(_current_proxy_source)
 
 
-def is_custom_proxy_source(source: Optional[str] = None) -> bool:
+def is_custom_proxy_source(source: str | None = None) -> bool:
     current = get_proxy_source() if source is None else normalize_proxy_source(source)
     return current == PROXY_SOURCE_CUSTOM
 
 
-def source_uses_custom_api_override(source: Optional[str] = None) -> bool:
+def source_uses_custom_api_override(source: str | None = None) -> bool:
     return is_custom_proxy_source(source)
 
 
@@ -121,7 +123,7 @@ def get_proxy_required_seconds_by_answer_seconds(total_seconds: int) -> int:
 def get_proxy_minute_by_answer_seconds(
     total_seconds: int,
     *,
-    survey_provider: Optional[str] = None,
+    survey_provider: str | None = None,
 ) -> int:
     normalized_provider = str(survey_provider or "").strip().lower()
     if normalized_provider == SURVEY_PROVIDER_WJX:
@@ -134,9 +136,9 @@ def get_proxy_minute_by_answer_seconds(
 
 
 def set_proxy_occupy_minute_by_answer_duration(
-    answer_duration_range_seconds: Optional[Tuple[int, int]],
+    answer_duration_range_seconds: tuple[int, int] | None,
     *,
-    survey_provider: Optional[str] = None,
+    survey_provider: str | None = None,
 ) -> int:
     global _proxy_occupy_minute
     min_seconds = max_seconds = 0
@@ -179,7 +181,7 @@ def get_proxy_occupy_minute() -> int:
 
 
 
-def _validate_proxy_api_url(api_url: Optional[str]) -> str:
+def _validate_proxy_api_url(api_url: str | None) -> str:
     try:
         cleaned = str(api_url or "").strip()
     except Exception:
@@ -191,7 +193,7 @@ def _validate_proxy_api_url(api_url: Optional[str]) -> str:
     return cleaned
 
 
-def _normalize_area_code(area_code: Optional[str]) -> str:
+def _normalize_area_code(area_code: str | None) -> str:
     try:
         cleaned = str(area_code or "").strip()
     except Exception:
@@ -205,7 +207,7 @@ def _is_province_level_area_code(area_code: str) -> bool:
     return bool(area_code) and len(area_code) == 6 and area_code.isdigit() and area_code.endswith("0000")
 
 
-def _resolve_default_pool_by_area(area_code: Optional[str]) -> Optional[str]:
+def _resolve_default_pool_by_area(area_code: str | None) -> str | None:
     normalized_area = _normalize_area_code(area_code)
     if not normalized_area:
         return None
@@ -235,12 +237,12 @@ def is_custom_proxy_api_active() -> bool:
     return is_custom_proxy_source()
 
 
-def get_proxy_area_code() -> Optional[str]:
+def get_proxy_area_code() -> str | None:
     with _config_lock:
         return _proxy_area_code_override
 
 
-def set_proxy_area_code(area_code: Optional[str]) -> Optional[str]:
+def set_proxy_area_code(area_code: str | None) -> str | None:
     global _proxy_area_code_override
     with _config_lock:
         if area_code is None:
@@ -250,7 +252,7 @@ def set_proxy_area_code(area_code: Optional[str]) -> Optional[str]:
         return _proxy_area_code_override
 
 
-def set_proxy_api_override(api_url: Optional[str]) -> str:
+def set_proxy_api_override(api_url: str | None) -> str:
     global _proxy_api_url_override
     cleaned = _validate_proxy_api_url(api_url)
     with _config_lock:
@@ -269,7 +271,7 @@ def get_proxy_settings() -> ProxySettings:
     )
 
 
-def apply_proxy_source_settings(source: str, *, custom_api_url: Optional[str] = None) -> ProxySettings:
+def apply_proxy_source_settings(source: str, *, custom_api_url: str | None = None) -> ProxySettings:
     
     normalized = normalize_proxy_source(source)
     if normalized == PROXY_SOURCE_CUSTOM:
@@ -280,13 +282,13 @@ def apply_proxy_source_settings(source: str, *, custom_api_url: Optional[str] = 
     return get_proxy_settings()
 
 
-def apply_proxy_area_code(area_code: Optional[str]) -> ProxySettings:
+def apply_proxy_area_code(area_code: str | None) -> ProxySettings:
     
     set_proxy_area_code(area_code)
     return get_proxy_settings()
 
 
-def apply_custom_proxy_api(custom_api_url: Optional[str]) -> ProxySettings:
+def apply_custom_proxy_api(custom_api_url: str | None) -> ProxySettings:
     
     set_proxy_api_override(custom_api_url if custom_api_url else None)
     return get_proxy_settings()

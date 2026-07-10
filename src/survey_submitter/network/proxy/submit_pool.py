@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import logging
 from collections import deque
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from typing import Iterable
 
 from survey_submitter.core.task import ExecutionState, ProxyLease
 from survey_submitter.network.proxy.pool import coerce_proxy_lease, mask_proxy_for_log
@@ -16,7 +18,7 @@ _BAD_PROXY_COOLDOWN_SECONDS = 180.0
 
 @dataclass(frozen=True)
 class SubmitProxyLease:
-    address: Optional[str]
+    address: str | None
     provider: str = "unknown"
 
 
@@ -82,8 +84,8 @@ def _cooldown_proxy_addresses_locked(ctx: ExecutionState) -> set[str]:
 def _purge_unusable_proxy_pool_locked(
     ctx: ExecutionState,
     *,
-    required_ttl: Optional[int] = None,
-    blocked_addresses: Optional[set[str]] = None,
+    required_ttl: int | None = None,
+    blocked_addresses: set[str] | None = None,
 ) -> set[str]:
     ctx._purge_expired_proxy_cooldowns_locked()
     required_ttl_seconds = _required_proxy_ttl_seconds(ctx) if required_ttl is None else int(required_ttl)
@@ -121,7 +123,7 @@ def _purge_unusable_proxy_pool_locked(
     return seen
 
 
-def _pop_available_proxy_lease_locked(ctx: ExecutionState) -> Optional[ProxyLease]:
+def _pop_available_proxy_lease_locked(ctx: ExecutionState) -> ProxyLease | None:
     required_ttl = _required_proxy_ttl_seconds(ctx)
     blocked_addresses = _blocked_proxy_addresses_locked(ctx)
     _purge_unusable_proxy_pool_locked(
@@ -152,7 +154,7 @@ def _merge_fetched_proxy_leases_locked(
     fetched: Iterable[object],
     *,
     select_first: bool,
-) -> Optional[ProxyLease]:
+) -> ProxyLease | None:
     required_ttl = _required_proxy_ttl_seconds(ctx)
     blocked_addresses = _blocked_proxy_addresses_locked(ctx)
     existing = _purge_unusable_proxy_pool_locked(
@@ -162,7 +164,7 @@ def _merge_fetched_proxy_leases_locked(
     )
     existing.update(blocked_addresses)
     pool = _ensure_proxy_pool_deque_locked(ctx)
-    selected: Optional[ProxyLease] = None
+    selected: ProxyLease | None = None
     changed = False
 
     for item in fetched or []:
@@ -193,7 +195,7 @@ def _merge_fetched_proxy_leases_locked(
     return selected
 
 
-def _mark_proxy_in_use(ctx: ExecutionState, thread_name: str, lease: Optional[ProxyLease]) -> Optional[str]:
+def _mark_proxy_in_use(ctx: ExecutionState, thread_name: str, lease: ProxyLease | None) -> str | None:
     if lease is None:
         return None
     if thread_name:

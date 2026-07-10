@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Any, List, Optional, Sequence
+from typing import Any, Sequence
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.ai.runtime import (
@@ -71,7 +71,7 @@ async def _build_wjx_choice_action(
     question: SurveyQuestionMeta,
     config_index: int,
     ctx: ExecutionState,
-    psycho_plan: Optional[Any],
+    psycho_plan: Any | None,
     thread_name: str,
     entry_type: QuestionType,
     prob_config_key: str,
@@ -79,7 +79,7 @@ async def _build_wjx_choice_action(
     kind: str,
     record_type: str,
     allow_ai_placeholder: bool = False,
-) -> Optional[AnswerAction]:
+) -> AnswerAction | None:
     """Shared logic for single-choice and dropdown builders."""
     config = ctx.config
     current = int(question.num or 0)
@@ -90,7 +90,7 @@ async def _build_wjx_choice_action(
         current,
         thread_name=thread_name,
     )
-    forced_index: Optional[int] = None
+    forced_index: int | None = None
     if reverse_fill_answer is not None and reverse_fill_answer.kind == REVERSE_FILL_KIND_CHOICE:
         forced_index = _valid_forced_choice_index(reverse_fill_answer.choice_index, option_count)
     if forced_index is None:
@@ -177,10 +177,10 @@ async def _build_wjx_single_action(
     config_index: int,
     ctx: ExecutionState,
     *,
-    psycho_plan: Optional[Any] = None,
+    psycho_plan: Any | None = None,
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
-) -> Optional[AnswerAction]:
+) -> AnswerAction | None:
     action = await _build_wjx_choice_action(
         question=question,
         config_index=config_index,
@@ -213,10 +213,10 @@ async def _build_wjx_dropdown_action(
     config_index: int,
     ctx: ExecutionState,
     *,
-    psycho_plan: Optional[Any],
+    psycho_plan: Any | None,
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
-) -> Optional[AnswerAction]:
+) -> AnswerAction | None:
     return await _build_wjx_choice_action(
         question=question,
         config_index=config_index,
@@ -239,7 +239,7 @@ async def _build_wjx_text_action(
     *,
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
-) -> Optional[AnswerAction]:
+) -> AnswerAction | None:
     config = ctx.config
     current = int(question.num or 0)
     blank_count = max(1, int(question.text_inputs or 0))
@@ -309,10 +309,10 @@ async def _build_wjx_score_like_action(
     config_index: int,
     ctx: ExecutionState,
     *,
-    psycho_plan: Optional[Any],
+    psycho_plan: Any | None,
     answer_type: str,
     thread_name: str = "",
-) -> Optional[AnswerAction]:
+) -> AnswerAction | None:
     config = ctx.config
     current = int(question.num or 0)
     option_texts = await _resolve_runtime_option_texts(question)
@@ -322,7 +322,7 @@ async def _build_wjx_score_like_action(
         current,
         thread_name=thread_name,
     )
-    forced_index: Optional[int] = None
+    forced_index: int | None = None
     if reverse_fill_answer is not None and reverse_fill_answer.kind == REVERSE_FILL_KIND_CHOICE:
         forced_index = _valid_forced_choice_index(reverse_fill_answer.choice_index, option_count)
     if forced_index is None:
@@ -366,7 +366,7 @@ async def _build_wjx_multiple_action(
     *,
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
-) -> Optional[AnswerAction]:
+) -> AnswerAction | None:
     config = ctx.config
     current = int(question.num or 0)
     option_texts = await _resolve_runtime_option_texts(question)
@@ -383,7 +383,7 @@ async def _build_wjx_multiple_action(
     required_indices = _normalize_selected_indices(sorted(must_select_indices or []), option_count)
     blocked_indices = _normalize_selected_indices(sorted(must_not_select_indices or []), option_count)
 
-    async def _finalize(selected_indices: Sequence[int]) -> Optional[AnswerAction]:
+    async def _finalize(selected_indices: Sequence[int]) -> AnswerAction | None:
         selected = _normalize_selected_indices(list(selected_indices), option_count)
         if not selected:
             return None
@@ -444,7 +444,7 @@ async def _build_wjx_multiple_action(
         sampled = random.sample(available_pool, extra_count) if extra_count > 0 else []
         return await _finalize(list(required_indices) + sampled)
 
-    sanitized_probabilities: List[float] = []
+    sanitized_probabilities: list[float] = []
     for raw_prob in selection_probabilities:
         try:
             prob_value = float(raw_prob)
@@ -493,7 +493,7 @@ async def _build_wjx_multiple_action(
     positive_indices = [idx for idx, prob in enumerate(sanitized_probabilities) if prob > 0]
     if not positive_indices and not required_indices:
         return None
-    selection_mask: List[int] = []
+    selection_mask: list[int] = []
     attempts = 0
     if positive_indices:
         while sum(selection_mask) == 0 and attempts < MAX_MULTIPLE_SELECTION_ATTEMPTS:
@@ -516,9 +516,9 @@ async def _build_wjx_matrix_action(
     config_index: int,
     ctx: ExecutionState,
     *,
-    psycho_plan: Optional[Any],
+    psycho_plan: Any | None,
     thread_name: str = "",
-) -> Optional[AnswerAction]:
+) -> AnswerAction | None:
     config = ctx.config
     current = int(question.num or 0)
     from survey_submitter.providers.contracts import MatrixQuestionMeta
@@ -535,14 +535,14 @@ async def _build_wjx_matrix_action(
         forced_indices = [int(item) for item in list(reverse_fill_answer.matrix_choice_indexes or []) if int(item) >= 0]
     strict_ratio_question = is_strict_ratio_question(ctx, current)
     selected_indices: list[int] = []
-    pending: list[tuple[int, int, Optional[int]]] = []
+    pending: list[tuple[int, int, int | None]] = []
     next_index = config_index
     for row_index in range(row_count):
         if row_index < len(forced_indices):
             selected_index = min(max(0, forced_indices[row_index]), option_count - 1)
         else:
             raw_probabilities = config.matrix_prob[next_index] if next_index < len(config.matrix_prob) else -1
-            strict_reference: Optional[List[float]] = None
+            strict_reference: list[float] | None = None
             row_probabilities: Any = -1
             if isinstance(raw_probabilities, list):
                 try:
@@ -599,7 +599,7 @@ async def _build_wjx_slider_action(
     question: SurveyQuestionMeta,
     config_index: int,
     ctx: ExecutionState,
-) -> Optional[AnswerAction]:
+) -> AnswerAction | None:
     target_value = 50.0
     if config_index < len(ctx.config.slider_targets):
         try:
@@ -632,7 +632,7 @@ async def _build_wjx_order_action(
 
 async def _build_wjx_location_action(
     question: SurveyQuestionMeta,
-) -> Optional[AnswerAction]:
+) -> AnswerAction | None:
     """Build an answer action for location-type questions (省市区 or 高校).
 
     For 省市区: generates a random ``省-市-区`` string (e.g. ``北京-北京市-海淀区``).
@@ -668,10 +668,10 @@ async def build_answer_action(
     question: SurveyQuestionMeta,
     ctx: ExecutionState,
     *,
-    psycho_plan: Optional[Any],
+    psycho_plan: Any | None,
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
-) -> Optional[AnswerAction]:
+) -> AnswerAction | None:
     config_entry = ctx.config.question_config_index_map.get(int(question.num or 0))
     if not config_entry:
         return None

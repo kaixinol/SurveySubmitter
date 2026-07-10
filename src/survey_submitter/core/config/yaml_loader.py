@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict
 
 from survey_submitter.core.config.codec import (
     normalize_runtime_config_payload,

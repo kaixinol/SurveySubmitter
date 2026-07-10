@@ -1,45 +1,37 @@
+from __future__ import annotations
+
 import logging
 import threading
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 from survey_submitter.core.persona.generator import get_current_persona
 from survey_submitter.core.questions.types import QuestionType
-
-
-
 
 @dataclass
 class AnsweredQuestion:
     
     question_num: int
     question_type: str          
-    selected_indices: List[int] = field(default_factory=list)   
-    selected_texts: List[str] = field(default_factory=list)     
+    selected_indices: list[int] = field(default_factory=list)   
+    selected_texts: list[str] = field(default_factory=list)     
     text_answer: str = ""       
-    row_answers: Dict[int, List[int]] = field(default_factory=dict)  
-
-
-
+    row_answers: dict[int, list[int]] = field(default_factory=dict)  
 
 _thread_local = threading.local()
 
-
 PERSONA_BOOST_FACTOR = 3.0
-
 
 def reset_context() -> None:
     
     _thread_local.answered = {}
 
-
 def record_answer(
     question_num: int,
     question_type: str,
-    selected_indices: Optional[List[int]] = None,
-    selected_texts: Optional[List[str]] = None,
+    selected_indices: list[int] | None = None,
+    selected_texts: list[str] | None = None,
     text_answer: str = "",
-    row_index: Optional[int] = None,
+    row_index: int | None = None,
 ) -> None:
     
     ctx = getattr(_thread_local, "answered", None)
@@ -63,18 +55,14 @@ def record_answer(
             text_answer=text_answer,
         )
 
-
-def get_answered() -> Dict[int, AnsweredQuestion]:
+def get_answered() -> dict[int, AnsweredQuestion]:
     
     return getattr(_thread_local, "answered", {})
 
-
-
-
 def apply_persona_boost(
-    option_texts: List[str],
-    base_weights: List[float],
-) -> List[float]:
+    option_texts: list[str],
+    base_weights: list[float],
+) -> list[float]:
     
     persona = get_current_persona()
     if persona is None:
@@ -85,7 +73,7 @@ def apply_persona_boost(
         return list(base_weights)
 
     
-    all_keywords: List[str] = []
+    all_keywords: list[str] = []
     for keywords in keyword_map.values():
         all_keywords.extend(keywords)
 
@@ -107,10 +95,9 @@ def apply_persona_boost(
                 break  
     return boosted
 
-
 def build_ai_context_prompt() -> str:
     
-    parts: List[str] = []
+    parts: list[str] = []
 
     
     persona = get_current_persona()
@@ -138,5 +125,4 @@ def build_ai_context_prompt() -> str:
                 parts.append("请保持与前面回答的一致性。")
 
     return "\n".join(parts)
-
 

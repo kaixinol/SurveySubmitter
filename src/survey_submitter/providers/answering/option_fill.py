@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Mapping, Sequence
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.questions.utils import (
@@ -24,7 +24,7 @@ def option_requires_fill(question: Any, option_index: int) -> bool:
     return False
 
 
-def default_missing_option_fill(question: Any, option_index: int, fill_value: Optional[str]) -> Optional[str]:
+def default_missing_option_fill(question: Any, option_index: int, fill_value: str | None) -> str | None:
     if str(fill_value or "").strip():
         return str(fill_value or "").strip()
     if option_requires_fill(question, option_index):
@@ -46,11 +46,11 @@ def option_fill_text_map(option_fill_texts: Sequence[tuple[int, str]] | None) ->
 
 
 def resolve_static_option_fill_text(
-    fill_entries: Optional[Sequence[Optional[str]]],
+    fill_entries: Sequence[str | None] | None,
     option_index: int,
     *,
     question: Any = None,
-) -> Optional[str]:
+) -> str | None:
     raw_value = get_fill_text_from_config(fill_entries, option_index)
     if raw_value is None:
         return default_missing_option_fill(question, option_index, None)

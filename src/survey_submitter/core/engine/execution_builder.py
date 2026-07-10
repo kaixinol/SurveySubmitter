@@ -11,7 +11,7 @@ from __future__ import annotations
 import copy
 import logging
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple, cast
+from typing import Any, cast
 
 from survey_submitter.core.config.answer_datetime_window import (
     answer_datetime_window_to_epoch_ms,
@@ -68,9 +68,9 @@ class PreparedExecutionArtifacts:
 
     execution_config_template: ExecutionConfig
     survey_provider: str
-    question_entries: List[Any]
-    questions_info: List[SurveyQuestionMeta]
-    reverse_fill_spec: Optional[ReverseFillSpec]
+    question_entries: list[Any]
+    questions_info: list[SurveyQuestionMeta]
+    reverse_fill_spec: ReverseFillSpec | None
 
 
 class RuntimePreparationError(Exception):
@@ -100,23 +100,23 @@ def _resolve_thread_limit(config: RuntimeConfig) -> int:
 
 def _resolve_survey_provider(config: RuntimeConfig) -> str:
     return normalize_survey_provider(
-        getattr(config, "survey_provider", None),
-        default=detect_survey_provider(getattr(config, "url", "")) or SURVEY_PROVIDER_WJX,
+        config.survey_provider,
+        default=detect_survey_provider(config.url) or SURVEY_PROVIDER_WJX,
     )
 
 
 def _resolve_survey_title(config: RuntimeConfig, fallback_title: str) -> str:
-    config_title = str(getattr(config, "survey_title", "") or "")
+    config_title = str(config.survey_title or "")
     return config_title or str(fallback_title or "")
 
 
-def _resolve_proxy_answer_duration(config: RuntimeConfig) -> Tuple[int, int]:
-    raw = getattr(config, "answer_duration", None) or (0, 0)
+def _resolve_proxy_answer_duration(config: RuntimeConfig) -> tuple[int, int]:
+    raw = config.answer_duration or (0, 0)
     return (int(raw[0]), int(raw[1]))
 
 
 def _resolve_answer_datetime_window(config: RuntimeConfig) -> tuple[str, str]:
-    return normalize_answer_datetime_window(getattr(config, "answer_datetime_window", ("", "")))
+    return normalize_answer_datetime_window(config.answer_datetime_window)
 
 
 def _validate_answer_datetime_window(config: RuntimeConfig, survey_provider: str) -> None:
@@ -133,7 +133,7 @@ def _validate_answer_datetime_window(config: RuntimeConfig, survey_provider: str
         raise RuntimePreparationError("见数作答时间窗格式无效，请重新选择日期时间")
     if end_dt <= start_dt:
         raise RuntimePreparationError("见数结束日期时间必须晚于开始日期时间")
-    max_duration_seconds = max(0, int((getattr(config, "answer_duration", (0, 0))[1])))
+    max_duration_seconds = max(0, int((config.answer_duration[1])))
     window_seconds = int((end_dt - start_dt).total_seconds())
     if window_seconds < max_duration_seconds:
         raise RuntimePreparationError("见数作答时间窗太窄，容不下当前最长作答时长")
@@ -142,7 +142,7 @@ def _validate_answer_datetime_window(config: RuntimeConfig, survey_provider: str
 def _verify_wjx_survey_is_answerable(config: RuntimeConfig, survey_provider: str) -> None:
     if survey_provider != SURVEY_PROVIDER_WJX:
         return
-    url = str(getattr(config, "url", "") or "").strip()
+    url = str(config.url or "").strip()
     if not url:
         return
     try:
@@ -162,7 +162,7 @@ def _verify_wjx_survey_is_answerable(config: RuntimeConfig, survey_provider: str
 
 
 def _build_questions_metadata(
-    questions_info: List[SurveyQuestionMeta],
+    questions_info: list[SurveyQuestionMeta],
 ) -> dict[int, SurveyQuestionMeta]:
     metadata: dict[int, SurveyQuestionMeta] = {}
     for item in questions_info:
@@ -176,7 +176,7 @@ def _build_questions_metadata(
 
 
 def _build_provider_question_metadata(
-    questions_info: List[SurveyQuestionMeta],
+    questions_info: list[SurveyQuestionMeta],
     *,
     survey_provider: str = "",
 ) -> dict[str, SurveyQuestionMeta]:
@@ -197,75 +197,68 @@ def _build_execution_config_template(
     *,
     survey_title: str,
     survey_provider: str,
-    reverse_fill_spec: Optional[ReverseFillSpec],
-    questions_info: List[SurveyQuestionMeta],
+    reverse_fill_spec: ReverseFillSpec | None,
+    questions_info: list[SurveyQuestionMeta],
 ) -> ExecutionConfig:
     try:
-        psycho_target_alpha = normalize_target_alpha(getattr(config, "psycho_target_alpha", None))
+        psycho_target_alpha = normalize_target_alpha(config.psycho_target_alpha)
     except Exception:
         psycho_target_alpha = normalize_target_alpha(None)
 
     thread_limit = _resolve_thread_limit(config)
-    requested_target_num = max(1, int(getattr(config, "target", 1) or 1))
-    requested_num_threads = max(1, int(getattr(config, "threads", 1) or 1))
+    requested_target_num = max(1, int(config.target or 1))
+    requested_num_threads = max(1, int(config.threads or 1))
     if reverse_fill_spec is not None:
-        requested_target_num = max(1, int(getattr(reverse_fill_spec, "target_num", 0) or 1))
+        requested_target_num = max(1, int(reverse_fill_spec.target_num or 1))
         requested_num_threads = max(
             1,
             int(
-                getattr(
-                    config,
-                    "reverse_fill_threads",
-                    getattr(config, "threads", 1),
-                )
+                config.reverse_fill_threads
+                or config.threads
                 or 1
             ),
         )
         requested_num_threads = min(requested_num_threads, requested_target_num)
 
     execution_config = ExecutionConfig(
-        url=str(getattr(config, "url", "") or ""),
+        url=str(config.url or ""),
         survey_title=survey_title,
         survey_provider=survey_provider,
         target_num=requested_target_num,
         num_threads=max(1, min(thread_limit, requested_num_threads)),
         fail_threshold=5,
         submit_interval_range_seconds=(
-            int(getattr(config, "submit_interval", (0, 0))[0]),
-            int(getattr(config, "submit_interval", (0, 0))[1]),
+            int(config.submit_interval[0]),
+            int(config.submit_interval[1]),
         ),
         answer_duration_range_seconds=(
-            int(getattr(config, "answer_duration", (0, 0))[0]),
-            int(getattr(config, "answer_duration", (0, 0))[1]),
+            int(config.answer_duration[0]),
+            int(config.answer_duration[1]),
         ),
         answer_datetime_window_ms=answer_datetime_window_to_epoch_ms(
-            getattr(config, "answer_datetime_window", ("", ""))
+            config.answer_datetime_window
         ),
-        random_proxy_ip_enabled=bool(getattr(config, "random_ip_enabled", False)),
-        proxy_source=str(getattr(config, "proxy_source", "custom") or "custom").strip().lower(),
+        random_proxy_ip_enabled=bool(config.random_ip_enabled),
+        proxy_source=str(config.proxy_source or "custom").strip().lower(),
         proxy_ip_pool=[],
-        random_user_agent_enabled=bool(getattr(config, "random_ua_enabled", False)),
+        random_user_agent_enabled=bool(config.random_ua_enabled),
         user_agent_ratios=copy.deepcopy(
             dict(
-                getattr(
-                    config,
-                    "random_ua_ratios",
-                    {"wechat": 33, "mobile": 33, "pc": 34},
-                )
+                config.random_ua_ratios
                 or {}
             )
         ),
-        pause_on_aliyun_captcha=bool(getattr(config, "pause_on_aliyun_captcha", True)),
-        stop_on_fail_enabled=bool(getattr(config, "fail_stop_enabled", True)),
-        answer_rules=copy.deepcopy(list(getattr(config, "answer_rules", []) or [])),
+        pause_on_aliyun_captcha=bool(config.pause_on_aliyun_captcha),
+        stop_on_fail_enabled=bool(config.fail_stop_enabled),
+        answer_rules=copy.deepcopy(list(config.answer_rules or [])),
         reverse_fill_spec=copy.deepcopy(reverse_fill_spec),
         psycho_target_alpha=psycho_target_alpha,
-        ai_system_prompt=str(getattr(config, "ai_system_prompt", "") or "").strip(),
+        ai_system_prompt=str(config.ai_system_prompt or "").strip(),
     )
     execution_config.questions_metadata = _build_questions_metadata(questions_info)
     execution_config.provider_question_metadata_map = _build_provider_question_metadata(
         questions_info,
-        survey_provider=str(getattr(config, "survey_provider", "") or ""),
+        survey_provider=str(config.survey_provider or ""),
     )
     return execution_config
 
@@ -284,7 +277,7 @@ def prepare_execution_artifacts(
     This is the GUI-agnostic equivalent of the former
     ``runtime_preparation.prepare_execution_artifacts``.
     """
-    question_entries = list(getattr(config, "question_entries", []) or [])
+    question_entries = list(config.question_entries or [])
     if not question_entries:
         raise RuntimePreparationError(
             '未配置任何题目，无法开始执行（请先在"题目配置"页添加/配置题目）',
@@ -302,10 +295,10 @@ def prepare_execution_artifacts(
         ) from exc
 
     questions_info = clone_questions_info(
-        getattr(config, "questions_info", []) or [],
+        config.questions_info or [],
         default_provider=survey_provider,
     )
-    questions_info_inputs = cast(List[SurveyQuestionMeta | dict[str, Any]], list(questions_info))
+    questions_info_inputs = cast(list[SurveyQuestionMeta | dict[str, Any]], list(questions_info))
 
     validation_error = validate_question_config(question_entries, questions_info_inputs)
     if validation_error:
@@ -345,7 +338,7 @@ def prepare_execution_artifacts(
         configure_probabilities(
             question_entries,
             ctx=execution_config,
-            reliability_mode_enabled=bool(getattr(config, "reliability_mode_enabled", True)),
+            reliability_mode_enabled=bool(config.reliability_mode_enabled),
         )
     except Exception as exc:
         raise RuntimePreparationError(str(exc), log_message=f"配置题目失败：{exc}") from exc

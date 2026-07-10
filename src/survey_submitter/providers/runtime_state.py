@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 import weakref
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Generic, Optional, TypeVar, cast
+from typing import Any, Callable, Generic, TypeVar, cast
 
 from survey_submitter.providers.common import SURVEY_PROVIDER_WJX, normalize_survey_provider
 
@@ -23,7 +23,7 @@ class ProviderRuntimeStateStore(Generic[StateT]):
         self._factory = factory
         self._lock = threading.RLock()
         self._states: "weakref.WeakKeyDictionary[object, StateT]" = weakref.WeakKeyDictionary()
-        self._fallback_states: Dict[int, StateT] = {}
+        self._fallback_states: dict[int, StateT] = {}
 
     @staticmethod
     def _driver_identity(driver: object) -> int:
@@ -58,7 +58,7 @@ class ProviderRuntimeStateStore(Generic[StateT]):
             self._fallback_states[identity] = state
             return state
 
-    def peek(self, driver: Any) -> Optional[StateT]:
+    def peek(self, driver: Any) -> StateT | None:
         if driver is None:
             return None
         key = cast(object, driver)
@@ -82,7 +82,7 @@ class ProviderRuntimeStateStore(Generic[StateT]):
             return len(self._states) + len(self._fallback_states)
 
 
-_STATE_STORES: Dict[str, ProviderRuntimeStateStore[Any]] = {}
+_STATE_STORES: dict[str, ProviderRuntimeStateStore[Any]] = {}
 _STATE_STORES_LOCK = threading.RLock()
 
 

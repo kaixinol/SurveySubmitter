@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import math
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any
 
 from survey_submitter.core.questions.reliability_mode import get_reliability_profile
 from survey_submitter.core.questions.utils import normalize_droplist_probs
@@ -19,26 +21,26 @@ _STANDARD_CORRECTION_PARAMS = (
 )
 
 
-def build_distribution_stat_key(question_index: int, row_index: Optional[int] = None) -> str:
+def build_distribution_stat_key(question_index: int, row_index: int | None = None) -> str:
     if row_index is None:
         return f"q:{int(question_index)}"
     return f"matrix:{int(question_index)}:{int(row_index)}"
 
 
 def _normalize_distribution_target(
-    probabilities: Union[List[float], int, float, None],
+    probabilities: list[float] | int | float | None,
     option_count: int,
-) -> List[float]:
+) -> list[float]:
     if option_count <= 0:
         return []
     return normalize_droplist_probs(probabilities, option_count)
 
 
 def _resolve_runtime_counts(
-    ctx: Optional[Any],
+    ctx: Any | None,
     stat_key: str,
     option_count: int,
-) -> Tuple[int, List[int]]:
+) -> tuple[int, list[int]]:
     if ctx is None or not hasattr(ctx, "snapshot_distribution_stats"):
         return (0, [0] * max(0, int(option_count or 0)))
     try:
@@ -48,7 +50,7 @@ def _resolve_runtime_counts(
     return (max(0, int(total or 0)), list(counts or []))
 
 
-def _has_active_runtime_dimension(ctx: Optional[Any], question_index: Optional[int]) -> bool:
+def _has_active_runtime_dimension(ctx: Any | None, question_index: int | None) -> bool:
     if ctx is None or question_index is None:
         return False
     try:
@@ -61,9 +63,9 @@ def _has_active_runtime_dimension(ctx: Optional[Any], question_index: Optional[i
 
 
 def _psycho_plan_covers_question(
-    psycho_plan: Optional[Any],
-    question_index: Optional[int],
-    row_index: Optional[int],
+    psycho_plan: Any | None,
+    question_index: int | None,
+    row_index: int | None,
 ) -> bool:
     if psycho_plan is None or question_index is None or not hasattr(psycho_plan, "get_choice"):
         return False
@@ -76,7 +78,7 @@ def _psycho_plan_covers_question(
 def _resolve_correction_params(
     *,
     use_priority_profile: bool,
-) -> Tuple[int, float, float, float, float]:
+) -> tuple[int, float, float, float, float]:
     if not use_priority_profile:
         return _STANDARD_CORRECTION_PARAMS
     profile = get_reliability_profile()
@@ -90,14 +92,14 @@ def _resolve_correction_params(
 
 
 def resolve_distribution_probabilities(
-    probabilities: Union[List[float], int, float, None],
+    probabilities: list[float] | int | float | None,
     option_count: int,
-    ctx: Optional[Any],
-    question_index: Optional[int],
+    ctx: Any | None,
+    question_index: int | None,
     *,
-    row_index: Optional[int] = None,
-    psycho_plan: Optional[Any] = None,
-) -> List[float]:
+    row_index: int | None = None,
+    psycho_plan: Any | None = None,
+) -> list[float]:
     target = _normalize_distribution_target(probabilities, option_count)
     if option_count <= 0 or not target or question_index is None or ctx is None:
         return target
@@ -118,7 +120,7 @@ def resolve_distribution_probabilities(
     if sample_factor <= 0.0:
         return target
 
-    adjusted: List[float] = []
+    adjusted: list[float] = []
     for idx, target_ratio in enumerate(target):
         if target_ratio <= 0.0:
             adjusted.append(0.0)
@@ -136,12 +138,12 @@ def resolve_distribution_probabilities(
 
 
 def record_pending_distribution_choice(
-    ctx: Optional[Any],
-    question_index: Optional[int],
+    ctx: Any | None,
+    question_index: int | None,
     option_index: int,
     option_count: int,
     *,
-    row_index: Optional[int] = None,
+    row_index: int | None = None,
 ) -> None:
     if ctx is None or question_index is None or option_count <= 0:
         return

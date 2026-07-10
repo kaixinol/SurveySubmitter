@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT, DIMENSION_UNGROUPED
 from survey_submitter.core.psychometrics import JOINT_PSYCHOMETRIC_SUPPORTED_TYPES
@@ -50,23 +50,23 @@ def _resolve_runtime_dimension(
     *,
     reliability_mode_enabled: bool,
     strict_ratio: bool,
-    allows_reliability: Optional[bool] = None,
-) -> Optional[str]:
+    allows_reliability: bool | None = None,
+) -> str | None:
     allows_joint_ratio = (
         bool(allows_reliability)
         if allows_reliability is not None
-        else str(getattr(entry, "question_type", "") or "").strip() in JOINT_PSYCHOMETRIC_SUPPORTED_TYPES
+        else entry.question_type.strip() in JOINT_PSYCHOMETRIC_SUPPORTED_TYPES
     )
     if not reliability_mode_enabled or (strict_ratio and not allows_joint_ratio):
         return None
-    raw_dimension = str(getattr(entry, "dimension", "") or "").strip()
+    raw_dimension = str(entry.dimension or "").strip()
     if not raw_dimension or raw_dimension == DIMENSION_UNGROUPED:
         return None
     return raw_dimension
 
 
 def configure_probabilities(
-    entries: List[QuestionEntry],
+    entries: list[QuestionEntry],
     ctx: "ExecutionConfig",
     reliability_mode_enabled: bool = True,
 ) -> None:
@@ -89,7 +89,7 @@ def configure_probabilities(
         )
 
     def _raise_if_all_zero_attached_selects(entry: QuestionEntry, question_num: int) -> None:
-        issues = find_all_zero_attached_selects(getattr(entry, "attached_option_selects", []) or [])
+        issues = find_all_zero_attached_selects(entry.attached_option_selects or [])
         if not issues:
             return
         cfg_idx, option_text = issues[0]
@@ -124,17 +124,17 @@ def configure_probabilities(
     target.question_strict_ratio_map = {}
     target.question_psycho_bias_map = {}
 
-    def _remember_provider_mapping(entry: QuestionEntry, mapped_value: Tuple[str, int]) -> None:
+    def _remember_provider_mapping(entry: QuestionEntry, mapped_value: tuple[str, int]) -> None:
         provider_key = make_provider_question_key(
-            getattr(entry, "survey_provider", None),
-            getattr(entry, "provider_page_id", None),
-            getattr(entry, "provider_question_id", None),
+            entry.survey_provider,
+            entry.provider_page_id,
+            entry.provider_question_id,
         )
         if provider_key:
             target.provider_question_config_index_map[provider_key] = mapped_value
 
     idx_single = idx_dropdown = idx_multiple = idx_matrix = idx_scale = idx_slider = idx_text = 0
-    reliability_candidates: List[Tuple[int, bool, str]] = []
+    reliability_candidates: list[tuple[int, bool, str]] = []
 
     for idx, entry in enumerate(entries, start=1):
         question_num = entry.question_num if entry.question_num is not None else idx
@@ -143,14 +143,14 @@ def configure_probabilities(
             entry.option_count = inferred_count
         probs = _resolve_prob_config(
             entry.probabilities,
-            getattr(entry, "custom_weights", None),
-            prefer_custom=(getattr(entry, "distribution_mode", None) == "custom"),
+            entry.custom_weights,
+            prefer_custom=(entry.distribution_mode == "custom"),
         )
         _raise_if_all_zero_attached_selects(entry, question_num)
         strict_ratio = is_strict_custom_ratio_mode(
-            getattr(entry, "distribution_mode", None),
+            entry.distribution_mode,
             probs,
-            getattr(entry, "custom_weights", None),
+            entry.custom_weights,
         )
         target.question_strict_ratio_map[question_num] = strict_ratio
 
@@ -171,12 +171,12 @@ def configure_probabilities(
                     strict_ratio=strict_ratio,
                     allows_reliability=True,
                 )
-                target.question_psycho_bias_map[question_num] = str(getattr(entry, "psycho_bias", "custom") or "custom")
+                target.question_psycho_bias_map[question_num] = str(entry.psycho_bias or "custom")
                 reliability_candidates.append((question_num, strict_ratio, entry.question_type))
             idx_single += 1
             target.single_prob.append(_normalize_single_like_prob_config(probs, entry.option_count))
             target.single_option_fill_texts.append(_normalize_option_fill_texts(entry.option_fill_texts, entry.option_count))
-            target.single_attached_option_selects.append(copy.deepcopy(getattr(entry, "attached_option_selects", []) or []))
+            target.single_attached_option_selects.append(copy.deepcopy(entry.attached_option_selects or []))
         elif entry.question_type == QuestionType.DROPDOWN:
             _raise_if_all_zero_single_like(probs, question_num, "dropdown")
             mapped_value = ("dropdown", idx_dropdown)
@@ -187,7 +187,7 @@ def configure_probabilities(
                 reliability_mode_enabled=reliability_mode_enabled,
                 strict_ratio=strict_ratio,
             )
-            target.question_psycho_bias_map[question_num] = str(getattr(entry, "psycho_bias", "custom") or "custom")
+            target.question_psycho_bias_map[question_num] = str(entry.psycho_bias or "custom")
             reliability_candidates.append((question_num, strict_ratio, entry.question_type))
             idx_dropdown += 1
             target.droplist_prob.append(_normalize_single_like_prob_config(probs, entry.option_count))
@@ -212,16 +212,16 @@ def configure_probabilities(
                 reliability_mode_enabled=reliability_mode_enabled,
                 strict_ratio=strict_ratio,
             )
-            bias_value = getattr(entry, "psycho_bias", "custom")
+            bias_value = entry.psycho_bias
             target.question_psycho_bias_map[question_num] = list(bias_value) if isinstance(bias_value, list) else str(bias_value or "custom")
             reliability_candidates.append((question_num, strict_ratio, entry.question_type))
             idx_matrix += rows
             option_count = max(1, _infer_option_count(entry))
 
-            def _normalize_row(raw_row: Any) -> Optional[List[float]]:
+            def _normalize_row(raw_row: Any) -> list[float] | None:
                 if not isinstance(raw_row, (list, tuple)):
                     return None
-                cleaned: List[float] = []
+                cleaned: list[float] = []
                 for value in raw_row:
                     try:
                         cleaned.append(max(0.0, float(value)))
@@ -238,14 +238,14 @@ def configure_probabilities(
                 except Exception:
                     return None
 
-            row_weights_source: Optional[List[Any]] = None
+            row_weights_source: list[Any] | None = None
             if isinstance(probs, list) and any(isinstance(item, (list, tuple)) for item in probs):
                 row_weights_source = probs
             elif isinstance(entry.custom_weights, list) and any(isinstance(item, (list, tuple)) for item in entry.custom_weights):
                 row_weights_source = entry.custom_weights
 
             if row_weights_source is not None:
-                last_row: Optional[Any] = None
+                last_row: Any | None = None
                 for row_idx in range(rows):
                     raw_row = row_weights_source[row_idx] if row_idx < len(row_weights_source) else last_row
                     normalized_row = _normalize_row(raw_row)
@@ -272,7 +272,7 @@ def configure_probabilities(
                 reliability_mode_enabled=reliability_mode_enabled,
                 strict_ratio=strict_ratio,
             )
-            target.question_psycho_bias_map[question_num] = str(getattr(entry, "psycho_bias", "custom") or "custom")
+            target.question_psycho_bias_map[question_num] = str(entry.psycho_bias or "custom")
             reliability_candidates.append((question_num, strict_ratio, entry.question_type))
             idx_scale += 1
             target.scale_prob.append(_normalize_single_like_prob_config(probs, entry.option_count))
@@ -281,11 +281,11 @@ def configure_probabilities(
             target.question_config_index_map[question_num] = mapped_value
             _remember_provider_mapping(entry, mapped_value)
             idx_slider += 1
-            mode = str(getattr(entry, "distribution_mode", "") or "").strip().lower()
+            mode = str(entry.distribution_mode or "").strip().lower()
             if mode == "random":
                 target.slider_targets.append(float("nan"))
                 continue
-            target_value: Optional[float] = None
+            target_value: float | None = None
             if isinstance(entry.custom_weights, (list, tuple)) and entry.custom_weights:
                 try:
                     first = entry.custom_weights[0]
@@ -311,10 +311,10 @@ def configure_probabilities(
             _remember_provider_mapping(entry, mapped_value)
             target.location_parts[question_num] = [
                 str(item or "").strip()
-                for item in list(getattr(entry, "location_parts", []) or [])[:3]
+                for item in list(entry.location_parts or [])[:3]
             ]
         elif entry.question_type in TEXT_TYPES:
-            if not getattr(entry, "is_location", False):
+            if not entry.is_location:
                 mapped_value = ("text", idx_text)
                 target.question_config_index_map[question_num] = mapped_value
                 _remember_provider_mapping(entry, mapped_value)
@@ -325,29 +325,29 @@ def configure_probabilities(
                 _remember_provider_mapping(entry, mapped_value)
                 target.location_parts[question_num] = [
                     str(item or "").strip()
-                    for item in list(getattr(entry, "location_parts", []) or [])[:3]
+                    for item in list(entry.location_parts or [])[:3]
                 ]
-            text_random_mode = str(getattr(entry, "text_random_mode", _TEXT_RANDOM_NONE) or _TEXT_RANDOM_NONE).strip().lower()
+            text_random_mode = str(entry.text_random_mode or _TEXT_RANDOM_NONE).strip().lower()
             normalized_values = [str(item).strip() for item in (entry.texts or []) if str(item).strip()]
-            normalized_blank_ai_flags: List[bool] = []
-            normalized_blank_int_ranges: List[List[int]] = []
+            normalized_blank_ai_flags: list[bool] = []
+            normalized_blank_int_ranges: list[list[int]] = []
             if entry.question_type == QuestionType.MULTI_TEXT:
-                raw_blank_ai_flags = getattr(entry, "multi_text_blank_ai_flags", []) or []
+                raw_blank_ai_flags = entry.multi_text_blank_ai_flags or []
                 if isinstance(raw_blank_ai_flags, list):
                     normalized_blank_ai_flags = [bool(flag) for flag in raw_blank_ai_flags]
-                raw_blank_int_ranges = getattr(entry, "multi_text_blank_int_ranges", []) or []
+                raw_blank_int_ranges = entry.multi_text_blank_int_ranges or []
                 if isinstance(raw_blank_int_ranges, list):
                     normalized_blank_int_ranges = [serialize_random_int_range(item) for item in raw_blank_int_ranges]
-                for blank_idx, mode in enumerate(getattr(entry, "multi_text_blank_modes", []) or []):
+                for blank_idx, mode in enumerate(entry.multi_text_blank_modes or []):
                     if str(mode or _TEXT_RANDOM_NONE).strip().lower() != _TEXT_RANDOM_INTEGER:
                         continue
                     target_range = raw_blank_int_ranges[blank_idx] if blank_idx < len(raw_blank_int_ranges) else []
                     if try_parse_random_int_range(target_range) is None:
                         raise ValueError(f"多项填空题第{blank_idx + 1}个空位的随机整数范围未设置完整")
             if entry.question_type == QuestionType.TEXT:
-                ai_enabled = bool(getattr(entry, "ai_enabled", False))
+                ai_enabled = bool(entry.ai_enabled)
             elif entry.question_type == QuestionType.MULTI_TEXT:
-                ai_enabled = bool(getattr(entry, "ai_enabled", False)) or (
+                ai_enabled = bool(entry.ai_enabled) or (
                     bool(normalized_blank_ai_flags) and all(normalized_blank_ai_flags)
                 )
             else:
@@ -361,7 +361,7 @@ def configure_probabilities(
                 elif text_random_mode == _TEXT_RANDOM_ID_CARD:
                     normalized_values = [_TEXT_RANDOM_ID_CARD_TOKEN]
                 else:
-                    text_random_range = serialize_random_int_range(getattr(entry, "text_random_int_range", []))
+                    text_random_range = serialize_random_int_range(entry.text_random_int_range)
                     if len(text_random_range) != 2:
                         raise ValueError("填空题随机整数范围未设置完整")
                     normalized_values = [build_random_int_token(*text_random_range)]
@@ -378,8 +378,8 @@ def configure_probabilities(
             target.texts_prob.append(normalized)
             target.text_entry_types.append(entry.question_type)
             target.text_ai_flags.append(ai_enabled)
-            target.text_titles.append(str(getattr(entry, "question_title", "") or ""))
-            target.multi_text_blank_modes.append(getattr(entry, "multi_text_blank_modes", []))
+            target.text_titles.append(str(entry.question_title or ""))
+            target.multi_text_blank_modes.append(entry.multi_text_blank_modes)
             target.multi_text_blank_ai_flags.append(normalized_blank_ai_flags)
             target.multi_text_blank_int_ranges.append(normalized_blank_int_ranges)
 

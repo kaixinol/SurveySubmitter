@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import asyncio
-from typing import Any, Awaitable, Callable, Dict, Iterable, TypeVar
+from typing import Any, Awaitable, Callable, Iterable, TypeVar
 from urllib.parse import urlsplit, urlunsplit
 
 import survey_submitter.network.http as http_client
@@ -108,7 +108,7 @@ def _extract_text_parts(content: Any) -> Iterable[str]:
             yield text
 
 
-def _extract_chat_completion_text(data: Dict[str, Any]) -> str:
+def _extract_chat_completion_text(data: dict[str, Any]) -> str:
     choices = data.get("choices")
     if not isinstance(choices, list) or not choices:
         raise RuntimeError("API 返回中缺少 choices")
@@ -121,7 +121,7 @@ def _extract_chat_completion_text(data: Dict[str, Any]) -> str:
     raise RuntimeError("API 返回内容为空")
 
 
-def _extract_responses_text(data: Dict[str, Any]) -> str:
+def _extract_responses_text(data: dict[str, Any]) -> str:
     top_level_text = str(data.get("output_text") or "").strip()
     if top_level_text:
         return top_level_text
@@ -138,7 +138,7 @@ def _extract_responses_text(data: Dict[str, Any]) -> str:
     raise RuntimeError("Responses API 返回内容为空")
 
 
-def _extract_json_dict(response: Any) -> Dict[str, Any]:
+def _extract_json_dict(response: Any) -> dict[str, Any]:
     try:
         payload = response.json()
     except Exception:

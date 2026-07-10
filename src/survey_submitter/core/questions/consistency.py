@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import threading
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Sequence
 
 from survey_submitter.core.persona.context import get_answered
 from survey_submitter.core.questions.types import TypeCode
@@ -20,12 +20,12 @@ class AnswerRule:
     id: str
     condition_question_num: int
     condition_mode: str
-    condition_option_indices: List[int]
+    condition_option_indices: list[int]
     target_question_num: int
     action_mode: str
-    target_option_indices: List[int]
-    condition_row_index: Optional[int] = None  
-    target_row_index: Optional[int] = None     
+    target_option_indices: list[int]
+    condition_row_index: int | None = None  
+    target_row_index: int | None = None     
 
 
 def _to_int(value: Any, default: int = 0) -> int:
@@ -35,10 +35,10 @@ def _to_int(value: Any, default: int = 0) -> int:
         return int(default)
 
 
-def _to_int_list(values: Any) -> List[int]:
+def _to_int_list(values: Any) -> list[int]:
     if not isinstance(values, list):
         return []
-    result: List[int] = []
+    result: list[int] = []
     seen = set()
     for item in values:
         idx = _to_int(item, -1)
@@ -64,8 +64,8 @@ def question_supports_answer_rule(question: Any) -> bool:
     return type_code in _SUPPORTED_RULE_TYPE_CODES
 
 
-def _build_question_info_map(questions_info: Optional[Sequence[SurveyQuestionMeta | Dict[str, Any]]]) -> Dict[int, SurveyQuestionMeta]:
-    question_map: Dict[int, SurveyQuestionMeta] = {}
+def _build_question_info_map(questions_info: Sequence[SurveyQuestionMeta | dict[str, Any]] | None) -> dict[int, SurveyQuestionMeta]:
+    question_map: dict[int, SurveyQuestionMeta] = {}
     for item in questions_info or []:
         if not isinstance(item, (dict, SurveyQuestionMeta)):
             continue
@@ -78,12 +78,12 @@ def _build_question_info_map(questions_info: Optional[Sequence[SurveyQuestionMet
 
 
 def sanitize_answer_rules(
-    answer_rules: Optional[Sequence[Dict[str, Any]]],
-    questions_info: Optional[Sequence[SurveyQuestionMeta | Dict[str, Any]]] = None,
-) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
+    answer_rules: Sequence[dict[str, Any]] | None,
+    questions_info: Sequence[SurveyQuestionMeta | dict[str, Any]] | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
     
     stats = {"invalid": 0, "unsupported": 0}
-    sanitized: List[Dict[str, Any]] = []
+    sanitized: list[dict[str, Any]] = []
     question_map = _build_question_info_map(questions_info)
     has_question_info = bool(question_map)
 
@@ -105,7 +105,7 @@ def sanitize_answer_rules(
     return sanitized, stats
 
 
-def normalize_rule_dict(raw: Any) -> Optional[Dict[str, Any]]:
+def normalize_rule_dict(raw: Any) -> dict[str, Any] | None:
     if not isinstance(raw, dict):
         return None
     condition_question_num = _to_int(raw.get("condition_question_num"), -1)
@@ -123,8 +123,8 @@ def normalize_rule_dict(raw: Any) -> Optional[Dict[str, Any]]:
     if not condition_option_indices or not target_option_indices:
         return None
     
-    condition_row_index: Optional[int] = None
-    target_row_index: Optional[int] = None
+    condition_row_index: int | None = None
+    target_row_index: int | None = None
     raw_cri = raw.get("condition_row_index")
     if raw_cri is not None:
         cri = _to_int(raw_cri, -1)
@@ -138,7 +138,7 @@ def normalize_rule_dict(raw: Any) -> Optional[Dict[str, Any]]:
     rule_id = str(raw.get("id") or "").strip() or (
         f"rule-{condition_question_num}-{target_question_num}-{len(condition_option_indices)}-{len(target_option_indices)}"
     )
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "id": rule_id,
         "condition_question_num": condition_question_num,
         "condition_mode": condition_mode,
@@ -154,7 +154,7 @@ def normalize_rule_dict(raw: Any) -> Optional[Dict[str, Any]]:
     return result
 
 
-def _normalize_rule(raw: Any) -> Optional[AnswerRule]:
+def _normalize_rule(raw: Any) -> AnswerRule | None:
     normalized = normalize_rule_dict(raw)
     if not normalized:
         return None
@@ -172,11 +172,11 @@ def _normalize_rule(raw: Any) -> Optional[AnswerRule]:
 
 
 def reset_consistency_context(
-    answer_rules: Optional[Sequence[Dict[str, Any]]] = None,
-    questions_info: Optional[Sequence[SurveyQuestionMeta | Dict[str, Any]]] = None,
+    answer_rules: Sequence[dict[str, Any]] | None = None,
+    questions_info: Sequence[SurveyQuestionMeta | dict[str, Any]] | None = None,
 ) -> None:
     
-    parsed_rules: List[AnswerRule] = []
+    parsed_rules: list[AnswerRule] = []
     sanitized_rules, _ = sanitize_answer_rules(answer_rules, questions_info)
     for item in sanitized_rules:
         normalized = _normalize_rule(item)
@@ -185,15 +185,15 @@ def reset_consistency_context(
     _thread_local.answer_rules = parsed_rules
 
 
-def _get_answer_rules() -> List[AnswerRule]:
+def _get_answer_rules() -> list[AnswerRule]:
     rules = getattr(_thread_local, "answer_rules", None)
     if not rules:
         return []
     return list(rules)
 
 
-def _sanitize_probabilities(probabilities: Sequence[float]) -> List[float]:
-    result: List[float] = []
+def _sanitize_probabilities(probabilities: Sequence[float]) -> list[float]:
+    result: list[float] = []
     for value in probabilities:
         try:
             weight = float(value)
@@ -229,8 +229,8 @@ def _is_rule_triggered(rule: AnswerRule) -> bool:
     return False
 
 
-def _pick_latest_triggered_rule(question_number: int, row_index: Optional[int] = None) -> Optional[AnswerRule]:
-    selected_rule: Optional[AnswerRule] = None
+def _pick_latest_triggered_rule(question_number: int, row_index: int | None = None) -> AnswerRule | None:
+    selected_rule: AnswerRule | None = None
     for rule in _get_answer_rules():
         if rule.target_question_num != question_number:
             continue
@@ -242,14 +242,14 @@ def _pick_latest_triggered_rule(question_number: int, row_index: Optional[int] =
     return selected_rule
 
 
-def _resolve_valid_rule_indices(rule: AnswerRule, option_count: int) -> Set[int]:
+def _resolve_valid_rule_indices(rule: AnswerRule, option_count: int) -> set[int]:
     return {idx for idx in rule.target_option_indices if 0 <= idx < option_count}
 
 
 def _apply_rule(
-    base_probabilities: List[float],
+    base_probabilities: list[float],
     rule: AnswerRule,
-) -> List[float]:
+) -> list[float]:
     if not base_probabilities:
         return []
     valid_indices = _resolve_valid_rule_indices(rule, len(base_probabilities))
@@ -285,7 +285,7 @@ def _apply_rule(
 def apply_single_like_consistency(
     probabilities: Sequence[float],
     question_number: int,
-) -> List[float]:
+) -> list[float]:
     
     base_probabilities = _sanitize_probabilities(probabilities)
     rule = _pick_latest_triggered_rule(question_number, row_index=None)
@@ -298,7 +298,7 @@ def apply_matrix_row_consistency(
     probabilities: Sequence[float],
     question_number: int,
     row_index: int,
-) -> List[float]:
+) -> list[float]:
     
     base_probabilities = _sanitize_probabilities(probabilities)
     rule = _pick_latest_triggered_rule(question_number, row_index=row_index)
@@ -310,7 +310,7 @@ def apply_matrix_row_consistency(
 def get_multiple_rule_constraint(
     question_number: int,
     option_count: int,
-) -> Tuple[Set[int], Set[int], Optional[str]]:
+) -> tuple[set[int], set[int], str | None]:
     
     rule = _pick_latest_triggered_rule(question_number, row_index=None)
     if rule is None:

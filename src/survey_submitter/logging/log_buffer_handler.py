@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import logging
 import queue
 import re
 import threading
 from collections import deque
 from dataclasses import dataclass
-from typing import Callable, Deque, List, Optional
+from typing import Callable
 
 from survey_submitter.constants import LOG_BUFFER_CAPACITY, LOG_FORMAT
 from survey_submitter.logging.log_utils import _safe_internal_log, _should_filter_noise
@@ -30,7 +32,7 @@ class LogBufferHandler(logging.Handler):
         self._queue: queue.Queue = queue.Queue(maxsize=max(1000, int(capacity or 0) * 4))
 
         
-        self._records: Deque[LogBufferEntry] = deque(maxlen=capacity if capacity else None)
+        self._records: deque[LogBufferEntry] = deque(maxlen=capacity if capacity else None)
         self._records_lock = threading.RLock()
 
         
@@ -40,7 +42,7 @@ class LogBufferHandler(logging.Handler):
         self._listeners_lock = threading.Lock()
 
         
-        self._worker_thread: Optional[threading.Thread] = None
+        self._worker_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
 
         self.setFormatter(logging.Formatter(LOG_FORMAT, datefmt="%Y-%m-%d %H:%M:%S"))
@@ -138,7 +140,7 @@ class LogBufferHandler(logging.Handler):
         except Exception:
             self.handleError(record)
 
-    def get_records(self, _try_lock: bool = False) -> List[LogBufferEntry]:
+    def get_records(self, _try_lock: bool = False) -> list[LogBufferEntry]:
         
         with self._records_lock:
             return list(self._records)
@@ -279,7 +281,7 @@ class LogBufferHandler(logging.Handler):
         return message
 
     @staticmethod
-    def _collapse_adjacent_label(message: str, original_label: str, target_label: str) -> Optional[str]:
+    def _collapse_adjacent_label(message: str, original_label: str, target_label: str) -> str | None:
         if not message or not original_label or not target_label:
             return None
         index = message.find(original_label)

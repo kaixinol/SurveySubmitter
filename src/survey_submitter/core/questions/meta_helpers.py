@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, Tuple
+from typing import Any, Mapping
 
 from survey_submitter.core.questions.types import QuestionType, TypeCode
 from survey_submitter.providers.contracts import (
@@ -40,11 +40,11 @@ def count_positive_weights(raw_weights: Any) -> int:
     return count
 
 
-def find_all_zero_matrix_rows(raw_weights: Any) -> List[int]:
+def find_all_zero_matrix_rows(raw_weights: Any) -> list[int]:
     if not isinstance(raw_weights, list) or not raw_weights:
         return []
     if any(isinstance(item, (list, tuple)) for item in raw_weights):
-        invalid_rows: List[int] = []
+        invalid_rows: list[int] = []
         for row_index, row_weights in enumerate(raw_weights, start=1):
             if isinstance(row_weights, (list, tuple)) and row_weights and count_positive_weights(row_weights) <= 0:
                 invalid_rows.append(row_index)
@@ -52,8 +52,8 @@ def find_all_zero_matrix_rows(raw_weights: Any) -> List[int]:
     return [0] if count_positive_weights(raw_weights) <= 0 else []
 
 
-def find_all_zero_attached_selects(attached_configs: Any) -> List[Tuple[int, str]]:
-    issues: List[Tuple[int, str]] = []
+def find_all_zero_attached_selects(attached_configs: Any) -> list[tuple[int, str]]:
+    issues: list[tuple[int, str]] = []
     for cfg_idx, cfg in enumerate(list(attached_configs or []), start=1):
         if not isinstance(cfg, dict):
             continue
@@ -115,9 +115,9 @@ def infer_question_entry_type(question: QuestionMetaLike) -> str:
 def normalize_attached_option_selects(
     parsed_configs: Any,
     existing_configs: Any = None,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     parsed_list = parsed_configs if isinstance(parsed_configs, list) else []
-    existing_map: Dict[int, Dict[str, Any]] = {}
+    existing_map: dict[int, dict[str, Any]] = {}
     if isinstance(existing_configs, list):
         for item in existing_configs:
             if not isinstance(item, dict):
@@ -130,7 +130,7 @@ def normalize_attached_option_selects(
             except Exception:
                 continue
             existing_map[option_index] = item
-    normalized: List[Dict[str, Any]] = []
+    normalized: list[dict[str, Any]] = []
     for item in parsed_list:
         if not isinstance(item, dict):
             continue
@@ -177,12 +177,12 @@ def normalize_fillable_option_indices(
     parsed_indices: Any,
     option_count: int,
     existing_indices: Any = None,
-) -> List[int]:
+) -> list[int]:
     source = parsed_indices if isinstance(parsed_indices, list) else existing_indices
     if not isinstance(source, list):
         return []
     total = max(0, int(option_count or 0))
-    normalized: List[int] = []
+    normalized: list[int] = []
     seen: set[int] = set()
     for raw in source:
         try:

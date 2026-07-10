@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from datetime import datetime, timezone
 import logging
 import time
 from urllib.parse import urlsplit
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 import survey_submitter.network.http as http_client
 from survey_submitter.core.task import ProxyLease
@@ -25,7 +27,7 @@ HTTP_PROXY_MIN_REMAINING_TTL_SECONDS = 50
 
 
 
-def _normalize_proxy_address(proxy_address: Optional[str]) -> Optional[str]:
+def _normalize_proxy_address(proxy_address: str | None) -> str | None:
     if not proxy_address:
         return None
     normalized = proxy_address.strip()
@@ -36,7 +38,7 @@ def _normalize_proxy_address(proxy_address: Optional[str]) -> Optional[str]:
     return normalized
 
 
-def _format_host_port(hostname: str, port: Optional[int]) -> str:
+def _format_host_port(hostname: str, port: int | None) -> str:
     if not hostname:
         return ""
     if port is None:
@@ -46,7 +48,7 @@ def _format_host_port(hostname: str, port: Optional[int]) -> str:
     return f"{hostname}:{port}"
 
 
-def _mask_proxy_for_log(proxy_address: Optional[str]) -> str:
+def _mask_proxy_for_log(proxy_address: str | None) -> str:
     if not proxy_address:
         return ""
     text = str(proxy_address).strip()
@@ -71,7 +73,7 @@ def _mask_proxy_for_log(proxy_address: Optional[str]) -> str:
 
 
 
-def _parse_expire_at_to_ts(expire_at: Optional[str]) -> float:
+def _parse_expire_at_to_ts(expire_at: str | None) -> float:
     text = str(expire_at or "").strip()
     if not text:
         return 0.0
@@ -86,12 +88,12 @@ def _parse_expire_at_to_ts(expire_at: Optional[str]) -> float:
 
 
 def _build_proxy_lease(
-    proxy_address: Optional[str],
+    proxy_address: str | None,
     *,
-    expire_at: Optional[str] = None,
+    expire_at: str | None = None,
     poolable: bool = True,
     source: str = "",
-) -> Optional[ProxyLease]:
+) -> ProxyLease | None:
     normalized = _normalize_proxy_address(proxy_address)
     if not normalized:
         return None
@@ -105,7 +107,7 @@ def _build_proxy_lease(
     )
 
 
-def _coerce_proxy_lease(item: Any, *, source: str = "") -> Optional[ProxyLease]:
+def _coerce_proxy_lease(item: Any, *, source: str = "") -> ProxyLease | None:
     if isinstance(item, ProxyLease):
         normalized = _normalize_proxy_address(item.address)
         if not normalized:
@@ -135,9 +137,9 @@ def _coerce_proxy_lease(item: Any, *, source: str = "") -> Optional[ProxyLease]:
 
 
 def get_proxy_required_ttl_seconds(
-    answer_duration_range_seconds: Optional[Tuple[int, int]],
+    answer_duration_range_seconds: tuple[int, int] | None,
     *,
-    survey_provider: Optional[str] = None,
+    survey_provider: str | None = None,
 ) -> int:
     max_seconds = 0
     if isinstance(answer_duration_range_seconds, (list, tuple)):
@@ -159,7 +161,7 @@ def get_proxy_required_ttl_seconds(
     return max(0, int(max_seconds)) + PROXY_TTL_GRACE_SECONDS
 
 
-def proxy_lease_has_sufficient_ttl(lease: Optional[ProxyLease], *, required_ttl_seconds: int) -> bool:
+def proxy_lease_has_sufficient_ttl(lease: ProxyLease | None, *, required_ttl_seconds: int) -> bool:
     if lease is None:
         return False
     expire_ts = float(getattr(lease, "expire_ts", 0.0) or 0.0)
@@ -211,17 +213,17 @@ async def _proxy_is_responsive_async(proxy_address: str) -> bool:
     return True
 
 
-def normalize_proxy_address(proxy_address: Optional[str]) -> Optional[str]:
+def normalize_proxy_address(proxy_address: str | None) -> str | None:
     
     return _normalize_proxy_address(proxy_address)
 
 
-def mask_proxy_for_log(proxy_address: Optional[str]) -> str:
+def mask_proxy_for_log(proxy_address: str | None) -> str:
     
     return _mask_proxy_for_log(proxy_address)
 
 
-def coerce_proxy_lease(item: Any, *, source: str = "") -> Optional[ProxyLease]:
+def coerce_proxy_lease(item: Any, *, source: str = "") -> ProxyLease | None:
     
     return _coerce_proxy_lease(item, source=source)
 

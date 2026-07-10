@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Iterable, List, Optional
+from typing import Iterable
 
 
 @dataclass(frozen=True)
 class OrdinalOptionMapping:
-    score_by_choice_index: List[int]
+    score_by_choice_index: list[int]
 
     @property
     def option_count(self) -> int:
@@ -85,8 +85,8 @@ def _normalize_option_text(value: object) -> str:
     return re.sub(r"\s+", "", text)
 
 
-def _parse_numeric_options(texts: List[str]) -> Optional[List[int]]:
-    values: List[int] = []
+def _parse_numeric_options(texts: list[str]) -> list[int] | None:
+    values: list[int] = []
     for text in texts:
         match = _NUMERIC_RE.match(text)
         if not match:
@@ -102,8 +102,8 @@ def _parse_numeric_options(texts: List[str]) -> Optional[List[int]]:
     return None
 
 
-def _parse_chinese_numeric_options(texts: List[str]) -> Optional[List[int]]:
-    values: List[int] = []
+def _parse_chinese_numeric_options(texts: list[str]) -> list[int] | None:
+    values: list[int] = []
     for text in texts:
         value = text.removesuffix("分").removesuffix("点").removesuffix("级").removesuffix("星")
         if value not in _CHINESE_NUMBERS:
@@ -119,7 +119,7 @@ def _parse_chinese_numeric_options(texts: List[str]) -> Optional[List[int]]:
     return None
 
 
-def _match_text_group(texts: List[str]) -> Optional[List[int]]:
+def _match_text_group(texts: list[str]) -> list[int] | None:
     if len(texts) < 2:
         return None
     for group in _ORDINAL_GROUPS:
@@ -133,11 +133,11 @@ def _match_text_group(texts: List[str]) -> Optional[List[int]]:
     return None
 
 
-def _match_attitude_scale(texts: List[str]) -> Optional[List[int]]:
+def _match_attitude_scale(texts: list[str]) -> list[int] | None:
     if len(texts) != 5:
         return None
 
-    scores: List[int] = []
+    scores: list[int] = []
     for text in texts:
         score = _score_attitude_option(text)
         if score is None:
@@ -148,7 +148,7 @@ def _match_attitude_scale(texts: List[str]) -> Optional[List[int]]:
     return scores
 
 
-def _score_attitude_option(text: str) -> Optional[int]:
+def _score_attitude_option(text: str) -> int | None:
     if text in _ATTITUDE_NEUTRAL_TEXTS:
         return 2
 
@@ -164,7 +164,7 @@ def _score_attitude_option(text: str) -> Optional[int]:
     return 4 if is_extreme and not is_mild else 3
 
 
-def infer_ordinal_option_mapping(option_texts: Iterable[object]) -> Optional[OrdinalOptionMapping]:
+def infer_ordinal_option_mapping(option_texts: Iterable[object]) -> OrdinalOptionMapping | None:
     texts = [_normalize_option_text(item) for item in list(option_texts or [])]
     texts = [text for text in texts if text]
     if len(texts) < 2:

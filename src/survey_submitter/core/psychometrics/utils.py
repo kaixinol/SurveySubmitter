@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import math
 import random
-from typing import Any, List
+from typing import Any
 
 from survey_submitter.core.psychometrics.orientation import infer_dimension_orientation
 
@@ -96,7 +98,7 @@ def z_to_category(z: float, option_count: int) -> int:
     return m - 1
 
 
-def variance(values: List[float]) -> float:
+def variance(values: list[float]) -> float:
     
     if not values or len(values) < 2:
         return 0.0
@@ -106,7 +108,7 @@ def variance(values: List[float]) -> float:
     return sum((x - mean) ** 2 for x in values) / (n - 1)
 
 
-def correlation(xs: List[float], ys: List[float]) -> float:
+def correlation(xs: list[float], ys: list[float]) -> float:
     
     if not xs or not ys or len(xs) != len(ys) or len(xs) < 2:
         return 0.0
@@ -130,12 +132,12 @@ def correlation(xs: List[float], ys: List[float]) -> float:
     return num / den if den != 0 else 0.0
 
 
-def infer_reversed_keys(items: List[Any]) -> set[str]:
+def infer_reversed_keys(items: list[Any]) -> set[str]:
     
     return set(infer_dimension_orientation(items).reversed_keys)
 
 
-def cronbach_alpha(matrix: List[List[float]]) -> float:
+def cronbach_alpha(matrix: list[list[float]]) -> float:
     
     if not matrix or len(matrix) == 0:
         return 0.0

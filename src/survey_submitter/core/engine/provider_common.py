@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import contextmanager
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Iterator
 
 from survey_submitter.core.persona.context import reset_context as _reset_answer_context
 from survey_submitter.core.persona.generator import generate_persona, reset_persona, set_current_persona
@@ -21,8 +21,8 @@ from survey_submitter.core.questions.tendency import reset_tendency
 
 def _build_grouped_runtime_items(
     config: ExecutionConfig,
-) -> Dict[str, List[Any]]:
-    grouped_items: Dict[str, List[Any]] = {}
+) -> dict[str, list[Any]]:
+    grouped_items: dict[str, list[Any]] = {}
     for dimension, items in build_psychometric_blueprint(config).items():
         normalized_dimension = str(dimension or "").strip()
         if not normalized_dimension:
@@ -33,7 +33,7 @@ def _build_grouped_runtime_items(
     return grouped_items
 
 
-def build_psychometric_plan_for_run(config: ExecutionConfig) -> Optional[Any]:
+def build_psychometric_plan_for_run(config: ExecutionConfig) -> Any | None:
     
     grouped_items = _build_grouped_runtime_items(config)
 
@@ -41,7 +41,7 @@ def build_psychometric_plan_for_run(config: ExecutionConfig) -> Optional[Any]:
         return None
 
     try:
-        target_alpha = normalize_target_alpha(getattr(config, "psycho_target_alpha", None))
+        target_alpha = normalize_target_alpha(config.psycho_target_alpha)
     except Exception:
         target_alpha = normalize_target_alpha(None)
 
@@ -51,8 +51,8 @@ def build_psychometric_plan_for_run(config: ExecutionConfig) -> Optional[Any]:
     )
 
 
-def ensure_joint_psychometric_answer_plan(config: ExecutionConfig) -> Optional[Any]:
-    cached = getattr(config, "joint_psychometric_answer_plan", None)
+def ensure_joint_psychometric_answer_plan(config: ExecutionConfig) -> Any | None:
+    cached = config.joint_psychometric_answer_plan
     if cached is not None:
         return cached
     plan = build_joint_psychometric_answer_plan(config)
@@ -64,10 +64,10 @@ def ensure_joint_psychometric_answer_plan(config: ExecutionConfig) -> Optional[A
 def provider_run_context(
     config: ExecutionConfig,
     *,
-    state: Optional[ExecutionState] = None,
+    state: ExecutionState | None = None,
     thread_name: str = "",
-    psycho_plan: Optional[Any] = None,
-) -> Iterator[Optional[Any]]:
+    psycho_plan: Any | None = None,
+) -> Iterator[Any | None]:
     
     persona = generate_persona()
     set_current_persona(persona)
@@ -76,9 +76,9 @@ def provider_run_context(
     reset_consistency_context(config.answer_rules, list((config.questions_metadata or {}).values()))
 
     resolved_plan = psycho_plan
-    fallback_plan: Optional[Any] = None
-    joint_sample_plan: Optional[Any] = None
-    reserved_sample_index: Optional[int] = None
+    fallback_plan: Any | None = None
+    joint_sample_plan: Any | None = None
+    reserved_sample_index: int | None = None
     if resolved_plan is None:
         fallback_plan = build_psychometric_plan_for_run(config)
         joint_answer_plan = ensure_joint_psychometric_answer_plan(config)
@@ -107,7 +107,7 @@ def provider_run_context(
             int(reserved_sample_index or 0) + 1,
             len(active_dimensions),
             len(getattr(joint_sample_plan, "choices", {}) or {}),
-            float(getattr(config, "psycho_target_alpha", 0.85) or 0.85),
+            float(config.psycho_target_alpha or 0.85),
             ",".join(active_dimensions[:5]) if active_dimensions else "无",
         )
         for diagnostic in diagnostics.values():
@@ -135,7 +135,7 @@ def provider_run_context(
             "本轮启用心理测量计划：维度数=%d，题目数=%d，目标α=%.2f，维度=%s",
             dimension_count,
             len(getattr(resolved_plan, "items", []) or []),
-            float(getattr(config, "psycho_target_alpha", 0.85) or 0.85),
+            float(config.psycho_target_alpha or 0.85),
             dimension_summary,
         )
 

@@ -4,10 +4,9 @@ import asyncio
 import threading
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional, Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from survey_submitter.core.engine.stop_signal import StopSignalLike
-
 
 @dataclass
 class ProxyLease:
@@ -19,7 +18,6 @@ class ProxyLease:
     poolable: bool = True
     source: str = ""
 
-
 if TYPE_CHECKING:
     class _ProxyRuntimeHost(Protocol):
         lock: threading.Lock
@@ -28,18 +26,17 @@ if TYPE_CHECKING:
         successful_proxy_addresses: set[str]
         proxy_cooldown_until_by_address: dict[str, float]
         _runtime_condition: threading.Condition
-        _runtime_async_event: Optional[asyncio.Event]
-        _runtime_async_event_loop: Optional[asyncio.AbstractEventLoop]
+        _runtime_async_event: asyncio.Event | None
+        _runtime_async_event_loop: asyncio.AbstractEventLoop | None
         _runtime_change_seq: int
 
-        def _purge_expired_proxy_cooldowns_locked(self, *, now_ts: Optional[float] = None) -> None: ...
-        def _is_proxy_in_cooldown_locked(self, proxy_address: str, *, now_ts: Optional[float] = None) -> bool: ...
+        def _purge_expired_proxy_cooldowns_locked(self, *, now_ts: float | None = None) -> None: ...
+        def _is_proxy_in_cooldown_locked(self, proxy_address: str, *, now_ts: float | None = None) -> bool: ...
         def active_proxy_addresses_locked(self, *, exclude_thread_name: str = "") -> set[str]: ...
         def successful_proxy_addresses_locked(self) -> set[str]: ...
         def notify_runtime_change(self) -> None: ...
         def _runtime_change_sequence(self) -> int: ...
         def _ensure_runtime_async_event(self) -> asyncio.Event: ...
-
 
 class ProxyRuntimeMixin:
     def register_proxy_waiter(self: "_ProxyRuntimeHost") -> None:
@@ -60,7 +57,7 @@ class ProxyRuntimeMixin:
     def _purge_expired_proxy_cooldowns_locked(
         self: "_ProxyRuntimeHost",
         *,
-        now_ts: Optional[float] = None,
+        now_ts: float | None = None,
     ) -> None:
         current = float(now_ts if now_ts is not None else time.time())
         expired = [
@@ -71,7 +68,7 @@ class ProxyRuntimeMixin:
         for address in expired:
             self.proxy_cooldown_until_by_address.pop(address, None)
 
-    def purge_expired_proxy_cooldowns(self: "_ProxyRuntimeHost", *, now_ts: Optional[float] = None) -> None:
+    def purge_expired_proxy_cooldowns(self: "_ProxyRuntimeHost", *, now_ts: float | None = None) -> None:
         with self.lock:
             self._purge_expired_proxy_cooldowns_locked(now_ts=now_ts)
 
@@ -79,7 +76,7 @@ class ProxyRuntimeMixin:
         self: "_ProxyRuntimeHost",
         proxy_address: str,
         *,
-        now_ts: Optional[float] = None,
+        now_ts: float | None = None,
     ) -> bool:
         normalized = str(proxy_address or "").strip()
         if not normalized:
@@ -92,7 +89,7 @@ class ProxyRuntimeMixin:
         self: "_ProxyRuntimeHost",
         proxy_address: str,
         *,
-        now_ts: Optional[float] = None,
+        now_ts: float | None = None,
     ) -> bool:
         normalized = str(proxy_address or "").strip()
         if not normalized:
@@ -130,7 +127,7 @@ class ProxyRuntimeMixin:
         for thread_name, lease in self.proxy_in_use_by_thread.items():
             if excluded and str(thread_name or "").strip() == excluded:
                 continue
-            address = str(getattr(lease, "address", "") or "").strip()
+            address = str(lease.address or "").strip()
             if address:
                 active.add(address)
         return active
@@ -210,8 +207,8 @@ class ProxyRuntimeMixin:
     def wait_for_runtime_change(
         self: "_ProxyRuntimeHost",
         *,
-        stop_signal: Optional[StopSignalLike] = None,
-        timeout: Optional[float] = None,
+        stop_signal: StopSignalLike | None = None,
+        timeout: float | None = None,
     ) -> bool:
         if stop_signal is not None and stop_signal.is_set():
             return True
@@ -236,8 +233,8 @@ class ProxyRuntimeMixin:
     async def wait_for_runtime_change_async(
         self: "_ProxyRuntimeHost",
         *,
-        stop_signal: Optional[StopSignalLike] = None,
-        timeout: Optional[float] = None,
+        stop_signal: StopSignalLike | None = None,
+        timeout: float | None = None,
     ) -> bool:
         if stop_signal is not None and stop_signal.is_set():
             return True
@@ -260,7 +257,7 @@ class ProxyRuntimeMixin:
             except asyncio.TimeoutError:
                 return bool(stop_signal is not None and stop_signal.is_set())
 
-    def release_proxy_in_use(self: "_ProxyRuntimeHost", thread_name: str) -> Optional[ProxyLease]:
+    def release_proxy_in_use(self: "_ProxyRuntimeHost", thread_name: str) -> ProxyLease | None:
         key = str(thread_name or "").strip()
         if not key:
             return None

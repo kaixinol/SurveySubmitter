@@ -190,7 +190,7 @@ def _escape_wjx_submit_text(value: Any) -> str:
 def _question_items(config: ExecutionConfig) -> list[SurveyQuestionMeta]:
     return sorted(
         list((config.questions_metadata or {}).values()),
-        key=lambda item: (int(getattr(item, "page", 1) or 1), int(getattr(item, "num", 0) or 0)),
+        key=lambda item: (int(getattr(item, "page", 1) or 1), int(item.num or 0)),
     )
 
 

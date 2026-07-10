@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import os
 from collections.abc import Sequence
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from survey_submitter.core.questions.default_builder import build_default_question_entries
 from survey_submitter.core.questions.schema import QuestionEntry, _infer_option_count
@@ -38,13 +38,11 @@ from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_surv
 
 MAX_DISPLAYED_BLOCKING_ISSUES = 12
 
-
-def _detail_from_columns(columns: List[Any]) -> str:
+def _detail_from_columns(columns: list[Any]) -> str:
     headers = [str(getattr(column, "header", "") or "").strip() for column in list(columns or []) if str(getattr(column, "header", "") or "").strip()]
     return " / ".join(headers)
 
-
-def _regular_config_ready(entry: Optional[QuestionEntry], info: SurveyQuestionMeta | Dict[str, Any], expected_type: str) -> bool:
+def _regular_config_ready(entry: QuestionEntry | None, info: SurveyQuestionMeta | dict[str, Any], expected_type: str) -> bool:
     if entry is None:
         return False
     entry_type = str(getattr(entry, "question_type", "") or "").strip()
@@ -58,7 +56,6 @@ def _regular_config_ready(entry: Optional[QuestionEntry], info: SurveyQuestionMe
     copied_info = ensure_survey_question_meta(info)
     return validate_question_config([copied_entry], [copied_info]) is None
 
-
 def _question_issue(
     *,
     question_num: int,
@@ -66,9 +63,9 @@ def _question_issue(
     category: str,
     reason: str,
     fallback_ready: bool,
-    sample_rows: Optional[List[int]] = None,
-    suggestion: Optional[str] = None,
-    severity: Optional[str] = None,
+    sample_rows: list[int] | None = None,
+    suggestion: str | None = None,
+    severity: str | None = None,
 ) -> ReverseFillIssue:
     resolved_suggestion = str(suggestion or "").strip()
     if not resolved_suggestion:
@@ -84,14 +81,13 @@ def _question_issue(
         sample_rows=list(sample_rows or []),
     )
 
-
 def _build_question_plan(
     *,
     question_num: int,
     title: str,
     question_type: str,
     status: str,
-    columns: List[Any],
+    columns: list[Any],
     detail: str,
     fallback_ready: bool,
     fallback_resolved: bool = False,
@@ -108,8 +104,7 @@ def _build_question_plan(
         fallback_resolved=bool(fallback_resolved),
     )
 
-
-def _entry_differs_from_default(entry: Optional[QuestionEntry], default_entry: Optional[QuestionEntry]) -> bool:
+def _entry_differs_from_default(entry: QuestionEntry | None, default_entry: QuestionEntry | None) -> bool:
     if entry is None or default_entry is None:
         return False
     compare_fields = (
@@ -146,7 +141,6 @@ def _entry_differs_from_default(entry: Optional[QuestionEntry], default_entry: O
             return True
     return False
 
-
 def _build_no_sample_issue(*, start_row: int, total_samples: int) -> ReverseFillIssue:
     return ReverseFillIssue(
         question_num=0,
@@ -156,7 +150,6 @@ def _build_no_sample_issue(*, start_row: int, total_samples: int) -> ReverseFill
         reason=f"起始样本行设为 {start_row}，但 Excel 总共只有 {total_samples} 行数据，后面已经没有可反填的样本了",
         suggestion="请把起始样本行往前调，或更换包含更多数据的 Excel",
     )
-
 
 def _build_global_issue(*, target_num: int, available_samples: int) -> ReverseFillIssue:
     return ReverseFillIssue(
@@ -168,13 +161,12 @@ def _build_global_issue(*, target_num: int, available_samples: int) -> ReverseFi
         suggestion="请降低目标份数，或把起始样本行往前调，或更换样本更多的 Excel",
     )
 
-
 def build_reverse_fill_spec(
     *,
     source_path: str,
     survey_provider: str,
-    questions_info: Sequence[SurveyQuestionMeta | Dict[str, Any]],
-    question_entries: List[QuestionEntry],
+    questions_info: Sequence[SurveyQuestionMeta | dict[str, Any]],
+    question_entries: list[QuestionEntry],
     selected_format: str = REVERSE_FILL_FORMAT_AUTO,
     start_row: int = 1,
     target_num: int = 0,
@@ -206,9 +198,9 @@ def build_reverse_fill_spec(
         effective_target_num = available_rows
     selected_rows = list(export.raw_rows or [])[normalized_start_row - 1 :]
 
-    issues: List[ReverseFillIssue] = []
-    question_plans: List[ReverseFillQuestionPlan] = []
-    answers_by_row: Dict[int, Dict[int, Any]] = {
+    issues: list[ReverseFillIssue] = []
+    question_plans: list[ReverseFillQuestionPlan] = []
+    answers_by_row: dict[int, dict[int, Any]] = {
         int(row.data_row_number): {} for row in selected_rows
     }
 
@@ -415,7 +407,7 @@ def build_reverse_fill_spec(
                 continue
             ordered_columns = resolve_ordered_columns(columns, blank_labels)
 
-        parse_errors: List[int] = []
+        parse_errors: list[int] = []
         for raw_row in selected_rows:
             try:
                 if question_type in CHOICE_TYPES:
@@ -499,7 +491,7 @@ def build_reverse_fill_spec(
             )
         )
 
-    samples: List[ReverseFillSampleRow] = []
+    samples: list[ReverseFillSampleRow] = []
     for raw_row in selected_rows:
         answers = dict(answers_by_row.get(int(raw_row.data_row_number)) or {})
         samples.append(
@@ -523,7 +515,6 @@ def build_reverse_fill_spec(
         samples=samples,
     )
 
-
 def format_reverse_fill_blocking_message(spec: ReverseFillSpec) -> str:
     blocking = list(spec.blocking_issues)
     if not blocking:
@@ -540,12 +531,11 @@ def format_reverse_fill_blocking_message(spec: ReverseFillSpec) -> str:
         lines.append(f"  - 其余 {len(blocking) - MAX_DISPLAYED_BLOCKING_ISSUES} 个阻塞项已省略")
     return "\n".join(lines)
 
-
 def build_enabled_reverse_fill_spec(
     config: RuntimeConfig,
-    questions_info: List[SurveyQuestionMeta | Dict[str, Any]],
-    question_entries: List[QuestionEntry],
-) -> Optional[ReverseFillSpec]:
+    questions_info: list[SurveyQuestionMeta | dict[str, Any]],
+    question_entries: list[QuestionEntry],
+) -> ReverseFillSpec | None:
     if not bool(getattr(config, "reverse_fill_enabled", False)):
         return None
     source_path = str(getattr(config, "reverse_fill_source_path", "") or "").strip()

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Optional, Sequence
+from typing import Any, Awaitable, Callable, Sequence
 
 from survey_submitter.providers.answering import AnswerAction
 from survey_submitter.providers.contracts import (
@@ -10,7 +10,7 @@ from survey_submitter.providers.contracts import (
     SurveyQuestionMeta,
 )
 
-BuildHttpAnswerAction = Callable[[SurveyQuestionMeta], Awaitable[Optional[AnswerAction]]]
+BuildHttpAnswerAction = Callable[[SurveyQuestionMeta], Awaitable[AnswerAction | None]]
 _SUPPORTED_CONDITION_MODES = {"selected", "not_selected"}
 _TERMINATE_JUMP_KEYWORDS = ("结束作答", "结束答题", "结束填写", "终止作答", "停止作答")
 
@@ -33,34 +33,34 @@ def _jump_rule_terminates_survey(rule: Any) -> bool:
 
 def _ordered_questions(questions: Sequence[SurveyQuestionMeta]) -> list[SurveyQuestionMeta]:
     return sorted(
-        [item for item in questions if item is not None and int(getattr(item, "num", 0) or 0) > 0],
-        key=lambda item: (int(getattr(item, "page", 1) or 1), int(getattr(item, "num", 0) or 0)),
+        [item for item in questions if item is not None and int(item.num or 0) > 0],
+        key=lambda item: (int(getattr(item, "page", 1) or 1), int(item.num or 0)),
     )
 
 
 def question_has_survey_logic(question: SurveyQuestionMeta) -> bool:
     return bool(
-        getattr(question, "has_jump", False)
-        or getattr(question, "has_display_condition", False)
-        or getattr(question, "has_dependent_display_logic", False)
+        question.has_jump
+        or question.has_display_condition
+        or question.has_dependent_display_logic
     )
 
 
 def _logic_status_is_complete_enough(question: SurveyQuestionMeta) -> bool:
-    logic_status = str(getattr(question, "logic_parse_status", "") or "").strip().lower()
+    logic_status = str(question.logic_parse_status or "").strip().lower()
     if logic_status == LOGIC_PARSE_STATUS_COMPLETE:
         return True
     if logic_status != LOGIC_PARSE_STATUS_UNKNOWN:
         return False
 
-    if bool(getattr(question, "has_jump", False)) and not list(getattr(question, "jump_rules", []) or []):
+    if bool(question.has_jump) and not list(question.jump_rules or []):
         return False
-    if bool(getattr(question, "has_display_condition", False)) and not list(
-        getattr(question, "display_conditions", []) or []
+    if bool(question.has_display_condition) and not list(
+        question.display_conditions or []
     ):
         return False
-    if bool(getattr(question, "has_dependent_display_logic", False)) and not list(
-        getattr(question, "controls_display_targets", []) or []
+    if bool(question.has_dependent_display_logic) and not list(
+        question.controls_display_targets or []
     ):
         return False
     return True
@@ -68,16 +68,16 @@ def _logic_status_is_complete_enough(question: SurveyQuestionMeta) -> bool:
 
 def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> str:
     ordered_questions = _ordered_questions(questions)
-    max_question_num = max((int(getattr(item, "num", 0) or 0) for item in ordered_questions), default=0)
+    max_question_num = max((int(item.num or 0) for item in ordered_questions), default=0)
     for question in ordered_questions:
-        question_num = int(getattr(question, "num", 0) or 0)
+        question_num = int(question.num or 0)
         if question_num <= 0 or not question_has_survey_logic(question):
             continue
 
         if not _logic_status_is_complete_enough(question):
             return f"第{question_num}题逻辑规则未完整解析"
 
-        for condition in list(getattr(question, "display_conditions", []) or []):
+        for condition in list(question.display_conditions or []):
             if not isinstance(condition, dict):
                 return f"第{question_num}题显隐条件格式异常"
             try:
@@ -92,7 +92,7 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
             if condition_mode not in _SUPPORTED_CONDITION_MODES:
                 return f"第{question_num}题显隐条件模式不支持：{condition_mode}"
 
-        for target in list(getattr(question, "controls_display_targets", []) or []):
+        for target in list(question.controls_display_targets or []):
             if not isinstance(target, dict):
                 return f"第{question_num}题控制显示规则格式异常"
             try:
@@ -105,7 +105,7 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
             if condition_mode not in _SUPPORTED_CONDITION_MODES:
                 return f"第{question_num}题控制显示模式不支持：{condition_mode}"
 
-        for rule in list(getattr(question, "jump_rules", []) or []):
+        for rule in list(question.jump_rules or []):
             if not isinstance(rule, dict):
                 return f"第{question_num}题跳题规则格式异常"
             try:
@@ -164,9 +164,9 @@ def _question_is_visible(
     question: SurveyQuestionMeta,
     action_by_question_num: dict[int, AnswerAction],
 ) -> bool:
-    conditions = list(getattr(question, "display_conditions", []) or [])
+    conditions = list(question.display_conditions or [])
     if not conditions:
-        return not bool(getattr(question, "has_display_condition", False))
+        return not bool(question.has_display_condition)
 
     grouped_conditions: dict[tuple[int, str], list[dict[str, Any]]] = {}
     for condition in conditions:
@@ -181,7 +181,7 @@ def _question_is_visible(
         condition_mode = str(condition.get("condition_mode") or "selected").strip() or "selected"
         grouped_conditions.setdefault((source_question_num, condition_mode), []).append(condition)
     if not grouped_conditions:
-        return not bool(getattr(question, "has_display_condition", False))
+        return not bool(question.has_display_condition)
 
     for grouped in grouped_conditions.values():
         if not any(_condition_is_met(action_by_question_num, condition) for condition in grouped):
@@ -192,11 +192,11 @@ def _question_is_visible(
 def _resolve_jump_target(
     question: SurveyQuestionMeta,
     action: AnswerAction,
-) -> tuple[Optional[int], bool]:
+) -> tuple[int | None, bool]:
     selected_indices = _action_selected_indices(action)
-    unconditional_target: Optional[int] = None
+    unconditional_target: int | None = None
     unconditional_terminates = False
-    for rule in list(getattr(question, "jump_rules", []) or []):
+    for rule in list(question.jump_rules or []):
         if not isinstance(rule, dict):
             continue
         try:
@@ -231,14 +231,14 @@ async def build_http_logic_plan(
     if fallback_reason:
         raise RuntimeError(f"{fallback_reason}，暂不支持纯 HTTP 提交")
 
-    max_question_num = max((int(getattr(item, "num", 0) or 0) for item in ordered_questions), default=0)
+    max_question_num = max((int(item.num or 0) for item in ordered_questions), default=0)
     action_by_question_num: dict[int, AnswerAction] = {}
     actions: list[AnswerAction] = []
     skipped_question_nums: list[int] = []
-    jump_target_num: Optional[int] = None
+    jump_target_num: int | None = None
 
     for question in ordered_questions:
-        question_num = int(getattr(question, "num", 0) or 0)
+        question_num = int(question.num or 0)
         if question_num <= 0:
             continue
 

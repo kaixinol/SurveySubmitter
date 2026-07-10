@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Any, Deque, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 from pydantic import Field
 
@@ -15,43 +15,42 @@ from survey_submitter.core.task.proxy_state import ProxyLease, ProxyRuntimeMixin
 from survey_submitter.core.task.reverse_fill_state import ReverseFillRuntimeMixin
 from survey_submitter.providers.contracts import SurveyQuestionMeta
 
-
 class ExecutionConfig(BaseConfigModel):
     url: str = ""
     survey_title: str = ""
     survey_provider: str = "wjx"
 
-    single_prob: List[Union[List[float], int, float, None]] = []
-    droplist_prob: List[Union[List[float], int, float, None]] = []
-    multiple_prob: List[List[float]] = []
-    matrix_prob: List[Union[List[float], int, float, None]] = []
-    scale_prob: List[Union[List[float], int, float, None]] = []
-    slider_targets: List[float] = []
-    texts: List[List[str]] = []
-    texts_prob: List[List[float]] = []
-    text_entry_types: List[str] = []
-    text_ai_flags: List[bool] = []
-    text_titles: List[str] = []
-    location_parts: Dict[int, List[str]] = {}
-    multi_text_blank_modes: List[List[str]] = []
-    multi_text_blank_ai_flags: List[List[bool]] = []
-    multi_text_blank_int_ranges: List[List[List[int]]] = []
-    single_option_fill_texts: List[Optional[List[Optional[str]]]] = []
-    single_attached_option_selects: List[List[Dict[str, Any]]] = []
-    droplist_option_fill_texts: List[Optional[List[Optional[str]]]] = []
-    multiple_option_fill_texts: List[Optional[List[Optional[str]]]] = []
-    answer_rules: List[Dict[str, Any]] = []
-    reverse_fill_spec: Optional[ReverseFillSpec] = None
+    single_prob: list[list[float] | int | float | None] = []
+    droplist_prob: list[list[float] | int | float | None] = []
+    multiple_prob: list[list[float]] = []
+    matrix_prob: list[list[float] | int | float | None] = []
+    scale_prob: list[list[float] | int | float | None] = []
+    slider_targets: list[float] = []
+    texts: list[list[str]] = []
+    texts_prob: list[list[float]] = []
+    text_entry_types: list[str] = []
+    text_ai_flags: list[bool] = []
+    text_titles: list[str] = []
+    location_parts: dict[int, list[str]] = {}
+    multi_text_blank_modes: list[list[str]] = []
+    multi_text_blank_ai_flags: list[list[bool]] = []
+    multi_text_blank_int_ranges: list[list[list[int]]] = []
+    single_option_fill_texts: list[list[str | None] | None] = []
+    single_attached_option_selects: list[list[dict[str, Any]]] = []
+    droplist_option_fill_texts: list[list[str | None] | None] = []
+    multiple_option_fill_texts: list[list[str | None] | None] = []
+    answer_rules: list[dict[str, Any]] = []
+    reverse_fill_spec: ReverseFillSpec | None = None
 
-    question_config_index_map: Dict[int, Tuple[str, int]] = {}
-    provider_question_config_index_map: Dict[str, Tuple[str, int]] = {}
-    question_dimension_map: Dict[int, Optional[str]] = {}
-    question_ordinal_score_map: Dict[int, List[int]] = {}
-    question_strict_ratio_map: Dict[int, bool] = {}
-    question_psycho_bias_map: Dict[int, Any] = {}
-    questions_metadata: Dict[int, SurveyQuestionMeta] = {}
-    provider_question_metadata_map: Dict[str, SurveyQuestionMeta] = {}
-    joint_psychometric_answer_plan: Optional[Any] = None
+    question_config_index_map: dict[int, tuple[str, int]] = {}
+    provider_question_config_index_map: dict[str, tuple[str, int]] = {}
+    question_dimension_map: dict[int, str | None] = {}
+    question_ordinal_score_map: dict[int, list[int]] = {}
+    question_strict_ratio_map: dict[int, bool] = {}
+    question_psycho_bias_map: dict[int, Any] = {}
+    questions_metadata: dict[int, SurveyQuestionMeta] = {}
+    provider_question_metadata_map: dict[str, SurveyQuestionMeta] = {}
+    joint_psychometric_answer_plan: Any | None = None
 
     psycho_target_alpha: float = 0.85
 
@@ -60,18 +59,17 @@ class ExecutionConfig(BaseConfigModel):
     fail_threshold: int = 5
     stop_on_fail_enabled: bool = True
 
-    submit_interval_range_seconds: Tuple[int, int] = (0, 0)
-    answer_duration_range_seconds: Tuple[int, int] = (0, 0)
-    answer_datetime_window_ms: Tuple[int, int] = (0, 0)
+    submit_interval_range_seconds: tuple[int, int] = (0, 0)
+    answer_duration_range_seconds: tuple[int, int] = (0, 0)
+    answer_datetime_window_ms: tuple[int, int] = (0, 0)
 
     random_proxy_ip_enabled: bool = False
     proxy_source: str = "default"
     proxy_ip_pool: Any = Field(default_factory=deque)
     random_user_agent_enabled: bool = False
-    user_agent_ratios: Dict[str, int] = {"wechat": 33, "mobile": 33, "pc": 34}
+    user_agent_ratios: dict[str, int] = {"wechat": 33, "mobile": 33, "pc": 34}
     pause_on_aliyun_captcha: bool = True
     ai_system_prompt: str = ""
-
 
 @dataclass
 class ExecutionState(
@@ -90,19 +88,19 @@ class ExecutionState(
     terminal_stop_category: str = ""
     terminal_failure_reason: str = ""
     terminal_stop_message: str = ""
-    thread_progress: Dict[str, ThreadProgressState] = field(default_factory=dict)
-    distribution_runtime_stats: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    distribution_pending_by_thread: Dict[str, List[Tuple[str, int, int]]] = field(default_factory=dict)
-    joint_reserved_sample_by_thread: Dict[str, int] = field(default_factory=dict)
-    joint_reserved_sample_started_at_by_thread: Dict[str, float] = field(default_factory=dict)
+    thread_progress: dict[str, ThreadProgressState] = field(default_factory=dict)
+    distribution_runtime_stats: dict[str, dict[str, Any]] = field(default_factory=dict)
+    distribution_pending_by_thread: dict[str, list[tuple[str, int, int]]] = field(default_factory=dict)
+    joint_reserved_sample_by_thread: dict[str, int] = field(default_factory=dict)
+    joint_reserved_sample_started_at_by_thread: dict[str, float] = field(default_factory=dict)
     joint_committed_sample_indexes: set[int] = field(default_factory=set)
     joint_answering_threads: set[str] = field(default_factory=set)
 
     proxy_waiting_threads: int = 0
-    proxy_in_use_by_thread: Dict[str, ProxyLease] = field(default_factory=dict)
+    proxy_in_use_by_thread: dict[str, ProxyLease] = field(default_factory=dict)
     successful_proxy_addresses: set[str] = field(default_factory=set)
-    proxy_cooldown_until_by_address: Dict[str, float] = field(default_factory=dict)
-    reverse_fill_runtime: Optional[ReverseFillRuntimeState] = None
+    proxy_cooldown_until_by_address: dict[str, float] = field(default_factory=dict)
+    reverse_fill_runtime: ReverseFillRuntimeState | None = None
 
     stop_event: threading.Event = field(default_factory=threading.Event)
     lock: threading.Lock = field(default_factory=threading.Lock)
@@ -148,14 +146,13 @@ class ExecutionState(
             self.terminal_stop_message = normalized_message
         self.notify_runtime_change()
 
-    def get_terminal_stop_snapshot(self) -> Tuple[str, str, str]:
+    def get_terminal_stop_snapshot(self) -> tuple[str, str, str]:
         with self._terminal_stop_lock:
             return (
                 str(self.terminal_stop_category or ""),
                 str(self.terminal_failure_reason or ""),
                 str(self.terminal_stop_message or ""),
             )
-
 
 _EXECUTION_CONFIG_FIELD_NAMES = frozenset(ExecutionConfig.model_fields.keys())
 _EXECUTION_STATE_FIELD_NAMES = frozenset(ExecutionState.__dataclass_fields__.keys())

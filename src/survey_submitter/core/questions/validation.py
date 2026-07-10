@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from survey_submitter.core.questions.meta_helpers import (
     count_positive_weights,
@@ -23,9 +23,9 @@ _TEXT_MIN_LENGTH_PATTERNS = (
 )
 
 
-def _extract_text_min_length(*fragments: Any) -> Optional[int]:
+def _extract_text_min_length(*fragments: Any) -> int | None:
     
-    limits: List[int] = []
+    limits: list[int] = []
     for fragment in fragments:
         text = str(fragment or "").strip()
         if not text:
@@ -40,18 +40,18 @@ def _extract_text_min_length(*fragments: Any) -> Optional[int]:
 
 
 def _is_text_ai_enabled(entry: QuestionEntry) -> bool:
-    question_type = str(getattr(entry, "question_type", "") or "").strip()
+    question_type = str(entry.question_type or "").strip()
     if question_type == QuestionType.TEXT:
-        return bool(getattr(entry, "ai_enabled", False))
+        return bool(entry.ai_enabled)
     if question_type == QuestionType.MULTI_TEXT:
-        blank_flags = getattr(entry, "multi_text_blank_ai_flags", []) or []
-        return bool(getattr(entry, "ai_enabled", False)) or (bool(blank_flags) and all(bool(flag) for flag in blank_flags))
+        blank_flags = entry.multi_text_blank_ai_flags or []
+        return bool(entry.ai_enabled) or (bool(blank_flags) and all(bool(flag) for flag in blank_flags))
     return False
 
 
-def _text_answer_too_short_indexes(entry: QuestionEntry, min_length: int) -> List[tuple[int, int]]:
-    issues: List[tuple[int, int]] = []
-    for answer_index, raw_answer in enumerate(list(getattr(entry, "texts", []) or []), start=1):
+def _text_answer_too_short_indexes(entry: QuestionEntry, min_length: int) -> list[tuple[int, int]]:
+    issues: list[tuple[int, int]] = []
+    for answer_index, raw_answer in enumerate(list(entry.texts or []), start=1):
         answer = str(raw_answer or "").strip()
         if len(answer) < min_length:
             issues.append((answer_index, len(answer)))
@@ -68,31 +68,31 @@ def _text_random_mode_label(raw_mode: Any) -> str:
     }.get(mode, "随机处理")
 
 
-def _display_question_num(raw_num: Any, question_info: Optional[SurveyQuestionMeta]) -> Any:
+def _display_question_num(raw_num: Any, question_info: SurveyQuestionMeta | None) -> Any:
     if question_info is not None:
-        display_num = getattr(question_info, "display_num", None)
+        display_num = question_info.display_num
         if display_num not in (None, ""):
             return display_num
     return raw_num
 
 
 def validate_question_config(
-    entries: List[QuestionEntry],
-    questions_info: Optional[List[SurveyQuestionMeta | Dict[str, Any]]] = None,
-) -> Optional[str]:
+    entries: list[QuestionEntry],
+    questions_info: list[SurveyQuestionMeta | dict[str, Any]] | None = None,
+) -> str | None:
     
     if not entries:
         return "未配置任何题目"
 
     def _pick_config_weights(entry: QuestionEntry) -> Any:
-        distribution_mode = str(getattr(entry, "distribution_mode", "") or "").strip().lower()
-        custom_weights = getattr(entry, "custom_weights", None)
-        probabilities = getattr(entry, "probabilities", None)
+        distribution_mode = str(entry.distribution_mode or "").strip().lower()
+        custom_weights = entry.custom_weights
+        probabilities = entry.probabilities
         return custom_weights if distribution_mode == "custom" and custom_weights not in (None, []) else probabilities
 
-    errors: List[str] = []
+    errors: list[str] = []
     question_info_map = {}
-    unsupported_questions: List[SurveyQuestionMeta] = []
+    unsupported_questions: list[SurveyQuestionMeta] = []
     for item in questions_info or []:
         if not isinstance(item, (dict, SurveyQuestionMeta)):
             continue
@@ -106,7 +106,7 @@ def validate_question_config(
         lines = ["当前问卷包含暂不支持的题型，已禁止启动："]
         for item in unsupported_questions[:MAX_DISPLAYED_UNSUPPORTED_ITEMS]:
             title = str(item.title or f"第{item.num}题").strip()
-            provider_type = str(getattr(item, 'provider_type', '') or item.type_code or "未知类型").strip()
+            provider_type = str(item.provider_type or item.type_code or "未知类型").strip()
             reason = str(item.unsupported_reason or "").strip()
             suffix = f"（{provider_type}，{reason}）" if reason else f"（{provider_type}）"
             lines.append(f"  - 第 {item.num} 题：{title}{suffix}")
@@ -115,8 +115,8 @@ def validate_question_config(
         return "\n".join(lines)
 
     for idx, entry in enumerate(entries):
-        question_num = getattr(entry, "question_num", idx + 1)
-        question_type = getattr(entry, "question_type", "")
+        question_num = entry.question_num if entry.question_num is not None else idx + 1
+        question_type = entry.question_type
         try:
             normalized_question_num = int(question_num)
         except Exception:
@@ -126,11 +126,11 @@ def validate_question_config(
         display_question_num = _display_question_num(question_num, question_info)
 
         if question_type == QuestionType.MULTIPLE:
-            multi_min_limit: Optional[int] = None
+            multi_min_limit: int | None = None
             if question_info:
                 multi_min_limit = getattr(question_info, 'multi_min_limit', None)
 
-            probs = getattr(entry, "custom_weights", None) or getattr(entry, "probabilities", None)
+            probs = entry.custom_weights or entry.probabilities
             if isinstance(probs, list):
                 positive_count = count_positive_weights(probs)
                 if positive_count <= 0:
@@ -155,7 +155,7 @@ def validate_question_config(
         if question_type in TEXT_TYPES and question_info and not _is_text_ai_enabled(entry):
             min_text_length = _extract_text_min_length(question_info.title, question_info.description)
             if min_text_length is not None and min_text_length > 0:
-                text_random_mode = str(getattr(entry, "text_random_mode", "") or "").strip().lower()
+                text_random_mode = str(entry.text_random_mode or "").strip().lower()
                 if question_type == QuestionType.TEXT and text_random_mode not in ("", "none"):
                     errors.append(
                         f"第 {display_question_num} 题（填空题）配置冲突：\n"
@@ -204,7 +204,7 @@ def validate_question_config(
                         "  - 请至少将 1 个选项的配比设为大于 0"
                     )
 
-        for cfg_idx, option_text in find_all_zero_attached_selects(getattr(entry, "attached_option_selects", []) or []):
+        for cfg_idx, option_text in find_all_zero_attached_selects(entry.attached_option_selects or []):
             errors.append(
                 f"第 {display_question_num} 题（嵌入式下拉）配置无效：\n"
                 f"  - 第 {cfg_idx} 组（{option_text or '未命名选项'}）所有配比都小于等于 0\n"
