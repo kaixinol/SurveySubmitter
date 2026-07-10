@@ -2,7 +2,13 @@ from survey_submitter.core.questions.default_builder import build_default_questi
 from survey_submitter.core.questions.normalization import configure_probabilities
 from survey_submitter.core.questions.schema import (
     GLOBAL_RELIABILITY_DIMENSION,
+    DistributionConfig,
+    FillOptionsConfig,
+    LocationInfo,
+    MultiTextBlankConfig,
+    ProviderInfo,
     QuestionEntry,
+    TextRandomConfig,
     _TEXT_RANDOM_ID_CARD,
     _TEXT_RANDOM_ID_CARD_TOKEN,
     _TEXT_RANDOM_INTEGER,
@@ -17,7 +23,13 @@ from survey_submitter.core.questions.validation import validate_question_config
 
 __all__ = [
     "GLOBAL_RELIABILITY_DIMENSION",
+    "DistributionConfig",
+    "FillOptionsConfig",
+    "LocationInfo",
+    "MultiTextBlankConfig",
+    "ProviderInfo",
     "QuestionEntry",
+    "TextRandomConfig",
     "_TEXT_RANDOM_ID_CARD",
     "_TEXT_RANDOM_ID_CARD_TOKEN",
     "_TEXT_RANDOM_INTEGER",

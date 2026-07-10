@@ -449,6 +449,141 @@ def _sample_ktimes(config: ExecutionConfig) -> int:
     return default_seconds
 
 
+async def _build_and_record_actions(
+    config: ExecutionConfig,
+    ctx: ExecutionState,
+    *,
+    psycho_plan: Any,
+    stop_signal: Any,
+    thread_name: str,
+) -> tuple[list[AnswerAction], HttpLogicPlan, str]:
+    """Build the action plan, validate, record actions, and produce submitdata."""
+    await update_http_submit_step(ctx, thread_name, "生成答案")
+    plan = await _build_action_plan(
+        config,
+        ctx,
+        psycho_plan=psycho_plan,
+        stop_signal=stop_signal,
+        thread_name=thread_name,
+    )
+    actions = list(plan.actions)
+    if not actions:
+        return actions, plan, ""
+    assert_no_ai_placeholders_in_actions(actions, provider_label="问卷星")
+    for action in actions:
+        _record_action(ctx, action)
+    submitdata = _submitdata_from_actions(
+        actions,
+        questions=_question_items(config),
+        skipped_question_nums=plan.skipped_question_nums,
+    )
+    return actions, plan, submitdata
+
+
+def _build_wjx_submit_params(
+    *,
+    config: ExecutionConfig,
+    page_html: str,
+    user_agent_value: str,
+    user_agent_profile: UserAgentProfile | None,
+) -> tuple[dict[str, str], str, str]:
+    """Build submit query params, return (params, scene_id, domain)."""
+    current_ms = int(time.time() * 1000)
+    ktimes = _sample_ktimes(config)
+    start_seconds, ktimes = _resolve_wjx_submit_timing(
+        page_html=page_html,
+        current_ms=current_ms,
+        sampled_ktimes=ktimes,
+    )
+    scene_id = _extract_wjx_scene_id(page_html)
+    jqnonce = str(uuid.uuid4())
+    domain = _submit_domain(config.url)
+    shortid = _shortid_from_url(config.url)
+    channel_profile = _resolve_wjx_channel_profile(user_agent_value, user_agent_profile)
+    params = {
+        "shortid": shortid,
+        "starttime": _format_wjx_starttime(start_seconds),
+        "cst": str(start_seconds * 1000),
+        "source": channel_profile.source,
+        "submittype": "1",
+        "ktimes": str(ktimes),
+        "rn": str(2000000000 + random.random() * 100000000),
+        "jcn": shortid,
+        "nw": "1",
+        "jwt": "4",
+        "jpm": "62",
+        "capt": "2",
+        "t": str(current_ms),
+        "jqnonce": jqnonce,
+        "jqsign": _build_jqsign(jqnonce, ktimes),
+    }
+    params.update(channel_profile.extra_params)
+    return params, scene_id, domain
+
+
+async def _post_wjx_submit_request(
+    *,
+    config: ExecutionConfig,
+    ctx: ExecutionState,
+    thread_name: str,
+    headers: dict[str, str],
+    params: dict[str, str],
+    submitdata: str,
+    scene_id: str,
+    domain: str,
+    proxy_address: str | None,
+    submit_proxy_lease_factory: Any,
+) -> tuple[str, str | None]:
+    """Acquire proxy if needed, POST the submit request, return (response_text, resolved_proxy_address)."""
+    await update_http_submit_step(ctx, thread_name, "提交问卷")
+    submit_proxy_address = str(proxy_address or "").strip() or None
+    submit_proxy_lease = None
+    if submit_proxy_lease_factory is not None:
+        submit_proxy_lease = await submit_proxy_lease_factory()
+        submit_proxy_address = str(getattr(submit_proxy_lease, "address", "") or "").strip() or None
+    if bool(getattr(config, "random_proxy_ip_enabled", False)) and not submit_proxy_address:
+        raise SubmitProxyUnavailableError("提交前未获取到随机 IP")
+    submit_proxies = _proxy_arg(submit_proxy_address)
+    if str(submit_proxy_address or "").strip():
+        logging.debug("问卷星 HTTP 提交使用随机IP：%s", mask_proxy_for_log(submit_proxy_address))
+    try:
+        response = await http_client.apost(
+            f"https://{domain}/joinnew/processjq.ashx",
+            params=params,
+            data={"submitdata": submitdata, "sceneId": scene_id},
+            headers={
+                **headers,
+                "Accept": "text/plain, */*; q=0.01",
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "Origin": f"https://{domain}",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            timeout=_WJX_SUBMIT_TIMEOUT_SECONDS,
+            proxies=submit_proxies,
+        )
+        response.raise_for_status()
+        if submit_proxy_address and thread_name:
+            release_submit_proxy(ctx, thread_name, submit_proxy_address)
+    except Exception:
+        if submit_proxy_address and thread_name:
+            release_submit_proxy(ctx, thread_name, submit_proxy_address)
+        raise
+    return str(response.text or "").strip(), submit_proxy_address
+
+
+def _process_wjx_submit_response(
+    config: ExecutionConfig,
+    ctx: ExecutionState,
+    response_text: str,
+    *,
+    submit_proxy_address: str | None,
+) -> None:
+    """Classify the submit response; raise on rejection, mark proxy success."""
+    if classify_wjx_submit_response(response_text) != WjxSubmitResult.SUCCESS:
+        _raise_submit_rejected(config, response_text, proxy_address=submit_proxy_address)
+    mark_submit_proxy_success(ctx, submit_proxy_address)
+
+
 async def brush_wjx_http(
     config: ExecutionConfig,
     ctx: ExecutionState,
@@ -464,7 +599,6 @@ async def brush_wjx_http(
     if stop_signal is not None and stop_signal.is_set():
         return False
     try:
-        shortid = _shortid_from_url(config.url)
         user_agent_value = _resolve_user_agent(user_agent)
         headers = {
             **DEFAULT_HTTP_HEADERS,
@@ -473,97 +607,44 @@ async def brush_wjx_http(
         }
         page_html = await _load_wjx_page(config.url, headers=headers, proxies={})
 
-        await update_http_submit_step(ctx, thread_name, "生成答案")
-        plan = await _build_action_plan(
+        actions, _plan, submitdata = await _build_and_record_actions(
             config,
             ctx,
             psycho_plan=psycho_plan,
             stop_signal=stop_signal,
             thread_name=thread_name,
         )
-        actions = list(plan.actions)
         if not actions:
             return False
-        assert_no_ai_placeholders_in_actions(actions, provider_label="问卷星")
-        for action in actions:
-            _record_action(ctx, action)
-        submitdata = _submitdata_from_actions(
-            actions,
-            questions=_question_items(config),
-            skipped_question_nums=plan.skipped_question_nums,
-        )
         if not bool(getattr(config, "submit_enabled", True)):
             logging.info("问卷星 HTTP 单测已生成答案，未提交。")
             return True
 
-        current_ms = int(time.time() * 1000)
-        ktimes = _sample_ktimes(config)
-        start_seconds, ktimes = _resolve_wjx_submit_timing(
+        params, scene_id, domain = _build_wjx_submit_params(
+            config=config,
             page_html=page_html,
-            current_ms=current_ms,
-            sampled_ktimes=ktimes,
+            user_agent_value=user_agent_value,
+            user_agent_profile=user_agent_profile,
         )
-        scene_id = _extract_wjx_scene_id(page_html)
-        jqnonce = str(uuid.uuid4())
-        domain = _submit_domain(config.url)
-        submit_url = f"https://{domain}/joinnew/processjq.ashx"
-        channel_profile = _resolve_wjx_channel_profile(user_agent_value, user_agent_profile)
-        params = {
-            "shortid": shortid,
-            "starttime": _format_wjx_starttime(start_seconds),
-            "cst": str(start_seconds * 1000),
-            "source": channel_profile.source,
-            "submittype": "1",
-            "ktimes": str(ktimes),
-            "rn": str(2000000000 + random.random() * 100000000),
-            "jcn": shortid,
-            "nw": "1",
-            "jwt": "4",
-            "jpm": "62",
-            "capt": "2",
-            "t": str(current_ms),
-            "jqnonce": jqnonce,
-            "jqsign": _build_jqsign(jqnonce, ktimes),
-        }
-        params.update(channel_profile.extra_params)
-        await update_http_submit_step(ctx, thread_name, "提交问卷")
-        submit_proxy_address = str(proxy_address or "").strip() or None
-        submit_proxy_lease = None
-        if submit_proxy_lease_factory is not None:
-            submit_proxy_lease = await submit_proxy_lease_factory()
-            submit_proxy_address = str(getattr(submit_proxy_lease, "address", "") or "").strip() or None
-        if bool(getattr(config, "random_proxy_ip_enabled", False)) and not submit_proxy_address:
-            raise SubmitProxyUnavailableError("提交前未获取到随机 IP")
-        submit_proxies = _proxy_arg(submit_proxy_address)
-        if str(submit_proxy_address or "").strip():
-            logging.debug("问卷星 HTTP 提交使用随机IP：%s", mask_proxy_for_log(submit_proxy_address))
-        try:
-            response = await http_client.apost(
-                submit_url,
-                params=params,
-                data={"submitdata": submitdata, "sceneId": scene_id},
-                headers={
-                    **headers,
-                    "Accept": "text/plain, */*; q=0.01",
-                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                    "Origin": f"https://{domain}",
-                    "X-Requested-With": "XMLHttpRequest",
-                },
-                timeout=_WJX_SUBMIT_TIMEOUT_SECONDS,
-                proxies=submit_proxies,
-            )
-            response.raise_for_status()
-            if submit_proxy_address and thread_name:
-                release_submit_proxy(ctx, thread_name, submit_proxy_address)
-        except Exception:
-            if submit_proxy_address and thread_name:
-                release_submit_proxy(ctx, thread_name, submit_proxy_address)
-            raise
+        response_text, submit_proxy_address = await _post_wjx_submit_request(
+            config=config,
+            ctx=ctx,
+            thread_name=thread_name,
+            headers=headers,
+            params=params,
+            submitdata=submitdata,
+            scene_id=scene_id,
+            domain=domain,
+            proxy_address=proxy_address,
+            submit_proxy_lease_factory=submit_proxy_lease_factory,
+        )
         await update_http_submit_step(ctx, thread_name, "校验结果")
-        response_text = str(response.text or "").strip()
-        if classify_wjx_submit_response(response_text) != WjxSubmitResult.SUCCESS:
-            _raise_submit_rejected(config, response_text, proxy_address=submit_proxy_address)
-        mark_submit_proxy_success(ctx, submit_proxy_address)
+        _process_wjx_submit_response(
+            config,
+            ctx,
+            response_text,
+            submit_proxy_address=submit_proxy_address,
+        )
         return True
     finally:
         pass

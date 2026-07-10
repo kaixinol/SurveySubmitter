@@ -7,6 +7,16 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from survey_submitter.core.engine.stop_signal import StopSignalLike
+from survey_submitter.core.task._proxy_address_tracker import (
+    add_successful_proxy_address,
+    get_active_proxy_addresses,
+    get_successful_proxy_addresses,
+)
+from survey_submitter.core.task._proxy_cooldown import (
+    is_proxy_in_cooldown as _is_proxy_in_cooldown,
+    mark_proxy_in_cooldown as _mark_proxy_in_cooldown,
+    purge_expired_proxy_cooldowns as _purge_expired_proxy_cooldowns,
+)
 
 @dataclass
 class ProxyLease:
@@ -38,160 +48,7 @@ if TYPE_CHECKING:
         def _runtime_change_sequence(self) -> int: ...
         def _ensure_runtime_async_event(self) -> asyncio.Event: ...
 
-class ProxyRuntimeMixin:
-    def register_proxy_waiter(self: "_ProxyRuntimeHost") -> None:
-        with self.lock:
-            self.proxy_waiting_threads = max(0, int(self.proxy_waiting_threads or 0)) + 1
-
-    def unregister_proxy_waiter(self: "_ProxyRuntimeHost") -> None:
-        with self.lock:
-            self.proxy_waiting_threads = max(0, int(self.proxy_waiting_threads or 0) - 1)
-
-    def mark_proxy_in_use(self: "_ProxyRuntimeHost", thread_name: str, lease: ProxyLease) -> None:
-        key = str(thread_name or "").strip()
-        if not key or not isinstance(lease, ProxyLease):
-            return
-        with self.lock:
-            self.proxy_in_use_by_thread[key] = lease
-
-    def _purge_expired_proxy_cooldowns_locked(
-        self: "_ProxyRuntimeHost",
-        *,
-        now_ts: float | None = None,
-    ) -> None:
-        current = float(now_ts if now_ts is not None else time.time())
-        expired = [
-            address
-            for address, cooldown_until in self.proxy_cooldown_until_by_address.items()
-            if float(cooldown_until or 0.0) <= current
-        ]
-        for address in expired:
-            self.proxy_cooldown_until_by_address.pop(address, None)
-
-    def purge_expired_proxy_cooldowns(self: "_ProxyRuntimeHost", *, now_ts: float | None = None) -> None:
-        with self.lock:
-            self._purge_expired_proxy_cooldowns_locked(now_ts=now_ts)
-
-    def _is_proxy_in_cooldown_locked(
-        self: "_ProxyRuntimeHost",
-        proxy_address: str,
-        *,
-        now_ts: float | None = None,
-    ) -> bool:
-        normalized = str(proxy_address or "").strip()
-        if not normalized:
-            return False
-        self._purge_expired_proxy_cooldowns_locked(now_ts=now_ts)
-        current = float(now_ts if now_ts is not None else time.time())
-        return float(self.proxy_cooldown_until_by_address.get(normalized, 0.0) or 0.0) > current
-
-    def is_proxy_in_cooldown(
-        self: "_ProxyRuntimeHost",
-        proxy_address: str,
-        *,
-        now_ts: float | None = None,
-    ) -> bool:
-        normalized = str(proxy_address or "").strip()
-        if not normalized:
-            return False
-        with self.lock:
-            return self._is_proxy_in_cooldown_locked(normalized, now_ts=now_ts)
-
-    def mark_proxy_in_cooldown(
-        self: "_ProxyRuntimeHost",
-        proxy_address: str,
-        cooldown_seconds: float,
-    ) -> None:
-        normalized = str(proxy_address or "").strip()
-        if not normalized:
-            return
-        try:
-            seconds = max(0.0, float(cooldown_seconds))
-        except (ValueError, TypeError):
-            seconds = 0.0
-        if seconds <= 0:
-            return
-        cooldown_until = time.time() + seconds
-        with self.lock:
-            previous_until = float(self.proxy_cooldown_until_by_address.get(normalized, 0.0) or 0.0)
-            self.proxy_cooldown_until_by_address[normalized] = max(previous_until, cooldown_until)
-        self.notify_runtime_change()
-
-    def active_proxy_addresses_locked(
-        self: "_ProxyRuntimeHost",
-        *,
-        exclude_thread_name: str = "",
-    ) -> set[str]:
-        excluded = str(exclude_thread_name or "").strip()
-        active = set()
-        for thread_name, lease in self.proxy_in_use_by_thread.items():
-            if excluded and str(thread_name or "").strip() == excluded:
-                continue
-            address = str(lease.address or "").strip()
-            if address:
-                active.add(address)
-        return active
-
-    def successful_proxy_addresses_locked(self: "_ProxyRuntimeHost") -> set[str]:
-        return {
-            str(address or "").strip()
-            for address in set(self.successful_proxy_addresses or set())
-            if str(address or "").strip()
-        }
-
-    def snapshot_active_proxy_addresses(
-        self: "_ProxyRuntimeHost",
-        *,
-        exclude_thread_name: str = "",
-    ) -> set[str]:
-        with self.lock:
-            return self.active_proxy_addresses_locked(exclude_thread_name=exclude_thread_name)
-
-    def snapshot_successful_proxy_addresses(self: "_ProxyRuntimeHost") -> set[str]:
-        with self.lock:
-            return self.successful_proxy_addresses_locked()
-
-    def snapshot_blocked_proxy_addresses(
-        self: "_ProxyRuntimeHost",
-        *,
-        exclude_thread_name: str = "",
-    ) -> set[str]:
-        with self.lock:
-            blocked = self.active_proxy_addresses_locked(exclude_thread_name=exclude_thread_name)
-            blocked.update(self.successful_proxy_addresses_locked())
-            return blocked
-
-    def is_proxy_address_in_use(
-        self: "_ProxyRuntimeHost",
-        proxy_address: str,
-        *,
-        exclude_thread_name: str = "",
-    ) -> bool:
-        normalized = str(proxy_address or "").strip()
-        if not normalized:
-            return False
-        with self.lock:
-            return normalized in self.active_proxy_addresses_locked(exclude_thread_name=exclude_thread_name)
-
-    def mark_successful_proxy_address(self: "_ProxyRuntimeHost", proxy_address: str) -> bool:
-        normalized = str(proxy_address or "").strip()
-        if not normalized:
-            return False
-        with self.lock:
-            previous_size = len(self.successful_proxy_addresses)
-            self.successful_proxy_addresses.add(normalized)
-            changed = len(self.successful_proxy_addresses) != previous_size
-        if changed:
-            self.notify_runtime_change()
-        return changed
-
-    def is_successful_proxy_address(self: "_ProxyRuntimeHost", proxy_address: str) -> bool:
-        normalized = str(proxy_address or "").strip()
-        if not normalized:
-            return False
-        with self.lock:
-            return normalized in self.successful_proxy_addresses_locked()
-
+class _ProxyRuntimeNotifyMixin:
     def notify_runtime_change(self: "_ProxyRuntimeHost") -> None:
         with self._runtime_condition:
             self._runtime_change_seq += 1
@@ -257,6 +114,22 @@ class ProxyRuntimeMixin:
             except asyncio.TimeoutError:
                 return bool(stop_signal is not None and stop_signal.is_set())
 
+class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
+    def register_proxy_waiter(self: "_ProxyRuntimeHost") -> None:
+        with self.lock:
+            self.proxy_waiting_threads = max(0, int(self.proxy_waiting_threads or 0)) + 1
+
+    def unregister_proxy_waiter(self: "_ProxyRuntimeHost") -> None:
+        with self.lock:
+            self.proxy_waiting_threads = max(0, int(self.proxy_waiting_threads or 0) - 1)
+
+    def mark_proxy_in_use(self: "_ProxyRuntimeHost", thread_name: str, lease: ProxyLease) -> None:
+        key = str(thread_name or "").strip()
+        if not key or not isinstance(lease, ProxyLease):
+            return
+        with self.lock:
+            self.proxy_in_use_by_thread[key] = lease
+
     def release_proxy_in_use(self: "_ProxyRuntimeHost", thread_name: str) -> ProxyLease | None:
         key = str(thread_name or "").strip()
         if not key:
@@ -266,3 +139,108 @@ class ProxyRuntimeMixin:
         if released is not None:
             self.notify_runtime_change()
         return released
+
+    def _purge_expired_proxy_cooldowns_locked(
+        self: "_ProxyRuntimeHost",
+        *,
+        now_ts: float | None = None,
+    ) -> None:
+        _purge_expired_proxy_cooldowns(self.proxy_cooldown_until_by_address, now_ts=now_ts)
+
+    def purge_expired_proxy_cooldowns(self: "_ProxyRuntimeHost", *, now_ts: float | None = None) -> None:
+        with self.lock:
+            self._purge_expired_proxy_cooldowns_locked(now_ts=now_ts)
+
+    def _is_proxy_in_cooldown_locked(
+        self: "_ProxyRuntimeHost",
+        proxy_address: str,
+        *,
+        now_ts: float | None = None,
+    ) -> bool:
+        return _is_proxy_in_cooldown(
+            self.proxy_cooldown_until_by_address, proxy_address, now_ts=now_ts,
+        )
+
+    def is_proxy_in_cooldown(
+        self: "_ProxyRuntimeHost",
+        proxy_address: str,
+        *,
+        now_ts: float | None = None,
+    ) -> bool:
+        normalized = str(proxy_address or "").strip()
+        if not normalized:
+            return False
+        with self.lock:
+            return self._is_proxy_in_cooldown_locked(normalized, now_ts=now_ts)
+
+    def mark_proxy_in_cooldown(
+        self: "_ProxyRuntimeHost",
+        proxy_address: str,
+        cooldown_seconds: float,
+    ) -> None:
+        with self.lock:
+            changed = _mark_proxy_in_cooldown(
+                self.proxy_cooldown_until_by_address, proxy_address, cooldown_seconds,
+            )
+        if changed:
+            self.notify_runtime_change()
+
+    def active_proxy_addresses_locked(
+        self: "_ProxyRuntimeHost",
+        *,
+        exclude_thread_name: str = "",
+    ) -> set[str]:
+        return get_active_proxy_addresses(
+            self.proxy_in_use_by_thread, exclude_thread_name=exclude_thread_name,
+        )
+
+    def successful_proxy_addresses_locked(self: "_ProxyRuntimeHost") -> set[str]:
+        return get_successful_proxy_addresses(self.successful_proxy_addresses)
+
+    def snapshot_active_proxy_addresses(
+        self: "_ProxyRuntimeHost",
+        *,
+        exclude_thread_name: str = "",
+    ) -> set[str]:
+        with self.lock:
+            return self.active_proxy_addresses_locked(exclude_thread_name=exclude_thread_name)
+
+    def snapshot_successful_proxy_addresses(self: "_ProxyRuntimeHost") -> set[str]:
+        with self.lock:
+            return self.successful_proxy_addresses_locked()
+
+    def snapshot_blocked_proxy_addresses(
+        self: "_ProxyRuntimeHost",
+        *,
+        exclude_thread_name: str = "",
+    ) -> set[str]:
+        with self.lock:
+            blocked = self.active_proxy_addresses_locked(exclude_thread_name=exclude_thread_name)
+            blocked.update(self.successful_proxy_addresses_locked())
+            return blocked
+
+    def is_proxy_address_in_use(
+        self: "_ProxyRuntimeHost",
+        proxy_address: str,
+        *,
+        exclude_thread_name: str = "",
+    ) -> bool:
+        normalized = str(proxy_address or "").strip()
+        if not normalized:
+            return False
+        with self.lock:
+            return normalized in self.active_proxy_addresses_locked(exclude_thread_name=exclude_thread_name)
+
+    def mark_successful_proxy_address(self: "_ProxyRuntimeHost", proxy_address: str) -> bool:
+        with self.lock:
+            changed = add_successful_proxy_address(self.successful_proxy_addresses, proxy_address)
+        if changed:
+            self.notify_runtime_change()
+        return changed
+
+    def is_successful_proxy_address(self: "_ProxyRuntimeHost", proxy_address: str) -> bool:
+        normalized = str(proxy_address or "").strip()
+        if not normalized:
+            return False
+        with self.lock:
+            return normalized in self.successful_proxy_addresses_locked()
