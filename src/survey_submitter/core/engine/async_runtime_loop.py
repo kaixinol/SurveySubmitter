@@ -9,11 +9,7 @@ from survey_submitter.core.ai.runtime import AIRuntimeError
 from survey_submitter.core.engine.async_events import AsyncRunContext, ThreadEventProxy
 from survey_submitter.core.engine.async_http_submitter import AsyncHttpSubmitter
 from survey_submitter.core.engine.async_proxy_session import AsyncProxySession
-from survey_submitter.core.engine.async_round_resources import (
-    AsyncRoundResources,
-    JOINT_PRE_ANSWER_ATTEMPT_REQUEUE_DELAY_SECONDS,
-    JOINT_PRE_ANSWER_TIMEOUT,
-)
+from survey_submitter.core.engine.async_round_resources import AsyncRoundResources
 from survey_submitter.core.engine.async_scheduler import AsyncScheduler
 from survey_submitter.core.engine.failure_reason import FailureReason
 from survey_submitter.core.engine.run_stop_policy import RunStopPolicy
@@ -79,7 +75,6 @@ class AsyncSlotRunner:
             state=state,
             slot_label=self.slot_label,
         )
-        self._joint_pre_answer_timed_out = False
 
     def _update_status(self, status_text: str, *, running: bool = True) -> None:
         try:
@@ -136,9 +131,6 @@ class AsyncSlotRunner:
                 return "已完成"
         return "已停止"
 
-    def _requires_joint_sample(self) -> bool:
-        return self.round_resources.requires_joint_sample()
-
     async def _prepare_round_context(self) -> bool:
         return await self.round_resources.prepare_round_context()
 
@@ -150,9 +142,6 @@ class AsyncSlotRunner:
 
     def _release_session_proxy(self) -> None:
         self.proxy_session.release_current_proxy()
-
-    async def _run_pre_answer_step_with_joint_lease(self, label: str, operation: Any) -> Any:
-        return await self.round_resources.run_pre_answer_step_with_joint_lease(label, operation)
 
     def _handle_proxy_unavailable(self, *, status_text: str, log_message: str) -> bool:
         threshold_getter = getattr(self.stop_policy, "proxy_unavailable_threshold", None)
@@ -268,7 +257,6 @@ class AsyncSlotRunner:
         if block_reason:
             self._block_http_runtime(block_reason)
             try:
-                self.state.release_joint_sample(self.slot_label)
                 self.state.release_reverse_fill_sample(self.slot_label, requeue=True)
                 self.state.mark_thread_finished(self.slot_label, status_text=self._resolve_finished_status_text())
             except Exception:
@@ -285,35 +273,16 @@ class AsyncSlotRunner:
             should_requeue_dispatch = True
             dispatch_delay_seconds = 0.0
             try:
-                self._joint_pre_answer_timed_out = False
                 await self._update_http_step("准备请求")
                 if not await self._prepare_round_context():
                     should_requeue_dispatch = False
                     break
 
-                ua_result = await self._run_pre_answer_step_with_joint_lease(
-                    "准备会话",
-                    self._select_session_proxy_and_ua,
-                )
-                if ua_result is JOINT_PRE_ANSWER_TIMEOUT:
-                    dispatch_delay_seconds = JOINT_PRE_ANSWER_ATTEMPT_REQUEUE_DELAY_SECONDS
-                    continue
-                _proxy_address, ua_value = ua_result
+                _proxy_address, ua_value = await self._select_session_proxy_and_ua()
                 ua_profile = self.proxy_session.user_agent_profile
                 if self.run_context.stop_requested():
                     should_requeue_dispatch = False
                     break
-
-                try:
-                    marked_answering = self.state.mark_joint_sample_answering(self.slot_label)
-                except Exception:
-                    logging.debug("标记联合信效度槽位进入答题失败", exc_info=True)
-                    marked_answering = False
-                if self._requires_joint_sample() and not marked_answering:
-                    logging.warning("会话[%s]进入 HTTP 答题前发现联合信效度槽位已释放，本轮放弃并重试", self.slot_label)
-                    self._release_round_resources(requeue_reverse_fill=True)
-                    dispatch_delay_seconds = JOINT_PRE_ANSWER_ATTEMPT_REQUEUE_DELAY_SECONDS
-                    continue
 
                 async def submit_proxy_lease_factory():
                     if self.config.random_proxy_ip_enabled:
@@ -403,7 +372,6 @@ class AsyncSlotRunner:
                     delay_seconds=dispatch_delay_seconds,
                 )
         try:
-            self.state.release_joint_sample(self.slot_label)
             self.state.release_reverse_fill_sample(self.slot_label, requeue=True)
             self.state.mark_thread_finished(self.slot_label, status_text=self._resolve_finished_status_text())
         except Exception:

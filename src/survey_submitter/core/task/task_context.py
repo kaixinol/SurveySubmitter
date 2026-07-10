@@ -50,7 +50,6 @@ class ExecutionConfig(BaseConfigModel):
     question_psycho_bias_map: dict[int, Any] = {}
     questions_metadata: dict[int, SurveyQuestionMeta] = {}
     provider_question_metadata_map: dict[str, SurveyQuestionMeta] = {}
-    joint_psychometric_answer_plan: Any | None = None
 
     psycho_target_alpha: float = 0.85
 
@@ -91,10 +90,6 @@ class ExecutionState(
     thread_progress: dict[str, ThreadProgressState] = field(default_factory=dict)
     distribution_runtime_stats: dict[str, dict[str, Any]] = field(default_factory=dict)
     distribution_pending_by_thread: dict[str, list[tuple[str, int, int]]] = field(default_factory=dict)
-    joint_reserved_sample_by_thread: dict[str, int] = field(default_factory=dict)
-    joint_reserved_sample_started_at_by_thread: dict[str, float] = field(default_factory=dict)
-    joint_committed_sample_indexes: set[int] = field(default_factory=set)
-    joint_answering_threads: set[str] = field(default_factory=set)
 
     proxy_waiting_threads: int = 0
     proxy_in_use_by_thread: dict[str, ProxyLease] = field(default_factory=dict)

@@ -7,7 +7,6 @@ import pytest
 
 import survey_submitter.core.engine.async_runtime_loop as runtime_loop
 import survey_submitter.core.engine.async_proxy_session as proxy_session
-import survey_submitter.core.engine.async_round_resources as round_resources
 from survey_submitter.core.ai.runtime import AIRuntimeError
 from survey_submitter.core.engine.async_events import AsyncRunContext
 from survey_submitter.core.engine.async_runtime_loop import AsyncSlotRunner
@@ -158,12 +157,9 @@ class AsyncRuntimeLoopLargeTests:
         config = ExecutionConfig(target_num=2, survey_provider="wjx")
         state = ExecutionState(config=config)
         state.reset_pending_distribution = lambda *_args, **_kwargs: None
-        state.reserve_joint_sample = lambda *_args, **_kwargs: 0
         state.acquire_reverse_fill_sample = lambda *_args, **_kwargs: SimpleNamespace(status="exhausted", sample=None)
         terminal: list[tuple[str, str, str]] = []
         state.mark_terminal_stop = lambda category, *, failure_reason, message: terminal.append((category, failure_reason, message))
-        state.release_joint_sample = lambda *_args, **_kwargs: None
-        monkeypatch.setattr(round_resources, "ensure_joint_psychometric_answer_plan", lambda _config: SimpleNamespace(sample_count=2))
         runner, _state, ctx, _scheduler = _build_runner(config=config, state=state)
 
         assert await runner._prepare_round_context() is False

@@ -78,61 +78,6 @@ class ExecutionStateConcurrencyTests:
         assert all((not thread.is_alive() for thread in threads))
         assert state.proxy_waiting_threads == 0
 
-    def test_reserve_joint_sample_returns_unique_values_under_concurrency(self) -> None:
-        state = ExecutionState()
-        barrier = threading.Barrier(5)
-        results: dict[str, int | None] = {}
-        result_lock = threading.Lock()
-
-        def _worker(name: str) -> None:
-            barrier.wait()
-            value = state.reserve_joint_sample(3, thread_name=name)
-            with result_lock:
-                results[name] = value
-        threads = [threading.Thread(target=_worker, args=(f'Worker-{idx}',), name=f'Worker-{idx}') for idx in range(1, 6)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join(timeout=2.0)
-        acquired = [value for value in results.values() if value is not None]
-        assert len(acquired) == 3
-        assert len(set(acquired)) == 3
-        assert sum((value is None for value in results.values())) == 2
-
-    def test_joint_sample_quota_status_distinguishes_allocated_from_exhausted(self) -> None:
-        state = ExecutionState()
-        assert not state.is_joint_sample_quota_exhausted(2)
-
-        assert state.reserve_joint_sample(2, thread_name='Worker-1') == 0
-        assert not state.is_joint_sample_quota_exhausted(2)
-
-        state.commit_joint_sample('Worker-1')
-        assert not state.is_joint_sample_quota_exhausted(2)
-
-        assert state.reserve_joint_sample(2, thread_name='Worker-2') == 1
-        assert not state.is_joint_sample_quota_exhausted(2)
-
-        state.commit_joint_sample('Worker-2')
-        assert state.is_joint_sample_quota_exhausted(2)
-
-    def test_expire_stale_joint_sample_reservations_skips_answering_threads(self) -> None:
-        state = ExecutionState()
-        released_reverse: list[tuple[str, bool]] = []
-        state.release_reverse_fill_sample = lambda thread_name, *, requeue=True: released_reverse.append((thread_name, requeue))
-
-        assert state.reserve_joint_sample(2, thread_name='Worker-1') == 0
-        assert state.reserve_joint_sample(2, thread_name='Worker-2') == 1
-        assert state.mark_joint_sample_answering('Worker-2')
-        state.joint_reserved_sample_started_at_by_thread['Worker-1'] = 1.0
-        state.joint_reserved_sample_started_at_by_thread['Worker-2'] = 1.0
-
-        expired = state.expire_stale_joint_sample_reservations(0.001)
-
-        assert expired == 1
-        assert state.peek_reserved_joint_sample('Worker-1') is None
-        assert state.peek_reserved_joint_sample('Worker-2') == 1
-        assert released_reverse == [('Worker-1', True)]
-
     def test_release_proxy_in_use_notifies_waiting_threads(self) -> None:
         state = ExecutionState()
         state.mark_proxy_in_use('Worker-1', ProxyLease(address='http://1.1.1.1:8000'))

@@ -6,58 +6,10 @@ from typing import Any, Iterator
 
 from survey_submitter.core.persona.context import reset_context as _reset_answer_context
 from survey_submitter.core.persona.generator import generate_persona, reset_persona, set_current_persona
-from survey_submitter.core.psychometrics import (
-    CombinedPsychometricPlan,
-    build_dimension_psychometric_plan,
-    build_joint_psychometric_answer_plan,
-    build_psychometric_blueprint,
-)
-from survey_submitter.core.psychometrics.psychometric import normalize_target_alpha
 from survey_submitter.core.questions.config import GLOBAL_RELIABILITY_DIMENSION
 from survey_submitter.core.questions.consistency import reset_consistency_context
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.core.questions.tendency import reset_tendency
-
-
-def _build_grouped_runtime_items(
-    config: ExecutionConfig,
-) -> dict[str, list[Any]]:
-    grouped_items: dict[str, list[Any]] = {}
-    for dimension, items in build_psychometric_blueprint(config).items():
-        normalized_dimension = str(dimension or "").strip()
-        if not normalized_dimension:
-            continue
-        bucket = grouped_items.setdefault(normalized_dimension, [])
-        for item in items:
-            bucket.append(item.to_runtime_item())
-    return grouped_items
-
-
-def build_psychometric_plan_for_run(config: ExecutionConfig) -> Any | None:
-    
-    grouped_items = _build_grouped_runtime_items(config)
-
-    if not grouped_items:
-        return None
-
-    try:
-        target_alpha = normalize_target_alpha(config.psycho_target_alpha)
-    except Exception:
-        target_alpha = normalize_target_alpha(None)
-
-    return build_dimension_psychometric_plan(
-        grouped_items=grouped_items,
-        target_alpha=target_alpha,
-    )
-
-
-def ensure_joint_psychometric_answer_plan(config: ExecutionConfig) -> Any | None:
-    cached = config.joint_psychometric_answer_plan
-    if cached is not None:
-        return cached
-    plan = build_joint_psychometric_answer_plan(config)
-    config.joint_psychometric_answer_plan = plan
-    return plan
 
 
 @contextmanager
@@ -76,55 +28,8 @@ def provider_run_context(
     reset_consistency_context(config.answer_rules, list((config.questions_metadata or {}).values()))
 
     resolved_plan = psycho_plan
-    fallback_plan: Any | None = None
-    joint_sample_plan: Any | None = None
-    reserved_sample_index: int | None = None
-    if resolved_plan is None:
-        fallback_plan = build_psychometric_plan_for_run(config)
-        joint_answer_plan = ensure_joint_psychometric_answer_plan(config)
-        if joint_answer_plan is not None and state is not None:
-            reserved_sample_index = state.peek_reserved_joint_sample(thread_name)
-            if reserved_sample_index is not None:
-                joint_sample_plan = joint_answer_plan.build_sample_plan(reserved_sample_index)
-            else:
-                logging.warning("线程[%s]存在联合信效度计划但未预留样本槽位，已回退常规逻辑", thread_name or "Worker-?")
-        if joint_sample_plan is not None and fallback_plan is not None:
-            resolved_plan = CombinedPsychometricPlan(primary=joint_sample_plan, fallback=fallback_plan)
-        elif joint_sample_plan is not None:
-            resolved_plan = joint_sample_plan
-        else:
-            resolved_plan = fallback_plan
 
-    if joint_sample_plan is not None:
-        diagnostics = dict(getattr(joint_sample_plan, "diagnostics_by_dimension", {}) or {})
-        active_dimensions = [
-            name
-            for name, diagnostic in diagnostics.items()
-            if not bool(getattr(diagnostic, "skipped", False))
-        ]
-        logging.debug(
-            "本轮启用联合信效度计划：样本槽位=%d，维度数=%d，锁定题目数=%d，目标α=%.2f，维度=%s",
-            int(reserved_sample_index or 0) + 1,
-            len(active_dimensions),
-            len(getattr(joint_sample_plan, "choices", {}) or {}),
-            float(config.psycho_target_alpha or 0.85),
-            ",".join(active_dimensions[:5]) if active_dimensions else "无",
-        )
-        for diagnostic in diagnostics.values():
-            if bool(getattr(diagnostic, "skipped", False)):
-                continue
-            if not bool(getattr(diagnostic, "degraded_for_ratio", False)):
-                continue
-            logging.warning(
-                "维度[%s]已保比例优先，实际α=%.3f 低于目标α=%.3f，主方向=%s，反向题=%d，锚点明确=%s",
-                getattr(diagnostic, "dimension", ""),
-                float(getattr(diagnostic, "actual_alpha", 0.0) or 0.0),
-                float(getattr(diagnostic, "target_alpha", 0.0) or 0.0),
-                str(getattr(diagnostic, "anchor_direction", "center") or "center"),
-                int(getattr(diagnostic, "reverse_item_count", 0) or 0),
-                "否" if bool(getattr(diagnostic, "ambiguous_anchor", False)) else "是",
-            )
-    elif resolved_plan is not None:
+    if resolved_plan is not None:
         dimension_count = len(getattr(resolved_plan, "plans", {}) or {})
         plan_names = list((getattr(resolved_plan, "plans", {}) or {}).keys())
         if plan_names == [GLOBAL_RELIABILITY_DIMENSION]:
@@ -143,8 +48,7 @@ def provider_run_context(
         yield resolved_plan
     finally:
         reset_persona()
+
 __all__ = [
-    "build_psychometric_plan_for_run",
-    "ensure_joint_psychometric_answer_plan",
     "provider_run_context",
 ]

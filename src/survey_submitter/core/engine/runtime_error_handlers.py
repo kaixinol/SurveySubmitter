@@ -92,10 +92,6 @@ def handle_submission_verification_error(
     message = str(exc or "").strip() or "提交触发智能验证，请启用随机 IP 后再试"
     logging.warning("会话[%s]触发提交智能验证：%s", thread_name, message)
     try:
-        state.release_joint_sample(thread_name)
-    except Exception:
-        logging.debug("智能验证停止时释放联合信效度样本槽位失败", exc_info=True)
-    try:
         state.release_reverse_fill_sample(thread_name, requeue=True)
     except Exception:
         logging.debug("智能验证停止时回收反填样本失败", exc_info=True)
@@ -121,10 +117,6 @@ def handle_survey_provider_unavailable_error(
 ) -> bool:
     message = str(exc or "").strip() or "问卷当前不可填写"
     logging.warning("会话[%s]发现问卷不可继续：%s", thread_name, message)
-    try:
-        state.release_joint_sample(thread_name)
-    except Exception:
-        logging.debug("问卷不可继续时释放联合信效度样本槽位失败", exc_info=True)
     try:
         state.release_reverse_fill_sample(thread_name, requeue=True)
     except Exception:

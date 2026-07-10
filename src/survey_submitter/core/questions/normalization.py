@@ -4,7 +4,6 @@ import copy
 from typing import TYPE_CHECKING, Any
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT, DIMENSION_UNGROUPED
-from survey_submitter.core.psychometrics import JOINT_PSYCHOMETRIC_SUPPORTED_TYPES
 from survey_submitter.core.psychometrics.ordinal_options import infer_ordinal_option_mapping
 from survey_submitter.core.questions.schema import (
     GLOBAL_RELIABILITY_DIMENSION,
@@ -55,7 +54,7 @@ def _resolve_runtime_dimension(
     allows_joint_ratio = (
         bool(allows_reliability)
         if allows_reliability is not None
-        else entry.question_type.strip() in JOINT_PSYCHOMETRIC_SUPPORTED_TYPES
+        else True
     )
     if not reliability_mode_enabled or (strict_ratio and not allows_joint_ratio):
         return None
@@ -386,7 +385,6 @@ def configure_probabilities(
     )
     if reliability_mode_enabled and reliability_candidates and not has_explicit_runtime_dimension:
         for question_num, strict_ratio, question_type in reliability_candidates:
-            supports_joint_ratio = str(question_type or "").strip() in JOINT_PSYCHOMETRIC_SUPPORTED_TYPES
-            if (strict_ratio and not supports_joint_ratio) or target.question_dimension_map.get(question_num):
+            if strict_ratio or target.question_dimension_map.get(question_num):
                 continue
             target.question_dimension_map[question_num] = GLOBAL_RELIABILITY_DIMENSION

@@ -17,7 +17,6 @@ class RunStopPolicyTests:
         config = ExecutionConfig(fail_threshold=2, stop_on_fail_enabled=True)
         state = ExecutionState(config=config, cur_fail=1)
         increment_thread_fail = state.increment_thread_fail
-        state.release_joint_sample = make_callable_mock(return_value=None)
         state.increment_thread_fail = make_callable_mock(side_effect=increment_thread_fail)
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
@@ -27,7 +26,6 @@ class RunStopPolicyTests:
         assert state.cur_fail == 2
         assert state.get_terminal_stop_snapshot()[0] == 'fail_threshold'
         assert state.get_terminal_stop_snapshot()[1] == FailureReason.FILL_FAILED.value
-        state.release_joint_sample.assert_called_once_with('Worker-1')
         state.increment_thread_fail.assert_called_once()
 
     def test_record_failure_requeues_reverse_fill_row_on_first_failure(self) -> None:
@@ -103,7 +101,6 @@ class RunStopPolicyTests:
     def test_record_success_commits_progress_and_triggers_target_stop(self, make_gui_mock) -> None:
         config = ExecutionConfig(target_num=1, random_proxy_ip_enabled=True)
         state = ExecutionState(config=config, cur_fail=2)
-        state.joint_reserved_sample_by_thread['Worker-1'] = 0
         state.distribution_pending_by_thread['Worker-1'] = [('q:1', 1, 3)]
         gui = make_gui_mock('handle_random_ip_submission')
         policy = RunStopPolicy(config, state, gui)
@@ -113,7 +110,6 @@ class RunStopPolicyTests:
         assert state.cur_num == 1
         assert state.cur_fail == 0
         assert state.proxy_unavailable_fail_count == 0
-        assert 0 in state.joint_committed_sample_indexes
         assert state.distribution_runtime_stats['q:1']['total'] == 1
         assert stop_signal.is_set()
         assert state.get_terminal_stop_snapshot()[0] == 'target_reached'
