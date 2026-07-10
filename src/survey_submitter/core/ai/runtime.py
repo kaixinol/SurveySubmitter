@@ -8,7 +8,8 @@ from survey_submitter.core.task import ExecutionState
 from survey_submitter.logging.log_utils import log_suppressed_exception
 
 from survey_submitter.integrations.ai.client import agenerate_answer
-from survey_submitter.constants import _HTML_SPACE_RE
+
+_HTML_SPACE_RE = re.compile(r"\s+")
 
 
 class AIRuntimeError(RuntimeError):
