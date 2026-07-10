@@ -12,7 +12,7 @@ from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_surv
 _thread_local = threading.local()
 _CONDITION_MODES = {"selected", "not_selected"}
 _ACTION_MODES = {"must_select", "must_not_select"}
-_SUPPORTED_RULE_TYPE_CODES = {TypeCode.RADIO, TypeCode.CHECKBOX, TypeCode.RATING, TypeCode.MATRIX, TypeCode.SCORE, TypeCode.SCALE}
+_SUPPORTED_RULE_TYPE_CODES = {TypeCode.SINGLE, TypeCode.MULTIPLE, TypeCode.MATRIX, TypeCode.SCORE, TypeCode.SCALE}
 
 
 @dataclass

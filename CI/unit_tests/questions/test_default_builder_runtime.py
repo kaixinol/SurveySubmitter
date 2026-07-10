@@ -1,21 +1,22 @@
 from __future__ import annotations
 
+from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.questions.default_builder import build_default_question_entries
 from survey_submitter.core.questions.schema import QuestionEntry, _TEXT_RANDOM_MOBILE, _TEXT_RANDOM_NONE
-from survey_submitter.providers.contracts import SurveyQuestionMeta
+from survey_submitter.providers.contracts import ensure_survey_question_meta
 
 
 class DefaultBuilderRuntimeTests:
     def test_build_default_question_entries_creates_defaults_for_common_types(self) -> None:
         questions = [
-            SurveyQuestionMeta(num=1, title="单选", type_code="3", options=4, option_texts=["A", "B"], forced_option_index=2, forced_option_text="C"),
-            SurveyQuestionMeta(num=2, title="多选", type_code="4", options=3),
-            SurveyQuestionMeta(num=3, title="矩阵", type_code="6", options=5, rows=2),
-            SurveyQuestionMeta(num=4, title="评分", type_code="5", is_rating=True, rating_max=7),
-            SurveyQuestionMeta(num=5, title="滑块", type_code="5", is_slider_matrix=True, slider_min=10, slider_max=20),
-            SurveyQuestionMeta(num=6, title="填空", type_code="1", text_inputs=1, forced_texts=["指定文本"]),
-            SurveyQuestionMeta(num=7, title="说明", type_code="0", is_description=True),
-            SurveyQuestionMeta(num=8, title="不支持", type_code="99", unsupported=True),
+            ensure_survey_question_meta({"num": 1, "title": "单选", "type_code": "3", "option_texts": ["A", "B", "C", "D"], "forced_option_index": 2, "forced_option_text": "C"}),
+            ensure_survey_question_meta({"num": 2, "title": "多选", "type_code": "4", "option_texts": ["A", "B", "C"]}),
+            ensure_survey_question_meta({"num": 3, "title": "矩阵", "type_code": "6", "rows": 2}),
+            ensure_survey_question_meta({"num": 4, "title": "评分", "type_code": "5", "rating_max": 7}),
+            ensure_survey_question_meta({"num": 5, "title": "滑块", "type_code": "8", "slider_min": 10, "slider_max": 20}),
+            ensure_survey_question_meta({"num": 6, "title": "填空", "type_code": "1", "text_inputs": 1, "text_input_labels": ["指定文本"]}),
+            ensure_survey_question_meta({"num": 7, "title": "说明", "type_code": "description"}),
+            ensure_survey_question_meta({"num": 8, "title": "不支持", "type_code": "99", "unsupported": True}),
         ]
 
         entries = build_default_question_entries(questions, survey_url="https://www.wjx.cn/vm/demo.aspx")
@@ -30,22 +31,20 @@ class DefaultBuilderRuntimeTests:
         assert entries[2].rows == 2
         assert entries[3].question_type == "score"
         assert entries[3].option_count == 7
-        assert entries[4].question_type == "matrix"
-        assert entries[4].probabilities == -1
+        assert entries[4].question_type == "slider"
+        assert entries[4].probabilities == [15.0]
         assert entries[5].question_type == "text"
-        assert entries[5].texts == ["指定文本"]
+        assert entries[5].texts == [DEFAULT_FILL_TEXT]
 
     def test_build_default_question_entries_infers_multi_text_mobile_blank(self) -> None:
         questions = [
-            SurveyQuestionMeta(
-                num=11,
-                title="多项填空",
-                type_code="9",
-                text_inputs=3,
-                is_text_like=True,
-                is_multi_text=True,
-                text_input_labels=["项目评价", "请输入手机号", "备注"],
-            )
+            ensure_survey_question_meta({
+                "num": 11,
+                "title": "多项填空",
+                "type_code": "multi_text",
+                "text_inputs": 3,
+                "text_input_labels": ["项目评价", "请输入手机号", "备注"],
+            })
         ]
 
         entries = build_default_question_entries(questions, survey_url="https://www.wjx.cn/vm/demo.aspx")
@@ -86,18 +85,17 @@ class DefaultBuilderRuntimeTests:
             ai_enabled=True,
         )
         questions = [
-            SurveyQuestionMeta(
-                num=1,
-                title="新标题",
-                type_code="3",
-                options=2,
-                provider_question_id="provider-1",
-                fillable_options=[1],
-                attached_option_selects=[{"option_index": 1, "option_text": "其他", "select_options": ["北京", "上海"]}],
-                has_attached_option_select=True,
-            ),
-            SurveyQuestionMeta(num=2, title="多选题", type_code="4", options=2),
-            SurveyQuestionMeta(num=3, title="标题匹配", type_code="1", text_inputs=1),
+            ensure_survey_question_meta({
+                "num": 1,
+                "title": "新标题",
+                "type_code": "3",
+                "option_texts": ["X", "Y"],
+                "provider_question_id": "provider-1",
+                "fillable_options": [1],
+                "attached_option_selects": [{"option_index": "1", "option_text": "其他", "select_options": ["北京", "上海"]}],
+            }),
+            ensure_survey_question_meta({"num": 2, "title": "多选题", "type_code": "4", "option_texts": ["A", "B"]}),
+            ensure_survey_question_meta({"num": 3, "title": "标题匹配", "type_code": "1", "text_inputs": 1}),
         ]
 
         entries = build_default_question_entries(
@@ -128,7 +126,7 @@ class DefaultBuilderRuntimeTests:
             fillable_option_indices=[0],
         )
         entries = build_default_question_entries(
-            [SurveyQuestionMeta(num=1, title="单选题", type_code="3", options=2, fillable_options=[])],
+            [ensure_survey_question_meta({"num": 1, "title": "单选题", "type_code": "3", "option_texts": ["A", "B"], "fillable_options": [5]})],
             existing_entries=[existing],
         )
 
@@ -145,7 +143,7 @@ class DefaultBuilderRuntimeTests:
             distribution_mode="custom",
             custom_weights=[0, 1],
         )
-        questions = [SurveyQuestionMeta(num=1, title="新标题", type_code="3", options=2)]
+        questions = [ensure_survey_question_meta({"num": 1, "title": "新标题", "type_code": "3", "option_texts": ["A", "B"]})]
 
         entries = build_default_question_entries(questions, existing_entries=[existing])
 

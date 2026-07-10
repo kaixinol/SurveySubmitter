@@ -73,7 +73,6 @@ async def test_parse_hook_normalizes_tuple_result_to_survey_definition() -> None
     assert isinstance(definition, SurveyDefinition)
     assert definition.provider == SURVEY_PROVIDER_WJX
     assert definition.title == "标题"
-    assert definition.questions[0].provider == SURVEY_PROVIDER_WJX
 
 
 async def test_parse_hook_rejects_sync_parser_result() -> None:

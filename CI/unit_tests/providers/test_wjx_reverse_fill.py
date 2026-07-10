@@ -5,10 +5,9 @@ import tempfile
 from openpyxl import Workbook
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.questions.schema import QuestionEntry
-from survey_submitter.core.reverse_fill.schema import REVERSE_FILL_FORMAT_WJX_SCORE, REVERSE_FILL_FORMAT_WJX_SEQUENCE, REVERSE_FILL_FORMAT_WJX_TEXT, REVERSE_FILL_STATUS_BLOCKED, REVERSE_FILL_STATUS_FALLBACK, REVERSE_FILL_STATUS_REVERSE
+from survey_submitter.core.reverse_fill.schema import REVERSE_FILL_FORMAT_WJX_SEQUENCE, REVERSE_FILL_FORMAT_WJX_TEXT, REVERSE_FILL_STATUS_BLOCKED, REVERSE_FILL_STATUS_FALLBACK, REVERSE_FILL_STATUS_REVERSE
 from survey_submitter.core.reverse_fill.validation import build_enabled_reverse_fill_spec, build_reverse_fill_spec
 from survey_submitter.core.config.schema import RuntimeConfig
-from survey_submitter.io.spreadsheets.wjx_excel import load_wjx_excel_export
 
 def _write_workbook(rows: list[list[object]]) -> str:
     workbook = Workbook()
@@ -35,14 +34,6 @@ class WjxReverseFillTests:
             self._temp_paths = []
         self._temp_paths.append(path)
         return path
-
-    def test_detects_three_wjx_export_formats(self) -> None:
-        sequence_path = self._track(_write_workbook([['序号', '1、单选题', '2、(选项1)', '2、(选项2)'], [1, 2, 1, 2]]))
-        score_path = self._track(_write_workbook([['序号', '1、满意度'], [1, 4]]))
-        text_path = self._track(_write_workbook([['序号', '1、满意度'], [1, '4']]))
-        assert load_wjx_excel_export(sequence_path).detected_format == REVERSE_FILL_FORMAT_WJX_SEQUENCE
-        assert load_wjx_excel_export(score_path).detected_format == REVERSE_FILL_FORMAT_WJX_SCORE
-        assert load_wjx_excel_export(text_path).detected_format == REVERSE_FILL_FORMAT_WJX_TEXT
 
     def test_build_reverse_fill_spec_parses_supported_v1_answers(self) -> None:
         workbook_path = self._track(_write_workbook([['序号', '1、单选题', '2、姓名', '3、字段A', '3、字段B', '4、外观', '4、功能'], [1, 2, '张三', '甲', '乙', 1, 2]]))

@@ -5,6 +5,8 @@ import time
 from unittest.mock import patch
 from survey_submitter.core.task import ExecutionConfig, ExecutionState, ProxyLease
 from survey_submitter.network import session_policy
+from survey_submitter.network.proxy import submit_pool
+from survey_submitter.network import user_agent
 
 class SessionPolicyTests:
 
@@ -60,8 +62,8 @@ class SessionPolicyTests:
         def has_ttl(lease: ProxyLease | None, *, required_ttl_seconds: int) -> bool:
             assert required_ttl_seconds == 50
             return bool(lease and lease.address != 'http://3.3.3.3:8000')
-        with patch.object(session_policy, 'get_proxy_required_ttl_seconds', return_value=50), patch.object(session_policy, 'proxy_lease_has_sufficient_ttl', side_effect=has_ttl):
-            session_policy._purge_unusable_proxy_pool_locked(ctx)
+        with patch.object(submit_pool, 'get_proxy_required_ttl_seconds', return_value=50), patch.object(submit_pool, 'proxy_lease_has_sufficient_ttl', side_effect=has_ttl):
+            submit_pool._purge_unusable_proxy_pool_locked(ctx)
         assert list(ctx.config.proxy_ip_pool) == [ProxyLease(address='http://1.1.1.1:8000', poolable=True)]
         assert isinstance(ctx.config.proxy_ip_pool, deque)
 
@@ -74,7 +76,7 @@ class SessionPolicyTests:
         def has_ttl(lease: ProxyLease | None, *, required_ttl_seconds: int) -> bool:
             _ = required_ttl_seconds
             return bool(lease and lease.address == usable.address)
-        with patch.object(session_policy, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(session_policy, 'proxy_lease_has_sufficient_ttl', side_effect=has_ttl):
+        with patch.object(submit_pool, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(submit_pool, 'proxy_lease_has_sufficient_ttl', side_effect=has_ttl):
             selected = session_policy._pop_available_proxy_lease_locked(ctx)
         assert selected == usable
         assert list(ctx.config.proxy_ip_pool) == []
@@ -85,7 +87,7 @@ class SessionPolicyTests:
         usable = ProxyLease(address='http://2.2.2.2:8000')
         ctx.config.proxy_ip_pool = [duplicated, usable]
         ctx.proxy_in_use_by_thread = {'Worker-9': ProxyLease(address='http://1.1.1.1:8000')}
-        with patch.object(session_policy, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(session_policy, 'proxy_lease_has_sufficient_ttl', return_value=True):
+        with patch.object(submit_pool, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(submit_pool, 'proxy_lease_has_sufficient_ttl', return_value=True):
             selected = session_policy._pop_available_proxy_lease_locked(ctx)
         assert selected == usable
         assert list(ctx.config.proxy_ip_pool) == []
@@ -96,7 +98,7 @@ class SessionPolicyTests:
         usable = ProxyLease(address='http://2.2.2.2:8000')
         ctx.config.proxy_ip_pool = [cooled, usable]
         ctx.mark_proxy_in_cooldown(cooled.address, 180.0)
-        with patch.object(session_policy, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(session_policy, 'proxy_lease_has_sufficient_ttl', return_value=True):
+        with patch.object(submit_pool, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(submit_pool, 'proxy_lease_has_sufficient_ttl', return_value=True):
             selected = session_policy._pop_available_proxy_lease_locked(ctx)
         assert selected == usable
         assert list(ctx.config.proxy_ip_pool) == []
@@ -107,7 +109,7 @@ class SessionPolicyTests:
         usable = ProxyLease(address='http://2.2.2.2:8000')
         ctx.config.proxy_ip_pool = [used, usable]
         ctx.mark_successful_proxy_address(used.address)
-        with patch.object(session_policy, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(session_policy, 'proxy_lease_has_sufficient_ttl', return_value=True):
+        with patch.object(submit_pool, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(submit_pool, 'proxy_lease_has_sufficient_ttl', return_value=True):
             selected = session_policy._pop_available_proxy_lease_locked(ctx)
         assert selected == usable
         assert list(ctx.config.proxy_ip_pool) == []
@@ -156,7 +158,7 @@ class SessionPolicyTests:
         fetched = [ProxyLease(address='http://1.1.1.1:8000', source='api'), ProxyLease(address='http://2.2.2.2:8000', source='api')]
         async def fake_fetch_proxy_batch_async(**_kwargs):
             return fetched
-        with patch.object(session_policy, 'fetch_proxy_batch_async', side_effect=fake_fetch_proxy_batch_async), patch.object(session_policy, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(session_policy, 'proxy_lease_has_sufficient_ttl', return_value=True):
+        with patch.object(session_policy, 'fetch_proxy_batch_async', side_effect=fake_fetch_proxy_batch_async), patch.object(submit_pool, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(submit_pool, 'proxy_lease_has_sufficient_ttl', return_value=True):
             selected = asyncio.run(session_policy._select_proxy_for_session_async(ctx, 'Worker-1'))
         assert selected == 'http://2.2.2.2:8000'
         assert ctx.proxy_in_use_by_thread['Worker-1'].address == 'http://2.2.2.2:8000'
@@ -167,7 +169,7 @@ class SessionPolicyTests:
         fetched = [ProxyLease(address='http://1.1.1.1:8000', source='api'), ProxyLease(address='http://2.2.2.2:8000', source='api')]
         async def fake_fetch_proxy_batch_async(**_kwargs):
             return fetched
-        with patch.object(session_policy, 'fetch_proxy_batch_async', side_effect=fake_fetch_proxy_batch_async), patch.object(session_policy, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(session_policy, 'proxy_lease_has_sufficient_ttl', return_value=True):
+        with patch.object(session_policy, 'fetch_proxy_batch_async', side_effect=fake_fetch_proxy_batch_async), patch.object(submit_pool, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(submit_pool, 'proxy_lease_has_sufficient_ttl', return_value=True):
             selected = asyncio.run(session_policy._select_proxy_for_session_async(ctx, 'Worker-1'))
         assert selected == 'http://2.2.2.2:8000'
         assert ctx.proxy_in_use_by_thread['Worker-1'].address == 'http://2.2.2.2:8000'
@@ -178,7 +180,7 @@ class SessionPolicyTests:
         fetched = [ProxyLease(address='http://1.1.1.1:8000', source='api'), ProxyLease(address='http://2.2.2.2:8000', source='api')]
         async def fake_fetch_proxy_batch_async(**_kwargs):
             return fetched
-        with patch.object(session_policy, 'fetch_proxy_batch_async', side_effect=fake_fetch_proxy_batch_async), patch.object(session_policy, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(session_policy, 'proxy_lease_has_sufficient_ttl', return_value=True):
+        with patch.object(session_policy, 'fetch_proxy_batch_async', side_effect=fake_fetch_proxy_batch_async), patch.object(submit_pool, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(submit_pool, 'proxy_lease_has_sufficient_ttl', return_value=True):
             selected = asyncio.run(session_policy._select_proxy_for_session_async(ctx, 'Worker-1'))
         assert selected == 'http://2.2.2.2:8000'
         assert ctx.proxy_in_use_by_thread['Worker-1'].address == 'http://2.2.2.2:8000'
@@ -235,7 +237,7 @@ class SessionPolicyTests:
         lease = ProxyLease(address='http://1.1.1.1:8000')
         ctx.config.proxy_ip_pool = [lease]
         ctx.proxy_cooldown_until_by_address[lease.address] = time.time() - 1.0
-        with patch.object(session_policy, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(session_policy, 'proxy_lease_has_sufficient_ttl', return_value=True):
+        with patch.object(submit_pool, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(submit_pool, 'proxy_lease_has_sufficient_ttl', return_value=True):
             selected = session_policy._pop_available_proxy_lease_locked(ctx)
         assert selected == lease
         assert not ctx.is_proxy_in_cooldown(lease.address)
@@ -248,7 +250,7 @@ class SessionPolicyTests:
             ProxyLease(address='http://2.2.2.2:8000'),
             ProxyLease(address='http://3.3.3.3:8000', poolable=False),
         ]
-        with patch.object(session_policy, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(session_policy, 'proxy_lease_has_sufficient_ttl', return_value=True):
+        with patch.object(submit_pool, 'get_proxy_required_ttl_seconds', return_value=0), patch.object(submit_pool, 'proxy_lease_has_sufficient_ttl', return_value=True):
             merged = session_policy.merge_prefetched_proxy_leases(ctx, fetched)
         assert merged == 1
         assert [lease.address for lease in ctx.config.proxy_ip_pool] == ['http://1.1.1.1:8000', 'http://2.2.2.2:8000']
@@ -266,6 +268,6 @@ class SessionPolicyTests:
 
     def test_select_user_agent_returns_none_when_disabled(self) -> None:
         ctx = ExecutionState(config=ExecutionConfig(random_user_agent_enabled=False))
-        with patch.object(session_policy, '_select_user_agent_from_ratios') as select_user_agent:
+        with patch.object(user_agent, '_select_user_agent_from_ratios') as select_user_agent:
             assert session_policy._select_user_agent_for_session(ctx) is None
         select_user_agent.assert_not_called()

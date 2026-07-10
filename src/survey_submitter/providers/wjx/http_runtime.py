@@ -237,13 +237,13 @@ def _skipped_submitdata_answer(question: SurveyQuestionMeta) -> str:
     option_count = max(1, len(question.option_texts) if isinstance(question, ChoiceQuestionMeta) and question.option_texts else 0)
     rows = max(1, question.rows if isinstance(question, MatrixQuestionMeta) else 1)
     match type_code:
-        case TypeCode.RADIO | TypeCode.CHECKBOX | TypeCode.RATING | TypeCode.DROPDOWN | TypeCode.SCORE | TypeCode.SCALE:
+        case TypeCode.SINGLE | TypeCode.MULTIPLE | TypeCode.DROPDOWN | TypeCode.SCORE | TypeCode.SCALE:
             return "-3"
         case TypeCode.ORDER:
             return ",".join("-3" for _ in range(option_count))
         case TypeCode.MATRIX:
             return ",".join(f"{row_index + 1}!-3" for row_index in range(rows))
-        case TypeCode.GAPFILL | TypeCode.LOCATION_TEXT | TypeCode.SLIDER | TypeCode.MATRIX_TEXT | TypeCode.MULTI_TEXT | TypeCode.CAPTCHA | TypeCode.SIGNATURE:
+        case TypeCode.TEXT | TypeCode.LOCATION | TypeCode.SLIDER | TypeCode.MULTI_TEXT | TypeCode.UNKNOWN:
             return "(跳过)"
         case _:
             return "-3"

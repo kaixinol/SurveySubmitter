@@ -17,9 +17,8 @@ from .regexes import WJX_MODLEN_CLASS_RE, WJX_QUESTION_PREFIX_RE, WJX_TITLE_SUFF
 
 _TEXT_INPUT_ALLOWED_TYPES = {"text", "tel", "email", "number", "search", "url", "password"}
 _KNOWN_NON_TEXT_QUESTION_TYPES = {
-    TypeCode.RADIO, TypeCode.CHECKBOX, TypeCode.RATING, TypeCode.MATRIX,
+    TypeCode.SINGLE, TypeCode.MULTIPLE, TypeCode.SCORE, TypeCode.SCALE, TypeCode.MATRIX,
     TypeCode.DROPDOWN, TypeCode.SLIDER, TypeCode.ORDER,
-    TypeCode.TYPE_12, TypeCode.TYPE_13, TypeCode.TYPE_15, TypeCode.TYPE_16, TypeCode.TYPE_17,
 }
 _SELECT_PLACEHOLDER_PREFIXES = ("请选择", "请先选择")
 _LOCATION_VERIFY_MARKERS = ("地图", "省市", "省份", "城市", "地区", "map", "city", "province", "area")
@@ -424,7 +423,7 @@ def _soup_question_looks_like_description(question_div, type_code: str) -> bool:
     except Exception:
         pass
     
-    if type_code not in {TypeCode.RADIO, TypeCode.CHECKBOX}:
+    if type_code not in {TypeCode.SINGLE, TypeCode.MULTIPLE}:
         return False
     try:
         
@@ -578,11 +577,11 @@ def _should_mark_as_multi_text(
     if has_slider_matrix:
         return False
     normalized = _normalize_question_type_code(type_code)
-    if normalized == TypeCode.MATRIX_TEXT and has_gapfill:
+    if normalized == TypeCode.MATRIX and has_gapfill:
         return True
     if text_input_count < 2:
         return False
-    if normalized in {TypeCode.GAPFILL, TypeCode.LOCATION_TEXT, TypeCode.MATRIX_TEXT}:
+    if normalized in {TypeCode.TEXT, TypeCode.LOCATION, TypeCode.MATRIX}:
         return True
     if normalized in _KNOWN_NON_TEXT_QUESTION_TYPES:
         return False

@@ -32,7 +32,7 @@ class RuntimePreparationTests:
         config.random_ua_ratios = {'wechat': 20, 'mobile': 30, 'pc': 50}
         config.answer_rules = [{'num': 1, 'equals': [1]}]
         config.question_entries = [QuestionEntry(question_type='single', probabilities=[100.0, 0.0], option_count=2, question_num=1, survey_provider='wjx', provider_question_id='q1', provider_page_id='p1')]
-        config.questions_info = [{'num': 1, 'title': 'Q1', 'provider': 'qq', 'provider_question_id': 'q1', 'provider_page_id': 'p1', 'options': 2}]
+        config.questions_info = [{'num': 1, 'title': 'Q1', 'provider_question_id': 'q1', 'provider_page_id': 'p1'}]
         return config
 
     def test_prepare_execution_artifacts_rejects_empty_question_entries(self) -> None:
@@ -54,7 +54,6 @@ class RuntimePreparationTests:
         config.url = 'https://v.wjx.cn/vm/demo.aspx'
         config.survey_provider = 'wjx'
         config.question_entries[0].survey_provider = 'wjx'
-        config.questions_info[0].provider = 'wjx'
         html = "<html><body><div id='divWorkError'>此问卷处于停止状态，无法作答！</div></body></html>"
         with patch('survey_submitter.network.http.get', return_value=_FakeHttpResponse(html)) as http_get, patch('survey_submitter.core.engine.execution_builder.validate_question_config', return_value=''):
             with pytest.raises(RuntimePreparationError) as cm:
@@ -67,7 +66,6 @@ class RuntimePreparationTests:
         config.url = 'https://v.wjx.cn/vm/demo.aspx'
         config.survey_provider = 'wjx'
         config.question_entries[0].survey_provider = 'wjx'
-        config.questions_info[0].provider = 'wjx'
         html = """
         <html><body>
           <div>问卷发布者还未购买企业标准版或企业标准版已到期，此问卷暂时不能被填写！</div>
@@ -103,7 +101,6 @@ class RuntimePreparationTests:
         assert artifacts.execution_config_template.target_num == 5
         assert artifacts.execution_config_template.num_threads == 3
         assert artifacts.execution_config_template.question_config_index_map == {1: ('single', 0)}
-        assert artifacts.execution_config_template.questions_metadata[1].provider == 'wjx'
         assert artifacts.execution_config_template.questions_metadata[1].title == 'Q1'
         assert artifacts.execution_config_template.provider_question_metadata_map == {
             'wjx:p1:q1': artifacts.execution_config_template.questions_metadata[1]
@@ -119,7 +116,7 @@ class RuntimePreparationTests:
         with patch('survey_submitter.core.engine.execution_builder.build_enabled_reverse_fill_spec', return_value=None), patch('survey_submitter.core.engine.execution_builder.configure_probabilities', return_value=None):
             artifacts = prepare_execution_artifacts(config, fallback_survey_title='解析得到的标题')
         assert artifacts.execution_config_template.survey_title == '解析得到的标题'
-        assert artifacts.questions_info[0].provider == 'wjx'
+        assert artifacts.survey_provider == 'wjx'
         assert artifacts.questions_info[0] is not config.questions_info[0]
 
     def test_prepare_execution_artifacts_clamps_threads_by_http_limit(self) -> None:

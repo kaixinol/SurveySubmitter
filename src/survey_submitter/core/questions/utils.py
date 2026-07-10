@@ -14,9 +14,10 @@ from survey_submitter.system.runtime_paths import get_resource_path
 from survey_submitter.core.questions.types import TypeCode
 
 _KNOWN_NON_TEXT_QUESTION_TYPES = {
-    TypeCode.RADIO,
-    TypeCode.CHECKBOX,
-    TypeCode.RATING,
+    TypeCode.SINGLE,
+    TypeCode.MULTIPLE,
+    TypeCode.SCORE,
+    TypeCode.SCALE,
     TypeCode.MATRIX,
     TypeCode.DROPDOWN,
     TypeCode.SLIDER,
@@ -50,7 +51,7 @@ def _should_treat_question_as_text_like(
     if has_slider_matrix:
         return False
     normalized = _normalize_question_type_code(type_code)
-    if normalized in {TypeCode.GAPFILL, TypeCode.LOCATION_TEXT, TypeCode.MATRIX_TEXT}:
+    if normalized in {TypeCode.TEXT, TypeCode.LOCATION, TypeCode.MATRIX}:
         return text_input_count > 0
     if normalized in _KNOWN_NON_TEXT_QUESTION_TYPES:
         return False

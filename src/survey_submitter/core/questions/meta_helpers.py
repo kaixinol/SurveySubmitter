@@ -66,12 +66,12 @@ def find_all_zero_attached_selects(attached_configs: Any) -> List[Tuple[int, str
 def infer_question_entry_type(question: QuestionMetaLike) -> str:
     meta = ensure_survey_question_meta(question)
 
+    if meta.type_code == TypeCode.DESCRIPTION:
+        return QuestionType.DESCRIPTION
     if isinstance(meta, SliderQuestionMeta):
-        if meta.type_code == TypeCode.SLIDER_MATRIX:
-            return QuestionType.MATRIX
         return QuestionType.SLIDER
     if isinstance(meta, TextQuestionMeta):
-        if meta.is_location:
+        if meta.is_location or meta.type_code == TypeCode.LOCATION:
             return QuestionType.LOCATION
         if meta.text_inputs > 1:
             return QuestionType.MULTI_TEXT
@@ -96,11 +96,11 @@ def infer_question_entry_type(question: QuestionMetaLike) -> str:
                 return QuestionType.SCALE
 
     match meta.type_code:
-        case TypeCode.RADIO:
+        case TypeCode.SINGLE:
             return QuestionType.SINGLE
-        case TypeCode.CHECKBOX:
+        case TypeCode.MULTIPLE:
             return QuestionType.MULTIPLE
-        case TypeCode.MATRIX | TypeCode.MATRIX_TEXT:
+        case TypeCode.MATRIX:
             return QuestionType.MATRIX
         case TypeCode.DROPDOWN:
             return QuestionType.DROPDOWN

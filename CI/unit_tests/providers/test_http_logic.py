@@ -6,6 +6,7 @@ from survey_submitter.providers.answering import AnswerAction
 from survey_submitter.providers.contracts import (
     LOGIC_PARSE_STATUS_UNKNOWN,
     SurveyQuestionMeta,
+    ensure_survey_question_meta,
 )
 from survey_submitter.providers.http_logic import build_http_logic_plan, get_http_logic_fallback_reason
 
@@ -20,7 +21,7 @@ async def _choice_action(question: SurveyQuestionMeta):
 
 
 def _question(num: int, **kwargs) -> SurveyQuestionMeta:
-    return SurveyQuestionMeta(num=num, title=f"Q{num}", type_code="3", options=2, **kwargs)
+    return ensure_survey_question_meta({"num": num, "title": f"Q{num}", "type_code": "3", "option_texts": ["A", "B"], **kwargs})
 
 
 def test_http_logic_rejects_unknown_unparsed_jump_rules() -> None:
@@ -40,9 +41,9 @@ def test_http_logic_rejects_future_display_dependency() -> None:
         has_display_condition=True,
         display_conditions=[
             {
-                "condition_question_num": 3,
+                "condition_question_num": "3",
                 "condition_mode": "selected",
-                "condition_option_indices": [0],
+                "condition_option_indices": ["0"],
             }
         ],
     )
@@ -79,9 +80,9 @@ async def test_http_logic_skips_hidden_questions() -> None:
             has_display_condition=True,
             display_conditions=[
                 {
-                    "condition_question_num": 1,
+                    "condition_question_num": "1",
                     "condition_mode": "not_selected",
-                    "condition_option_indices": [0],
+                    "condition_option_indices": ["0"],
                 }
             ],
         ),

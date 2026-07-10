@@ -47,8 +47,13 @@ def _detail_from_columns(columns: List[Any]) -> str:
 def _regular_config_ready(entry: Optional[QuestionEntry], info: SurveyQuestionMeta | Dict[str, Any], expected_type: str) -> bool:
     if entry is None:
         return False
-    if str(getattr(entry, "question_type", "") or "").strip() != str(expected_type or "").strip():
-        return False
+    entry_type = str(getattr(entry, "question_type", "") or "").strip()
+    normalized_expected = str(expected_type or "").strip()
+    if entry_type != normalized_expected:
+        if normalized_expected == "location" and entry_type == "text" and bool(getattr(entry, "is_location", False)):
+            pass  # text entry with is_location is compatible with location type
+        else:
+            return False
     copied_entry = copy.deepcopy(entry)
     copied_info = ensure_survey_question_meta(info)
     return validate_question_config([copied_entry], [copied_info]) is None
@@ -329,7 +334,7 @@ def build_reverse_fill_spec(
             continue
 
         ordered_columns = columns
-        if question_type in CHOICE_TYPES | TEXT_TYPES and len(columns) != 1:
+        if question_type in CHOICE_TYPES | TEXT_TYPES and question_type != QuestionType.MULTI_TEXT and len(columns) != 1:
             reason = "这道题在 Excel 中对应了多列，V1 无法确认唯一答案列"
             issues.append(
                 _question_issue(
