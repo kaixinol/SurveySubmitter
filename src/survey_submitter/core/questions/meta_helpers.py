@@ -3,8 +3,16 @@ from __future__ import annotations
 from typing import Any, Dict, List, Mapping, Tuple
 
 from survey_submitter.core.questions.types import QuestionType, TypeCode
-from survey_submitter.core.questions.utils import _normalize_question_type_code
-from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_survey_question_meta
+from survey_submitter.providers.contracts import (
+    MatrixQuestionMeta,
+    MultipleChoiceQuestionMeta,
+    RatingQuestionMeta,
+    SingleChoiceQuestionMeta,
+    SliderQuestionMeta,
+    SurveyQuestionMeta,
+    TextQuestionMeta,
+    ensure_survey_question_meta,
+)
 
 QuestionMetaLike = SurveyQuestionMeta | Mapping[str, Any]
 
@@ -57,29 +65,51 @@ def find_all_zero_attached_selects(attached_configs: Any) -> List[Tuple[int, str
 
 def infer_question_entry_type(question: QuestionMetaLike) -> str:
     meta = ensure_survey_question_meta(question)
-    type_code = _normalize_question_type_code(meta.type_code)
 
-    if bool(meta.is_slider_matrix):
-        return QuestionType.MATRIX
-    if bool(meta.is_multi_text) or (bool(meta.is_text_like) and int(meta.text_inputs or 0) > 1):
-        return QuestionType.MULTI_TEXT
-    if bool(meta.is_text_like) or type_code in (TypeCode.GAPFILL, TypeCode.LOCATION_TEXT):
-        return QuestionType.TEXT
-    if type_code == TypeCode.RADIO:
-        return QuestionType.SINGLE
-    if type_code == TypeCode.CHECKBOX:
-        return QuestionType.MULTIPLE
-    if type_code == TypeCode.RATING:
-        return QuestionType.SCORE if bool(meta.is_rating) else QuestionType.SCALE
-    if type_code in (TypeCode.MATRIX, TypeCode.MATRIX_TEXT):
-        return QuestionType.MATRIX
-    if type_code == TypeCode.DROPDOWN:
-        return QuestionType.DROPDOWN
-    if type_code == TypeCode.SLIDER:
+    if isinstance(meta, SliderQuestionMeta):
+        if meta.type_code == TypeCode.SLIDER_MATRIX:
+            return QuestionType.MATRIX
         return QuestionType.SLIDER
-    if type_code == TypeCode.ORDER:
-        return QuestionType.ORDER
-    return QuestionType.SINGLE
+    if isinstance(meta, TextQuestionMeta):
+        if meta.is_location:
+            return QuestionType.LOCATION
+        if meta.text_inputs > 1:
+            return QuestionType.MULTI_TEXT
+        return QuestionType.TEXT
+    if isinstance(meta, MultipleChoiceQuestionMeta):
+        return QuestionType.MULTIPLE
+    if isinstance(meta, SingleChoiceQuestionMeta):
+        match meta.type_code:
+            case TypeCode.DROPDOWN:
+                return QuestionType.DROPDOWN
+            case TypeCode.ORDER:
+                return QuestionType.ORDER
+            case _:
+                return QuestionType.SINGLE
+    if isinstance(meta, MatrixQuestionMeta):
+        return QuestionType.MATRIX
+    if isinstance(meta, RatingQuestionMeta):
+        match meta.type_code:
+            case TypeCode.SCORE:
+                return QuestionType.SCORE
+            case _:
+                return QuestionType.SCALE
+
+    match meta.type_code:
+        case TypeCode.RADIO:
+            return QuestionType.SINGLE
+        case TypeCode.CHECKBOX:
+            return QuestionType.MULTIPLE
+        case TypeCode.MATRIX | TypeCode.MATRIX_TEXT:
+            return QuestionType.MATRIX
+        case TypeCode.DROPDOWN:
+            return QuestionType.DROPDOWN
+        case TypeCode.SLIDER:
+            return QuestionType.SLIDER
+        case TypeCode.ORDER:
+            return QuestionType.ORDER
+        case _:
+            return QuestionType.SINGLE
 
 
 def normalize_attached_option_selects(

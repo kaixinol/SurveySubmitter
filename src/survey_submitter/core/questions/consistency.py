@@ -6,12 +6,13 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 from survey_submitter.core.persona.context import get_answered
+from survey_submitter.core.questions.types import TypeCode
 from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_survey_question_meta
 
 _thread_local = threading.local()
 _CONDITION_MODES = {"selected", "not_selected"}
 _ACTION_MODES = {"must_select", "must_not_select"}
-_SUPPORTED_RULE_TYPE_CODES = {"3", "4", "5", "6"}
+_SUPPORTED_RULE_TYPE_CODES = {TypeCode.RADIO, TypeCode.CHECKBOX, TypeCode.RATING, TypeCode.MATRIX, TypeCode.SCORE, TypeCode.SCALE}
 
 
 @dataclass

@@ -50,7 +50,7 @@ def _should_treat_question_as_text_like(
     if has_slider_matrix:
         return False
     normalized = _normalize_question_type_code(type_code)
-    if normalized in ("1", "2", "9"):
+    if normalized in {TypeCode.GAPFILL, TypeCode.LOCATION_TEXT, TypeCode.MATRIX_TEXT}:
         return text_input_count > 0
     if normalized in _KNOWN_NON_TEXT_QUESTION_TYPES:
         return False

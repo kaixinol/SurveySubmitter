@@ -61,7 +61,10 @@ MAX_MULTIPLE_SELECTION_ATTEMPTS = 32
 async def _resolve_runtime_option_texts(
     question: SurveyQuestionMeta,
 ) -> list[str]:
-    return [str(item or "").strip() for item in list(question.option_texts or []) if str(item or "").strip()]
+    from survey_submitter.providers.contracts import ChoiceQuestionMeta
+    if isinstance(question, ChoiceQuestionMeta) and question.option_texts:
+        return [str(item or "").strip() for item in question.option_texts if str(item or "").strip()]
+    return []
 
 async def _build_wjx_choice_action(
     *,
@@ -81,7 +84,7 @@ async def _build_wjx_choice_action(
     config = ctx.config
     current = int(question.num or 0)
     option_texts = await _resolve_runtime_option_texts(question)
-    option_count = max(1, len(option_texts) or int(question.options or 0))
+    option_count = max(1, len(option_texts))
     reverse_fill_answer = resolve_current_reverse_fill_answer(
         ctx,
         current,
@@ -313,7 +316,7 @@ async def _build_wjx_score_like_action(
     config = ctx.config
     current = int(question.num or 0)
     option_texts = await _resolve_runtime_option_texts(question)
-    option_count = max(2, len(option_texts) or int(question.options or 0))
+    option_count = max(2, len(option_texts))
     reverse_fill_answer = resolve_current_reverse_fill_answer(
         ctx,
         current,
@@ -367,9 +370,12 @@ async def _build_wjx_multiple_action(
     config = ctx.config
     current = int(question.num or 0)
     option_texts = await _resolve_runtime_option_texts(question)
-    option_count = max(1, len(option_texts) or int(question.options or 0))
-    min_required = max(1, min(_coerce_positive_int(question.multi_min_limit, 1), option_count))
-    max_allowed = max(1, min(_coerce_positive_int(question.multi_max_limit, option_count) or option_count, option_count))
+    option_count = max(1, len(option_texts))
+    from survey_submitter.providers.contracts import MultipleChoiceQuestionMeta
+    multi_min_limit = question.multi_min_limit if isinstance(question, MultipleChoiceQuestionMeta) else None
+    multi_max_limit = question.multi_max_limit if isinstance(question, MultipleChoiceQuestionMeta) else None
+    min_required = max(1, min(_coerce_positive_int(multi_min_limit, 1), option_count))
+    max_allowed = max(1, min(_coerce_positive_int(multi_max_limit, option_count) or option_count, option_count))
     if min_required > max_allowed:
         min_required = max_allowed
 
@@ -515,8 +521,10 @@ async def _build_wjx_matrix_action(
 ) -> Optional[AnswerAction]:
     config = ctx.config
     current = int(question.num or 0)
-    row_count = max(1, int(question.rows or 1))
-    option_count = max(2, len(question.option_texts or []) or int(question.options or 0))
+    from survey_submitter.providers.contracts import MatrixQuestionMeta
+    row_count = max(1, question.rows if isinstance(question, MatrixQuestionMeta) else 1)
+    option_texts = await _resolve_runtime_option_texts(question)
+    option_count = max(2, len(option_texts))
     reverse_fill_answer = resolve_current_reverse_fill_answer(
         ctx,
         current,
@@ -610,7 +618,7 @@ async def _build_wjx_order_action(
     question: SurveyQuestionMeta,
 ) -> AnswerAction:
     option_texts = await _resolve_runtime_option_texts(question)
-    option_count = max(1, len(option_texts) or int(question.options or 0))
+    option_count = max(1, len(option_texts))
     ordered_indices = list(range(option_count))
     random.shuffle(ordered_indices)
     return AnswerAction(

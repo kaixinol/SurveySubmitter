@@ -19,7 +19,7 @@ _TEXT_INPUT_ALLOWED_TYPES = {"text", "tel", "email", "number", "search", "url", 
 _KNOWN_NON_TEXT_QUESTION_TYPES = {
     TypeCode.RADIO, TypeCode.CHECKBOX, TypeCode.RATING, TypeCode.MATRIX,
     TypeCode.DROPDOWN, TypeCode.SLIDER, TypeCode.ORDER,
-    "12", "13", "15", "16", "17",
+    TypeCode.TYPE_12, TypeCode.TYPE_13, TypeCode.TYPE_15, TypeCode.TYPE_16, TypeCode.TYPE_17,
 }
 _SELECT_PLACEHOLDER_PREFIXES = ("请选择", "请先选择")
 _LOCATION_VERIFY_MARKERS = ("地图", "省市", "省份", "城市", "地区", "map", "city", "province", "area")
@@ -578,11 +578,11 @@ def _should_mark_as_multi_text(
     if has_slider_matrix:
         return False
     normalized = _normalize_question_type_code(type_code)
-    if normalized == "9" and has_gapfill:
+    if normalized == TypeCode.MATRIX_TEXT and has_gapfill:
         return True
     if text_input_count < 2:
         return False
-    if normalized in ("1", "2", "9"):
+    if normalized in {TypeCode.GAPFILL, TypeCode.LOCATION_TEXT, TypeCode.MATRIX_TEXT}:
         return True
     if normalized in _KNOWN_NON_TEXT_QUESTION_TYPES:
         return False

@@ -232,18 +232,21 @@ def _submitdata_answer(action: AnswerAction) -> str:
 
 
 def _skipped_submitdata_answer(question: SurveyQuestionMeta) -> str:
-    type_code = str(getattr(question, "type_code", "") or "").strip()
-    option_count = max(1, int(getattr(question, "options", 0) or 0))
-    rows = max(1, int(getattr(question, "rows", 1) or 1))
-    if type_code in {TypeCode.RADIO, TypeCode.CHECKBOX, TypeCode.RATING, TypeCode.DROPDOWN}:
-        return "-3"
-    if type_code == TypeCode.ORDER:
-        return ",".join("-3" for _ in range(option_count))
-    if type_code == TypeCode.MATRIX:
-        return ",".join(f"{row_index + 1}!-3" for row_index in range(rows))
-    if type_code in {TypeCode.GAPFILL, TypeCode.LOCATION_TEXT, TypeCode.SLIDER, TypeCode.MATRIX_TEXT, TypeCode.CAPTCHA, TypeCode.SIGNATURE}:
-        return "(跳过)"
-    return "-3"
+    from survey_submitter.providers.contracts import ChoiceQuestionMeta, MatrixQuestionMeta
+    type_code = question.type_code
+    option_count = max(1, len(question.option_texts) if isinstance(question, ChoiceQuestionMeta) and question.option_texts else 0)
+    rows = max(1, question.rows if isinstance(question, MatrixQuestionMeta) else 1)
+    match type_code:
+        case TypeCode.RADIO | TypeCode.CHECKBOX | TypeCode.RATING | TypeCode.DROPDOWN | TypeCode.SCORE | TypeCode.SCALE:
+            return "-3"
+        case TypeCode.ORDER:
+            return ",".join("-3" for _ in range(option_count))
+        case TypeCode.MATRIX:
+            return ",".join(f"{row_index + 1}!-3" for row_index in range(rows))
+        case TypeCode.GAPFILL | TypeCode.LOCATION_TEXT | TypeCode.SLIDER | TypeCode.MATRIX_TEXT | TypeCode.MULTI_TEXT | TypeCode.CAPTCHA | TypeCode.SIGNATURE:
+            return "(跳过)"
+        case _:
+            return "-3"
 
 
 def _submitdata_from_actions(
@@ -255,9 +258,9 @@ def _submitdata_from_actions(
     action_by_num = {int(action.question_num or 0): action for action in actions if int(action.question_num or 0) > 0}
     skipped_nums = {int(item) for item in skipped_question_nums if int(item) > 0}
     question_by_num = {
-        int(getattr(question, "num", 0) or 0): question
+        int(question.num or 0): question
         for question in list(questions or [])
-        if int(getattr(question, "num", 0) or 0) > 0
+        if int(question.num or 0) > 0
     }
     ordered_nums = sorted(set(action_by_num) | skipped_nums)
     parts: list[str] = []
@@ -294,11 +297,9 @@ def _question_error_label(config: ExecutionConfig, question_num: int) -> str:
         question = None
     if question is None:
         return f"第{int(question_num)}题"
-    try:
-        display_num = int(getattr(question, "display_num", 0) or 0)
-    except Exception:
-        display_num = 0
-    title = str(getattr(question, "title", "") or "").strip()
+    from survey_submitter.providers.contracts import _QuestionMetaBase
+    display_num = int(question.display_num or 0) if isinstance(question, _QuestionMetaBase) and question.display_num else 0
+    title = str(question.title or "").strip()
     prefix = f"第{display_num if display_num > 0 else int(question_num)}题"
     return f"{prefix}（{title}）" if title else prefix
 
@@ -401,7 +402,7 @@ async def _build_action_plan(
     for question in questions:
         if stop_signal is not None and stop_signal.is_set():
             return HttpLogicPlan(actions=())
-        if bool(getattr(question, "unsupported", False)):
+        if question.unsupported:
             raise RuntimeError(f"问卷星第{question.num}题暂不支持：{question.unsupported_reason or question.type_code}")
 
     async def _build_action(question: SurveyQuestionMeta) -> AnswerAction | None:
