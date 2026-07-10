@@ -52,7 +52,7 @@ def _backfill_session_log_from_buffer() -> None:
                     file.write(text)
                     file.write("\n")
         _SESSION_LOG_BACKFILLED = True
-    except Exception as exc:
+    except OSError as exc:
         _log_utils._safe_internal_log("backfill session log from buffer failed", exc)
 
 
@@ -81,7 +81,7 @@ def flush_session_log_file() -> None:
     with _SESSION_LOG_LOCK:
         try:
             handler.flush()
-        except Exception as exc:
+        except OSError as exc:
             _log_utils._safe_internal_log("flush_session_log_file failed", exc)
 
 
@@ -219,7 +219,7 @@ def export_full_log_to_file(
             with open(src, "r", encoding="utf-8") as source, open(dst, "w", encoding="utf-8") as target:
                 shutil.copyfileobj(source, target)
             return file_path
-        except Exception as exc:
+        except OSError as exc:
             _log_utils._safe_internal_log("export_full_log_to_file fallback to buffer failed to read session log", exc)
 
     records = fallback_records if fallback_records is not None else _log_utils.LOG_BUFFER_HANDLER.get_records()

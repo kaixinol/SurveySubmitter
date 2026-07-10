@@ -14,6 +14,7 @@ from survey_submitter.core.engine.async_status_bus import AsyncStatusBus
 from survey_submitter.core.engine.runtime_control_port import RuntimeControlPort, on_random_ip_loading_changed
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.network.proxy.api import fetch_proxy_batch_async
+import survey_submitter.network.http as http_client
 from survey_submitter.network.session_policy import (
     _acquire_proxy_fetch_lock_async,
     merge_prefetched_proxy_leases,
@@ -29,7 +30,7 @@ def _format_seconds_range(value: Any) -> str:
     try:
         start, end = value
         return f"{int(start)}-{int(end)}秒"
-    except Exception:
+    except (ValueError, TypeError):
         return "未知"
 
 
@@ -171,14 +172,14 @@ class AsyncRuntimeEngine:
                             True,
                             f"正在准备代理 {min(merged_count, request_count)}/{request_count}",
                         )
-                except Exception:
-                    logging.info("随机IP异步预热失败", exc_info=True)
+                except (http_client.TransportError, OSError, TimeoutError):
+                    logging.debug("随机IP异步预热失败", exc_info=True)
                 finally:
                     if fetch_lock_acquired:
                         try:
                             release_proxy_fetch_lock(state)
                         except Exception:
-                            logging.info("释放随机IP异步预热锁失败", exc_info=True)
+                            logging.debug("释放随机IP异步预热锁失败", exc_info=True)
                     on_random_ip_loading_changed(runtime_bridge, False, "")
                 if await wait_for_proxy_prefetch_cycle(state, state.stop_event):
                     return
@@ -220,10 +221,7 @@ class AsyncRuntimeEngine:
         stop_event = self._stop_event
         state = self._state
         if state is not None:
-            try:
-                state.stop_event.set()
-            except Exception:
-                logging.debug("设置 ExecutionState.stop_event 失败", exc_info=True)
+            state.stop_event.set()
         if self._loop is not None and stop_event is not None:
             self._loop.call_soon_threadsafe(stop_event.set)
         future = self._run_future

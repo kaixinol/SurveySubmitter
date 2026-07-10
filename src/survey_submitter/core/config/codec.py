@@ -155,7 +155,7 @@ _RUNTIME_CONFIG_FIELDS.update({"question_entries", "questions_info"})
 def _coerce_int(value: Any, default: int = 0) -> int:
     try:
         return int(value)
-    except Exception:
+    except (ValueError, TypeError):
         return default
 
 
@@ -224,7 +224,7 @@ def _prob_config_is_unset(value: Any) -> bool:
             try:
                 if float(item) > 0:
                     return False
-            except Exception:
+            except (ValueError, TypeError):
                 continue
         return True
     return False
@@ -242,7 +242,7 @@ def _custom_weights_has_positive(weights: Any) -> bool:
         try:
             if float(item) > 0:
                 return True
-        except Exception:
+        except (ValueError, TypeError):
             continue
     return False
 
@@ -308,7 +308,7 @@ def _normalize_answer_duration_range(value: Any) -> tuple[int, int]:
                 return _legacy_answer_duration_to_range(int(value[0]))
             return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
         return _legacy_answer_duration_to_range(int(value))
-    except Exception as exc:
+    except (ValueError, TypeError) as exc:
         log_suppressed_exception(
             "_normalize_answer_duration_range failure",
             exc,
@@ -318,10 +318,7 @@ def _normalize_answer_duration_range(value: Any) -> tuple[int, int]:
 
 
 def _normalize_dimension_value(raw: Any) -> str | None:
-    try:
-        text = str(raw or "").strip()
-    except Exception:
-        text = ""
+    text = str(raw or "").strip()
     if not text or text == "未分组":
         return None
     return text
@@ -384,7 +381,7 @@ def deserialize_question_entry(data: dict[str, Any]):
     def _as_int(value: Any, default: int = 0) -> int:
         try:
             return int(value)
-        except Exception:
+        except (ValueError, TypeError):
             return default
 
     unknown_keys = set(data or {}) - _QUESTION_ENTRY_FIELDS
@@ -471,13 +468,13 @@ def normalize_runtime_config_payload(raw: dict[str, Any]) -> RuntimeConfig:
     def _as_int(value: Any, default: int = 0) -> int:
         try:
             return int(value)
-        except Exception:
+        except (ValueError, TypeError):
             return default
 
     def _as_float(value: Any, default: float = 0.0) -> float:
         try:
             return float(value)
-        except Exception:
+        except (ValueError, TypeError):
             return default
 
     def _as_bool(value: Any, default: bool = False) -> bool:
@@ -500,7 +497,7 @@ def normalize_runtime_config_payload(raw: dict[str, Any]) -> RuntimeConfig:
         try:
             if isinstance(value, (list, tuple)) and len(value) >= 2:
                 return int(value[0]), int(value[1])
-        except Exception as exc:
+        except (ValueError, TypeError) as exc:
             log_suppressed_exception("_tuple_pair failure", exc, level=logging.WARNING)
         return 0, 0
 

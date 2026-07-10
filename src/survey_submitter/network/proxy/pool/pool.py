@@ -60,7 +60,7 @@ def _mask_proxy_for_log(proxy_address: str | None) -> str:
         host_port = _format_host_port(parsed.hostname or "", parsed.port)
         if host_port:
             return host_port
-    except Exception as exc:
+    except ValueError as exc:
         log_suppressed_exception("random_ip._mask_proxy_for_log parse proxy", exc)
     raw = text
     if "://" in raw:
@@ -79,7 +79,7 @@ def _parse_expire_at_to_ts(expire_at: str | None) -> float:
         return 0.0
     try:
         parsed = datetime.fromisoformat(text)
-    except Exception:
+    except ValueError:
         logging.info("代理 expire_at 解析失败：%s", text, exc_info=True)
         return 0.0
     if parsed.tzinfo is None:

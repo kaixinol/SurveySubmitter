@@ -32,10 +32,7 @@ def _extract_text_min_length(*fragments: Any) -> int | None:
             continue
         for pattern in _TEXT_MIN_LENGTH_PATTERNS:
             for match in pattern.finditer(text):
-                try:
-                    limits.append(int(match.group(1)))
-                except Exception:
-                    continue
+                limits.append(int(match.group(1)))
     return max(limits) if limits else None
 
 
@@ -119,7 +116,7 @@ def validate_question_config(
         question_type = entry.question_type
         try:
             normalized_question_num = int(question_num)
-        except Exception:
+        except (ValueError, TypeError):
             normalized_question_num = idx + 1
 
         question_info = question_info_map.get(normalized_question_num)

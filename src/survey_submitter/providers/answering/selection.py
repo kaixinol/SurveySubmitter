@@ -8,7 +8,7 @@ from typing import Any
 def coerce_positive_int(value: Any, default: int) -> int:
     try:
         number = int(value)
-    except Exception:
+    except (ValueError, TypeError):
         number = int(default)
     return max(0, number)
 
@@ -16,7 +16,7 @@ def coerce_positive_int(value: Any, default: int) -> int:
 def valid_forced_choice_index(raw_value: Any, option_count: int) -> int | None:
     try:
         candidate = int(raw_value)
-    except Exception:
+    except (ValueError, TypeError):
         return None
     if 0 <= candidate < option_count:
         return candidate
@@ -26,7 +26,7 @@ def valid_forced_choice_index(raw_value: Any, option_count: int) -> int | None:
 def format_weight_value(value: Any) -> str:
     try:
         number = float(value)
-    except Exception:
+    except (ValueError, TypeError):
         return str(value or "").strip() or "随机"
     if math.isnan(number) or math.isinf(number):
         return "随机"
@@ -57,7 +57,7 @@ def positive_multiple_indexes(weights: Any, option_count: int) -> list[int]:
         raw = weights[idx] if idx < len(weights) else 0.0
         try:
             normalized.append(max(0.0, float(raw)))
-        except Exception:
+        except (ValueError, TypeError):
             normalized.append(0.0)
     selected = [idx for idx, weight in enumerate(normalized) if weight > 0 and random.uniform(0, 100) <= weight]
     if not selected:
@@ -94,7 +94,7 @@ def positive_multiple_indexes_with_limits(
             raw = weights[idx] if idx < len(weights) else 0.0
             try:
                 weight = max(0.0, float(raw))
-            except Exception:
+            except (ValueError, TypeError):
                 weight = 0.0
             if idx not in selected and weight > 0:
                 remaining_positive.append(idx)

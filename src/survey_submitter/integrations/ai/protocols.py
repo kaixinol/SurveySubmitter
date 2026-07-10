@@ -141,7 +141,7 @@ def _extract_responses_text(data: dict[str, Any]) -> str:
 def _extract_json_dict(response: Any) -> dict[str, Any]:
     try:
         payload = response.json()
-    except Exception:
+    except ValueError:
         return {}
     if isinstance(payload, dict):
         return payload

@@ -29,11 +29,9 @@ def _is_navigation_transient_error(exc: BaseException) -> bool:
     return any(pattern in message for pattern in _NAVIGATION_TRANSIENT_ERRORS)
 
 def has_configured_answer_duration(answer_duration_range_seconds: tuple[int, int] = (0, 0)) -> bool:
-    
-
     try:
         raw_min, raw_max = answer_duration_range_seconds
-    except Exception:
+    except (ValueError, TypeError):
         return False
     return max(0, int(raw_min), int(raw_max)) > 0
 
@@ -43,11 +41,9 @@ def sample_answer_duration_seconds(
     survey_provider: str | None = None,
     default_unconfigured_seconds: int = 0,
 ) -> float:
-    
-
     try:
         raw_min, raw_max = answer_duration_range_seconds
-    except Exception:
+    except (ValueError, TypeError):
         raw_min = raw_max = default_unconfigured_seconds
     if not has_configured_answer_duration(answer_duration_range_seconds):
         if default_unconfigured_seconds <= 0:

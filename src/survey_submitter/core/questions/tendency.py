@@ -37,7 +37,7 @@ def _generate_base_ratio(
                 raw = persona.satisfaction_tendency
                 jitter = random.gauss(0, 0.1)
                 return max(0.0, min(1.0, raw + jitter))
-        except Exception as exc:
+        except ImportError as exc:
             log_suppressed_exception("_generate_base_ratio: get_current_persona", exc, level=logging.ERROR)
         return random.random()
     if isinstance(probabilities, list) and probabilities:
@@ -72,7 +72,7 @@ def _normalize_probabilities_for_zero_guard(
         raw = probabilities[idx] if idx < len(probabilities) else 0.0
         try:
             weight = float(raw)
-        except Exception:
+        except (ValueError, TypeError):
             weight = 0.0
         if math.isnan(weight) or math.isinf(weight) or weight <= 0.0:
             weight = 0.0
@@ -145,7 +145,7 @@ def _blend_psychometric_choice(
     for idx in range(option_count):
         try:
             weight = float(probabilities[idx])
-        except Exception:
+        except (ValueError, TypeError):
             weight = 0.0
         if math.isnan(weight) or math.isinf(weight) or weight <= 0.0:
             adjusted_probs.append(0.0)

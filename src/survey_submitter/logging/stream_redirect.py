@@ -18,7 +18,7 @@ class StreamToLogger:
             if self.stream:
                 try:
                     self.stream.write(message)
-                except Exception as exc:
+                except OSError as exc:
                     _safe_internal_log("StreamToLogger.write failed", exc)
             return
         self._buffer += text.replace("\r", "")
@@ -32,7 +32,7 @@ class StreamToLogger:
         if self.stream:
             try:
                 self.stream.write(message)
-            except Exception as exc:
+            except OSError as exc:
                 _safe_internal_log("StreamToLogger.write failed", exc)
 
     def flush(self):
@@ -42,5 +42,5 @@ class StreamToLogger:
         if self.stream:
             try:
                 self.stream.flush()
-            except Exception as exc:
+            except OSError as exc:
                 _safe_internal_log("StreamToLogger.flush failed", exc)

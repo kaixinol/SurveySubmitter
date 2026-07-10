@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import re
-import logging
 from typing import Any
 
-from survey_submitter.logging.log_utils import log_suppressed_exception
 from survey_submitter.providers.match_utils import normalize_match_text
 from .html_parser_common import (
     _is_select_placeholder_option,
@@ -48,16 +46,10 @@ def _collect_force_select_fragments(question_div, title_text: str) -> list[str]:
     if question_div is None:
         return fragments
     for selector in (".qtypetip", ".topichtml", ".field-label"):
-        try:
-            element = question_div.select_one(selector)
-        except Exception:
-            element = None
+        element = question_div.select_one(selector)
         if not element:
             continue
-        try:
-            text = _normalize_html_text(element.get_text(" ", strip=True))
-        except Exception:
-            text = ""
+        text = _normalize_html_text(element.get_text(" ", strip=True))
         if text:
             fragments.append(text)
     unique_fragments: list[str] = []
@@ -107,7 +99,7 @@ def _extract_force_select_option(
             if index_match:
                 try:
                     target_idx = int(index_match.group("index")) - 1
-                except Exception:
+                except (ValueError, TypeError):
                     target_idx = -1
                 if 0 <= target_idx < len(option_texts):
                     selected = str(option_texts[target_idx] or "").strip()
@@ -139,14 +131,8 @@ def _extract_force_select_option(
 def _is_text_input_element(element) -> bool:
     if element is None:
         return False
-    try:
-        tag_name = (element.name or '').lower()
-    except Exception:
-        tag_name = ''
-    try:
-        input_type = (element.get('type') or '').lower()
-    except Exception:
-        input_type = ''
+    tag_name = (element.name or '').lower()
+    input_type = (element.get('type') or '').lower()
     if tag_name == 'textarea':
         return True
     return tag_name == 'input' and input_type in ('', 'text', 'search', 'tel', 'number')
@@ -156,10 +142,7 @@ def _element_contains_text_input(element) -> bool:
         return False
     if _is_text_input_element(element):
         return True
-    try:
-        candidates = element.find_all(['input', 'textarea'])
-    except Exception:
-        return False
+    candidates = element.find_all(['input', 'textarea'])
     for candidate in candidates:
         if _is_text_input_element(candidate):
             return True
@@ -168,20 +151,14 @@ def _element_contains_text_input(element) -> bool:
 def _question_div_has_shared_text_input(question_div) -> bool:
     if question_div is None:
         return False
-    try:
-        shared_inputs = question_div.select('.ui-other input, .ui-other textarea')
-    except Exception:
-        shared_inputs = []
+    shared_inputs = question_div.select('.ui-other input, .ui-other textarea')
     if any(_element_contains_text_input(element) for element in shared_inputs):
         return True
-    try:
-        keyword_inputs = question_div.select(
-            "input[id*='other'], input[name*='other'], textarea[id*='other'], textarea[name*='other']"
-        )
-        if any(_element_contains_text_input(element) for element in keyword_inputs):
-            return True
-    except Exception as exc:
-        log_suppressed_exception("survey.parser._question_div_has_shared_text_input keyword", exc, level=logging.ERROR)
+    keyword_inputs = question_div.select(
+        "input[id*='other'], input[name*='other'], textarea[id*='other'], textarea[name*='other']"
+    )
+    if any(_element_contains_text_input(element) for element in keyword_inputs):
+        return True
     return False
 
 def _extract_option_text_from_attrs(target) -> str:
@@ -190,10 +167,7 @@ def _extract_option_text_from_attrs(target) -> str:
 
     def _get_attr_text(node, keys) -> str:
         for key in keys:
-            try:
-                raw = node.get(key)
-            except Exception:
-                raw = None
+            raw = node.get(key)
             if raw is None:
                 continue
             text_value = _normalize_html_text(str(raw))
@@ -206,10 +180,7 @@ def _extract_option_text_from_attrs(target) -> str:
     if text_value:
         return text_value
 
-    try:
-        candidates = target.find_all(["a", "span", "label"], limit=4)
-    except Exception:
-        candidates = []
+    candidates = target.find_all(["a", "span", "label"], limit=4)
     for child in candidates:
         text_value = _get_attr_text(child, primary_keys)
         if text_value:
@@ -242,10 +213,7 @@ def _extract_rating_option_texts(question_div) -> list[str]:
     )
     anchors: list[Any] = []
     for selector in selectors:
-        try:
-            anchors = question_div.select(selector)
-        except Exception:
-            anchors = []
+        anchors = question_div.select(selector)
         if anchors:
             break
     if not anchors:
@@ -255,20 +223,11 @@ def _extract_rating_option_texts(question_div) -> list[str]:
     for idx, anchor in enumerate(anchors):
         text = _extract_option_text_from_attrs(anchor)
         if not _text_looks_meaningful(text):
-            try:
-                text = _normalize_html_text(anchor.get_text(" ", strip=True))
-            except Exception:
-                text = ""
+            text = _normalize_html_text(anchor.get_text(" ", strip=True))
         if not _text_looks_meaningful(text):
-            try:
-                text = _normalize_html_text(anchor.get("title") or "")
-            except Exception:
-                text = ""
+            text = _normalize_html_text(anchor.get("title") or "")
         if not _text_looks_meaningful(text):
-            try:
-                text = _normalize_html_text(anchor.get("val") or "")
-            except Exception:
-                text = ""
+            text = _normalize_html_text(anchor.get("val") or "")
         if not _text_looks_meaningful(text):
             text = str(idx + 1)
         if text in seen:
@@ -283,19 +242,12 @@ def _collect_choice_option_texts(question_div) -> tuple[list[str], list[int]]:
     option_elements: list[Any] = []
     selectors = ['.ui-controlgroup > div', 'ul > li']
     for selector in selectors:
-        try:
-            option_elements = question_div.select(selector)
-        except Exception:
-            option_elements = []
+        option_elements = question_div.select(selector)
         if option_elements:
             break
     if option_elements:
         for element in option_elements:
-            label_element = None
-            try:
-                label_element = element.select_one('.label')
-            except Exception:
-                label_element = None
+            label_element = element.select_one('.label')
             if not label_element:
                 label_element = element
             text = _normalize_html_text(label_element.get_text(' ', strip=True))
@@ -311,10 +263,7 @@ def _collect_choice_option_texts(question_div) -> tuple[list[str], list[int]]:
         seen = set()
         fallback_selectors = ['.label', 'li span', 'li']
         for selector in fallback_selectors:
-            try:
-                elements = question_div.select(selector)
-            except Exception:
-                elements = []
+            elements = question_div.select(selector)
             for element in elements:
                 text = _normalize_html_text(element.get_text(' ', strip=True))
                 if not text:
@@ -334,10 +283,7 @@ def _extract_select_option_texts_from_element(select_element) -> list[str]:
     if select_element is None:
         return []
     options: list[str] = []
-    try:
-        option_elements = select_element.find_all("option")
-    except Exception:
-        option_elements = []
+    option_elements = select_element.find_all("option")
     for idx, option in enumerate(option_elements):
         value = _normalize_html_text(option.get("value") or "")
         text = _normalize_html_text(option.get_text(" ", strip=True))
@@ -354,10 +300,7 @@ def _extract_custom_select_option_texts(element) -> list[str]:
     raw_values: list[str] = []
     attr_keys = ("cusom", "custom", "data-custom", "data-cusom")
     for key in attr_keys:
-        try:
-            raw = element.get(key)
-        except Exception:
-            raw = None
+        raw = element.get(key)
         if raw is not None:
             raw_values.append(str(raw))
     options: list[str] = []
@@ -381,37 +324,21 @@ def _extract_choice_attached_selects(question_div) -> list[dict[str, Any]]:
         return []
     option_elements: list[Any] = []
     for selector in ('.ui-controlgroup > div', 'ul > li'):
-        try:
-            option_elements = question_div.select(selector)
-        except Exception:
-            option_elements = []
+        option_elements = question_div.select(selector)
         if option_elements:
             break
     attached_selects: list[dict[str, Any]] = []
     for option_index, element in enumerate(option_elements):
         option_text = ""
-        try:
-            label_element = element.select_one(".label")
-        except Exception:
-            label_element = None
+        label_element = element.select_one(".label")
         if label_element is not None:
-            try:
-                option_text = _normalize_html_text(label_element.get_text(" ", strip=True))
-            except Exception:
-                option_text = ""
+            option_text = _normalize_html_text(label_element.get_text(" ", strip=True))
         if not option_text:
             option_text = _extract_option_text_from_attrs(element)
-        try:
-            select_element = element.find("select")
-        except Exception:
-            select_element = None
+        select_element = element.find("select")
         select_options = _extract_select_option_texts_from_element(select_element)
         if not select_options:
-            input_candidates = []
-            try:
-                input_candidates = element.find_all("input")
-            except Exception:
-                input_candidates = []
+            input_candidates = element.find_all("input")
             for input_element in input_candidates:
                 select_options = _extract_custom_select_option_texts(input_element)
                 if select_options:
@@ -444,15 +371,9 @@ def _verify_text_indicates_location(value: str | None) -> bool:
 def _soup_question_is_location(question_div) -> bool:
     if question_div is None:
         return False
-    try:
-        if question_div.find(class_="get_Local"):
-            return True
-    except Exception as exc:
-        log_suppressed_exception("survey.parser._soup_question_is_location get_Local", exc, level=logging.ERROR)
-    try:
-        inputs = question_div.find_all("input")
-    except Exception:
-        inputs = []
+    if question_div.find(class_="get_Local"):
+        return True
+    inputs = question_div.find_all("input")
     for input_element in inputs:
         verify_value = input_element.get("verify")
         if _verify_text_indicates_location(verify_value):
@@ -467,10 +388,7 @@ def _extract_location_verify_type(question_div) -> str:
     """
     if question_div is None:
         return ""
-    try:
-        inputs = question_div.find_all("input")
-    except Exception:
-        inputs = []
+    inputs = question_div.find_all("input")
     for input_element in inputs:
         verify_value = str(input_element.get("verify") or "").strip()
         if verify_value:

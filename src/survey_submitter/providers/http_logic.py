@@ -82,7 +82,7 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
                 return f"第{question_num}题显隐条件格式异常"
             try:
                 source_question_num = int(condition.get("condition_question_num") or 0)
-            except Exception:
+            except (ValueError, TypeError):
                 source_question_num = 0
             condition_mode = str(condition.get("condition_mode") or "selected").strip() or "selected"
             if source_question_num <= 0:
@@ -97,7 +97,7 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
                 return f"第{question_num}题控制显示规则格式异常"
             try:
                 target_question_num = int(target.get("target_question_num") or 0)
-            except Exception:
+            except (ValueError, TypeError):
                 target_question_num = 0
             condition_mode = str(target.get("condition_mode") or "selected").strip() or "selected"
             if target_question_num <= question_num:
@@ -110,7 +110,7 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
                 return f"第{question_num}题跳题规则格式异常"
             try:
                 jump_target = int(rule.get("jumpto") or 0)
-            except Exception:
+            except (ValueError, TypeError):
                 jump_target = 0
             if _jump_rule_terminates_survey(rule):
                 continue
@@ -133,7 +133,7 @@ def _condition_is_met(
 ) -> bool:
     try:
         source_question_num = int(condition.get("condition_question_num") or 0)
-    except Exception:
+    except (ValueError, TypeError):
         source_question_num = 0
     if source_question_num <= 0:
         return False
@@ -174,7 +174,7 @@ def _question_is_visible(
             continue
         try:
             source_question_num = int(condition.get("condition_question_num") or 0)
-        except Exception:
+        except (ValueError, TypeError):
             source_question_num = 0
         if source_question_num <= 0:
             continue
@@ -201,14 +201,14 @@ def _resolve_jump_target(
             continue
         try:
             jump_target = int(rule.get("jumpto") or 0)
-        except Exception:
+        except (ValueError, TypeError):
             jump_target = 0
         if jump_target <= 0:
             continue
         terminates_survey = _jump_rule_terminates_survey(rule)
         try:
             option_index = int(rule.get("option_index") or 0)
-        except Exception:
+        except (ValueError, TypeError):
             option_index = 0
         if option_index < 0:
             if unconditional_target is None:

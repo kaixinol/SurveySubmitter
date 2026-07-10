@@ -42,7 +42,7 @@ class AsyncRoundResources:
                 JOINT_PRE_ANSWER_RESERVATION_LEASE_SECONDS,
             )
         except Exception:
-            logging.info("清理过期联合信效度槽位租约失败", exc_info=True)
+            logging.debug("清理过期联合信效度槽位租约失败", exc_info=True)
             return
         if expired_count > 0:
             logging.warning("已释放%s个超时未进入答题的联合信效度槽位", expired_count)
@@ -61,7 +61,7 @@ class AsyncRoundResources:
         try:
             self.state.reset_pending_distribution(self.slot_label)
         except Exception:
-            logging.info("重置本轮比例统计缓存失败", exc_info=True)
+            logging.debug("重置本轮比例统计缓存失败", exc_info=True)
 
         joint_answer_plan = ensure_joint_psychometric_answer_plan(self.config)
         sample_count = 0
@@ -92,7 +92,7 @@ class AsyncRoundResources:
                     try:
                         self.state.release_reverse_fill_sample(self.slot_label, requeue=True)
                     except Exception:
-                        logging.info("等待信效度配额时回收反填样本失败", exc_info=True)
+                        logging.debug("等待信效度配额时回收反填样本失败", exc_info=True)
                 if self.state.is_joint_sample_quota_exhausted(sample_count):
                     message = "联合信效度样本槽位已全部完成"
                     logging.info("%s，剩余会话自动收尾。", message)
@@ -109,7 +109,7 @@ class AsyncRoundResources:
                     try:
                         self.state.release_joint_sample(self.slot_label)
                     except Exception:
-                        logging.info("等待反填样本时释放联合信效度样本槽位失败", exc_info=True)
+                        logging.debug("等待反填样本时释放联合信效度样本槽位失败", exc_info=True)
                 self.update_status("等待反填样本")
                 await asyncio.sleep(JOINT_SLOT_WAIT_POLL_SECONDS)
                 continue
@@ -120,7 +120,7 @@ class AsyncRoundResources:
                     try:
                         self.state.release_joint_sample(self.slot_label)
                     except Exception:
-                        logging.info("反填样本耗尽时释放联合信效度样本槽位失败", exc_info=True)
+                        logging.debug("反填样本耗尽时释放联合信效度样本槽位失败", exc_info=True)
                 self.state.mark_terminal_stop(
                     "reverse_fill_exhausted",
                     failure_reason=FailureReason.FILL_FAILED.value,
@@ -143,14 +143,14 @@ class AsyncRoundResources:
         try:
             self.state.release_joint_sample(self.slot_label)
         except Exception:
-            logging.info("释放联合信效度样本槽位失败", exc_info=True)
+            logging.debug("释放联合信效度样本槽位失败", exc_info=True)
         try:
             self.state.release_reverse_fill_sample(
                 self.slot_label,
                 requeue=requeue_reverse_fill,
             )
         except Exception:
-            logging.info("释放反填样本失败", exc_info=True)
+            logging.debug("释放反填样本失败", exc_info=True)
 
     async def run_pre_answer_step_with_joint_lease(self, label: str, operation: Any) -> Any:
         if self.state.peek_reserved_joint_sample(self.slot_label) is None:

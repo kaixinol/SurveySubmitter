@@ -52,40 +52,31 @@ def _collect_multi_limit_text_fragments(question_div) -> list[str]:
         ".question-hint",
     )
     for selector in selectors:
-        try:
-            elements = question_div.select(selector)
-        except Exception:
-            elements = []
+        elements = question_div.select(selector)
         for element in elements:
-            try:
-                text = _normalize_html_text(element.get_text(" ", strip=True))
-            except Exception:
-                text = ""
+            text = _normalize_html_text(element.get_text(" ", strip=True))
             if text:
                 fragments.append(text)
 
     if BeautifulSoup is not None:
-        try:
-            cloned_soup = BeautifulSoup(str(question_div), "html.parser")
-            for selector in (
-                ".ui-controlgroup",
-                "ul",
-                "ol",
-                "table",
-                "textarea",
-                "select",
-                ".slider",
-                ".rangeslider",
-                ".range-slider",
-                ".errorMessage",
-            ):
-                for element in cloned_soup.select(selector):
-                    element.decompose()
-            cleaned_text = _normalize_html_text(cloned_soup.get_text(" ", strip=True))
-            if cleaned_text:
-                fragments.append(cleaned_text)
-        except Exception:
-            pass
+        cloned_soup = BeautifulSoup(str(question_div), "html.parser")
+        for selector in (
+            ".ui-controlgroup",
+            "ul",
+            "ol",
+            "table",
+            "textarea",
+            "select",
+            ".slider",
+            ".rangeslider",
+            ".range-slider",
+            ".errorMessage",
+        ):
+            for element in cloned_soup.select(selector):
+                element.decompose()
+        cleaned_text = _normalize_html_text(cloned_soup.get_text(" ", strip=True))
+        if cleaned_text:
+            fragments.append(cleaned_text)
 
     deduped: list[str] = []
     seen = set()
@@ -102,56 +93,49 @@ def _extract_multiple_choice_limits(question_div, question_number: int) -> tuple
     if question_div is None:
         return None, None
 
+    from survey_submitter.providers.wjx.questions.multiple_limits import (
+        _extract_multi_limit_range_from_text,
+        _extract_min_max_from_attributes,
+        _extract_range_from_possible_json,
+    )
+
+    min_limit: int | None = None
+    max_limit: int | None = None
+
     
-    try:
-        from survey_submitter.providers.wjx.questions.multiple_limits import (
-            _extract_multi_limit_range_from_text,
-            _extract_min_max_from_attributes,
-            _extract_range_from_possible_json,
-        )
+    attr_min, attr_max = _extract_min_max_from_attributes(question_div)
+    if attr_min is not None:
+        min_limit = attr_min
+    if attr_max is not None:
+        max_limit = attr_max
 
-        min_limit: int | None = None
-        max_limit: int | None = None
+    
+    if min_limit is None or max_limit is None:
+        for attr_name in ("data", "data-setting", "data-validate"):
+            attr_value = question_div.get(attr_name)
+            cand_min, cand_max = _extract_range_from_possible_json(attr_value)
+            if min_limit is None and cand_min is not None:
+                min_limit = cand_min
+            if max_limit is None and cand_max is not None:
+                max_limit = cand_max
+            if min_limit is not None and max_limit is not None:
+                break
 
-        
-        attr_min, attr_max = _extract_min_max_from_attributes(question_div)
-        if attr_min is not None:
-            min_limit = attr_min
-        if attr_max is not None:
-            max_limit = attr_max
+    
+    if min_limit is None or max_limit is None:
+        for fragment in _collect_multi_limit_text_fragments(question_div):
+            cand_min, cand_max = _extract_multi_limit_range_from_text(fragment)
+            if min_limit is None and cand_min is not None:
+                min_limit = cand_min
+            if max_limit is None and cand_max is not None:
+                max_limit = cand_max
+            if min_limit is not None and max_limit is not None:
+                break
 
-        
-        if min_limit is None or max_limit is None:
-            for attr_name in ("data", "data-setting", "data-validate"):
-                try:
-                    attr_value = question_div.get(attr_name)
-                except Exception:
-                    attr_value = None
-                cand_min, cand_max = _extract_range_from_possible_json(attr_value)
-                if min_limit is None and cand_min is not None:
-                    min_limit = cand_min
-                if max_limit is None and cand_max is not None:
-                    max_limit = cand_max
-                if min_limit is not None and max_limit is not None:
-                    break
+    if min_limit is not None and max_limit is not None and min_limit > max_limit:
+        min_limit, max_limit = max_limit, min_limit
 
-        
-        if min_limit is None or max_limit is None:
-            for fragment in _collect_multi_limit_text_fragments(question_div):
-                cand_min, cand_max = _extract_multi_limit_range_from_text(fragment)
-                if min_limit is None and cand_min is not None:
-                    min_limit = cand_min
-                if max_limit is None and cand_max is not None:
-                    max_limit = cand_max
-                if min_limit is not None and max_limit is not None:
-                    break
-
-        if min_limit is not None and max_limit is not None and min_limit > max_limit:
-            min_limit, max_limit = max_limit, min_limit
-
-        return min_limit, max_limit
-    except Exception:
-        return None, None
+    return min_limit, max_limit
 
 def _extract_question_metadata_from_html(soup, question_div, question_number: int, type_code: str):
     option_texts: list[str] = []
@@ -200,7 +184,7 @@ def _extract_jump_rules_from_html(question_div, question_number: int, option_tex
         try:
             target_text = match.group("signed") or match.group("target") or ""
             return int(target_text)
-        except Exception:
+        except (ValueError, TypeError):
             return None
 
     def _jump_target_terminates(jumpto_num: int, option_text: str | None) -> bool:
@@ -276,7 +260,7 @@ def _extract_display_conditions_from_html(question_div, question_number: int) ->
             continue
         try:
             source_question_num = int(match.group("source"))
-        except Exception:
+        except (ValueError, TypeError):
             continue
         option_indices: list[int] = []
         seen_indices = set()
@@ -284,7 +268,7 @@ def _extract_display_conditions_from_html(question_div, question_number: int) ->
         for raw_option in option_text.split(","):
             try:
                 option_num = int(str(raw_option or "").strip())
-            except Exception:
+            except (ValueError, TypeError):
                 continue
             if option_num <= 0:
                 continue
@@ -313,7 +297,7 @@ def _attach_display_condition_metadata(questions_info: list[dict[str, Any]]) -> 
     for info in questions_info:
         try:
             question_num = int(info.get("num") or 0)
-        except Exception:
+        except (ValueError, TypeError):
             question_num = 0
         if question_num > 0 and question_num not in by_num:
             by_num[question_num] = info
@@ -324,14 +308,14 @@ def _attach_display_condition_metadata(questions_info: list[dict[str, Any]]) -> 
             continue
         try:
             target_question_num = int(info.get("num") or 0)
-        except Exception:
+        except (ValueError, TypeError):
             target_question_num = 0
         for condition in display_conditions:
             if not isinstance(condition, dict):
                 continue
             try:
                 source_question_num = int(condition.get("condition_question_num") or 0)
-            except Exception:
+            except (ValueError, TypeError):
                 source_question_num = 0
             option_indices = condition.get("condition_option_indices") or []
             if source_question_num <= 0 or not isinstance(option_indices, list):
@@ -348,7 +332,7 @@ def _attach_display_condition_metadata(questions_info: list[dict[str, Any]]) -> 
             for raw_index in option_indices:
                 try:
                     index = int(raw_index)
-                except Exception:
+                except (ValueError, TypeError):
                     continue
                 if index < 0 or index in seen_indices:
                     continue
@@ -362,7 +346,7 @@ def _attach_display_condition_metadata(questions_info: list[dict[str, Any]]) -> 
                     continue
                 try:
                     existing_target = int(existing.get("target_question_num") or 0)
-                except Exception:
+                except (ValueError, TypeError):
                     existing_target = 0
                 existing_indices = existing.get("condition_option_indices") or []
                 if existing_target == target_question_num and list(existing_indices) == normalized_indices:

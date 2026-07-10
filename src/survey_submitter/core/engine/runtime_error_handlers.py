@@ -94,15 +94,15 @@ def handle_submission_verification_error(
     try:
         state.release_joint_sample(thread_name)
     except Exception:
-        logging.info("智能验证停止时释放联合信效度样本槽位失败", exc_info=True)
+        logging.debug("智能验证停止时释放联合信效度样本槽位失败", exc_info=True)
     try:
         state.release_reverse_fill_sample(thread_name, requeue=True)
     except Exception:
-        logging.info("智能验证停止时回收反填样本失败", exc_info=True)
+        logging.debug("智能验证停止时回收反填样本失败", exc_info=True)
     try:
         state.increment_thread_fail(thread_name, status_text="触发智能验证")
     except Exception:
-        logging.info("智能验证停止时更新线程状态失败", exc_info=True)
+        logging.debug("智能验证停止时更新线程状态失败", exc_info=True)
     state.mark_terminal_stop(
         SUBMISSION_VERIFICATION_STOP_CATEGORY,
         failure_reason=FailureReason.SUBMISSION_VERIFICATION_REQUIRED.value,
@@ -124,15 +124,15 @@ def handle_survey_provider_unavailable_error(
     try:
         state.release_joint_sample(thread_name)
     except Exception:
-        logging.info("问卷不可继续时释放联合信效度样本槽位失败", exc_info=True)
+        logging.debug("问卷不可继续时释放联合信效度样本槽位失败", exc_info=True)
     try:
         state.release_reverse_fill_sample(thread_name, requeue=True)
     except Exception:
-        logging.info("问卷不可继续时回收反填样本失败", exc_info=True)
+        logging.debug("问卷不可继续时回收反填样本失败", exc_info=True)
     try:
         state.increment_thread_fail(thread_name, status_text="问卷不可填写")
     except Exception:
-        logging.info("问卷不可继续时更新线程状态失败", exc_info=True)
+        logging.debug("问卷不可继续时更新线程状态失败", exc_info=True)
     state.mark_terminal_stop(
         SURVEY_PROVIDER_UNAVAILABLE_STOP_CATEGORY,
         failure_reason=FailureReason.SURVEY_PROVIDER_UNAVAILABLE.value,

@@ -272,7 +272,8 @@ class WjxParserTests:
 
     @pytest.mark.asyncio
     async def test_parse_wjx_survey_surfaces_http_error_directly(self, patch_attrs) -> None:
-        http_exc = RuntimeError("http failed")
+        import httpx
+        http_exc = httpx.HTTPError("http failed")
 
         patch_attrs(
             (wjx_parser.http_client, "aget", AsyncMock(side_effect=http_exc)),

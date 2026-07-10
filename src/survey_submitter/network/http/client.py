@@ -376,7 +376,7 @@ def prewarm() -> None:
                 trust_env=False,
             )
             _PREWARMED = True
-        except Exception as exc:
+        except (httpx.HTTPError, OSError) as exc:
             log_suppressed_exception("http_client.prewarm httpx.Client()", exc, level=logging.WARNING)
         finally:
             if temp_client is not None:

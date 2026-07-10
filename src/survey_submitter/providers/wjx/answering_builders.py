@@ -448,7 +448,7 @@ async def _build_wjx_multiple_action(
     for raw_prob in selection_probabilities:
         try:
             prob_value = float(raw_prob)
-        except Exception:
+        except (ValueError, TypeError):
             prob_value = 0.0
         if math.isnan(prob_value) or math.isinf(prob_value):
             prob_value = 0.0
@@ -547,7 +547,7 @@ async def _build_wjx_matrix_action(
             if isinstance(raw_probabilities, list):
                 try:
                     probs = [float(value) for value in raw_probabilities]
-                except Exception:
+                except (ValueError, TypeError):
                     probs = []
                 if len(probs) != option_count:
                     probs = [1.0] * option_count
@@ -604,7 +604,7 @@ async def _build_wjx_slider_action(
     if config_index < len(ctx.config.slider_targets):
         try:
             target_value = float(ctx.config.slider_targets[config_index])
-        except Exception:
+        except (ValueError, TypeError):
             target_value = 50.0
     return AnswerAction(
         question_num=int(question.num or 0),

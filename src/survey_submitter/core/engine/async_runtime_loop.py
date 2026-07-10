@@ -85,13 +85,13 @@ class AsyncSlotRunner:
         try:
             self.state.update_thread_status(self.slot_label, status_text, running=running)
         except Exception:
-            logging.info("更新 slot 状态失败：%s", status_text, exc_info=True)
+            logging.debug("更新 slot 状态失败：%s", status_text, exc_info=True)
 
     def _update_step(self, status_text: str) -> None:
         try:
             self.state.update_thread_step(self.slot_label, 0, 0, status_text=status_text, running=True)
         except Exception:
-            logging.info("更新 slot 步骤失败：%s", status_text, exc_info=True)
+            logging.debug("更新 slot 步骤失败：%s", status_text, exc_info=True)
 
     async def _update_http_step(self, status_text: str) -> None:
         await update_http_submit_step(self.state, self.slot_label, status_text)
@@ -130,6 +130,7 @@ class AsyncSlotRunner:
             try:
                 terminal_category = str(self.state.get_terminal_stop_snapshot()[0] or "").strip()
             except Exception:
+                logging.debug("获取终端停止快照失败", exc_info=True)
                 terminal_category = ""
             if terminal_category == "target_reached":
                 return "已完成"
@@ -192,7 +193,7 @@ class AsyncSlotRunner:
             try:
                 _mark_proxy_temporarily_bad(self.state, self.proxy_session.proxy_address)
             except Exception:
-                logging.info("标记风控代理失败", exc_info=True)
+                logging.debug("标记风控代理失败", exc_info=True)
             stopped = self.stop_policy.record_failure(
                 self.stop_proxy,
                 thread_name=self.slot_label,
@@ -256,7 +257,7 @@ class AsyncSlotRunner:
             try:
                 _discard_unresponsive_proxy(self.state, self.proxy_session.proxy_address)
             except Exception:
-                logging.info("废弃 HTTP 连接失败代理失败", exc_info=True)
+                logging.debug("废弃 HTTP 连接失败代理失败", exc_info=True)
         return self._handle_proxy_unavailable(
             status_text="代理连接失败" if self.proxy_session.proxy_address else "网络请求失败",
             log_message=f"HTTP 请求失败，本轮按失败处理：{exc}",
@@ -271,7 +272,7 @@ class AsyncSlotRunner:
                 self.state.release_reverse_fill_sample(self.slot_label, requeue=True)
                 self.state.mark_thread_finished(self.slot_label, status_text=self._resolve_finished_status_text())
             except Exception:
-                logging.info("阻止纯 HTTP 提交后的收尾状态更新失败", exc_info=True)
+                logging.debug("阻止纯 HTTP 提交后的收尾状态更新失败", exc_info=True)
             return
 
         self._update_status("HTTP 会话启动", running=True)
@@ -306,7 +307,7 @@ class AsyncSlotRunner:
                 try:
                     marked_answering = self.state.mark_joint_sample_answering(self.slot_label)
                 except Exception:
-                    logging.info("标记联合信效度槽位进入答题失败", exc_info=True)
+                    logging.debug("标记联合信效度槽位进入答题失败", exc_info=True)
                     marked_answering = False
                 if self._requires_joint_sample() and not marked_answering:
                     logging.warning("会话[%s]进入 HTTP 答题前发现联合信效度槽位已释放，本轮放弃并重试", self.slot_label)
@@ -406,7 +407,7 @@ class AsyncSlotRunner:
             self.state.release_reverse_fill_sample(self.slot_label, requeue=True)
             self.state.mark_thread_finished(self.slot_label, status_text=self._resolve_finished_status_text())
         except Exception:
-            logging.info("HTTP slot 收尾状态更新失败", exc_info=True)
+            logging.debug("HTTP slot 收尾状态更新失败", exc_info=True)
 
     async def run(self) -> None:
         if not self._uses_http_runtime():

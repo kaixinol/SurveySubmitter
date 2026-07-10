@@ -31,7 +31,7 @@ class RunStopPolicy:
         try:
             runtime_wait_if_paused(self.runtime_bridge, stop_signal)
         except Exception:
-            logging.info("暂停等待失败", exc_info=True)
+            logging.debug("暂停等待失败", exc_info=True)
 
     def failure_threshold(self) -> int:
         base_threshold = max(1, int(self.config.fail_threshold or 1))
@@ -85,7 +85,7 @@ class RunStopPolicy:
             try:
                 self.state.release_joint_sample(thread_name)
             except Exception:
-                logging.info("失败后释放联合信效度样本槽位失败", exc_info=True)
+                logging.debug("失败后释放联合信效度样本槽位失败", exc_info=True)
             try:
                 if consume_reverse_fill_attempt:
                     row_number, discarded = self.state.mark_reverse_fill_submission_failed(
@@ -102,11 +102,11 @@ class RunStopPolicy:
                     if row_number is not None:
                         logging.info("反填样本第%s行已回队，本次失败不计入样本作废次数。", row_number)
             except Exception:
-                logging.info("失败后回收反填样本失败", exc_info=True)
+                logging.debug("失败后回收反填样本失败", exc_info=True)
             try:
                 self.state.increment_thread_fail(thread_name, status_text=status_text)
             except Exception:
-                logging.info("更新线程失败计数失败", exc_info=True)
+                logging.debug("更新线程失败计数失败", exc_info=True)
         if self.state.is_reverse_fill_target_unreachable():
             message = "反填样本已耗尽，剩余样本不足以完成目标份数"
             logging.critical("%s", message)
@@ -170,19 +170,19 @@ class RunStopPolicy:
             try:
                 self.state.commit_joint_sample(thread_name)
             except Exception:
-                logging.info("提交成功后核销联合信效度样本槽位失败", exc_info=True)
+                logging.debug("提交成功后核销联合信效度样本槽位失败", exc_info=True)
             try:
                 self.state.commit_reverse_fill_sample(thread_name)
             except Exception:
-                logging.info("提交成功后核销反填样本失败", exc_info=True)
+                logging.debug("提交成功后核销反填样本失败", exc_info=True)
             try:
                 self.state.commit_pending_distribution(thread_name)
             except Exception:
-                logging.info("提交成功后写入比例统计失败", exc_info=True)
+                logging.debug("提交成功后写入比例统计失败", exc_info=True)
             try:
                 self.state.increment_thread_success(thread_name, status_text=status_text)
             except Exception:
-                logging.info("更新线程成功计数失败", exc_info=True)
+                logging.debug("更新线程成功计数失败", exc_info=True)
         if should_break:
             stop_signal.set()
         if trigger_target_stop:
@@ -191,7 +191,7 @@ class RunStopPolicy:
             try:
                 trigger_random_ip_submission(self.runtime_bridge, stop_signal)
             except Exception:
-                logging.info("提交成功后刷新随机IP失败", exc_info=True)
+                logging.debug("提交成功后刷新随机IP失败", exc_info=True)
         return should_break or trigger_target_stop
 
     def trigger_target_reached_stop(

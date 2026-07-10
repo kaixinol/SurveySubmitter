@@ -107,7 +107,7 @@ class ProxyRuntimeMixin:
             return
         try:
             seconds = max(0.0, float(cooldown_seconds))
-        except Exception:
+        except (ValueError, TypeError):
             seconds = 0.0
         if seconds <= 0:
             return

@@ -35,10 +35,7 @@ _ID_CARD_CHECKSUM_CHARS = "10X98765432"
 def _normalize_question_type_code(value: Any) -> str:
     if value is None:
         return ""
-    try:
-        return str(value).strip()
-    except Exception:
-        return ""
+    return str(value).strip()
 
 
 def _should_treat_question_as_text_like(
@@ -70,7 +67,7 @@ def weighted_index(probabilities: list[float]) -> int:
     for value in probabilities:
         try:
             weight = float(value)
-        except Exception:
+        except (ValueError, TypeError):
             weight = 0.0
         if math.isnan(weight) or math.isinf(weight) or weight < 0.0:
             weight = 0.0
@@ -124,7 +121,7 @@ def generate_random_chinese_name() -> str:
         persona = get_current_persona()
         if persona is not None:
             gender = persona.gender
-    except Exception as exc:
+    except ImportError as exc:
         log_suppressed_exception("generate_random_chinese_name: from survey_submitter.core.persona.generator import get_current_persona", exc, level=logging.ERROR)
 
     surname = random.choice(surname_pool)
@@ -161,7 +158,7 @@ def _load_id_card_area_codes() -> tuple[str, ...]:
     try:
         with open(asset_path, "r", encoding="utf-8") as fp:
             area_data = json.load(fp)
-    except Exception as exc:
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
         log_suppressed_exception("questions.utils._load_id_card_area_codes open", exc, level=logging.ERROR)
         return fallback_codes
 
@@ -185,7 +182,7 @@ def _resolve_current_persona() -> Any:
     try:
         from survey_submitter.core.persona.generator import get_current_persona
         return get_current_persona()
-    except Exception as exc:
+    except ImportError as exc:
         log_suppressed_exception("questions.utils._resolve_current_persona import", exc, level=logging.ERROR)
         return None
 
@@ -250,15 +247,12 @@ def try_parse_random_int_range(raw: Any) -> tuple[int, int] | None:
     
 
     def _coerce_int(value: Any) -> int | None:
-        try:
-            text = str(value).strip()
-        except Exception:
-            return None
+        text = str(value).strip() if value is not None else ""
         if not text:
             return None
         try:
             return int(text)
-        except Exception:
+        except (ValueError, TypeError):
             return None
 
     if isinstance(raw, dict):
@@ -349,12 +343,7 @@ def resolve_dynamic_text_token(token: Any) -> str:
 
 
 def extract_text_from_element(element) -> str:
-    
-    try:
-        text = element.text or ""
-    except Exception:
-        text = ""
-    text = text.strip()
+    text = (element.text or "").strip()
     if text:
         return text
     try:
@@ -387,10 +376,7 @@ def normalize_droplist_probs(prob_config: list[float] | int | float | None, opti
     if option_count <= 0:
         return []
     if prob_config == -1 or prob_config is None:
-        try:
-            return normalize_probabilities([1.0] * option_count)
-        except Exception:
-            return [1.0 / option_count] * option_count
+        return normalize_probabilities([1.0] * option_count)
     try:
         if isinstance(prob_config, (list, tuple)):
             base = list(prob_config)
@@ -407,7 +393,7 @@ def normalize_droplist_probs(prob_config: list[float] | int | float | None, opti
         if total > 0:
             return [value / total for value in sanitized]
         return [1.0 / option_count] * option_count
-    except Exception:
+    except (ValueError, TypeError):
         return [1.0 / option_count] * option_count
 
 
@@ -422,10 +408,7 @@ def normalize_option_fill_texts(option_texts: list[str | None] | None, option_co
         if raw is None:
             normalized.append(None)
             continue
-        try:
-            text_value = str(raw).strip()
-        except Exception:
-            text_value = ""
+        text_value = str(raw).strip()
         normalized.append(text_value or None)
     if not any(value for value in normalized):
         return None
@@ -444,7 +427,7 @@ def _prob_config_is_unset(value: Any) -> bool:
             try:
                 if float(item) > 0:
                     return False
-            except Exception:
+            except (ValueError, TypeError):
                 continue
         return True
     return False
@@ -462,7 +445,7 @@ def _custom_weights_has_positive(weights: Any) -> bool:
         try:
             if float(item) > 0:
                 return True
-        except Exception:
+        except (ValueError, TypeError):
             continue
     return False
 

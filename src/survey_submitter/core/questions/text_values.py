@@ -81,7 +81,7 @@ def resolve_text_values_from_config(
     try:
         numeric_weights = [float(value) for value in weights]
         normalized = normalize_probabilities(numeric_weights)
-    except Exception:
+    except (ValueError, TypeError):
         normalized = normalize_probabilities([1.0] * len(candidates))
 
     selected_raw = candidates[weighted_index(normalized)]

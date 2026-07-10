@@ -15,7 +15,7 @@ def normalize_probability_list(values: list[float]) -> list[float]:
     for raw in values:
         try:
             value = max(0.0, float(raw))
-        except Exception:
+        except (ValueError, TypeError):
             value = 0.0
         if math.isnan(value) or math.isinf(value):
             value = 0.0
@@ -53,17 +53,13 @@ def build_bias_target_probabilities(option_count: int, bias: str) -> list[float]
 
 
 def _resolve_choice_key(item: Any) -> str:
-    try:
-        key = str(getattr(item, "choice_key", "") or "").strip()
-    except Exception:
-        key = ""
-    return key
+    return str(getattr(item, "choice_key", "") or "").strip()
 
 
 def _resolve_option_count(item: Any) -> int:
     try:
         option_count = int(getattr(item, "option_count", 0) or 0)
-    except Exception:
+    except (ValueError, TypeError):
         option_count = 0
     return max(2, option_count)
 

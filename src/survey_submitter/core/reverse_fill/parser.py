@@ -111,19 +111,13 @@ def supports_reverse_fill_runtime(question_type: str, info: SurveyQuestionMeta |
 
 def resolve_question_entry(info: SurveyQuestionMeta | dict[str, Any], entries: list[QuestionEntry]) -> QuestionEntry | None:
     raw_question_num = info.num if isinstance(info, SurveyQuestionMeta) else info.get("num")
-    try:
-        question_num = int(raw_question_num) if raw_question_num is not None else None
-    except Exception:
-        question_num = None
+    question_num = int(raw_question_num) if raw_question_num is not None else None
     raw_title = info.title if isinstance(info, SurveyQuestionMeta) else info.get("title")
     title_key = normalize_reverse_fill_key(raw_title)
     matched_by_title: QuestionEntry | None = None
     for entry in list(entries or []):
-        try:
-            raw_entry_num = getattr(entry, "question_num", None)
-            entry_num = int(raw_entry_num) if raw_entry_num is not None else None
-        except Exception:
-            entry_num = None
+        raw_entry_num = getattr(entry, "question_num", None)
+        entry_num = int(raw_entry_num) if raw_entry_num is not None else None
         if entry_num is not None and question_num is not None and question_num == entry_num:
             return entry
         if matched_by_title is None and title_key and normalize_reverse_fill_key(getattr(entry, "question_title", None)) == title_key:

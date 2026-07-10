@@ -36,7 +36,7 @@ DEFAULT_SLIDER_MAX = 100.0
 def _as_float(val: Any, default: float) -> float:
     try:
         return float(val)
-    except Exception:
+    except (ValueError, TypeError):
         return default
 
 
@@ -50,15 +50,12 @@ def _normalize_question_num(raw: Any) -> int | None:
         if raw is None:
             return None
         return int(raw)
-    except Exception:
+    except (ValueError, TypeError):
         return None
 
 
 def _normalize_title(raw: Any) -> str:
-    try:
-        text = str(raw or "").strip()
-    except Exception:
-        return ""
+    text = str(raw or "").strip()
     if not text:
         return ""
     return "".join(text.split())
@@ -75,7 +72,7 @@ def _normalize_provider_key(raw_provider: Any, raw_question_id: Any) -> tuple[st
 def _normalize_forced_option_index(raw: Any, option_count: int) -> int | None:
     try:
         idx = int(raw)
-    except Exception:
+    except (ValueError, TypeError):
         return None
     total = max(0, int(option_count or 0))
     if 0 <= idx < total:
@@ -120,7 +117,7 @@ def _filter_option_fill_texts_to_fillable(
     for raw_index in fillable_indices:
         try:
             option_index = int(raw_index)
-        except Exception:
+        except (ValueError, TypeError):
             continue
         if 0 <= option_index < total:
             fillable_set.add(option_index)

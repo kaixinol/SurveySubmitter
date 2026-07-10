@@ -225,7 +225,7 @@ def configure_probabilities(
                 for value in raw_row:
                     try:
                         cleaned.append(max(0.0, float(value)))
-                    except Exception:
+                    except (ValueError, TypeError):
                         continue
                 if not cleaned:
                     return None
@@ -235,7 +235,7 @@ def configure_probabilities(
                     cleaned = cleaned[:option_count]
                 try:
                     return normalize_probabilities(cleaned)
-                except Exception:
+                except ValueError:
                     return None
 
             row_weights_source: list[Any] | None = None
@@ -287,18 +287,15 @@ def configure_probabilities(
                 continue
             target_value: float | None = None
             if isinstance(entry.custom_weights, (list, tuple)) and entry.custom_weights:
-                try:
-                    first = entry.custom_weights[0]
-                    target_value = float(first) if isinstance(first, (int, float)) else None
-                except Exception:
-                    target_value = None
+                first = entry.custom_weights[0]
+                target_value = float(first) if isinstance(first, (int, float)) else None
             if target_value is None:
                 if isinstance(probs, (int, float)):
                     target_value = float(probs)
                 elif isinstance(probs, list) and probs:
                     try:
                         target_value = float(probs[0])
-                    except Exception:
+                    except (ValueError, TypeError):
                         target_value = None
             target.slider_targets.append(DEFAULT_SLIDER_TARGET if target_value is None else target_value)
         elif entry.question_type == QuestionType.ORDER:

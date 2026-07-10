@@ -35,7 +35,7 @@ def count_positive_weights(raw_weights: Any) -> int:
         try:
             if float(value) > 0:
                 count += 1
-        except Exception:
+        except (ValueError, TypeError):
             continue
     return count
 
@@ -127,7 +127,7 @@ def normalize_attached_option_selects(
                 continue
             try:
                 option_index = int(raw_option_index)
-            except Exception:
+            except (ValueError, TypeError):
                 continue
             existing_map[option_index] = item
     normalized: list[dict[str, Any]] = []
@@ -139,7 +139,7 @@ def normalize_attached_option_selects(
             continue
         try:
             option_index = int(raw_option_index)
-        except Exception:
+        except (ValueError, TypeError):
             continue
         option_text = str(item.get("option_text") or "").strip()
         select_options_raw = item.get("select_options")
@@ -158,7 +158,7 @@ def normalize_attached_option_selects(
                     raw_weight = existing_weights[idx] if idx < len(existing_weights) else 0.0
                     try:
                         weights.append(max(0.0, float(raw_weight)))
-                    except Exception:
+                    except (ValueError, TypeError):
                         weights.append(0.0)
                 if not any(weight > 0 for weight in weights):
                     weights = None
@@ -187,7 +187,7 @@ def normalize_fillable_option_indices(
     for raw in source:
         try:
             index = int(raw)
-        except Exception:
+        except (ValueError, TypeError):
             continue
         if index < 0 or index >= total or index in seen:
             continue

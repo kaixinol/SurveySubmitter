@@ -10,7 +10,7 @@ def has_positive_weight_values(raw: Any) -> bool:
     if isinstance(raw, (int, float)):
         try:
             value = float(raw)
-        except Exception:
+        except (ValueError, TypeError):
             return False
         return math.isfinite(value) and value > 0.0
 
@@ -25,7 +25,7 @@ def has_positive_weight_values(raw: Any) -> bool:
             continue
         try:
             value = float(item)
-        except Exception:
+        except (ValueError, TypeError):
             continue
         if math.isfinite(value) and value > 0.0:
             return True
@@ -49,7 +49,7 @@ def is_strict_ratio_question(task_ctx: Any, question_number: Any) -> bool:
         return False
     try:
         q_num = int(question_number)
-    except Exception:
+    except (ValueError, TypeError):
         return False
     config = getattr(task_ctx, "config", task_ctx)
     strict_map = getattr(config, "question_strict_ratio_map", {})
@@ -80,7 +80,7 @@ def weighted_sample_without_replacement(
     for idx, raw_weight in zip(indices, weights):
         try:
             weight = float(raw_weight)
-        except Exception:
+        except (ValueError, TypeError):
             weight = 0.0
         if not math.isfinite(weight) or weight <= 0.0:
             continue
@@ -113,7 +113,7 @@ def build_rank_groups(probabilities: Sequence[float]) -> list[list[int]]:
     for idx, raw_weight in enumerate(probabilities):
         try:
             weight = float(raw_weight)
-        except Exception:
+        except (ValueError, TypeError):
             weight = 0.0
         if not math.isfinite(weight) or weight <= 0.0:
             continue

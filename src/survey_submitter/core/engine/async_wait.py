@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 
 
@@ -49,7 +50,7 @@ async def sleep_or_stop(stop_signal: Any, seconds: float) -> bool:
         try:
             return bool(await asyncio.to_thread(waiter, delay))
         except Exception:
-            pass
+            logging.debug("stop_signal.wait() 调用失败", exc_info=True)
 
     await asyncio.sleep(delay)
     return is_stop_requested(stop_signal)
