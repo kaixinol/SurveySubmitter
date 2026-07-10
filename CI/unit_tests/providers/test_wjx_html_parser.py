@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from survey_submitter.core.questions.types import TypeCode
 from survey_submitter.providers.wjx.html_parser import parse_survey_questions_from_html
 
 
@@ -43,7 +44,7 @@ class WjxHtmlParserTests:
         assert first["num"] == 1
         assert first["display_num"] == 1
         assert first["title"] == "本题检测，请选择 非常满意"
-        assert first["type_code"] == "3"
+        assert first["type_code"] == TypeCode.SINGLE
         assert first["options"] == 2
         assert first["option_texts"] == ["一般", "非常满意"]
         assert first["forced_option_index"] == 1
@@ -63,7 +64,7 @@ class WjxHtmlParserTests:
         second = questions[1]
         assert second["num"] == 2
         assert second["display_num"] == 2
-        assert second["type_code"] == "4"
+        assert second["type_code"] == TypeCode.MULTIPLE
         assert second["multi_min_limit"] == 1
         assert second["multi_max_limit"] == 2
         assert second["has_jump"]
@@ -125,7 +126,7 @@ class WjxHtmlParserTests:
 
         slider = questions[1]
         assert slider["num"] == 4
-        assert slider["type_code"] == "8"
+        assert slider["type_code"] == TypeCode.SLIDER
         assert slider["options"] == 1
         assert slider["slider_min"] == 1.0
         assert slider["slider_max"] == 5.0
@@ -424,12 +425,12 @@ class WjxHtmlParserTests:
 
         location = questions[0]
         assert location["is_location"]
-        assert location["type_code"] == "2"
+        assert location["type_code"] == TypeCode.LOCATION
         assert location["text_inputs"] == 0
 
         region = questions[1]
         assert region["is_location"]
-        assert region["type_code"] == "1"
+        assert region["type_code"] == TypeCode.LOCATION
         assert region["text_inputs"] == 0
 
         slider_matrix = questions[2]

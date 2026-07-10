@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from survey_submitter.core.persona.context import record_answer, reset_context
 from survey_submitter.core.questions import consistency
-from survey_submitter.providers.contracts import SurveyQuestionMeta
+from survey_submitter.providers.contracts import ensure_survey_question_meta
 
 
 class ConsistencyRulesTests:
@@ -35,9 +35,9 @@ class ConsistencyRulesTests:
 
     def test_sanitize_answer_rules_counts_invalid_and_unsupported_items(self) -> None:
         questions = [
-            SurveyQuestionMeta(num=1, title="单选", type_code="3"),
-            SurveyQuestionMeta(num=2, title="填空", type_code="1"),
-            SurveyQuestionMeta(num=3, title="矩阵", type_code="6"),
+            ensure_survey_question_meta({"num": 1, "title": "单选", "type_code": "3"}),
+            ensure_survey_question_meta({"num": 2, "title": "填空", "type_code": "1"}),
+            ensure_survey_question_meta({"num": 3, "title": "矩阵", "type_code": "6"}),
         ]
         rules = [
             {

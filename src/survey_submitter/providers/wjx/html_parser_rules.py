@@ -160,11 +160,11 @@ def _extract_question_metadata_from_html(soup, question_div, question_number: in
     multi_min_limit: Optional[int] = None
     multi_max_limit: Optional[int] = None
 
-    if type_code in {TypeCode.RADIO, TypeCode.CHECKBOX, TypeCode.RATING, TypeCode.ORDER}:
+    if type_code in {TypeCode.SINGLE, TypeCode.MULTIPLE, TypeCode.SCORE, TypeCode.SCALE, TypeCode.ORDER}:
         option_texts, fillable_indices = _collect_choice_option_texts(question_div)
         option_count = len(option_texts)
         
-        if type_code == TypeCode.CHECKBOX:
+        if type_code == TypeCode.MULTIPLE:
             multi_min_limit, multi_max_limit = _extract_multiple_choice_limits(question_div, question_number)
     elif type_code == TypeCode.DROPDOWN:
         option_texts = _collect_select_option_texts(question_div, soup, question_number)

@@ -17,7 +17,7 @@ from survey_submitter.core.questions.schema import (
     _TEXT_RANDOM_NAME,
     _TEXT_RANDOM_NAME_TOKEN,
 )
-from survey_submitter.providers.contracts import SurveyQuestionMeta
+from survey_submitter.providers.contracts import ensure_survey_question_meta
 
 
 class NormalizationRuntimeTests:
@@ -152,20 +152,8 @@ class NormalizationRuntimeTests:
     def test_configure_probabilities_adds_only_ordinal_single_to_reliability(self) -> None:
         ctx = SimpleNamespace(
             questions_metadata={
-                1: SurveyQuestionMeta(
-                    num=1,
-                    title="满意度",
-                    type_code="3",
-                    options=5,
-                    option_texts=["非常满意", "满意", "一般", "不满意", "非常不满意"],
-                ),
-                2: SurveyQuestionMeta(
-                    num=2,
-                    title="性别",
-                    type_code="3",
-                    options=2,
-                    option_texts=["男", "女"],
-                ),
+                1: ensure_survey_question_meta({"num": 1, "title": "满意度", "type_code": "3", "option_texts": ["非常满意", "满意", "一般", "不满意", "非常不满意"]}),
+                2: ensure_survey_question_meta({"num": 2, "title": "性别", "type_code": "3", "option_texts": ["男", "女"]}),
             }
         )
         entries = [
@@ -181,13 +169,7 @@ class NormalizationRuntimeTests:
     def test_configure_probabilities_adds_obvious_attitude_single_to_reliability(self) -> None:
         ctx = SimpleNamespace(
             questions_metadata={
-                4: SurveyQuestionMeta(
-                    num=4,
-                    title="年轻人应该先完成学业或事业起步，再考虑生育",
-                    type_code="3",
-                    options=5,
-                    option_texts=["非常不同意", "比较不同意", "没意见", "比较同意", "非常同意"],
-                ),
+                4: ensure_survey_question_meta({"num": 4, "title": "年轻人应该先完成学业或事业起步，再考虑生育", "type_code": "3", "option_texts": ["非常不同意", "比较不同意", "没意见", "比较同意", "非常同意"]}),
             }
         )
         entries = [

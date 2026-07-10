@@ -5,7 +5,7 @@ from survey_submitter.providers.contracts import (
     LOGIC_PARSE_STATUS_NONE,
 )
 
-from survey_submitter.core.questions.types import TypeCode
+from survey_submitter.core.questions.types import TypeCode, convert_wire_type_code
 from survey_submitter.core.questions.utils import _should_treat_question_as_text_like
 
 try:
@@ -225,17 +225,21 @@ def parse_survey_questions_from_html(html: str) -> List[Dict[str, Any]]:
                     current_display_num = heading_num
                 continue
             type_code = str(question_div.get("type") or "").strip() or "0"
+            type_code = convert_wire_type_code(type_code)
             if type_code != TypeCode.ORDER and _soup_question_looks_like_reorder(question_div):
-                type_code = TypeCode.ORDER.value
+                type_code = TypeCode.ORDER
             is_description = _soup_question_looks_like_description(question_div, type_code)
             is_required = _soup_question_is_required(question_div)
             is_rating = False
             rating_max = 0
-            if type_code == TypeCode.RATING:
+            if type_code == TypeCode.SCORE:
                 is_rating = _soup_question_looks_like_rating(question_div)
                 if is_rating:
                     rating_max = _extract_rating_option_count(question_div)
-            is_location = type_code in {TypeCode.GAPFILL, TypeCode.LOCATION_TEXT} and _soup_question_is_location(question_div)
+                    type_code = TypeCode.SCALE
+            is_location = type_code in {TypeCode.TEXT, TypeCode.LOCATION} and _soup_question_is_location(question_div)
+            if is_location:
+                type_code = TypeCode.LOCATION
             display_num = _extract_display_question_number(raw_heading_text)
             if display_num is None:
                 display_num = current_display_num
@@ -266,13 +270,13 @@ def parse_survey_questions_from_html(html: str) -> List[Dict[str, Any]]:
                     if not option_texts or not has_meaningful:
                         option_texts = [str(i + 1) for i in range(option_count)]
             
-            elif type_code == TypeCode.RATING:
+            elif type_code in {TypeCode.SCORE, TypeCode.SCALE}:
                 scale_texts = _extract_rating_option_texts(question_div)
                 if scale_texts:
                     option_texts = scale_texts
                     option_count = len(scale_texts)
             attached_option_selects: List[Dict[str, Any]] = []
-            if type_code in {TypeCode.RADIO, TypeCode.CHECKBOX}:
+            if type_code in {TypeCode.SINGLE, TypeCode.MULTIPLE}:
                 attached_option_selects = _extract_choice_attached_selects(question_div)
             has_jump, jump_rules = _extract_jump_rules_from_html(question_div, question_number, option_texts)
             has_display_condition, display_conditions = _extract_display_conditions_from_html(question_div, question_number)
@@ -300,9 +304,13 @@ def parse_survey_questions_from_html(html: str) -> List[Dict[str, Any]]:
                 has_gapfill,
                 has_slider_matrix=is_slider_matrix,
             )
+            if is_description:
+                type_code = TypeCode.DESCRIPTION
+            elif is_multi_text and type_code == TypeCode.MATRIX:
+                type_code = TypeCode.MULTI_TEXT
             forced_option_index: Optional[int] = None
             forced_option_text: Optional[str] = None
-            if type_code in {TypeCode.RADIO, TypeCode.RATING, TypeCode.DROPDOWN}:
+            if type_code in {TypeCode.SINGLE, TypeCode.SCORE, TypeCode.SCALE, TypeCode.DROPDOWN}:
                 forced_option_index, forced_option_text = _extract_force_select_option(
                     question_div,
                     title_text,

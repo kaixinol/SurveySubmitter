@@ -13,7 +13,7 @@ from survey_submitter.core.engine.async_events import AsyncRunContext
 from survey_submitter.core.engine.async_runtime_loop import AsyncSlotRunner
 from survey_submitter.core.engine.failure_reason import FailureReason
 from survey_submitter.core.task import ExecutionConfig, ExecutionState, ProxyLease
-from survey_submitter.providers.contracts import SurveyQuestionMeta
+from survey_submitter.providers.contracts import SurveyQuestionMeta, _QuestionMetaBase
 from survey_submitter.providers.errors import SubmissionVerificationRequiredError, SurveyProviderUnavailableAtRuntimeError
 
 
@@ -174,7 +174,7 @@ class AsyncRuntimeLoopLargeTests:
     async def test_uses_http_runtime_respects_logic_parse_status(self) -> None:
         config = ExecutionConfig(url="https://www.wjx.cn/vm/demo.aspx", survey_provider="wjx")
         config.questions_metadata = {
-            1: SurveyQuestionMeta(
+            1: _QuestionMetaBase(
                 num=1,
                 title="Q1",
                 has_jump=True,
@@ -188,7 +188,7 @@ class AsyncRuntimeLoopLargeTests:
         assert runner._uses_http_runtime() is True
 
         config.questions_metadata = {
-            1: SurveyQuestionMeta(
+            1: _QuestionMetaBase(
                 num=1,
                 title="Q1",
                 has_jump=True,
@@ -204,7 +204,7 @@ class AsyncRuntimeLoopLargeTests:
     async def test_run_blocks_unsupported_http_logic_without_fallback(self) -> None:
         config = ExecutionConfig(url="https://www.wjx.cn/vm/demo.aspx", survey_provider="wjx")
         config.questions_metadata = {
-            1: SurveyQuestionMeta(
+            1: _QuestionMetaBase(
                 num=1,
                 title="Q1",
                 has_jump=True,

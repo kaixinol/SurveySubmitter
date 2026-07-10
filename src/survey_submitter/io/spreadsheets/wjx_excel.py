@@ -27,6 +27,14 @@ def _cell_text(value: Any) -> str:
     return text
 
 
+def _normalize_cell_value(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return value
+
+
 def _iter_question_values(raw_rows: Iterable[ReverseFillRawRow], question_columns: Dict[int, List[ReverseFillColumn]]) -> Iterable[Any]:
     column_indexes: List[int] = []
     for columns in question_columns.values():
@@ -85,11 +93,11 @@ def load_wjx_excel_export(source_path: str, *, preferred_format: str = REVERSE_F
     if not os.path.exists(path):
         raise ValueError(f"Excel 文件不存在：{path}")
 
-    workbook = CalamineWorkbook(path)
+    workbook = CalamineWorkbook.from_path(path)
     if not workbook.sheet_names:
         raise ValueError("Excel 中没有可读取的工作表")
     sheet = workbook.get_sheet_by_index(0)
-    all_rows = sheet.rows()
+    all_rows = sheet.to_python()
     if not all_rows:
         raise ValueError("Excel 缺少表头，无法识别问卷列")
 
@@ -120,7 +128,7 @@ def load_wjx_excel_export(source_path: str, *, preferred_format: str = REVERSE_F
         for column_list in question_columns.values():
             for column in column_list:
                 position = int(column.column_index) - 1
-                raw_value = data_row[position] if position < len(data_row) else None
+                raw_value = _normalize_cell_value(data_row[position]) if position < len(data_row) else None
                 values_by_column[int(column.column_index)] = raw_value
         raw_rows.append(
             ReverseFillRawRow(

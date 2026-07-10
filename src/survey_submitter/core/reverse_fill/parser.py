@@ -78,6 +78,8 @@ def is_reverse_fill_blank(value: Any) -> bool:
 
 
 def infer_reverse_fill_question_type(info: SurveyQuestionMeta | Dict[str, Any], entry: Optional[QuestionEntry] = None) -> str:
+    if isinstance(info, dict) and bool(info.get("is_multi_text")):
+        return QuestionType.MULTI_TEXT
     inferred = infer_question_entry_type(info)
     if inferred:
         return inferred

@@ -142,8 +142,8 @@ class WjxHtmlParserHelperTests:
         rating_div = _soup("<div><div class='evaluateTagWrap'></div><a class='rate-off'>星</a></div>").div
         rating_count_div = _soup("<div><ul class='modlen5'><li></li></ul></div>").div
 
-        assert html_parser_common._soup_question_looks_like_description(description_div, "3")
-        assert not html_parser_common._soup_question_looks_like_description(_soup("<div><input type='radio'/></div>").div, "3")
+        assert html_parser_common._soup_question_looks_like_description(description_div, "single")
+        assert not html_parser_common._soup_question_looks_like_description(_soup("<div><input type='radio'/></div>").div, "single")
         assert html_parser_common._soup_question_looks_like_reorder(reorder_div)
         assert html_parser_common._soup_question_looks_like_numeric_scale(scale_div)
         assert not html_parser_common._soup_question_looks_like_rating(scale_div)
@@ -182,11 +182,11 @@ class WjxHtmlParserHelperTests:
         assert not html_parser_common._is_select_placeholder_option(1, "1", "北京")
 
     def test_should_mark_as_multi_text_respects_type_and_flags(self) -> None:
-        assert html_parser_common._should_mark_as_multi_text("1", 0, 2, False)
-        assert html_parser_common._should_mark_as_multi_text("9", 0, 1, False, has_gapfill=True)
-        assert not html_parser_common._should_mark_as_multi_text("3", 4, 2, False)
-        assert not html_parser_common._should_mark_as_multi_text("1", 0, 2, True)
-        assert not html_parser_common._should_mark_as_multi_text("1", 0, 2, False, has_slider_matrix=True)
+        assert html_parser_common._should_mark_as_multi_text("text", 0, 2, False)
+        assert html_parser_common._should_mark_as_multi_text("matrix", 0, 1, False, has_gapfill=True)
+        assert not html_parser_common._should_mark_as_multi_text("single", 4, 2, False)
+        assert not html_parser_common._should_mark_as_multi_text("text", 0, 2, True)
+        assert not html_parser_common._should_mark_as_multi_text("text", 0, 2, False, has_slider_matrix=True)
 
     def test_force_select_detection_supports_text_label_and_index(self) -> None:
         text_div = _soup("<div><div class='topichtml'>本题检测，请选择 非常满意。</div></div>").div
@@ -373,7 +373,7 @@ class WjxHtmlParserHelperTests:
         soup = _soup(str(question_div))
 
         fragments = html_parser_rules._collect_multi_limit_text_fragments(question_div)
-        metadata = html_parser_rules._extract_question_metadata_from_html(soup, question_div, 7, "7")
+        metadata = html_parser_rules._extract_question_metadata_from_html(soup, question_div, 7, "dropdown")
 
         assert fragments == ["至少选1项，最多选3项"]
         assert metadata[0] == ["北京"]

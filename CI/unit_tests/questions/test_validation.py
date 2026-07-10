@@ -8,7 +8,7 @@ class QuestionValidationTests:
         assert validate_question_config([]) == '未配置任何题目'
 
     def test_validate_question_config_blocks_unsupported_questions(self) -> None:
-        result = validate_question_config([QuestionEntry(question_type='single', probabilities=[100.0], question_num=1)], [{'num': 9, 'title': '上传文件', 'unsupported': True, 'provider_type': 'upload', 'unsupported_reason': '当前平台还没做'}])
+        result = validate_question_config([QuestionEntry(question_type='single', probabilities=[100.0], question_num=1)], [{'num': 9, 'title': '上传文件', 'unsupported': True, 'type_code': 'upload', 'unsupported_reason': '当前平台还没做'}])
         assert result is not None
         assert result is not None
         assert '暂不支持的题型' in result
@@ -22,7 +22,7 @@ class QuestionValidationTests:
 
     def test_multiple_validation_still_blocks_when_positive_candidates_below_min_limit(self) -> None:
         entry = QuestionEntry(question_type='multiple', probabilities=[100.0, 0.0, 0.0, 0.0], option_count=4, question_num=6)
-        result = validate_question_config([entry], [{'num': 6, 'multi_min_limit': 2, 'multi_max_limit': 3}])
+        result = validate_question_config([entry], [{'num': 6, 'type_code': '4', 'multi_min_limit': 2, 'multi_max_limit': 3}])
         assert result is not None
         assert result is not None
         assert '最少选择 2 项' in result

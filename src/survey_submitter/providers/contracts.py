@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
 from survey_submitter.core.config.base import BaseConfigModel
-from survey_submitter.core.questions.types import TypeCode
+from survey_submitter.core.questions.types import TypeCode, convert_wire_type_code
 from survey_submitter.providers.common import SURVEY_PROVIDER_WJX, normalize_survey_provider
 
 type JumpRule = dict[str, str | int | bool]
@@ -160,6 +160,7 @@ class SurveyQuestionMeta(BaseConfigModel):
     num: int
     title: str
     type_code: TypeCode = TypeCode.UNKNOWN
+    provider_type: str = ""
     required: bool = False
     description: str | None = None
     unsupported: bool = False
@@ -201,6 +202,7 @@ class MultipleChoiceQuestionMeta(ChoiceQuestionMeta):
 class MatrixQuestionMeta(_QuestionMetaBase):
     rows: int = 1
     row_texts: list[str] | None = None
+    option_texts: list[str] | None = None
 
 
 class RatingQuestionMeta(_QuestionMetaBase):
@@ -247,21 +249,8 @@ def survey_question_meta_to_dict(question: SurveyQuestionMeta) -> dict[str, Any]
 
 
 def _resolve_type_code(normalized: Mapping[str, Any]) -> TypeCode:
-    raw = str(normalized.get("type_code") or "0").strip()
-    provider_type = str(normalized.get("provider_type") or "").strip().lower()
-    if provider_type == "description" or raw == TypeCode.DESCRIPTION:
-        return TypeCode.DESCRIPTION
-    try:
-        type_code = TypeCode(raw)
-    except ValueError:
-        type_code = TypeCode.UNKNOWN
-    if type_code == TypeCode.RATING and bool(normalized.get("is_rating")):
-        return TypeCode.SCORE
-    if type_code == TypeCode.MATRIX_TEXT and bool(normalized.get("is_multi_text")):
-        return TypeCode.MULTI_TEXT
-    if type_code == TypeCode.SLIDER and bool(normalized.get("is_slider_matrix")):
-        return TypeCode.SLIDER_MATRIX
-    return type_code
+    raw = str(normalized.get("type_code") or "unknown").strip()
+    return convert_wire_type_code(raw)
 
 
 def _build_common_kwargs(normalized: dict[str, Any], type_code: TypeCode, question_number: int) -> dict[str, Any]:
@@ -273,6 +262,7 @@ def _build_common_kwargs(normalized: dict[str, Any], type_code: TypeCode, questi
         "num": question_number,
         "title": str(normalized.get("title") or "").strip(),
         "type_code": type_code,
+        "provider_type": str(normalized.get("type_code") or "").strip(),
         "required": bool(normalized.get("required")),
         "description": str(normalized.get("description") or "").strip() or None,
         "unsupported": bool(normalized.get("unsupported")) and type_code != TypeCode.DESCRIPTION,
@@ -336,6 +326,7 @@ def _build_matrix_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
     return {
         "rows": _as_int(normalized.get("rows"), len(row_texts) or 1, minimum=1),
         "row_texts": row_texts or None,
+        "option_texts": _normalize_text_list(normalized.get("option_texts")) or None,
     }
 
 
@@ -347,10 +338,16 @@ def _build_rating_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
 
 
 def _build_text_kwargs(normalized: dict[str, Any], type_code: TypeCode = TypeCode.UNKNOWN) -> dict[str, Any]:
+    text_input_labels = _normalize_text_list(normalized.get("text_input_labels")) or None
+    text_inputs = _as_int(normalized.get("text_inputs"), 0, minimum=0)
+    if text_inputs == 0 and text_input_labels:
+        text_inputs = len(text_input_labels)
+    if text_inputs == 0 and bool(normalized.get("is_multi_text")):
+        text_inputs = max(2, text_inputs)
     return {
-        "text_inputs": _as_int(normalized.get("text_inputs"), 0, minimum=0),
-        "text_input_labels": _normalize_text_list(normalized.get("text_input_labels")) or None,
-        "is_location": bool(normalized.get("is_location")) or type_code == TypeCode.LOCATION_TEXT,
+        "text_inputs": text_inputs,
+        "text_input_labels": text_input_labels,
+        "is_location": bool(normalized.get("is_location")) or type_code == TypeCode.LOCATION,
     }
 
 
@@ -371,11 +368,11 @@ def _normalize_question(question: SurveyQuestionInput, provider: str, index: int
     logic = _build_logic_kwargs(normalized)
 
     match type_code:
-        case TypeCode.RADIO:
+        case TypeCode.SINGLE:
             return SingleChoiceQuestionMeta(**_filter_kwargs(
                 SingleChoiceQuestionMeta, {**common, **logic, **_build_choice_kwargs(normalized)},
             ))
-        case TypeCode.CHECKBOX:
+        case TypeCode.MULTIPLE:
             kwargs = {**common, **logic, **_build_choice_kwargs(normalized)}
             kwargs["multi_min_limit"] = normalized.get("multi_min_limit")
             kwargs["multi_max_limit"] = normalized.get("multi_max_limit")
@@ -384,19 +381,19 @@ def _normalize_question(question: SurveyQuestionInput, provider: str, index: int
             return SingleChoiceQuestionMeta(**_filter_kwargs(
                 SingleChoiceQuestionMeta, {**common, **logic, **_build_choice_kwargs(normalized)},
             ))
-        case TypeCode.MATRIX | TypeCode.MATRIX_TEXT:
+        case TypeCode.MATRIX:
             return MatrixQuestionMeta(**_filter_kwargs(
                 MatrixQuestionMeta, {**common, **logic, **_build_matrix_kwargs(normalized)},
             ))
-        case TypeCode.RATING | TypeCode.SCORE | TypeCode.SCALE:
+        case TypeCode.SCORE | TypeCode.SCALE:
             return RatingQuestionMeta(**_filter_kwargs(
                 RatingQuestionMeta, {**common, **logic, **_build_rating_kwargs(normalized)},
             ))
-        case TypeCode.SLIDER | TypeCode.SLIDER_MATRIX:
+        case TypeCode.SLIDER:
             return SliderQuestionMeta(**_filter_kwargs(
                 SliderQuestionMeta, {**common, **logic, **_build_slider_kwargs(normalized)},
             ))
-        case TypeCode.GAPFILL | TypeCode.LOCATION_TEXT | TypeCode.MULTI_TEXT:
+        case TypeCode.TEXT | TypeCode.MULTI_TEXT | TypeCode.LOCATION:
             return TextQuestionMeta(**_filter_kwargs(
                 TextQuestionMeta, {**common, **logic, **_build_text_kwargs(normalized, type_code)},
             ))
