@@ -10,6 +10,7 @@ dependencies = [
     "keyring>=25,<26; sys_platform == 'darwin'",
     "packaging",
     "py-yaml12",
+    "pydantic>=2.0",
     "python-calamine",
 ]
 

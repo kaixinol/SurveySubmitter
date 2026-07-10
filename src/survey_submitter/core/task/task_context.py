@@ -5,6 +5,9 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Deque, Dict, List, Optional, Tuple, Union
 
+from pydantic import Field
+
+from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.reverse_fill import ReverseFillRuntimeState, ReverseFillSpec
 from survey_submitter.core.task.distribution_state import DistributionRuntimeMixin
 from survey_submitter.core.task.progress_state import ThreadProgressMixin, ThreadProgressState
@@ -13,44 +16,41 @@ from survey_submitter.core.task.reverse_fill_state import ReverseFillRuntimeMixi
 from survey_submitter.providers.contracts import SurveyQuestionMeta
 
 
-@dataclass
-class ExecutionConfig:
-    
-
+class ExecutionConfig(BaseConfigModel):
     url: str = ""
     survey_title: str = ""
     survey_provider: str = "wjx"
 
-    single_prob: List[Union[List[float], int, float, None]] = field(default_factory=list)
-    droplist_prob: List[Union[List[float], int, float, None]] = field(default_factory=list)
-    multiple_prob: List[List[float]] = field(default_factory=list)
-    matrix_prob: List[Union[List[float], int, float, None]] = field(default_factory=list)
-    scale_prob: List[Union[List[float], int, float, None]] = field(default_factory=list)
-    slider_targets: List[float] = field(default_factory=list)
-    texts: List[List[str]] = field(default_factory=list)
-    texts_prob: List[List[float]] = field(default_factory=list)
-    text_entry_types: List[str] = field(default_factory=list)
-    text_ai_flags: List[bool] = field(default_factory=list)
-    text_titles: List[str] = field(default_factory=list)
-    location_parts: Dict[int, List[str]] = field(default_factory=dict)
-    multi_text_blank_modes: List[List[str]] = field(default_factory=list)
-    multi_text_blank_ai_flags: List[List[bool]] = field(default_factory=list)
-    multi_text_blank_int_ranges: List[List[List[int]]] = field(default_factory=list)
-    single_option_fill_texts: List[Optional[List[Optional[str]]]] = field(default_factory=list)
-    single_attached_option_selects: List[List[Dict[str, Any]]] = field(default_factory=list)
-    droplist_option_fill_texts: List[Optional[List[Optional[str]]]] = field(default_factory=list)
-    multiple_option_fill_texts: List[Optional[List[Optional[str]]]] = field(default_factory=list)
-    answer_rules: List[Dict[str, Any]] = field(default_factory=list)
+    single_prob: List[Union[List[float], int, float, None]] = []
+    droplist_prob: List[Union[List[float], int, float, None]] = []
+    multiple_prob: List[List[float]] = []
+    matrix_prob: List[Union[List[float], int, float, None]] = []
+    scale_prob: List[Union[List[float], int, float, None]] = []
+    slider_targets: List[float] = []
+    texts: List[List[str]] = []
+    texts_prob: List[List[float]] = []
+    text_entry_types: List[str] = []
+    text_ai_flags: List[bool] = []
+    text_titles: List[str] = []
+    location_parts: Dict[int, List[str]] = {}
+    multi_text_blank_modes: List[List[str]] = []
+    multi_text_blank_ai_flags: List[List[bool]] = []
+    multi_text_blank_int_ranges: List[List[List[int]]] = []
+    single_option_fill_texts: List[Optional[List[Optional[str]]]] = []
+    single_attached_option_selects: List[List[Dict[str, Any]]] = []
+    droplist_option_fill_texts: List[Optional[List[Optional[str]]]] = []
+    multiple_option_fill_texts: List[Optional[List[Optional[str]]]] = []
+    answer_rules: List[Dict[str, Any]] = []
     reverse_fill_spec: Optional[ReverseFillSpec] = None
 
-    question_config_index_map: Dict[int, Tuple[str, int]] = field(default_factory=dict)
-    provider_question_config_index_map: Dict[str, Tuple[str, int]] = field(default_factory=dict)
-    question_dimension_map: Dict[int, Optional[str]] = field(default_factory=dict)
-    question_ordinal_score_map: Dict[int, List[int]] = field(default_factory=dict)
-    question_strict_ratio_map: Dict[int, bool] = field(default_factory=dict)
-    question_psycho_bias_map: Dict[int, Any] = field(default_factory=dict)
-    questions_metadata: Dict[int, SurveyQuestionMeta] = field(default_factory=dict)
-    provider_question_metadata_map: Dict[str, SurveyQuestionMeta] = field(default_factory=dict)
+    question_config_index_map: Dict[int, Tuple[str, int]] = {}
+    provider_question_config_index_map: Dict[str, Tuple[str, int]] = {}
+    question_dimension_map: Dict[int, Optional[str]] = {}
+    question_ordinal_score_map: Dict[int, List[int]] = {}
+    question_strict_ratio_map: Dict[int, bool] = {}
+    question_psycho_bias_map: Dict[int, Any] = {}
+    questions_metadata: Dict[int, SurveyQuestionMeta] = {}
+    provider_question_metadata_map: Dict[str, SurveyQuestionMeta] = {}
     joint_psychometric_answer_plan: Optional[Any] = None
 
     psycho_target_alpha: float = 0.85
@@ -66,11 +66,9 @@ class ExecutionConfig:
 
     random_proxy_ip_enabled: bool = False
     proxy_source: str = "default"
-    proxy_ip_pool: Union[List[ProxyLease], Deque[ProxyLease]] = field(default_factory=deque)
+    proxy_ip_pool: Any = Field(default_factory=deque)
     random_user_agent_enabled: bool = False
-    user_agent_ratios: Dict[str, int] = field(
-        default_factory=lambda: {"wechat": 33, "mobile": 33, "pc": 34}
-    )
+    user_agent_ratios: Dict[str, int] = {"wechat": 33, "mobile": 33, "pc": 34}
     pause_on_aliyun_captcha: bool = True
     ai_system_prompt: str = ""
 
@@ -159,5 +157,5 @@ class ExecutionState(
             )
 
 
-_EXECUTION_CONFIG_FIELD_NAMES = frozenset(ExecutionConfig.__dataclass_fields__.keys())
+_EXECUTION_CONFIG_FIELD_NAMES = frozenset(ExecutionConfig.model_fields.keys())
 _EXECUTION_STATE_FIELD_NAMES = frozenset(ExecutionState.__dataclass_fields__.keys())

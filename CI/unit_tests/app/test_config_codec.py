@@ -47,7 +47,7 @@ class ConfigCodecTests:
         assert restored.answer_datetime_window == ("2026-02-10 09:00:00", "2026-02-10 10:00:00")
 
     def test_runtime_config_roundtrip_keeps_questions_info_provider_metadata(self) -> None:
-        config = RuntimeConfig(survey_provider='qq', questions_info=[SurveyQuestionMeta(num=3, title='联系方式', type_code='1', provider='qq', provider_question_id='question-3', provider_page_id='page-2', provider_type='text', option_texts=['姓名', '电话'], required=True, logic_parse_status='unknown', question_media=[{'kind': 'image', 'scope': 'title', 'index': None, 'source_url': 'https://example.com/q3.png', 'label': '题干图'}])])
+        config = RuntimeConfig(survey_provider='wjx', questions_info=[SurveyQuestionMeta(num=3, title='联系方式', type_code='1', provider='wjx', provider_question_id='question-3', provider_page_id='page-2', provider_type='text', option_texts=['姓名', '电话'], required=True, logic_parse_status='unknown', question_media=[{'kind': 'image', 'scope': 'title', 'index': None, 'source_url': 'https://example.com/q3.png', 'label': '题干图'}])])
         payload = serialize_runtime_config(config)
         restored = deserialize_runtime_config(payload)
         assert payload['questions_info'][0]['provider_question_id'] == 'question-3'
@@ -58,7 +58,7 @@ class ConfigCodecTests:
         assert payload['questions_info'][0]['question_media'][0]['source_url'] == 'https://example.com/q3.png'
         assert len(restored.questions_info or []) == 1
         restored_info = restored.questions_info[0]
-        assert restored_info.provider == 'qq'
+        assert restored_info.provider == 'wjx'
         assert restored_info.provider_question_id == 'question-3'
         assert restored_info.provider_page_id == 'page-2'
         assert restored_info.provider_type == 'text'
@@ -131,8 +131,8 @@ class ConfigCodecTests:
             }
         )
 
-        assert entry.probabilities == [0, "3"]
-        assert entry.custom_weights == [0, "3"]
+        assert entry.probabilities == [0.0, 3.0]
+        assert entry.custom_weights == [0.0, 3.0]
         assert entry.survey_provider == "wjx"
         assert entry.provider_question_id == "q1"
         assert entry.provider_page_id == "p1"

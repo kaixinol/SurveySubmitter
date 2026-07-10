@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from pydantic import field_validator
+
+from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.io.config.settings_store import app_settings
 
 CUSTOM_API_PROTOCOLS = {
@@ -41,20 +44,12 @@ DEFAULT_SYSTEM_PROMPT = (
       "6. 当题目有多个空位时，按空位顺序输出一个字符串，并使用 || 分隔每个答案（示例：答案1||答案2||答案3）"
 )
 
-_DEFAULT_AI_SETTINGS: Dict[str, Any] = {
-    "api_key": "",
-    "base_url": "",
-    "api_protocol": "auto",
-    "model": "",
-    "system_prompt": DEFAULT_SYSTEM_PROMPT,
-}
-_RUNTIME_AI_SETTINGS: Optional[Dict[str, Any]] = None
 _AI_SETTINGS_KEY_PREFIX = "ai/"
 
 __all__ = [
     "CUSTOM_API_PROTOCOLS",
     "DEFAULT_SYSTEM_PROMPT",
-    "_normalize_custom_api_protocol",
+    "AISettings",
     "get_ai_readiness_error",
     "get_ai_settings",
     "get_default_system_prompt",
@@ -63,47 +58,78 @@ __all__ = [
 ]
 
 
+def _normalize_custom_api_protocol(value: Any) -> str:
+    protocol = str(value or "auto").strip().lower()
+    if protocol in CUSTOM_API_PROTOCOLS:
+        return protocol
+    return "auto"
+
+
+class AISettings(BaseConfigModel):
+    api_key: str = ""
+    base_url: str = ""
+    api_protocol: str = "auto"
+    model: str = ""
+    system_prompt: str = DEFAULT_SYSTEM_PROMPT
+
+    @field_validator("api_protocol")
+    @classmethod
+    def normalize_api_protocol(cls, v: str) -> str:
+        protocol = str(v or "auto").strip().lower()
+        if protocol in CUSTOM_API_PROTOCOLS:
+            return protocol
+        return "auto"
+
+    @field_validator("base_url", "model")
+    @classmethod
+    def strip_string(cls, v: str) -> str:
+        return str(v or "").strip()
+
+    @field_validator("system_prompt")
+    @classmethod
+    def normalize_system_prompt(cls, v: str) -> str:
+        prompt = str(v or "").strip()
+        return prompt or DEFAULT_SYSTEM_PROMPT
+
+
+_RUNTIME_AI_SETTINGS: Optional[AISettings] = None
+
+
 def get_default_system_prompt() -> str:
     return DEFAULT_SYSTEM_PROMPT
 
 
-def _ensure_runtime_settings() -> Dict[str, Any]:
+def _ensure_runtime_settings() -> AISettings:
     global _RUNTIME_AI_SETTINGS
     if _RUNTIME_AI_SETTINGS is None:
         _RUNTIME_AI_SETTINGS = _load_ai_settings_from_store()
     return _RUNTIME_AI_SETTINGS
 
 
-def _load_ai_settings_from_store() -> Dict[str, Any]:
-    settings = dict(_DEFAULT_AI_SETTINGS)
+def _load_ai_settings_from_store() -> AISettings:
     store = app_settings()
-    settings["api_key"] = str(store.value(f"{_AI_SETTINGS_KEY_PREFIX}api_key", settings["api_key"]) or "")
-    settings["base_url"] = str(store.value(f"{_AI_SETTINGS_KEY_PREFIX}base_url", settings["base_url"]) or "").strip()
-    settings["api_protocol"] = _normalize_custom_api_protocol(
-        store.value(f"{_AI_SETTINGS_KEY_PREFIX}api_protocol", settings["api_protocol"])
+    return AISettings(
+        api_key=str(store.value(f"{_AI_SETTINGS_KEY_PREFIX}api_key", "") or ""),
+        base_url=str(store.value(f"{_AI_SETTINGS_KEY_PREFIX}base_url", "") or ""),
+        api_protocol=store.value(f"{_AI_SETTINGS_KEY_PREFIX}api_protocol", "auto"),
+        model=str(store.value(f"{_AI_SETTINGS_KEY_PREFIX}model", "") or ""),
+        system_prompt=str(store.value(f"{_AI_SETTINGS_KEY_PREFIX}system_prompt", DEFAULT_SYSTEM_PROMPT) or ""),
     )
-    settings["model"] = str(store.value(f"{_AI_SETTINGS_KEY_PREFIX}model", settings["model"]) or "").strip()
-    prompt = str(store.value(f"{_AI_SETTINGS_KEY_PREFIX}system_prompt", settings["system_prompt"]) or "").strip()
-    settings["system_prompt"] = prompt or DEFAULT_SYSTEM_PROMPT
-    return settings
 
 
-def _persist_ai_settings(settings: Dict[str, Any]) -> None:
+def _persist_ai_settings(settings: AISettings) -> None:
     store = app_settings()
-    store.setValue(f"{_AI_SETTINGS_KEY_PREFIX}api_key", settings["api_key"])
-    store.setValue(f"{_AI_SETTINGS_KEY_PREFIX}base_url", settings["base_url"])
-    store.setValue(f"{_AI_SETTINGS_KEY_PREFIX}api_protocol", settings["api_protocol"])
-    store.setValue(f"{_AI_SETTINGS_KEY_PREFIX}model", settings["model"])
-    store.setValue(f"{_AI_SETTINGS_KEY_PREFIX}system_prompt", settings["system_prompt"])
+    store.setValue(f"{_AI_SETTINGS_KEY_PREFIX}api_key", settings.api_key)
+    store.setValue(f"{_AI_SETTINGS_KEY_PREFIX}base_url", settings.base_url)
+    store.setValue(f"{_AI_SETTINGS_KEY_PREFIX}api_protocol", settings.api_protocol)
+    store.setValue(f"{_AI_SETTINGS_KEY_PREFIX}model", settings.model)
+    store.setValue(f"{_AI_SETTINGS_KEY_PREFIX}system_prompt", settings.system_prompt)
     store.sync()
 
 
 def get_ai_settings() -> Dict[str, Any]:
-    settings = dict(_ensure_runtime_settings())
-    settings["api_protocol"] = _normalize_custom_api_protocol(settings.get("api_protocol"))
-    prompt = str(settings.get("system_prompt") or "").strip()
-    settings["system_prompt"] = prompt or DEFAULT_SYSTEM_PROMPT
-    return settings
+    settings = _ensure_runtime_settings()
+    return settings.model_dump()
 
 
 def save_ai_settings(
@@ -114,23 +140,21 @@ def save_ai_settings(
     system_prompt: Optional[str] = None,
 ):
     settings = _ensure_runtime_settings()
+    update_data = {}
     if api_key is not None:
-        settings["api_key"] = str(api_key)
+        update_data["api_key"] = str(api_key)
     if base_url is not None:
-        settings["base_url"] = str(base_url)
+        update_data["base_url"] = str(base_url)
     if api_protocol is not None:
-        settings["api_protocol"] = _normalize_custom_api_protocol(api_protocol)
+        update_data["api_protocol"] = api_protocol
     if model is not None:
-        settings["model"] = str(model)
+        update_data["model"] = str(model)
     if system_prompt is not None:
-        settings["system_prompt"] = str(system_prompt)
-    settings["api_key"] = str(settings.get("api_key") or "")
-    settings["base_url"] = str(settings.get("base_url") or "").strip()
-    settings["api_protocol"] = _normalize_custom_api_protocol(settings.get("api_protocol"))
-    settings["model"] = str(settings.get("model") or "").strip()
-    prompt = str(settings.get("system_prompt") or "").strip()
-    settings["system_prompt"] = prompt or DEFAULT_SYSTEM_PROMPT
-    _persist_ai_settings(settings)
+        update_data["system_prompt"] = str(system_prompt)
+    
+    global _RUNTIME_AI_SETTINGS
+    _RUNTIME_AI_SETTINGS = settings.model_copy(update=update_data)
+    _persist_ai_settings(_RUNTIME_AI_SETTINGS)
 
 
 def reset_ai_settings() -> None:
@@ -145,27 +169,23 @@ def reset_ai_settings() -> None:
     ):
         store.remove(key)
     store.sync()
-    _RUNTIME_AI_SETTINGS = dict(_DEFAULT_AI_SETTINGS)
+    _RUNTIME_AI_SETTINGS = AISettings()
 
 
 def get_ai_readiness_error(config: Optional[Dict[str, Any]] = None) -> str:
-    settings = get_ai_settings() if config is None else dict(config)
+    if config is None:
+        settings = _ensure_runtime_settings()
+    else:
+        settings = AISettings.model_validate(config)
 
     missing_fields: List[str] = []
-    if not str(settings.get("api_key") or "").strip():
+    if not settings.api_key.strip():
         missing_fields.append("API Key")
-    if not str(settings.get("base_url") or "").strip():
+    if not settings.base_url.strip():
         missing_fields.append("Base URL")
-    if not str(settings.get("model") or "").strip():
+    if not settings.model.strip():
         missing_fields.append("模型 ID")
 
     if missing_fields:
         return f"缺少 {'、'.join(missing_fields)}"
     return ""
-
-
-def _normalize_custom_api_protocol(value: Any) -> str:
-    protocol = str(value or "auto").strip().lower()
-    if protocol in CUSTOM_API_PROTOCOLS:
-        return protocol
-    return "auto"
