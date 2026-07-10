@@ -1,73 +1,93 @@
+"""Minimal JSON-based application settings (replaces QSettings)."""
 from __future__ import annotations
 
+import json
 import os
-from typing import Any
+import threading
+from typing import Any, Optional
 
-from PySide6.QtCore import QCoreApplication, QSettings
+from software.app.user_paths import get_user_config_root
 
-_SETTINGS_ORG = "SurveyController"
-_SETTINGS_APP = "Settings"
-_SETTINGS_DOMAIN = "surveycontroller.app"
-_SETTINGS_FILE_ENV = "SURVEYCONTROLLER_QSETTINGS_FILE"
-CONFIG_DIRECTORY_SETTING_KEY = "config_directory"
-
-
-def configure_qt_application_metadata() -> None:
-    
-    if not QCoreApplication.organizationName():
-        QCoreApplication.setOrganizationName(_SETTINGS_ORG)
-    if not QCoreApplication.organizationDomain():
-        QCoreApplication.setOrganizationDomain(_SETTINGS_DOMAIN)
-    if not QCoreApplication.applicationName():
-        QCoreApplication.setApplicationName(_SETTINGS_APP)
+_SETTINGS_FILE_NAME = "app_settings.json"
+_settings_lock = threading.RLock()
+_settings_cache: Optional[dict] = None
 
 
-def app_settings() -> QSettings:
-    
-    isolated_settings_file = os.environ.get(_SETTINGS_FILE_ENV)
-    if isolated_settings_file:
-        return QSettings(isolated_settings_file, QSettings.Format.IniFormat)
-    configure_qt_application_metadata()
-    return QSettings(_SETTINGS_ORG, _SETTINGS_APP)
+def _settings_file_path() -> str:
+    return os.path.join(get_user_config_root(), _SETTINGS_FILE_NAME)
+
+
+def _load_settings() -> dict:
+    global _settings_cache
+    if _settings_cache is not None:
+        return _settings_cache
+    path = _settings_file_path()
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                _settings_cache = json.load(f)
+            return _settings_cache
+        except (json.JSONDecodeError, OSError):
+            pass
+    _settings_cache = {}
+    return _settings_cache
+
+
+class _JsonSettings:
+    """QSettings-compatible interface backed by a JSON file."""
+
+    def value(self, key: str, default: Any = None) -> Any:
+        with _settings_lock:
+            store = _load_settings()
+        result = store.get(key, default)
+        return result
+
+    def setValue(self, key: str, value: Any) -> None:
+        with _settings_lock:
+            store = _load_settings()
+            store[key] = value
+            self._flush(store)
+
+    def remove(self, key: str) -> None:
+        with _settings_lock:
+            store = _load_settings()
+            store.pop(key, None)
+            self._flush(store)
+
+    def sync(self) -> None:
+        with _settings_lock:
+            store = _load_settings()
+            self._flush(store)
+
+    @staticmethod
+    def _flush(store: dict) -> None:
+        path = _settings_file_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(store, f, ensure_ascii=False, indent=2)
+
+
+def app_settings() -> _JsonSettings:
+    return _JsonSettings()
 
 
 def get_bool_from_qsettings(value: Any, default: bool = False) -> bool:
-    
-    if value is None:
-        return default
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
-        return value.lower() in {"true", "1", "yes", "on"}
-    return bool(value)
+        return value.lower() in ("true", "1", "yes")
+    return bool(value) if value is not None else default
 
 
-def get_int_from_qsettings(
-    value: Any,
-    default: int = 0,
-    *,
-    minimum: int | None = None,
-    maximum: int | None = None,
-) -> int:
-    
+def get_int_from_qsettings(value: Any, default: int = 0) -> int:
     try:
-        if value is None or value == "":
-            result = int(default)
-        else:
-            result = int(value)
+        return int(value)
     except (TypeError, ValueError):
-        result = int(default)
-    if minimum is not None:
-        result = max(int(minimum), result)
-    if maximum is not None:
-        result = min(int(maximum), result)
-    return result
+        return default
 
 
 def get_str_from_qsettings(value: Any, default: str = "") -> str:
-    
-    if value is None:
-        return default
-    text = str(value).strip()
-    return text or default
+    return str(value) if value is not None else default
 
+
+CONFIG_DIRECTORY_SETTING_KEY = "config_directory"

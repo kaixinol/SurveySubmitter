@@ -4,6 +4,8 @@ import os
 import re
 from typing import Any, Dict, Iterable, List
 
+from python_calamine import CalamineWorkbook
+
 from software.core.reverse_fill.schema import (
     REVERSE_FILL_FORMAT_AUTO,
     REVERSE_FILL_FORMAT_WJX_SCORE,
@@ -76,8 +78,6 @@ def _detect_wjx_export_format(question_columns: Dict[int, List[ReverseFillColumn
 
 
 def load_wjx_excel_export(source_path: str, *, preferred_format: str = REVERSE_FILL_FORMAT_AUTO) -> WjxExcelExport:
-    from openpyxl import load_workbook
-
     raw_path = str(source_path or "").strip()
     if not raw_path:
         raise ValueError("未提供 Excel 文件路径")
@@ -85,65 +85,61 @@ def load_wjx_excel_export(source_path: str, *, preferred_format: str = REVERSE_F
     if not os.path.exists(path):
         raise ValueError(f"Excel 文件不存在：{path}")
 
-    workbook = load_workbook(path, read_only=True, data_only=True)
-    try:
-        if not workbook.sheetnames:
-            raise ValueError("Excel 中没有可读取的工作表")
-        worksheet = workbook[workbook.sheetnames[0]]
-        rows_iter = worksheet.iter_rows(values_only=False)
-        header_cells = next(rows_iter, None)
-        if not header_cells:
-            raise ValueError("Excel 缺少表头，无法识别问卷列")
+    workbook = CalamineWorkbook(path)
+    if not workbook.sheet_names:
+        raise ValueError("Excel 中没有可读取的工作表")
+    sheet = workbook.get_sheet_by_index(0)
+    all_rows = sheet.rows()
+    if not all_rows:
+        raise ValueError("Excel 缺少表头，无法识别问卷列")
 
-        question_columns: Dict[int, List[ReverseFillColumn]] = {}
-        for cell in list(header_cells):
-            header = _cell_text(cell.value)
-            match = _QUESTION_HEADER_RE.match(header)
-            if not match:
-                continue
-            question_num = int(match.group(1))
-            suffix = str(match.group(2) or "").strip()
-            raw_column = cell.column
-            if raw_column is None:
-                continue
-            column_index = int(raw_column)
-            question_columns.setdefault(question_num, []).append(
-                ReverseFillColumn(
-                    column_index=column_index,
-                    header=header,
-                    question_num=question_num,
-                    suffix=suffix,
-                )
+    header_row = all_rows[0]
+    data_rows = all_rows[1:]
+
+    question_columns: Dict[int, List[ReverseFillColumn]] = {}
+    for col_idx, value in enumerate(header_row):
+        header = _cell_text(value)
+        match = _QUESTION_HEADER_RE.match(header)
+        if not match:
+            continue
+        question_num = int(match.group(1))
+        suffix = str(match.group(2) or "").strip()
+        column_index = col_idx + 1  # 1-based column index
+        question_columns.setdefault(question_num, []).append(
+            ReverseFillColumn(
+                column_index=column_index,
+                header=header,
+                question_num=question_num,
+                suffix=suffix,
             )
-
-        raw_rows: List[ReverseFillRawRow] = []
-        for data_row_number, row_cells in enumerate(rows_iter, start=1):
-            values_by_column: Dict[int, Any] = {}
-            for column_list in question_columns.values():
-                for column in column_list:
-                    position = int(column.column_index) - 1
-                    raw_value = row_cells[position].value if position < len(row_cells) else None
-                    values_by_column[int(column.column_index)] = raw_value
-            raw_rows.append(
-                ReverseFillRawRow(
-                    data_row_number=data_row_number,
-                    worksheet_row_number=data_row_number + 1,
-                    values_by_column=values_by_column,
-                )
-            )
-
-        detected_format = _detect_wjx_export_format(question_columns, raw_rows)
-        selected_format = str(preferred_format or REVERSE_FILL_FORMAT_AUTO).strip().lower()
-        if selected_format == REVERSE_FILL_FORMAT_AUTO:
-            selected_format = detected_format
-        return WjxExcelExport(
-            source_path=path,
-            detected_format=detected_format,
-            selected_format=selected_format,
-            header_row_number=1,
-            total_data_rows=len(raw_rows),
-            question_columns=question_columns,
-            raw_rows=raw_rows,
         )
-    finally:
-        workbook.close()
+
+    raw_rows: List[ReverseFillRawRow] = []
+    for data_row_number, data_row in enumerate(data_rows, start=1):
+        values_by_column: Dict[int, Any] = {}
+        for column_list in question_columns.values():
+            for column in column_list:
+                position = int(column.column_index) - 1
+                raw_value = data_row[position] if position < len(data_row) else None
+                values_by_column[int(column.column_index)] = raw_value
+        raw_rows.append(
+            ReverseFillRawRow(
+                data_row_number=data_row_number,
+                worksheet_row_number=data_row_number + 1,
+                values_by_column=values_by_column,
+            )
+        )
+
+    detected_format = _detect_wjx_export_format(question_columns, raw_rows)
+    selected_format = str(preferred_format or REVERSE_FILL_FORMAT_AUTO).strip().lower()
+    if selected_format == REVERSE_FILL_FORMAT_AUTO:
+        selected_format = detected_format
+    return WjxExcelExport(
+        source_path=path,
+        detected_format=detected_format,
+        selected_format=selected_format,
+        header_row_number=1,
+        total_data_rows=len(raw_rows),
+        question_columns=question_columns,
+        raw_rows=raw_rows,
+    )

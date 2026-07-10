@@ -19,10 +19,8 @@ from software.app.config import (
     AUTO_SAVE_LOGS_SETTING_KEY,
     DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT,
     DEFAULT_AUTO_SAVE_LOGS,
-    app_settings,
-    get_bool_from_qsettings,
-    get_int_from_qsettings,
 )
+from software.app.settings_store import app_settings, get_bool_from_qsettings, get_int_from_qsettings
 from software.app.user_paths import get_user_logs_directory
 
 

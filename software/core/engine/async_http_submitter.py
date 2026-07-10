@@ -5,8 +5,6 @@ from typing import Any, Optional
 from software.core.engine.stop_signal import StopSignalLike
 from software.core.task import ExecutionConfig, ExecutionState
 from software.providers.common import (
-    SURVEY_PROVIDER_CREDAMO,
-    SURVEY_PROVIDER_QQ,
     SURVEY_PROVIDER_WJX,
     normalize_survey_provider,
 )
@@ -15,8 +13,6 @@ from software.providers.registry import fill_survey_http
 
 HTTP_RUNTIME_PROVIDERS = {
     SURVEY_PROVIDER_WJX,
-    SURVEY_PROVIDER_QQ,
-    SURVEY_PROVIDER_CREDAMO,
 }
 
 

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from openpyxl import Workbook
@@ -90,25 +89,19 @@ class WjxExcelExportTests:
         with pytest.raises(ValueError, match="Excel 文件不存在"):
             load_wjx_excel_export(str(tmp_path / "missing.xlsx"))
 
-    def test_load_wjx_excel_export_rejects_empty_header_and_closes_workbook(self, tmp_path: Path) -> None:
+    def test_load_wjx_excel_export_rejects_empty_header(self, tmp_path: Path) -> None:
         path = _write_workbook(tmp_path / "empty_header.xlsx", [])
 
         with pytest.raises(ValueError, match="Excel 缺少表头"):
             load_wjx_excel_export(str(path))
 
-    def test_load_wjx_excel_export_closes_workbook_when_reader_raises(self, tmp_path: Path) -> None:
+    def test_load_wjx_excel_export_propagates_reader_errors(self, tmp_path: Path) -> None:
         path = tmp_path / "mocked.xlsx"
         path.write_bytes(b"not a real workbook")
-        workbook = MagicMock()
-        workbook.sheetnames = ["Sheet1"]
-        worksheet = SimpleNamespace(iter_rows=MagicMock(side_effect=RuntimeError("reader failed")))
-        workbook.__getitem__.return_value = worksheet
 
         with patch("os.path.exists", return_value=True), patch(
-            "openpyxl.load_workbook",
-            return_value=workbook,
+            "software.io.spreadsheets.wjx_excel.CalamineWorkbook",
+            side_effect=RuntimeError("reader failed"),
         ):
             with pytest.raises(RuntimeError, match="reader failed"):
                 load_wjx_excel_export(str(path), preferred_format=REVERSE_FILL_FORMAT_AUTO)
-
-        workbook.close.assert_called_once_with()
