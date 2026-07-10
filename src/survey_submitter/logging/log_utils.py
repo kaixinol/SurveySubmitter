@@ -679,9 +679,8 @@ def get_auto_save_log_settings() -> tuple[bool, int]:
     keep_count = get_int_from_qsettings(
         settings.value(AUTO_SAVE_LOG_RETENTION_COUNT_SETTING_KEY),
         DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT,
-        minimum=1,
-        maximum=max_keep,
     )
+    keep_count = max(1, min(keep_count, max_keep))
     return bool(enabled), int(keep_count)
 
 

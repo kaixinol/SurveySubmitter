@@ -9,7 +9,6 @@ from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.providers.errors import SubmissionVerificationRequiredError, SurveyProviderUnavailableAtRuntimeError
 AI_FILL_FAIL_THRESHOLD = 5
-FREE_AI_TIMEOUT_FAIL_THRESHOLD = AI_FILL_FAIL_THRESHOLD
 SUBMISSION_VERIFICATION_STOP_CATEGORY = "submission_verification"
 SURVEY_PROVIDER_UNAVAILABLE_STOP_CATEGORY = "survey_provider_unavailable"
 
@@ -145,7 +144,6 @@ def handle_survey_provider_unavailable_error(
 
 __all__ = [
     "AI_FILL_FAIL_THRESHOLD",
-    "FREE_AI_TIMEOUT_FAIL_THRESHOLD",
     "SUBMISSION_VERIFICATION_STOP_CATEGORY",
     "SURVEY_PROVIDER_UNAVAILABLE_STOP_CATEGORY",
     "handle_ai_runtime_error",

@@ -44,10 +44,6 @@ class AsyncProxySession:
         self.user_agent_profile = profile
         return profile
 
-    async def select_proxy_and_user_agent(self) -> tuple[Optional[str], Optional[str]]:
-        ua_value = await self.select_user_agent()
-        return None, ua_value
-
     def set_current_submit_proxy(self, proxy_address: str | None, *, provider: str = "unknown") -> None:
         self.proxy_address = str(proxy_address or "").strip() or None
         self.proxy_provider = str(provider or "unknown").strip() or "unknown"
@@ -56,9 +52,6 @@ class AsyncProxySession:
         self.proxy_address = None
         self.proxy_provider = "unknown"
         self.user_agent_profile = None
-
-    def mark_successful_proxy(self) -> None:
-        return None
 
     def release_current_proxy(self) -> None:
         self.clear_current_submit_proxy()

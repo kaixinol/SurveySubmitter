@@ -27,7 +27,7 @@ class CleanupRunnerTests:
             thread = _FakeThread(target=target, daemon=daemon, name=name)
             created_threads.append(thread)
             return thread
-        with patch('software.core.engine.cleanup.threading.Thread', side_effect=build_thread):
+        with patch('survey_submitter.core.engine.cleanup.threading.Thread', side_effect=build_thread):
             runner.submit(lambda: None, delay_seconds=0.2)
         assert len(created_threads) == 1
         assert created_threads[0].started
@@ -39,7 +39,7 @@ class CleanupRunnerTests:
         existing_thread = _FakeThread()
         existing_thread.alive = True
         runner._thread = existing_thread
-        with patch('software.core.engine.cleanup.threading.Thread') as thread_mock:
+        with patch('survey_submitter.core.engine.cleanup.threading.Thread') as thread_mock:
             runner.submit(lambda: None)
         thread_mock.assert_not_called()
         assert len(runner._queue) == 1
@@ -49,7 +49,7 @@ class CleanupRunnerTests:
         events: list[str] = []
         runner._queue.append((lambda: events.append('done'), 0.5))
         runner._thread = object()
-        with patch('software.core.engine.cleanup.time.sleep') as sleep_mock:
+        with patch('survey_submitter.core.engine.cleanup.time.sleep') as sleep_mock:
             runner._worker()
         assert events == ['done']
         sleep_mock.assert_called_once_with(0.5)
@@ -59,7 +59,7 @@ class CleanupRunnerTests:
         runner = CleanupRunner()
         runner._queue.append((lambda: (_ for _ in ()).throw(RuntimeError('boom')), 0.0))
         runner._thread = object()
-        with patch('software.core.engine.cleanup.log_suppressed_exception') as log_mock:
+        with patch('survey_submitter.core.engine.cleanup.log_suppressed_exception') as log_mock:
             runner._worker()
         log_mock.assert_called_once()
         assert runner._thread is None

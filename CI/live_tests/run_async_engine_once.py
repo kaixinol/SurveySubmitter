@@ -16,7 +16,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from survey_submitter.core.config.schema import RuntimeConfig  
-from survey_submitter.core.engine.async_engine import AsyncEngineClient  
+from survey_submitter.core.engine.async_engine import AsyncRuntimeEngine
 from survey_submitter.core.questions.config import build_default_question_entries  
 from survey_submitter.core.task import ExecutionState  
 from survey_submitter.providers.registry import parse_survey  
@@ -98,12 +98,13 @@ def main() -> int:
         state = ExecutionState(config=execution_config)
         state.initialize_reverse_fill_runtime()
 
-        client = AsyncEngineClient()
+        engine = AsyncRuntimeEngine()
         try:
-            future = client.start_run(execution_config, state, runtime_bridge=None)
+            engine.start()
+            future = engine.start_run(config=execution_config, state=state, runtime_bridge=None)
             future.result(timeout=max(1.0, float(args.timeout or 1.0)))
         finally:
-            client.shutdown(timeout=15.0)
+            engine.shutdown(timeout=15.0)
     except Exception as exc:
         _print_failure(exc)
         return 1

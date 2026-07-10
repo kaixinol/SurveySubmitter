@@ -3,8 +3,6 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from survey_submitter.core.engine.provider_common import provider_run_context
-from survey_submitter.core.engine.runtime_actions import RuntimeActionResult
-from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.providers.adapter_base import CallableProviderAdapter, ProviderAdapterHooks
 from survey_submitter.providers.common import (
     SURVEY_PROVIDER_WJX,
@@ -29,13 +27,9 @@ def _resolve_provider(*, provider: Optional[str] = None, ctx: Any = None) -> str
     return SURVEY_PROVIDER_WJX
 
 
-_WJX_PARSE: HookTarget = ("wjx.provider.parser", "parse_wjx_survey")
+_WJX_PARSE: HookTarget = ("survey_submitter.providers.wjx.parser", "parse_wjx_survey")
 
-_WJX_FILL_HTTP: HookTarget = ("wjx.provider.http_runtime", "brush_wjx_http")
-
-
-async def _wjx_browser_runtime_removed(*_args: Any, **_kwargs: Any) -> bool:
-    raise RuntimeError("问卷星已固化为纯 HTTP 提交链路，不再支持浏览器填答兜底")
+_WJX_FILL_HTTP: HookTarget = ("survey_submitter.providers.wjx.http_runtime", "brush_wjx_http")
 
 
 _PROVIDER_REGISTRY = {
@@ -44,7 +38,6 @@ _PROVIDER_REGISTRY = {
         ProviderAdapterHooks(
             parse_survey=build_parse_hook(SURVEY_PROVIDER_WJX, _WJX_PARSE),
             fill_survey_http=build_fill_http_hook(_WJX_FILL_HTTP),
-            fill_survey=_wjx_browser_runtime_removed,
         ),
     ),
 }
@@ -61,48 +54,14 @@ def _get_provider_adapter(*, provider: Optional[str] = None, ctx: Any = None, ur
 
 
 async def parse_survey(url: str) -> SurveyDefinition:
-    
+
     normalized_url = normalize_survey_parse_url(url)
     return await _get_provider_adapter(url=normalized_url).parse_survey_async(normalized_url)
 
 
-async def fill_survey(
-    driver: Any,
-    config: ExecutionConfig,
-    state: ExecutionState,
-    *,
-    stop_signal: Any = None,
-    thread_name: str = "",
-    psycho_plan: Any = None,
-    provider: Optional[str] = None,
-) -> bool:
-    
-    adapter = _get_provider_adapter(provider=provider, ctx=state)
-    try:
-        state.update_thread_status(thread_name, "识别题目", running=True)
-    except Exception:
-        pass
-    with provider_run_context(
-        config,
-        state=state,
-        thread_name=thread_name,
-        psycho_plan=psycho_plan,
-    ) as resolved_plan:
-        return bool(
-            await adapter.fill_survey_async(
-                driver,
-                config,
-                state,
-                stop_signal=stop_signal,
-                thread_name=thread_name,
-                psycho_plan=resolved_plan,
-            )
-        )
-
-
 async def fill_survey_http(
-    config: ExecutionConfig,
-    state: ExecutionState,
+    config: Any,
+    state: Any,
     *,
     stop_signal: Any = None,
     thread_name: str = "",
@@ -113,7 +72,6 @@ async def fill_survey_http(
     user_agent_profile: Any = None,
     submit_proxy_lease_factory: Any = None,
 ) -> bool:
-    
     adapter = _get_provider_adapter(provider=provider, ctx=state)
     try:
         state.update_thread_status(thread_name, "构造答案", running=True)
@@ -141,93 +99,15 @@ async def fill_survey_http(
 
 
 async def is_completion_page(driver: Any, provider: Optional[str] = None) -> bool:
-    
+
     return bool(await _get_provider_adapter(provider=provider).is_completion_page_async(driver))
-
-
-async def submission_requires_verification(driver: Any, provider: Optional[str] = None) -> bool:
-    
-    return bool(await _get_provider_adapter(provider=provider).submission_requires_verification_async(driver))
-
-
-async def submission_validation_message(driver: Any, provider: Optional[str] = None) -> str:
-    
-    return str(await _get_provider_adapter(provider=provider).submission_validation_message_async(driver) or "").strip()
-
-
-async def wait_for_submission_verification(
-    driver: Any,
-    *,
-    provider: Optional[str] = None,
-    timeout: int = 3,
-    stop_signal: Any = None,
-) -> bool:
-    
-    return bool(
-        await _get_provider_adapter(provider=provider).wait_for_submission_verification_async(
-            driver,
-            timeout=timeout,
-            stop_signal=stop_signal,
-        )
-    )
-
-
-async def attempt_submission_recovery(
-    driver: Any,
-    ctx: Any,
-    gui_instance: Any,
-    stop_signal: Any,
-    *,
-    provider: Optional[str] = None,
-    thread_name: str = "",
-) -> bool:
-    return bool(
-        await _get_provider_adapter(provider=provider).attempt_submission_recovery_async(
-            driver,
-            ctx,
-            gui_instance,
-            stop_signal,
-            thread_name=thread_name,
-        )
-    )
-
-
-async def handle_submission_verification_detected(
-    ctx: Any,
-    stop_signal: Any,
-    *,
-    provider: Optional[str] = None,
-) -> RuntimeActionResult:
-    
-    return await _get_provider_adapter(provider=provider, ctx=ctx).handle_submission_verification_detected_async(
-        ctx,
-        stop_signal,
-    )
-
-
-async def consume_submission_success_signal(driver: Any, provider: Optional[str] = None) -> bool:
-    
-    return bool(await _get_provider_adapter(provider=provider).consume_submission_success_signal_async(driver))
-
-
-async def is_device_quota_limit_page(driver: Any, provider: Optional[str] = None) -> bool:
-    
-    return bool(await _get_provider_adapter(provider=provider).is_device_quota_limit_page_async(driver))
 
 
 __all__ = [
     "SURVEY_PROVIDER_WJX",
     "SurveyDefinition",
-    "consume_submission_success_signal",
     "detect_survey_provider",
     "parse_survey",
-    "attempt_submission_recovery",
-    "fill_survey",
     "fill_survey_http",
     "is_completion_page",
-    "is_device_quota_limit_page",
-    "handle_submission_verification_detected",
-    "submission_requires_verification",
-    "submission_validation_message",
-    "wait_for_submission_verification",
 ]
