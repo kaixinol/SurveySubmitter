@@ -10,12 +10,12 @@ _APP_NAME = "SurveyController"
 
 
 def is_windows_absolute_path(path: str) -> bool:
-    normalized = str(path or "").strip()
+    normalized = path.strip()
     return bool(_WINDOWS_DRIVE_ABSOLUTE_RE.match(normalized)) or normalized.startswith(("\\\\", "//"))
 
 
 def normalize_filesystem_path(path: str) -> str:
-    raw_path = str(path or "").strip()
+    raw_path = path.strip()
     expanded = os.path.expanduser(raw_path) if raw_path.startswith("~") else raw_path
     if is_windows_absolute_path(expanded):
         return ntpath.normpath(expanded)
@@ -23,7 +23,7 @@ def normalize_filesystem_path(path: str) -> str:
 
 
 def _normalize_path(path: str) -> str:
-    return normalize_filesystem_path(str(path or "").strip())
+    return normalize_filesystem_path(path.strip())
 
 
 def _get_platform_config_root() -> str:
