@@ -134,7 +134,7 @@ class _StreamResponse:
             return
         self._closed = True
         _safe_suppress_and_log(
-            self._stream_ctx.__exit__,
+            lambda: self._stream_ctx.__exit__(None, None, None),
             "_StreamResponse.close stream_ctx.__exit__",
         )
         _safe_suppress_and_log(
