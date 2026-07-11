@@ -17,13 +17,13 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "openpyxl",
     "pyright>=1.1.410",
     "pytest",
     "pytest-asyncio",
     "pytest-cov",
     "pytest-xdist>=3.8.0",
     "ruff>=0.15.17",
+    "xlsxwriter",
 ]
 
 [tool.uv]

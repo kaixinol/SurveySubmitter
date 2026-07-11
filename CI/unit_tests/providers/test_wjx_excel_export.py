@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from openpyxl import Workbook
+import xlsxwriter
 
 from survey_submitter.core.reverse_fill.schema import (
     REVERSE_FILL_FORMAT_AUTO,
@@ -16,11 +16,11 @@ from survey_submitter.io.spreadsheets.wjx_excel import load_wjx_excel_export
 
 
 def _write_workbook(path: Path, rows: list[list[object]]) -> Path:
-    workbook = Workbook()
-    sheet = workbook.active
-    for row in rows:
-        sheet.append(row)
-    workbook.save(path)
+    workbook = xlsxwriter.Workbook(str(path))
+    sheet = workbook.add_worksheet()
+    for row_idx, row in enumerate(rows):
+        for col_idx, value in enumerate(row):
+            sheet.write(row_idx, col_idx, value)
     workbook.close()
     return path
 

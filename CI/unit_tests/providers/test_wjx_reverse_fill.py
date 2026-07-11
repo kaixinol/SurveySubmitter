@@ -2,7 +2,7 @@ from __future__ import annotations
 import pytest
 import os
 import tempfile
-from openpyxl import Workbook
+import xlsxwriter
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.questions.schema import QuestionEntry
 from survey_submitter.core.reverse_fill.schema import (
@@ -25,13 +25,13 @@ from survey_submitter.core.config.schema import (
 
 
 def _write_workbook(rows: list[list[object]]) -> str:
-    workbook = Workbook()
-    sheet = workbook.active
-    for row in rows:
-        sheet.append(list(row))
     handle = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
     handle.close()
-    workbook.save(handle.name)
+    workbook = xlsxwriter.Workbook(handle.name)
+    sheet = workbook.add_worksheet()
+    for row_idx, row in enumerate(rows):
+        for col_idx, value in enumerate(row):
+            sheet.write(row_idx, col_idx, value)
     workbook.close()
     return handle.name
 
