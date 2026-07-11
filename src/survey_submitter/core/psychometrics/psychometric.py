@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any
 
 from survey_submitter.core.psychometrics.orientation import (
     build_bias_target_probabilities,
@@ -24,7 +23,7 @@ def _build_choice_key(question_index: int, row_index: int | None = None) -> str:
     return f"q:{question_index}"
 
 
-def normalize_target_alpha(value: Any, default: float = DEFAULT_TARGET_ALPHA) -> float:
+def normalize_target_alpha(value: str | int | float | None, default: float = DEFAULT_TARGET_ALPHA) -> float:
 
     fallback = float(default)
 
@@ -119,7 +118,7 @@ class PsychometricItem:
         return max(0, min(self.option_count - 1, index))
 
 
-def _extract_item_attributes(raw_item: Any) -> dict[str, Any]:
+def _extract_item_attributes(raw_item: object) -> dict[str, object]:
     """Extract attributes from raw item object using getattr."""
     return {
         "to_runtime_item": getattr(raw_item, "to_runtime_item", None),
@@ -133,7 +132,7 @@ def _extract_item_attributes(raw_item: Any) -> dict[str, Any]:
     }
 
 
-def _coerce_psychometric_item(raw_item: Any) -> PsychometricItem | None:
+def _coerce_psychometric_item(raw_item: object) -> PsychometricItem | None:
     if isinstance(raw_item, PsychometricItem):
         probabilities = raw_item.target_probabilities
         if not isinstance(probabilities, list) or not probabilities:
@@ -241,7 +240,7 @@ class DimensionPsychometricPlan:
 
 
 def build_psychometric_plan(
-    psycho_items: list[Any],
+    psycho_items: list[object],
     target_alpha: float = 0.85,
 ) -> PsychometricPlan | None:
 
@@ -302,7 +301,7 @@ def build_psychometric_plan(
 
 
 def build_dimension_psychometric_plan(
-    grouped_items: dict[str, list[Any]],
+    grouped_items: dict[str, list[object]],
     target_alpha: float = 0.85,
 ) -> DimensionPsychometricPlan | None:
 

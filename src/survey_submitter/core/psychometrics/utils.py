@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from survey_submitter.core.psychometrics.psychometric import PsychometricItem
 
 from survey_submitter.core.psychometrics.orientation import infer_dimension_orientation
 
@@ -132,7 +135,7 @@ def correlation(xs: list[float], ys: list[float]) -> float:
     return num / den if den != 0 else 0.0
 
 
-def infer_reversed_keys(items: list[Any]) -> set[str]:
+def infer_reversed_keys(items: list[PsychometricItem]) -> set[str]:
     
     return set(infer_dimension_orientation(items).reversed_keys)
 

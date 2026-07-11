@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from survey_submitter.core.psychometrics.psychometric import PsychometricItem
 
 _LEFT_DIRECTION_THRESHOLD = 0.4
 _RIGHT_DIRECTION_THRESHOLD = 0.6
@@ -52,11 +55,11 @@ def build_bias_target_probabilities(option_count: int, bias: str) -> list[float]
     return normalize_probability_list(raw)
 
 
-def _resolve_choice_key(item: Any) -> str:
+def _resolve_choice_key(item: PsychometricItem) -> str:
     return str(getattr(item, "choice_key", "") or "").strip()
 
 
-def _resolve_option_count(item: Any) -> int:
+def _resolve_option_count(item: PsychometricItem) -> int:
     try:
         option_count = int(getattr(item, "option_count", 0) or 0)
     except (ValueError, TypeError):
@@ -64,7 +67,7 @@ def _resolve_option_count(item: Any) -> int:
     return max(2, option_count)
 
 
-def _resolve_target_probabilities(item: Any) -> list[float]:
+def _resolve_target_probabilities(item: PsychometricItem) -> list[float]:
     raw_values = getattr(item, "target_probabilities", None)
     if isinstance(raw_values, list) and raw_values:
         return normalize_probability_list(raw_values)
@@ -111,7 +114,7 @@ class PsychometricDimensionOrientation:
     ambiguous_anchor: bool
 
 
-def infer_item_orientation(item: Any) -> PsychometricItemOrientation:
+def infer_item_orientation(item: PsychometricItem) -> PsychometricItemOrientation:
     option_count = _resolve_option_count(item)
     probabilities = _resolve_target_probabilities(item)
     mean_ratio = _compute_mean_ratio(probabilities, option_count)
@@ -125,7 +128,7 @@ def infer_item_orientation(item: Any) -> PsychometricItemOrientation:
     )
 
 
-def infer_dimension_orientation(items: list[Any]) -> PsychometricDimensionOrientation:
+def infer_dimension_orientation(items: list[PsychometricItem]) -> PsychometricDimensionOrientation:
     item_orientations: dict[str, PsychometricItemOrientation] = {}
     left_strength = 0.0
     right_strength = 0.0

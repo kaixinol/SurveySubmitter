@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import threading
 from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import Sequence
 
 from survey_submitter.core.persona.context import get_answered
 from survey_submitter.core.questions.types import TypeCode
@@ -28,14 +28,14 @@ class AnswerRule:
     target_row_index: int | None = None     
 
 
-def _to_int(value: Any, default: int = 0) -> int:
+def _to_int(value: str | int | float | None, default: int = 0) -> int:
     try:
         return int(value)
     except (ValueError, TypeError):
         return int(default)
 
 
-def _to_int_list(values: Any) -> list[int]:
+def _to_int_list(values: list[str | int | float] | None) -> list[int]:
     if not isinstance(values, list):
         return []
     result: list[int] = []
@@ -49,11 +49,11 @@ def _to_int_list(values: Any) -> list[int]:
     return sorted(result)
 
 
-def _normalize_question_type_code(value: Any) -> str:
+def _normalize_question_type_code(value: str | None) -> str:
     return str(value or "").strip()
 
 
-def question_supports_answer_rule(question: Any) -> bool:
+def question_supports_answer_rule(question: dict[str, object] | SurveyQuestionMeta) -> bool:
     if not isinstance(question, (dict, SurveyQuestionMeta)):
         return False
     question_meta = ensure_survey_question_meta(question)
@@ -61,7 +61,7 @@ def question_supports_answer_rule(question: Any) -> bool:
     return type_code in _SUPPORTED_RULE_TYPE_CODES
 
 
-def _build_question_info_map(questions_info: Sequence[SurveyQuestionMeta | dict[str, Any]] | None) -> dict[int, SurveyQuestionMeta]:
+def _build_question_info_map(questions_info: Sequence[SurveyQuestionMeta | dict[str, object]] | None) -> dict[int, SurveyQuestionMeta]:
     question_map: dict[int, SurveyQuestionMeta] = {}
     for item in questions_info or []:
         if not isinstance(item, (dict, SurveyQuestionMeta)):
@@ -75,12 +75,12 @@ def _build_question_info_map(questions_info: Sequence[SurveyQuestionMeta | dict[
 
 
 def sanitize_answer_rules(
-    answer_rules: Sequence[dict[str, Any]] | None,
-    questions_info: Sequence[SurveyQuestionMeta | dict[str, Any]] | None = None,
-) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    answer_rules: Sequence[dict[str, object]] | None,
+    questions_info: Sequence[SurveyQuestionMeta | dict[str, object]] | None = None,
+) -> tuple[list[dict[str, object]], dict[str, int]]:
     
     stats = {"invalid": 0, "unsupported": 0}
-    sanitized: list[dict[str, Any]] = []
+    sanitized: list[dict[str, object]] = []
     question_map = _build_question_info_map(questions_info)
     has_question_info = bool(question_map)
 
@@ -102,7 +102,7 @@ def sanitize_answer_rules(
     return sanitized, stats
 
 
-def normalize_rule_dict(raw: Any) -> dict[str, Any] | None:
+def normalize_rule_dict(raw: dict[str, object]) -> dict[str, object] | None:
     if not isinstance(raw, dict):
         return None
     condition_question_num = _to_int(raw.get("condition_question_num"), -1)
@@ -135,7 +135,7 @@ def normalize_rule_dict(raw: Any) -> dict[str, Any] | None:
     rule_id = str(raw.get("id") or "").strip() or (
         f"rule-{condition_question_num}-{target_question_num}-{len(condition_option_indices)}-{len(target_option_indices)}"
     )
-    result: dict[str, Any] = {
+    result: dict[str, object] = {
         "id": rule_id,
         "condition_question_num": condition_question_num,
         "condition_mode": condition_mode,
@@ -151,7 +151,7 @@ def normalize_rule_dict(raw: Any) -> dict[str, Any] | None:
     return result
 
 
-def _normalize_rule(raw: Any) -> AnswerRule | None:
+def _normalize_rule(raw: dict[str, object]) -> AnswerRule | None:
     normalized = normalize_rule_dict(raw)
     if not normalized:
         return None
@@ -169,8 +169,8 @@ def _normalize_rule(raw: Any) -> AnswerRule | None:
 
 
 def reset_consistency_context(
-    answer_rules: Sequence[dict[str, Any]] | None = None,
-    questions_info: Sequence[SurveyQuestionMeta | dict[str, Any]] | None = None,
+    answer_rules: Sequence[dict[str, object]] | None = None,
+    questions_info: Sequence[SurveyQuestionMeta | dict[str, object]] | None = None,
 ) -> None:
     
     parsed_rules: list[AnswerRule] = []
