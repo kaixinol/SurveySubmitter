@@ -67,14 +67,14 @@ class AsyncRoundResources:
                 )
             return True
 
-    def release_round_resources(self, *, requeue_reverse_fill: bool) -> None:
+    def release_round_resources(self, *, submission_failed: bool = False) -> None:
         try:
-            self.state.release_reverse_fill_sample(
+            self.state.end_round(
                 self.slot_label,
-                requeue=requeue_reverse_fill,
+                submission_failed=submission_failed,
             )
         except Exception:
-            logging.debug("释放反填样本失败", exc_info=True)
+            logging.debug("释放轮次资源失败", exc_info=True)
 
 
 __all__ = [

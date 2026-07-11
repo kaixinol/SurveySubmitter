@@ -584,6 +584,8 @@ def _apply_feature_flags(config: RuntimeConfig, raw: dict[str, object]) -> None:
     config.fail_stop_enabled = bool(raw.get("fail_stop_enabled", True))
     config.pause_on_aliyun_captcha = bool(raw.get("pause_on_aliyun_captcha", True))
     config.reliability_mode_enabled = bool(raw.get("reliability_mode_enabled", True))
+    config.persona_enabled = bool(raw.get("persona_enabled", True))
+    config.ai_answering_enabled = bool(raw.get("ai_answering_enabled", True))
 
 
 def _apply_reverse_fill_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:

@@ -131,8 +131,8 @@ class AsyncSlotRunner(_SlotErrorHandlerMixin, _HttpRuntimeMixin):
     async def _prepare_round_context(self) -> bool:
         return await self.round_resources.prepare_round_context()
 
-    def _release_round_resources(self, *, requeue_reverse_fill: bool) -> None:
-        self.round_resources.release_round_resources(requeue_reverse_fill=requeue_reverse_fill)
+    def _release_round_resources(self, *, submission_failed: bool = False) -> None:
+        self.round_resources.release_round_resources(submission_failed=submission_failed)
 
     async def _select_session_proxy_and_ua(self) -> tuple[str | None, str | None]:
         return None, await self.proxy_session.select_user_agent()

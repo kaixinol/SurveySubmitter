@@ -66,7 +66,7 @@ class RunStopPolicyTests:
             stop_signal,
             thread_name="Worker-1",
             failure_reason=FailureReason.PROXY_UNAVAILABLE,
-            consume_reverse_fill_attempt=False,
+            submission_failed=False,
         )
         assert not stopped
         assert not stop_signal.is_set()
@@ -86,7 +86,7 @@ class RunStopPolicyTests:
             failure_reason=FailureReason.PROXY_UNAVAILABLE,
             threshold_override=policy.proxy_unavailable_threshold(),
             terminal_stop_category="proxy_unavailable_threshold",
-            consume_reverse_fill_attempt=False,
+            submission_failed=False,
         )
         assert not stopped
         assert not stop_signal.is_set()
@@ -131,7 +131,7 @@ class RunStopPolicyTests:
             failure_reason=FailureReason.PROXY_UNAVAILABLE,
             threshold_override=policy.proxy_unavailable_threshold(),
             terminal_stop_category="proxy_unavailable_threshold",
-            consume_reverse_fill_attempt=False,
+            submission_failed=False,
         )
         assert stopped
         assert stop_signal.is_set()

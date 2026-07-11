@@ -197,6 +197,7 @@ async def _build_choice_action_result(
         ctx=ctx,
         allow_ai_placeholder=allow_ai_placeholder,
         ai_placeholder_text=build_ai_option_fill_placeholder(current, selected_index),
+        ai_answering_enabled=getattr(config, "ai_answering_enabled", True),
     )
     fill_value = default_missing_option_fill(question, selected_index, fill_value)
     selected_texts = [
@@ -551,6 +552,7 @@ async def _build_multiple_answer_action(
             ctx=ctx,
             allow_ai_placeholder=allow_ai_placeholder,
             ai_placeholder_text=build_ai_option_fill_placeholder(current, option_idx),
+            ai_answering_enabled=getattr(config, "ai_answering_enabled", True),
         )
         fill_value = default_missing_option_fill(question, option_idx, fill_value)
         if fill_value:

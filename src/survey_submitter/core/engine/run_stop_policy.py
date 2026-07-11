@@ -80,8 +80,7 @@ class RunStopPolicy:
         threshold_override: int | None = None,
         terminal_stop_category: str = "fail_threshold",
         force_stop_when_threshold_reached: bool = False,
-        consume_reverse_fill_attempt: bool = True,
-        reverse_fill_max_retries: int = 1,
+        submission_failed: bool = True,
     ) -> bool:
         stop_threshold = max(1, int(threshold_override or self.failure_threshold()))
         is_proxy_unavailable = failure_reason == FailureReason.PROXY_UNAVAILABLE
@@ -109,33 +108,18 @@ class RunStopPolicy:
             else:
                 logging.warning("已连续失败%s次（失败止损已关闭）", consecutive_failures)
         if thread_name:
-
-            def _handle_reverse_fill_failure():
-                if consume_reverse_fill_attempt:
-                    row_number, discarded = self.state.mark_reverse_fill_submission_failed(
-                        thread_name,
-                        max_retries=max(0, int(reverse_fill_max_retries or 0)),
-                    )
-                    if row_number is not None:
-                        if discarded:
-                            logging.warning("反填样本第%s行已连续失败 2 次，已作废。", row_number)
-                        else:
-                            logging.info(
-                                "反填样本第%s行提交失败，已回队准备重试 1 次。", row_number
-                            )
-                else:
-                    row_number = self.state.release_reverse_fill_sample(thread_name, requeue=True)
-                    if row_number is not None:
-                        logging.info(
-                            "反填样本第%s行已回队，本次失败不计入样本作废次数。", row_number
-                        )
-
-            _safe_cleanup_call(_handle_reverse_fill_failure, "回收反填样本")
+            _safe_cleanup_call(
+                lambda: self.state.end_round(
+                    thread_name,
+                    submission_failed=submission_failed,
+                ),
+                "回收轮次资源",
+            )
             _safe_cleanup_call(
                 lambda: self.state.increment_thread_fail(thread_name, status_text=status_text),
                 "更新线程失败计数",
             )
-        if self.state.is_reverse_fill_target_unreachable():
+        if self.state.is_round_target_unreachable():
             message = "反填样本已耗尽，剩余样本不足以完成目标份数"
             logging.critical("%s", message)
             self.state.mark_terminal_stop(
@@ -200,7 +184,7 @@ class RunStopPolicy:
 
         if record_thread_success and thread_name:
             _safe_cleanup_call(
-                lambda: self.state.commit_reverse_fill_sample(thread_name), "核销反填样本"
+                lambda: self.state.complete_round(thread_name), "核销轮次样本"
             )
             _safe_cleanup_call(
                 lambda: self.state.commit_pending_distribution(thread_name), "写入比例统计"

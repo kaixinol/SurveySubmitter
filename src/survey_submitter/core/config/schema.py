@@ -28,6 +28,8 @@ class RuntimeConfig(BaseConfigModel):
     fail_stop_enabled: bool = True
     pause_on_aliyun_captcha: bool = True
     reliability_mode_enabled: bool = True
+    persona_enabled: bool = True
+    ai_answering_enabled: bool = True
     ai_api_key: str = ""
     ai_base_url: str = ""
     ai_api_protocol: str = "auto"

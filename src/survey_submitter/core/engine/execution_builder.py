@@ -239,6 +239,8 @@ def _build_execution_config_template(
         answer_rules=copy.deepcopy(list(config.answer_rules or [])),
         reverse_fill_spec=copy.deepcopy(reverse_fill_spec),
         ai_system_prompt=str(config.ai_system_prompt or "").strip(),
+        persona_enabled=bool(config.persona_enabled),
+        ai_answering_enabled=bool(config.ai_answering_enabled),
     )
     execution_config.questions_metadata = _build_questions_metadata(questions_info)
     execution_config.provider_question_metadata_map = _build_provider_question_metadata(

@@ -604,6 +604,9 @@ def _handle_text(
             if len(text_random_range) != 2:
                 raise ValueError("填空题随机整数范围未设置完整")
             normalized_values = [build_random_int_token(*text_random_range)]
+    if not getattr(target, "ai_answering_enabled", True):
+        ai_enabled = False
+        normalized_blank_ai_flags = [False] * len(normalized_blank_ai_flags)
     if not normalized_values:
         if ai_enabled:
             normalized_values = [DEFAULT_FILL_TEXT]

@@ -40,6 +40,7 @@ async def resolve_option_fill_text_from_config(
     ctx: ExecutionState | None = None,
     allow_ai_placeholder: bool = False,
     ai_placeholder_text: str = DEFAULT_FILL_TEXT,
+    ai_answering_enabled: bool = True,
 ) -> str | None:
     raw_value = get_fill_text_from_config(fill_entries, option_index)
     if raw_value is None:
@@ -49,6 +50,8 @@ async def resolve_option_fill_text_from_config(
         return None
     if text != OPTION_FILL_AI_TOKEN:
         return resolve_dynamic_text_token(text)
+    if not ai_answering_enabled:
+        return DEFAULT_FILL_TEXT
     if allow_ai_placeholder:
         return str(ai_placeholder_text or "").strip() or DEFAULT_FILL_TEXT
 
