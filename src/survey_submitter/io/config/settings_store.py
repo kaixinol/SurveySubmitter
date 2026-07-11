@@ -71,7 +71,7 @@ def app_settings() -> _JsonSettings:
     return _JsonSettings()
 
 
-def get_bool_from_qsettings(value: Any, default: bool = False) -> bool:
+def get_bool_setting(value: object, default: bool = False) -> bool:
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
@@ -79,7 +79,7 @@ def get_bool_from_qsettings(value: Any, default: bool = False) -> bool:
     return bool(value) if value is not None else default
 
 
-def get_int_from_qsettings(value: Any, default: int = 0) -> int:
+def get_int_setting(value: object, default: int = 0) -> int:
     try:
         return int(value)
     except (TypeError, ValueError):
