@@ -78,6 +78,8 @@ def _resolve_choice_forced_index(
     thread_name: str,
 ) -> int | None:
     """Resolve forced choice index from reverse-fill or question config."""
+    from survey_submitter.providers.contracts import ChoiceQuestionMeta
+
     current = int(question.num or 0)
     reverse_fill_answer = resolve_current_reverse_fill_answer(
         ctx,
@@ -87,8 +89,8 @@ def _resolve_choice_forced_index(
     forced_index: int | None = None
     if reverse_fill_answer is not None and reverse_fill_answer.kind == REVERSE_FILL_KIND_CHOICE:
         forced_index = _valid_forced_choice_index(reverse_fill_answer.choice_index, option_count)
-    if forced_index is None:
-        forced_index = _valid_forced_choice_index(question.forced_option_index, option_count)  # ty: ignore[unresolved-attribute]
+    if forced_index is None and isinstance(question, ChoiceQuestionMeta):
+        forced_index = _valid_forced_choice_index(question.forced_option_index, option_count)
     return forced_index
 
 
@@ -438,6 +440,8 @@ async def _build_wjx_score_like_action(
     answer_type: str,
     thread_name: str = "",
 ) -> AnswerAction | None:
+    from survey_submitter.providers.contracts import ChoiceQuestionMeta
+
     config = ctx.config
     current = int(question.num or 0)
     option_texts = await _resolve_runtime_option_texts(question)
@@ -450,8 +454,8 @@ async def _build_wjx_score_like_action(
     forced_index: int | None = None
     if reverse_fill_answer is not None and reverse_fill_answer.kind == REVERSE_FILL_KIND_CHOICE:
         forced_index = _valid_forced_choice_index(reverse_fill_answer.choice_index, option_count)
-    if forced_index is None:
-        forced_index = _valid_forced_choice_index(question.forced_option_index, option_count)  # ty: ignore[unresolved-attribute]
+    if forced_index is None and isinstance(question, ChoiceQuestionMeta):
+        forced_index = _valid_forced_choice_index(question.forced_option_index, option_count)
 
     if forced_index is None:
         probabilities = (
