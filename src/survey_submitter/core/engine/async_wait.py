@@ -2,27 +2,54 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, Protocol
+
+
+class StopSignalProtocol(Protocol):
+    """Protocol for objects that can signal stop requests."""
+    def is_set(self) -> bool:
+        """Check if stop is requested."""
+        ...
+
+    async def wait(self, timeout: float | None = None) -> bool:
+        """Wait for stop signal or timeout."""
+        ...
+
+    _event: asyncio.Event
+
+
+def _has_method(obj: Any, name: str) -> bool:
+    """Check if object has a callable method."""
+    return hasattr(obj, name) and callable(getattr(obj, name))
+
+
+def _get_method(obj: Any, name: str) -> Any | None:
+    """Safely get a method from an object."""
+    return getattr(obj, name, None) if _has_method(obj, name) else None
 
 
 def is_stop_requested(stop_signal: Any) -> bool:
     if stop_signal is None:
         return False
-    checker = getattr(stop_signal, "is_set", None)
-    if callable(checker):
+
+    is_set = _get_method(stop_signal, "is_set")
+    if is_set is not None:
         try:
-            return bool(checker())
+            return bool(is_set())
         except Exception:
             return False
+
     return False
 
 
 def _resolve_async_event(stop_signal: Any) -> asyncio.Event | None:
     if isinstance(stop_signal, asyncio.Event):
         return stop_signal
+
     event = getattr(stop_signal, "_event", None)
     if isinstance(event, asyncio.Event):
         return event
+
     return None
 
 
@@ -45,8 +72,8 @@ async def sleep_or_stop(stop_signal: Any, seconds: float) -> bool:
         await asyncio.sleep(delay)
         return False
 
-    waiter = getattr(stop_signal, "wait", None)
-    if callable(waiter):
+    waiter = _get_method(stop_signal, "wait")
+    if waiter is not None:
         try:
             return bool(await asyncio.to_thread(waiter, delay))
         except Exception:

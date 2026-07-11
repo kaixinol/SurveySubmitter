@@ -12,9 +12,19 @@ def _get_repo_root() -> str:
     )
 
 
+def _is_frozen() -> bool:
+    """Check if the application is running as a frozen (compiled) executable."""
+    return bool(getattr(sys, "frozen", False))
+
+
+def _get_meipass() -> str | None:
+    """Get the PyInstaller temporary extraction directory path."""
+    return getattr(sys, "_MEIPASS", None)
+
+
 def get_runtime_directory() -> str:
-    
-    if getattr(sys, "frozen", False):
+
+    if _is_frozen():
         exe_dir = os.path.dirname(sys.executable)
         if os.path.basename(exe_dir).lower() == "lib":
             return os.path.dirname(exe_dir)
@@ -23,9 +33,9 @@ def get_runtime_directory() -> str:
 
 
 def get_bundle_resource_root() -> str:
-    
-    if getattr(sys, "frozen", False):
-        meipass = getattr(sys, "_MEIPASS", None)
+
+    if _is_frozen():
+        meipass = _get_meipass()
         if meipass:
             return normalize_filesystem_path(meipass)
         return os.path.dirname(sys.executable)
@@ -33,11 +43,11 @@ def get_bundle_resource_root() -> str:
 
 
 def get_assets_directory() -> str:
-    
+
     bundle_root = get_bundle_resource_root()
     candidates = [os.path.join(bundle_root, "assets")]
 
-    if getattr(sys, "frozen", False):
+    if _is_frozen():
         exe_dir = os.path.dirname(sys.executable)
         exe_assets = os.path.join(exe_dir, "assets")
         internal_assets = os.path.join(exe_dir, "_internal", "assets")
@@ -53,7 +63,7 @@ def get_assets_directory() -> str:
 
 
 def get_resource_path(relative_path: str) -> str:
-    
+
     return os.path.normpath(os.path.join(get_bundle_resource_root(), relative_path))
 
 

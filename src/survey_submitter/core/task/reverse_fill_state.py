@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 class ReverseFillRuntimeMixin:
     def initialize_reverse_fill_runtime(self: "_ReverseFillRuntimeHost") -> None:
         with self.lock:
-            self.reverse_fill_runtime = create_reverse_fill_runtime_state(getattr(self.config, "reverse_fill_spec", None))
+            self.reverse_fill_runtime = create_reverse_fill_runtime_state(self.config.reverse_fill_spec)
         self.notify_runtime_change()
 
     def _reverse_fill_thread_key(self, thread_name: str | None = None) -> str:
@@ -71,7 +71,7 @@ class ReverseFillRuntimeMixin:
                     continue
                 runtime.reserved_row_by_thread[key] = row_number
                 return ReverseFillAcquireResult(status="acquired", sample=sample, message="reserved")
-            target_num = max(0, int(getattr(self.config, "target_num", 0) or 0))
+            target_num = max(0, int(self.config.target_num or 0))
             if target_num > 0 and self._reverse_fill_possible_total_locked() < target_num:
                 return ReverseFillAcquireResult(status="exhausted", message="reverse_fill_target_unreachable")
             return ReverseFillAcquireResult(status="waiting", message="reverse_fill_waiting")
@@ -179,7 +179,7 @@ class ReverseFillRuntimeMixin:
             runtime = self.reverse_fill_runtime
             if runtime is None:
                 return False
-            target_num = max(0, int(getattr(self.config, "target_num", 0) or 0))
+            target_num = max(0, int(self.config.target_num or 0))
             if target_num <= 0:
                 return False
             return self._reverse_fill_possible_total_locked() < target_num

@@ -144,7 +144,7 @@ def _resolve_wjx_channel_profile(
     user_agent: str | None,
     user_agent_profile: UserAgentProfile | None = None,
 ) -> WjxChannelProfile:
-    category = str(getattr(user_agent_profile, "category", "") or "").strip().lower()
+    category = str(user_agent_profile.category if user_agent_profile is not None else "").strip().lower()
     if not category:
         category = "wechat" if _is_wechat_user_agent(user_agent) else "pc"
     if category == "wechat":
@@ -540,8 +540,8 @@ async def _post_wjx_submit_request(
     submit_proxy_lease = None
     if submit_proxy_lease_factory is not None:
         submit_proxy_lease = await submit_proxy_lease_factory()
-        submit_proxy_address = str(getattr(submit_proxy_lease, "address", "") or "").strip() or None
-    if bool(getattr(config, "random_proxy_ip_enabled", False)) and not submit_proxy_address:
+        submit_proxy_address = str(submit_proxy_lease.address or "").strip() or None
+    if bool(config.random_proxy_ip_enabled) and not submit_proxy_address:
         raise SubmitProxyUnavailableError("提交前未获取到随机 IP")
     submit_proxies = _proxy_arg(submit_proxy_address)
     if str(submit_proxy_address or "").strip():

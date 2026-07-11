@@ -4,7 +4,10 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-from survey_submitter.core.psychometrics.orientation import build_bias_target_probabilities, infer_dimension_orientation
+from survey_submitter.core.psychometrics.orientation import (
+    build_bias_target_probabilities,
+    infer_dimension_orientation,
+)
 from survey_submitter.core.psychometrics.utils import randn, z_to_category
 from survey_submitter.core.questions.types import QuestionType
 
@@ -22,7 +25,7 @@ def _build_choice_key(question_index: int, row_index: int | None = None) -> str:
 
 
 def normalize_target_alpha(value: Any, default: float = DEFAULT_TARGET_ALPHA) -> float:
-    
+
     fallback = float(default)
 
     try:
@@ -36,22 +39,22 @@ def normalize_target_alpha(value: Any, default: float = DEFAULT_TARGET_ALPHA) ->
 
 
 def compute_rho_from_alpha(alpha: float, k: int) -> float:
-    
+
     if not (0 < alpha < 1):
         return 0.2
     if k < 2:
         return 0.2
-    
+
     denom = k - alpha * (k - 1)
     if denom <= 0:
         return 0.2
-    
+
     rho = alpha / denom
     return max(1e-6, min(0.999999, rho))
 
 
 def compute_sigma_e_from_alpha(alpha: float, k: int) -> float:
-    
+
     import math
     rho = compute_rho_from_alpha(alpha, k)
     return math.sqrt((1 / rho) - 1)
@@ -64,7 +67,7 @@ def generate_psycho_answer(
     sigma_e: float = 0.5,
     is_reversed: bool = False,
 ) -> int:
-    
+
     bias_shift = -0.5 if bias == "left" else 0.5 if bias == "right" else 0.0
     effective_theta = -theta if is_reversed else theta
     z = effective_theta + bias_shift + sigma_e * randn()
@@ -73,13 +76,13 @@ def generate_psycho_answer(
 
 @dataclass
 class PsychometricItem:
-    
-    kind: str  
-    question_index: int  
-    row_index: int | None = None  
-    option_count: int = 5  
-    bias: str = "center"  
-    target_probabilities: list[float] | None = None  
+
+    kind: str
+    question_index: int
+    row_index: int | None = None
+    option_count: int = 5
+    bias: str = "center"
+    target_probabilities: list[float] | None = None
     score_by_choice_index: list[int] | None = None
 
     @property
@@ -116,6 +119,20 @@ class PsychometricItem:
         return max(0, min(self.option_count - 1, index))
 
 
+def _extract_item_attributes(raw_item: Any) -> dict[str, Any]:
+    """Extract attributes from raw item object using getattr."""
+    return {
+        "to_runtime_item": getattr(raw_item, "to_runtime_item", None),
+        "question_index": getattr(raw_item, "question_index", None),
+        "row_index": getattr(raw_item, "row_index", None),
+        "kind": getattr(raw_item, "kind", getattr(raw_item, "question_type", "scale")),
+        "option_count": max(2, int(getattr(raw_item, "option_count", 5) or 5)),
+        "bias": str(getattr(raw_item, "bias", "center") or "center"),
+        "target_probabilities": getattr(raw_item, "target_probabilities", None),
+        "score_by_choice_index": list(getattr(raw_item, "score_by_choice_index", None) or []) or None,
+    }
+
+
 def _coerce_psychometric_item(raw_item: Any) -> PsychometricItem | None:
     if isinstance(raw_item, PsychometricItem):
         probabilities = raw_item.target_probabilities
@@ -147,23 +164,30 @@ def _coerce_psychometric_item(raw_item: Any) -> PsychometricItem | None:
             score_by_choice_index=None,
         )
 
-    to_runtime_item = getattr(raw_item, "to_runtime_item", None)
+    # Try to_runtime_item() method if available
+    attrs = _extract_item_attributes(raw_item)
+
+    to_runtime_item = attrs.get("to_runtime_item")
     if callable(to_runtime_item):
         runtime_item = to_runtime_item()
         return _coerce_psychometric_item(runtime_item)
 
-    question_index = getattr(raw_item, "question_index", None)
+    question_index = attrs.get("question_index")
     if question_index is None:
         return None
-    row_index = getattr(raw_item, "row_index", None)
-    kind = getattr(raw_item, "kind", getattr(raw_item, "question_type", "scale"))
+
+    row_index = attrs.get("row_index")
+    kind = attrs.get("kind", "scale")
     if kind == QuestionType.MATRIX and row_index is not None:
         kind = "matrix_row"
-    option_count = max(2, int(getattr(raw_item, "option_count", 5) or 5))
-    bias = str(getattr(raw_item, "bias", "center") or "center")
-    probabilities = getattr(raw_item, "target_probabilities", None)
+
+    option_count = attrs.get("option_count", 5)
+    bias = attrs.get("bias", "center")
+    probabilities = attrs.get("target_probabilities")
+
     if not isinstance(probabilities, list) or not probabilities:
         probabilities = build_bias_target_probabilities(option_count, bias)
+
     return PsychometricItem(
         kind=str(kind or "scale"),
         question_index=int(question_index or 0),
@@ -171,20 +195,20 @@ def _coerce_psychometric_item(raw_item: Any) -> PsychometricItem | None:
         option_count=option_count,
         bias=bias,
         target_probabilities=list(probabilities),
-        score_by_choice_index=list(getattr(raw_item, "score_by_choice_index", None) or []) or None,
+        score_by_choice_index=attrs.get("score_by_choice_index"),
     )
 
 
 @dataclass
 class PsychometricPlan:
-    
-    items: list[PsychometricItem]  
-    theta: float  
-    sigma_e: float  
-    choices: dict[str, int]  
-    
+
+    items: list[PsychometricItem]
+    theta: float
+    sigma_e: float
+    choices: dict[str, int]
+
     def get_choice(self, question_index: int, row_index: int | None = None) -> int | None:
-        
+
         key = _build_choice_key(question_index, row_index)
         return self.choices.get(key)
 
@@ -195,7 +219,6 @@ class PsychometricPlan:
 
 @dataclass
 class DimensionPsychometricPlan:
-    
 
     plans: dict[str, PsychometricPlan]
     item_dimension_map: dict[str, str]
@@ -221,14 +244,12 @@ def build_psychometric_plan(
     psycho_items: list[Any],
     target_alpha: float = 0.85,
 ) -> PsychometricPlan | None:
-    
-    
+
     if not psycho_items:
         return None
-    
-    
+
     items: list[PsychometricItem] = []
-    
+
     for raw_item in psycho_items:
         item = _coerce_psychometric_item(raw_item)
         if item is not None:
@@ -238,16 +259,13 @@ def build_psychometric_plan(
     if k < 2:
         logger.warning("心理测量计划需要至少2道题目，当前只有 %d 道", k)
         return None
-    
+
     target_alpha = normalize_target_alpha(target_alpha)
 
-    
     sigma_e = compute_sigma_e_from_alpha(target_alpha, k)
-    
-    
+
     theta = randn()
-    
-    
+
     choices: dict[str, int] = {}
     dimension_orientation = infer_dimension_orientation(items)
     reversed_keys = set(dimension_orientation.reversed_keys)
@@ -274,7 +292,7 @@ def build_psychometric_plan(
         dimension_orientation.anchor_direction,
         len(reversed_keys),
     )
-    
+
     return PsychometricPlan(
         items=items,
         theta=theta,
@@ -287,7 +305,7 @@ def build_dimension_psychometric_plan(
     grouped_items: dict[str, list[Any]],
     target_alpha: float = 0.85,
 ) -> DimensionPsychometricPlan | None:
-    
+
     if not grouped_items:
         return None
 

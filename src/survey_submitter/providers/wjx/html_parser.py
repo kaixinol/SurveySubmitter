@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from survey_submitter.core.questions.types import TypeCode, convert_wire_type_code
+from survey_submitter.core.questions.utils import _should_treat_question_as_text_like
 from survey_submitter.providers.contracts import (
     LOGIC_PARSE_STATUS_COMPLETE,
     LOGIC_PARSE_STATUS_NONE,
 )
-
-from survey_submitter.core.questions.types import TypeCode, convert_wire_type_code
-from survey_submitter.core.questions.utils import _should_treat_question_as_text_like
 
 try:
     from bs4 import BeautifulSoup
@@ -31,8 +30,8 @@ from .html_parser_common import (
     _extract_rating_option_count,
     _extract_text_input_labels,
     _normalize_html_text,
-    _soup_question_is_required,
     _should_mark_as_multi_text,
+    _soup_question_is_required,
     _soup_question_looks_like_description,
     _soup_question_looks_like_rating,
     _soup_question_looks_like_reorder,
@@ -338,8 +337,157 @@ def _finalize_logic_parse_status(questions_info: list[dict[str, Any]]) -> None:
         )
 
 
+def _build_question_info_dict(
+    *,
+    question_number: int,
+    display_num: int | str,
+    title_text: str,
+    type_code: str,
+    option_count: int,
+    matrix_rows: int,
+    row_texts: list[Any],
+    page_index: int,
+    option_texts: list[str],
+    is_location: bool,
+    location_verify_type: str,
+    is_rating: bool,
+    is_description: bool,
+    rating_max: int | None,
+    features: dict[str, Any],
+    question_div: Any,
+    multi_min_limit: int,
+    multi_max_limit: int,
+    is_required: bool,
+) -> dict[str, Any]:
+    """Build a question info dictionary from parsed metadata."""
+    return {
+        "num": question_number,
+        "display_num": display_num,
+        "title": title_text,
+        "type_code": type_code,
+        "options": option_count,
+        "rows": matrix_rows,
+        "row_texts": row_texts,
+        "page": page_index,
+        "option_texts": option_texts,
+        "forced_option_index": features["forced_option_index"],
+        "forced_option_text": features["forced_option_text"],
+        "fillable_options": features["fillable_indices"],
+        "attached_option_selects": features["attached_option_selects"],
+        "has_attached_option_select": bool(features["attached_option_selects"]),
+        "is_location": is_location,
+        "location_verify_type": location_verify_type,
+        "is_rating": is_rating,
+        "is_description": is_description,
+        "rating_max": rating_max,
+        "text_inputs": features["text_input_count"],
+        "text_input_labels": features["text_input_labels"],
+        "is_multi_text": features["is_multi_text"],
+        "is_text_like": features["is_text_like"],
+        "is_slider_matrix": features["is_slider_matrix"],
+        "has_jump": features["has_jump"],
+        "jump_rules": features["jump_rules"],
+        "has_display_condition": features["has_display_condition"],
+        "display_conditions": features["display_conditions"],
+        "logic_parse_status": LOGIC_PARSE_STATUS_NONE,
+        "question_media": _collect_question_media(question_div, row_texts, option_texts),
+        "slider_min": features["slider_min"],
+        "slider_max": features["slider_max"],
+        "slider_step": features["slider_step"],
+        "multi_min_limit": multi_min_limit,
+        "multi_max_limit": multi_max_limit,
+        "required": is_required,
+    }
+
+
+def _process_question_div(
+    *,
+    question_div: Any,
+    soup: Any,
+    page_index: int,
+    current_display_num: int | None,
+    visible_question_counter: int,
+) -> tuple[dict[str, Any] | None, int | None, int]:
+    """Process a single question div and return question info or None.
+
+    Returns (question_info_dict, updated_current_display_num, updated_visible_counter)
+    """
+    raw_heading_text = _extract_display_heading_text(question_div)
+    question_number = _extract_question_number_from_div(question_div)
+
+    if question_number is None:
+        heading_num = _extract_display_question_number(raw_heading_text)
+        if heading_num is not None:
+            current_display_num = heading_num
+        return None, current_display_num, visible_question_counter
+
+    raw_type_code = str(question_div.get("type") or "").strip() or "0"
+    resolved = _resolve_question_type(question_div, raw_type_code)
+    type_code = resolved["type_code"]
+    is_description = resolved["is_description"]
+    is_required = resolved["is_required"]
+    is_rating = resolved["is_rating"]
+    rating_max = resolved["rating_max"]
+    is_location = resolved["is_location"]
+    location_verify_type = resolved["location_verify_type"]
+
+    display_num, current_display_num, visible_question_counter = _resolve_display_number(
+        raw_heading_text, question_div, current_display_num, visible_question_counter
+    )
+
+    title_text = _extract_question_title(question_div, question_number)
+
+    (
+        option_texts,
+        option_count,
+        matrix_rows,
+        row_texts,
+        fillable_indices,
+        multi_min_limit,
+        multi_max_limit,
+    ) = _extract_question_metadata_from_html(soup, question_div, question_number, type_code)
+
+    option_texts, option_count = _apply_rating_scale_option_texts(
+        type_code, question_div, option_texts, option_count, is_rating, rating_max
+    )
+
+    if is_description:
+        type_code = TypeCode.DESCRIPTION
+
+    features = _extract_question_features(
+        soup, question_div, question_number, type_code, option_texts, option_count, title_text, is_location
+    )
+    type_code = features["type_code"]
+
+    # Build question info dict by separating fillable_indices
+    features["fillable_indices"] = fillable_indices
+    question_info = _build_question_info_dict(
+        question_number=question_number,
+        display_num=display_num,
+        title_text=title_text,
+        type_code=type_code,
+        option_count=option_count,
+        matrix_rows=matrix_rows,
+        row_texts=row_texts,
+        page_index=page_index,
+        option_texts=option_texts,
+        is_location=is_location,
+        location_verify_type=location_verify_type,
+        is_rating=is_rating,
+        is_description=is_description,
+        rating_max=rating_max,
+        features=features,
+        question_div=question_div,
+        multi_min_limit=multi_min_limit,
+        multi_max_limit=multi_max_limit,
+        is_required=is_required,
+    )
+
+    return question_info, current_display_num, visible_question_counter
+
+
 def parse_survey_questions_from_html(html: str) -> list[dict[str, Any]]:
-    
+
     if not BeautifulSoup:
         raise RuntimeError("BeautifulSoup is required for HTML parsing")
     soup = BeautifulSoup(html, "html.parser")
@@ -349,6 +497,7 @@ def parse_survey_questions_from_html(html: str) -> list[dict[str, Any]]:
     fieldsets = container.find_all("fieldset")
     if not fieldsets:
         fieldsets = [container]
+
     questions_info: list[dict[str, Any]] = []
     for page_index, fieldset in enumerate(fieldsets, 1):
         question_divs = [
@@ -358,82 +507,17 @@ def parse_survey_questions_from_html(html: str) -> list[dict[str, Any]]:
         ]
         current_display_num: int | None = None
         visible_question_counter = 0
+
         for question_div in question_divs:
-            raw_heading_text = _extract_display_heading_text(question_div)
-            question_number = _extract_question_number_from_div(question_div)
-            if question_number is None:
-                heading_num = _extract_display_question_number(raw_heading_text)
-                if heading_num is not None:
-                    current_display_num = heading_num
-                continue
-            raw_type_code = str(question_div.get("type") or "").strip() or "0"
-            resolved = _resolve_question_type(question_div, raw_type_code)
-            type_code = resolved["type_code"]
-            is_description = resolved["is_description"]
-            is_required = resolved["is_required"]
-            is_rating = resolved["is_rating"]
-            rating_max = resolved["rating_max"]
-            is_location = resolved["is_location"]
-            location_verify_type = resolved["location_verify_type"]
-            display_num, current_display_num, visible_question_counter = _resolve_display_number(
-                raw_heading_text, question_div, current_display_num, visible_question_counter
+            question_info, current_display_num, visible_question_counter = _process_question_div(
+                question_div=question_div,
+                soup=soup,
+                page_index=page_index,
+                current_display_num=current_display_num,
+                visible_question_counter=visible_question_counter,
             )
-            title_text = _extract_question_title(question_div, question_number)
-            (
-                option_texts,
-                option_count,
-                matrix_rows,
-                row_texts,
-                fillable_indices,
-                multi_min_limit,
-                multi_max_limit,
-            ) = _extract_question_metadata_from_html(soup, question_div, question_number, type_code)
-            option_texts, option_count = _apply_rating_scale_option_texts(
-                type_code, question_div, option_texts, option_count, is_rating, rating_max
-            )
-            if is_description:
-                type_code = TypeCode.DESCRIPTION
-            features = _extract_question_features(
-                soup, question_div, question_number, type_code, option_texts, option_count, title_text, is_location
-            )
-            type_code = features["type_code"]
-            questions_info.append({
-                "num": question_number,
-                "display_num": display_num,
-                "title": title_text,
-                "type_code": type_code,
-                "options": option_count,
-                "rows": matrix_rows,
-                "row_texts": row_texts,
-                "page": page_index,
-                "option_texts": option_texts,
-                "forced_option_index": features["forced_option_index"],
-                "forced_option_text": features["forced_option_text"],
-                "fillable_options": fillable_indices,
-                "attached_option_selects": features["attached_option_selects"],
-                "has_attached_option_select": bool(features["attached_option_selects"]),
-                "is_location": is_location,
-                "location_verify_type": location_verify_type,
-                "is_rating": is_rating,
-                "is_description": is_description,
-                "rating_max": rating_max,
-                "text_inputs": features["text_input_count"],
-                "text_input_labels": features["text_input_labels"],
-                "is_multi_text": features["is_multi_text"],
-                "is_text_like": features["is_text_like"],
-                "is_slider_matrix": features["is_slider_matrix"],
-                "has_jump": features["has_jump"],
-                "jump_rules": features["jump_rules"],
-                "has_display_condition": features["has_display_condition"],
-                "display_conditions": features["display_conditions"],
-                "logic_parse_status": LOGIC_PARSE_STATUS_NONE,
-                "question_media": _collect_question_media(question_div, row_texts, option_texts),
-                "slider_min": features["slider_min"],
-                "slider_max": features["slider_max"],
-                "slider_step": features["slider_step"],
-                "multi_min_limit": multi_min_limit,
-                "multi_max_limit": multi_max_limit,
-                "required": is_required,
-            })
+            if question_info is not None:
+                questions_info.append(question_info)
+
     _finalize_logic_parse_status(questions_info)
     return questions_info

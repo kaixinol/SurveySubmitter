@@ -48,8 +48,8 @@ def _blocked_proxy_addresses_locked(ctx: ExecutionState, *, exclude_thread_name:
 def _required_proxy_ttl_seconds(ctx: ExecutionState) -> int:
     return int(
         get_proxy_required_ttl_seconds(
-            getattr(ctx.config, "answer_duration_range_seconds", (0, 0)),
-            survey_provider=getattr(ctx.config, "survey_provider", ""),
+            ctx.config.answer_duration_range_seconds,
+            survey_provider=ctx.config.survey_provider,
         )
     )
 
@@ -204,7 +204,7 @@ def _mark_proxy_in_use(ctx: ExecutionState, thread_name: str, lease: ProxyLease 
         "\u7ebf\u7a0b[%s] \u5df2\u5206\u914d\u968f\u673aIP\uff1a%s\uff08\u6765\u6e90=%s\uff09",
         thread_name or "?",
         mask_proxy_for_log(lease.address),
-        str(getattr(lease, "source", "") or "unknown"),
+        str(lease.source or "unknown"),
     )
     return lease.address
 

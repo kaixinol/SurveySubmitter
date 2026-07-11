@@ -4,20 +4,21 @@ import random
 import threading
 from dataclasses import dataclass
 
+
 @dataclass
 class Persona:
-    
-    gender: str = ""                    
-    age_group: str = ""                 
-    education: str = ""                 
-    occupation: str = ""                
-    income_level: str = ""              
-    marital_status: str = ""            
+
+    gender: str = ""
+    age_group: str = ""
+    education: str = ""
+    occupation: str = ""
+    income_level: str = ""
+    marital_status: str = ""
     has_children: bool = False
-    satisfaction_tendency: float = 0.5  
+    satisfaction_tendency: float = 0.5
 
     def to_keyword_map(self) -> dict[str, list[str]]:
-        
+
         mapping: dict[str, list[str]] = {}
         if self.gender:
             mapping["gender"] = (
@@ -75,7 +76,7 @@ class Persona:
                 if self.marital_status == "未婚"
                 else ["已婚", "已婚已育", "已婚未育", "结婚"]
             )
-        
+
         if self.has_children:
             mapping["has_children"] = ["有孩子", "有子女", "已育", "有小孩"]
         else:
@@ -83,7 +84,7 @@ class Persona:
         return mapping
 
     def to_description(self) -> str:
-        
+
         parts = []
         if self.gender:
             parts.append(f"{self.gender}性")
@@ -104,108 +105,108 @@ class Persona:
             return "一名普通用户"
         return "、".join(parts)
 
+
+def _choose_education_by_age(age_group: str) -> str:
+    """Choose education level based on age group."""
+    weights_by_age = {
+        "18-25": (["高中及以下", "大专", "本科", "研究生及以上"], [15, 20, 50, 15]),
+        "26-35": (["高中及以下", "大专", "本科", "研究生及以上"], [10, 20, 45, 25]),
+        "36-45": (["高中及以下", "大专", "本科", "研究生及以上"], [10, 20, 45, 25]),
+        "46-60": (["高中及以下", "大专", "本科", "研究生及以上"], [25, 25, 35, 15]),
+    }
+    options, weights = weights_by_age.get(age_group, weights_by_age["46-60"])
+    return random.choices(options, weights=weights, k=1)[0]
+
+
+def _choose_occupation_by_age(age_group: str) -> str:
+    """Choose occupation based on age group."""
+    if age_group == "18-25":
+        return random.choices(["学生", "上班族", "自由职业"], weights=[55, 35, 10], k=1)[0]
+    elif age_group == "46-60":
+        return random.choices(["上班族", "自由职业", "退休"], weights=[50, 25, 25], k=1)[0]
+    else:
+        return random.choices(["上班族", "自由职业"], weights=[75, 25], k=1)[0]
+
+
+def _choose_income_level(occupation: str, age_group: str) -> str:
+    """Choose income level based on occupation and age group."""
+    if occupation == "学生":
+        return random.choices(["低", "中"], weights=[85, 15], k=1)[0]
+    elif occupation == "退休":
+        return random.choices(["低", "中", "高"], weights=[30, 50, 20], k=1)[0]
+    elif age_group in ("36-45", "46-60"):
+        return random.choices(["低", "中", "高"], weights=[15, 45, 40], k=1)[0]
+    elif age_group == "26-35":
+        return random.choices(["低", "中", "高"], weights=[20, 50, 30], k=1)[0]
+    else:
+        return random.choices(["低", "中", "高"], weights=[40, 45, 15], k=1)[0]
+
+
+def _choose_marital_status_by_age(age_group: str) -> str:
+    """Choose marital status based on age group."""
+    if age_group == "18-25":
+        return random.choices(["未婚", "已婚"], weights=[90, 10], k=1)[0]
+    elif age_group == "26-35":
+        return random.choices(["未婚", "已婚"], weights=[45, 55], k=1)[0]
+    elif age_group == "36-45":
+        return random.choices(["未婚", "已婚"], weights=[15, 85], k=1)[0]
+    else:
+        return random.choices(["未婚", "已婚"], weights=[10, 90], k=1)[0]
+
+
+def _should_have_children(age_group: str, marital_status: str) -> bool:
+    """Determine if persona should have children based on age and marital status."""
+    if marital_status == "未婚":
+        return random.random() < 0.03
+    elif age_group in ("36-45", "46-60"):
+        return random.random() < 0.90
+    elif age_group == "26-35":
+        return random.random() < 0.50
+    else:
+        return random.random() < 0.10
+
+
 def generate_persona() -> Persona:
-    
+
     p = Persona()
 
-    
     p.gender = random.choice(["男", "女"])
 
-    
     p.age_group = random.choices(
         ["18-25", "26-35", "36-45", "46-60"],
         weights=[35, 35, 20, 10],
         k=1,
     )[0]
 
-    
-    if p.age_group == "18-25":
-        p.education = random.choices(
-            ["高中及以下", "大专", "本科", "研究生及以上"],
-            weights=[15, 20, 50, 15],
-            k=1,
-        )[0]
-    elif p.age_group in ("26-35", "36-45"):
-        p.education = random.choices(
-            ["高中及以下", "大专", "本科", "研究生及以上"],
-            weights=[10, 20, 45, 25],
-            k=1,
-        )[0]
-    else:
-        p.education = random.choices(
-            ["高中及以下", "大专", "本科", "研究生及以上"],
-            weights=[25, 25, 35, 15],
-            k=1,
-        )[0]
+    p.education = _choose_education_by_age(p.age_group)
 
-    
-    if p.age_group == "18-25":
-        p.occupation = random.choices(
-            ["学生", "上班族", "自由职业"],
-            weights=[55, 35, 10],
-            k=1,
-        )[0]
-    elif p.age_group == "46-60":
-        p.occupation = random.choices(
-            ["上班族", "自由职业", "退休"],
-            weights=[50, 25, 25],
-            k=1,
-        )[0]
-    else:
-        p.occupation = random.choices(
-            ["上班族", "自由职业"],
-            weights=[75, 25],
-            k=1,
-        )[0]
+    p.occupation = _choose_occupation_by_age(p.age_group)
 
-    
-    if p.occupation == "学生":
-        p.income_level = random.choices(["低", "中"], weights=[85, 15], k=1)[0]
-    elif p.occupation == "退休":
-        p.income_level = random.choices(["低", "中", "高"], weights=[30, 50, 20], k=1)[0]
-    elif p.age_group in ("36-45", "46-60"):
-        p.income_level = random.choices(["低", "中", "高"], weights=[15, 45, 40], k=1)[0]
-    elif p.age_group == "26-35":
-        p.income_level = random.choices(["低", "中", "高"], weights=[20, 50, 30], k=1)[0]
-    else:
-        p.income_level = random.choices(["低", "中", "高"], weights=[40, 45, 15], k=1)[0]
+    p.income_level = _choose_income_level(p.occupation, p.age_group)
 
-    
-    if p.age_group == "18-25":
-        p.marital_status = random.choices(["未婚", "已婚"], weights=[90, 10], k=1)[0]
-    elif p.age_group == "26-35":
-        p.marital_status = random.choices(["未婚", "已婚"], weights=[45, 55], k=1)[0]
-    elif p.age_group == "36-45":
-        p.marital_status = random.choices(["未婚", "已婚"], weights=[15, 85], k=1)[0]
-    else:
-        p.marital_status = random.choices(["未婚", "已婚"], weights=[10, 90], k=1)[0]
+    p.marital_status = _choose_marital_status_by_age(p.age_group)
 
-    
-    if p.marital_status == "未婚":
-        p.has_children = random.random() < 0.03  
-    elif p.age_group in ("36-45", "46-60"):
-        p.has_children = random.random() < 0.90
-    elif p.age_group == "26-35":
-        p.has_children = random.random() < 0.50
-    else:
-        p.has_children = random.random() < 0.10
+    p.has_children = _should_have_children(p.age_group, p.marital_status)
 
-    
     raw = random.gauss(0.6, 0.15)
     p.satisfaction_tendency = max(0.1, min(0.9, raw))
 
     return p
 
+
 _thread_local = threading.local()
 
+
 def set_current_persona(persona: Persona) -> None:
-    
+
     _thread_local.persona = persona
 
+
 def get_current_persona() -> Persona | None:
-    
+
     return getattr(_thread_local, "persona", None)
 
+
 def reset_persona() -> None:
-    
+
     _thread_local.persona = None

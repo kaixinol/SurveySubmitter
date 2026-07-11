@@ -484,11 +484,15 @@ def build_runtime_config_snapshot(
     return snapshot
 
 
-def normalize_runtime_config_payload(raw: dict[str, Any]) -> RuntimeConfig:
-    config = RuntimeConfig()
+def _validate_no_unknown_keys(raw: dict[str, Any]) -> None:
     unknown_keys = set(raw or {}) - _RUNTIME_CONFIG_FIELDS
     if unknown_keys:
-        raise ValueError(f"{_CONFIG_CORRUPTED_MESSAGE}：配置包含不支持的字段（{', '.join(sorted(unknown_keys))}）")
+        raise ValueError(
+            f"{_CONFIG_CORRUPTED_MESSAGE}：配置包含不支持的字段（{', '.join(sorted(unknown_keys))}）"
+        )
+
+
+def _apply_basic_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
     config.url = _as_str(raw.get("url"))
     config.survey_title = _as_str(raw.get("survey_title"))
     config.survey_provider = normalize_survey_provider(
@@ -497,43 +501,62 @@ def normalize_runtime_config_payload(raw: dict[str, Any]) -> RuntimeConfig:
     )
     config.target = _coerce_int(raw.get("target"), 1)
     config.threads = _coerce_int(raw.get("threads"), 1)
+
+
+def _normalize_submit_interval(raw_value: Any) -> tuple[int, int]:
     try:
-        _si_raw = raw.get("submit_interval")
-        if isinstance(_si_raw, (list, tuple)) and len(_si_raw) >= 2:
-            config.submit_interval = int(_si_raw[0]), int(_si_raw[1])
-        else:
-            config.submit_interval = (0, 0)
+        if isinstance(raw_value, (list, tuple)) and len(raw_value) >= 2:
+            return int(raw_value[0]), int(raw_value[1])
+        return (0, 0)
     except (ValueError, TypeError) as exc:
         log_suppressed_exception("_tuple_pair failure", exc, level=logging.WARNING)
-        config.submit_interval = (0, 0)
+        return (0, 0)
+
+
+def _apply_timing_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
+    config.submit_interval = _normalize_submit_interval(raw.get("submit_interval"))
     config.answer_duration = _normalize_answer_duration_range(raw.get("answer_duration"))
     config.answer_datetime_window = normalize_answer_datetime_window(
         raw.get("answer_datetime_window")
     )
-    custom_proxy_api = _as_str(raw.get("custom_proxy_api"))
+
+
+def _apply_proxy_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
+    config.custom_proxy_api = _as_str(raw.get("custom_proxy_api"))
     proxy_source = _as_str(raw.get("proxy_source"), "default").lower()
     if proxy_source not in ("default", "benefit", "custom"):
         proxy_source = "default"
     config.proxy_source = proxy_source
-    config.custom_proxy_api = custom_proxy_api
     config.random_ip_enabled = _as_bool(raw.get("random_ip_enabled"))
     raw_area_code = raw.get("proxy_area_code")
     config.proxy_area_code = None if raw_area_code is None else str(raw_area_code)
+
+
+def _apply_ua_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
     config.random_ua_enabled = _as_bool(raw.get("random_ua_enabled"))
     config.random_ua_ratios = _normalize_user_agent_ratios(raw.get("random_ua_ratios"))
 
+
+def _apply_feature_flags(config: RuntimeConfig, raw: dict[str, Any]) -> None:
     config.fail_stop_enabled = bool(raw.get("fail_stop_enabled", True))
     config.pause_on_aliyun_captcha = bool(raw.get("pause_on_aliyun_captcha", True))
     config.reliability_mode_enabled = bool(raw.get("reliability_mode_enabled", True))
     config.psycho_target_alpha = normalize_target_alpha(raw.get("psycho_target_alpha"))
+
+
+def _apply_reverse_fill_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
     config.reverse_fill_enabled = _as_bool(raw.get("reverse_fill_enabled"))
     config.reverse_fill_source_path = _as_str(raw.get("reverse_fill_source_path"))
-    _rff = _as_str(raw.get("reverse_fill_format"), REVERSE_FILL_FORMAT_AUTO).lower()
-    config.reverse_fill_format = _rff if _rff in _REVERSE_FILL_FORMATS else REVERSE_FILL_FORMAT_AUTO
+    reverse_fill_format = _as_str(raw.get("reverse_fill_format"), REVERSE_FILL_FORMAT_AUTO).lower()
+    config.reverse_fill_format = (
+        reverse_fill_format if reverse_fill_format in _REVERSE_FILL_FORMATS else REVERSE_FILL_FORMAT_AUTO
+    )
     config.reverse_fill_start_row = max(1, _coerce_int(raw.get("reverse_fill_start_row"), 1))
     config.reverse_fill_threads = max(1, _coerce_int(raw.get("reverse_fill_threads"), config.threads or 1))
+
+
+def _apply_answer_rules(config: RuntimeConfig, raw: dict[str, Any]) -> None:
     config.answer_rules = []
-    config.dimension_groups = _normalize_dimension_groups(raw.get("dimension_groups"))
     raw_rules = raw.get("answer_rules")
     if isinstance(raw_rules, list):
         for item in raw_rules:
@@ -541,6 +564,8 @@ def normalize_runtime_config_payload(raw: dict[str, Any]) -> RuntimeConfig:
             if normalized_rule:
                 config.answer_rules.append(normalized_rule)
 
+
+def _apply_ai_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
     ai_keys = {
         "ai_api_key",
         "ai_base_url",
@@ -548,45 +573,79 @@ def normalize_runtime_config_payload(raw: dict[str, Any]) -> RuntimeConfig:
         "ai_model",
         "ai_system_prompt",
     }
-    has_ai_keys = any(key in raw for key in ai_keys)
-    if has_ai_keys:
-        config.ai_api_key = _as_str(raw.get("ai_api_key"))
-        config.ai_base_url = _as_str(raw.get("ai_base_url"))
-        config.ai_api_protocol = _as_str(raw.get("ai_api_protocol"), "auto")
-        config.ai_model = _as_str(raw.get("ai_model"))
-        config.ai_system_prompt = _as_str(raw.get("ai_system_prompt"))
+    if not any(key in raw for key in ai_keys):
+        return
+    config.ai_api_key = _as_str(raw.get("ai_api_key"))
+    config.ai_base_url = _as_str(raw.get("ai_base_url"))
+    config.ai_api_protocol = _as_str(raw.get("ai_api_protocol"), "auto")
+    config.ai_model = _as_str(raw.get("ai_model"))
+    config.ai_system_prompt = _as_str(raw.get("ai_system_prompt"))
 
-    entries_data = raw.get("question_entries") or []
-    config.question_entries = []
-    for item in entries_data:
+
+def _normalize_question_entries_list(
+    raw_entries: list[dict[str, Any]],
+    survey_provider: str,
+) -> list[Any]:
+    entries: list[Any] = []
+    for item in raw_entries:
         entry = deserialize_question_entry(item)
         if (
-            config.survey_provider != SURVEY_PROVIDER_WJX
+            survey_provider != SURVEY_PROVIDER_WJX
             and entry.provider_question_id
             and normalize_survey_provider(entry.survey_provider) == SURVEY_PROVIDER_WJX
         ):
-            entry.survey_provider = config.survey_provider
-        config.question_entries.append(entry)
+            entry.survey_provider = survey_provider
+        entries.append(entry)
+    return entries
 
-    questions_info_data = raw.get("questions_info") or []
-    if isinstance(questions_info_data, list):
-        for item in questions_info_data:
-            if isinstance(item, dict):
-                unknown_question_keys = set(item) - _SURVEY_QUESTION_META_FIELDS
-                if unknown_question_keys:
-                    raise ValueError(
-                        f"{_CONFIG_CORRUPTED_MESSAGE}：题目元数据包含不支持的字段（{', '.join(sorted(unknown_question_keys))}）"
-                    )
-        normalized_questions = ensure_questions_provider_fields(
-            questions_info_data,
-            default_provider=config.survey_provider,
-        )
-        config.questions_info = ensure_survey_question_metas(
-            normalized_questions,
-            default_provider=config.survey_provider,
-        )
-    else:
-        config.questions_info = []
+
+def _normalize_questions_info_data(
+    raw_data: Any,
+    survey_provider: str,
+) -> list[SurveyQuestionMeta]:
+    if not isinstance(raw_data, list):
+        return []
+    for item in raw_data:
+        if isinstance(item, dict):
+            unknown_question_keys = set(item) - _SURVEY_QUESTION_META_FIELDS
+            if unknown_question_keys:
+                raise ValueError(
+                    f"{_CONFIG_CORRUPTED_MESSAGE}：题目元数据包含不支持的字段（"
+                    f"{', '.join(sorted(unknown_question_keys))}）"
+                )
+    normalized_questions = ensure_questions_provider_fields(
+        raw_data,
+        default_provider=survey_provider,
+    )
+    return ensure_survey_question_metas(
+        normalized_questions,
+        default_provider=survey_provider,
+    )
+
+
+def normalize_runtime_config_payload(raw: dict[str, Any]) -> RuntimeConfig:
+    _validate_no_unknown_keys(raw)
+    config = RuntimeConfig()
+
+    _apply_basic_settings(config, raw)
+    _apply_timing_settings(config, raw)
+    _apply_proxy_settings(config, raw)
+    _apply_ua_settings(config, raw)
+    _apply_feature_flags(config, raw)
+    _apply_reverse_fill_settings(config, raw)
+    _apply_answer_rules(config, raw)
+    config.dimension_groups = _normalize_dimension_groups(raw.get("dimension_groups"))
+    _apply_ai_settings(config, raw)
+
+    config.question_entries = _normalize_question_entries_list(
+        raw.get("question_entries") or [],
+        config.survey_provider,
+    )
+    config.questions_info = _normalize_questions_info_data(
+        raw.get("questions_info"),
+        config.survey_provider,
+    )
+
     config.answer_rules, _ = sanitize_answer_rules(config.answer_rules, config.questions_info or [])
     return config
 

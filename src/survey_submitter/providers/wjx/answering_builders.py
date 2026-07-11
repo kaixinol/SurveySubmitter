@@ -66,25 +66,14 @@ async def _resolve_runtime_option_texts(
         return [str(item or "").strip() for item in question.option_texts if str(item or "").strip()]
     return []
 
-async def _build_wjx_choice_action(
-    *,
+def _resolve_choice_forced_index(
     question: SurveyQuestionMeta,
-    config_index: int,
+    option_count: int,
     ctx: ExecutionState,
-    psycho_plan: Any | None,
     thread_name: str,
-    entry_type: QuestionType,
-    prob_config_key: str,
-    fill_config_key: str,
-    kind: str,
-    record_type: str,
-    allow_ai_placeholder: bool = False,
-) -> AnswerAction | None:
-    """Shared logic for single-choice and dropdown builders."""
-    config = ctx.config
+) -> int | None:
+    """Resolve forced choice index from reverse-fill or question config."""
     current = int(question.num or 0)
-    option_texts = await _resolve_runtime_option_texts(question)
-    option_count = max(1, len(option_texts))
     reverse_fill_answer = resolve_current_reverse_fill_answer(
         ctx,
         current,
@@ -95,57 +84,97 @@ async def _build_wjx_choice_action(
         forced_index = _valid_forced_choice_index(reverse_fill_answer.choice_index, option_count)
     if forced_index is None:
         forced_index = _valid_forced_choice_index(question.forced_option_index, option_count)
+    return forced_index
+
+
+async def _select_choice_index(
+    *,
+    config: Any,
+    config_index: int,
+    ctx: ExecutionState,
+    current: int,
+    option_count: int,
+    option_texts: list[str],
+    entry_type: QuestionType,
+    prob_config_key: str,
+    psycho_plan: Any | None,
+    forced_index: int | None,
+) -> tuple[int, bool, bool]:
+    """Compute probabilities and select an option index.
+
+    Returns ``(selected_index, strict_ratio, has_reliability_dimension)``.
+    """
+    if forced_index is not None:
+        return forced_index, False, False
 
     _apply_consistency = (entry_type == QuestionType.SINGLE)
     _use_dimension_gate = (entry_type == QuestionType.SINGLE)
 
     dimension = config.question_dimension_map.get(current)
     has_reliability_dimension = isinstance(dimension, str) and bool(str(dimension).strip())
-    strict_ratio = False
-    if forced_index is None:
-        prob_list = getattr(config, prob_config_key)[config_index] if config_index < len(getattr(config, prob_config_key)) else -1
-        probabilities = normalize_droplist_probs(prob_list, option_count)
-        strict_ratio = is_strict_ratio_question(ctx, current)
-        if not strict_ratio:
-            probabilities = apply_persona_boost(option_texts, probabilities)
-        if _apply_consistency and not has_reliability_dimension:
-            probabilities = apply_single_like_consistency(probabilities, current)
-        distribution_trigger = (strict_ratio or has_reliability_dimension) if _use_dimension_gate else strict_ratio
-        if strict_ratio or (_use_dimension_gate and has_reliability_dimension):
-            strict_reference = list(probabilities)
-            probabilities = resolve_distribution_probabilities(
-                probabilities,
-                option_count,
-                ctx,
-                current,
-                psycho_plan=psycho_plan,
-            )
-            if entry_type == QuestionType.SINGLE:
-                probabilities = enforce_reference_rank_order(probabilities, strict_reference)
-            elif strict_ratio:
-                probabilities = enforce_reference_rank_order(probabilities, strict_reference)
-        elif distribution_trigger:
-            probabilities = resolve_distribution_probabilities(
-                probabilities,
-                option_count,
-                ctx,
-                current,
-                psycho_plan=psycho_plan,
-            )
-        selected_index = (
-            get_tendency_index(
-                option_count,
-                probabilities,
-                dimension=dimension,
-                psycho_plan=psycho_plan,
-                question_index=current,
-            )
-            if has_reliability_dimension
-            else weighted_index(probabilities)
-        )
-    else:
-        selected_index = forced_index
 
+    prob_list = getattr(config, prob_config_key)[config_index] if config_index < len(getattr(config, prob_config_key)) else -1
+    probabilities = normalize_droplist_probs(prob_list, option_count)
+    strict_ratio = is_strict_ratio_question(ctx, current)
+    if not strict_ratio:
+        probabilities = apply_persona_boost(option_texts, probabilities)
+    if _apply_consistency and not has_reliability_dimension:
+        probabilities = apply_single_like_consistency(probabilities, current)
+    distribution_trigger = (strict_ratio or has_reliability_dimension) if _use_dimension_gate else strict_ratio
+    if strict_ratio or (_use_dimension_gate and has_reliability_dimension):
+        strict_reference = list(probabilities)
+        probabilities = resolve_distribution_probabilities(
+            probabilities,
+            option_count,
+            ctx,
+            current,
+            psycho_plan=psycho_plan,
+        )
+        if entry_type == QuestionType.SINGLE:
+            probabilities = enforce_reference_rank_order(probabilities, strict_reference)
+        elif strict_ratio:
+            probabilities = enforce_reference_rank_order(probabilities, strict_reference)
+    elif distribution_trigger:
+        probabilities = resolve_distribution_probabilities(
+            probabilities,
+            option_count,
+            ctx,
+            current,
+            psycho_plan=psycho_plan,
+        )
+    selected_index = (
+        get_tendency_index(
+            option_count,
+            probabilities,
+            dimension=dimension,
+            psycho_plan=psycho_plan,
+            question_index=current,
+        )
+        if has_reliability_dimension
+        else weighted_index(probabilities)
+    )
+    return selected_index, strict_ratio, has_reliability_dimension
+
+
+async def _build_choice_action_result(
+    *,
+    question: SurveyQuestionMeta,
+    current: int,
+    selected_index: int,
+    option_texts: list[str],
+    option_count: int,
+    config: Any,
+    config_index: int,
+    fill_config_key: str,
+    kind: str,
+    record_type: str,
+    forced_index: int | None,
+    strict_ratio: bool,
+    has_reliability_dimension: bool,
+    ctx: ExecutionState,
+    allow_ai_placeholder: bool,
+) -> AnswerAction:
+    """Resolve fill text and build the final AnswerAction for a choice question."""
     selected_text = option_texts[selected_index] if selected_index < len(option_texts) else ""
     fill_entries_list = getattr(config, fill_config_key)
     fill_entries = fill_entries_list[config_index] if config_index < len(fill_entries_list) else None
@@ -168,7 +197,63 @@ async def _build_wjx_choice_action(
         option_fill_texts=((selected_index, fill_value),) if fill_value else (),
         selected_texts=tuple(selected_texts),
         record_type=record_type,
-        pending_distribution_choices=((selected_index, option_count, None),) if forced_index is None and (strict_ratio or has_reliability_dimension) else (),
+        pending_distribution_choices=(
+            (selected_index, option_count, None),
+        ) if forced_index is None and (strict_ratio or has_reliability_dimension) else (),
+    )
+
+
+async def _build_wjx_choice_action(
+    *,
+    question: SurveyQuestionMeta,
+    config_index: int,
+    ctx: ExecutionState,
+    psycho_plan: Any | None,
+    thread_name: str,
+    entry_type: QuestionType,
+    prob_config_key: str,
+    fill_config_key: str,
+    kind: str,
+    record_type: str,
+    allow_ai_placeholder: bool = False,
+) -> AnswerAction | None:
+    """Shared logic for single-choice and dropdown builders."""
+    config = ctx.config
+    current = int(question.num or 0)
+    option_texts = await _resolve_runtime_option_texts(question)
+    option_count = max(1, len(option_texts))
+
+    forced_index = _resolve_choice_forced_index(question, option_count, ctx, thread_name)
+
+    selected_index, strict_ratio, has_reliability_dimension = await _select_choice_index(
+        config=config,
+        config_index=config_index,
+        ctx=ctx,
+        current=current,
+        option_count=option_count,
+        option_texts=option_texts,
+        entry_type=entry_type,
+        prob_config_key=prob_config_key,
+        psycho_plan=psycho_plan,
+        forced_index=forced_index,
+    )
+
+    return await _build_choice_action_result(
+        question=question,
+        current=current,
+        selected_index=selected_index,
+        option_texts=option_texts,
+        option_count=option_count,
+        config=config,
+        config_index=config_index,
+        fill_config_key=fill_config_key,
+        kind=kind,
+        record_type=record_type,
+        forced_index=forced_index,
+        strict_ratio=strict_ratio,
+        has_reliability_dimension=has_reliability_dimension,
+        ctx=ctx,
+        allow_ai_placeholder=allow_ai_placeholder,
     )
 
 
@@ -280,9 +365,9 @@ async def _build_wjx_text_action(
                     else [str(generated or "").strip() or DEFAULT_FILL_TEXT]
                 )
         else:
-            text_entry_types = list(getattr(ctx.config, "text_entry_types", []) or [])
-            multi_text_blank_modes = list(getattr(ctx.config, "multi_text_blank_modes", []) or [])
-            multi_text_blank_ranges = list(getattr(ctx.config, "multi_text_blank_int_ranges", []) or [])
+            text_entry_types = list(ctx.config.text_entry_types or [])
+            multi_text_blank_modes = list(ctx.config.multi_text_blank_modes or [])
+            multi_text_blank_ranges = list(ctx.config.multi_text_blank_int_ranges or [])
             text_values = resolve_text_values_from_config(
                 config.texts[config_index] if config_index < len(config.texts) else [DEFAULT_FILL_TEXT],
                 config.texts_prob[config_index] if config_index < len(config.texts_prob) else [1.0],
