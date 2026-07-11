@@ -2,18 +2,68 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
+from survey_submitter.core.config.answer_datetime_window import normalize_answer_datetime_window
 from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.questions.schema import QuestionEntry
-from survey_submitter.providers.common import SURVEY_PROVIDER_WJX
+from survey_submitter.core.reverse_fill.schema import (
+    REVERSE_FILL_FORMAT_AUTO,
+    REVERSE_FILL_FORMAT_WJX_SCORE,
+    REVERSE_FILL_FORMAT_WJX_SEQUENCE,
+    REVERSE_FILL_FORMAT_WJX_TEXT,
+)
+from survey_submitter.providers.common import SURVEY_PROVIDER_WJX, detect_survey_provider, normalize_survey_provider
 from survey_submitter.providers.contracts import SurveyQuestionMeta
+
+
+# Reverse fill format constants
+_REVERSE_FILL_FORMATS = {
+    REVERSE_FILL_FORMAT_AUTO,
+    REVERSE_FILL_FORMAT_WJX_SEQUENCE,
+    REVERSE_FILL_FORMAT_WJX_SCORE,
+    REVERSE_FILL_FORMAT_WJX_TEXT,
+}
+
+
+_DEFAULT_UA_RATIOS = {"wechat": 33, "mobile": 33, "pc": 34}
+
+
+def _normalize_user_agent_ratios(raw_ratios: Any) -> dict[str, int]:
+    """Normalize user agent ratios from raw input."""
+    if not isinstance(raw_ratios, dict):
+        return dict(_DEFAULT_UA_RATIOS)
+
+    ratios: dict[str, int] = {}
+    for device_type in _DEFAULT_UA_RATIOS:
+        value = raw_ratios.get(device_type)
+        try:
+            int_value = int(value) if value is not None else 0
+        except (ValueError, TypeError):
+            int_value = 0
+        if int_value < 0 or int_value > 100:
+            return dict(_DEFAULT_UA_RATIOS)
+        ratios[device_type] = int_value
+
+    if sum(ratios.values()) != 100:
+        return dict(_DEFAULT_UA_RATIOS)
+    return ratios
 
 
 class SurveySection(BaseConfigModel):
     url: str = ""
     survey_title: str = ""
     survey_provider: str = SURVEY_PROVIDER_WJX
+
+    @model_validator(mode="after")
+    def auto_detect_provider(self) -> SurveySection:
+        normalized = normalize_survey_provider(
+            self.survey_provider,
+            default=detect_survey_provider(self.url),
+        )
+        if normalized != self.survey_provider:
+            object.__setattr__(self, "survey_provider", normalized)
+        return self
 
 
 class AISection(BaseConfigModel):
@@ -31,6 +81,21 @@ class ReverseFillSection(BaseConfigModel):
     format: str = "auto"
     start_row: int = Field(default=1, ge=1)
     threads: int = Field(default=1, ge=1)
+
+    @field_validator("format", mode="before")
+    @classmethod
+    def validate_format(cls, v: Any) -> str:
+        v = str(v or "auto").lower().strip()
+        return v if v in _REVERSE_FILL_FORMATS else "auto"
+
+    @field_validator("start_row", "threads", mode="before")
+    @classmethod
+    def coerce_positive_int(cls, v: Any) -> int:
+        try:
+            value = int(v)
+            return max(1, value)
+        except (ValueError, TypeError):
+            return 1
 
 
 class ExecutionSection(BaseConfigModel):
@@ -57,20 +122,65 @@ class ExecutionSection(BaseConfigModel):
     ai: AISection = Field(default_factory=AISection)
     reverse_fill: ReverseFillSection = Field(default_factory=ReverseFillSection)
 
-    @field_validator("submit_interval_range_seconds", "answer_duration_range_seconds")
+    @field_validator("target_num", "num_threads", mode="before")
     @classmethod
-    def validate_tuple_range(cls, v: tuple[int, int]) -> tuple[int, int]:
-        if len(v) != 2:
-            raise ValueError(f"必须是包含2个元素的元组: {v}")
-        if v[0] < 0 or v[1] < 0:
-            raise ValueError(f"元组元素不能为负数: {v}")
-        return v
+    def coerce_positive_int(cls, v: Any) -> int:
+        try:
+            value = int(v)
+            return max(1, value)
+        except (ValueError, TypeError):
+            return 1
+
+    @field_validator("submit_interval_range_seconds", mode="before")
+    @classmethod
+    def coerce_submit_interval(cls, v: Any) -> tuple[int, int]:
+        if isinstance(v, (list, tuple)) and len(v) >= 2:
+            try:
+                return (int(v[0]), int(v[1]))
+            except (ValueError, TypeError):
+                pass
+        return (0, 0)
+
+    @field_validator("answer_duration_range_seconds", mode="before")
+    @classmethod
+    def coerce_answer_duration(cls, v: Any) -> tuple[int, int]:
+        if isinstance(v, (list, tuple)) and len(v) >= 2:
+            try:
+                return (int(v[0]), int(v[1]))
+            except (ValueError, TypeError):
+                pass
+        return (60, 120)
+
+    @field_validator("answer_datetime_window", mode="before")
+    @classmethod
+    def coerce_datetime_window(cls, v: Any) -> tuple[str, str]:
+        if isinstance(v, (list, tuple)):
+            return normalize_answer_datetime_window([str(x) for x in v])
+        return ("", "")
+
+    @field_validator("proxy_source", mode="before")
+    @classmethod
+    def validate_proxy_source(cls, v: Any) -> str:
+        v = str(v or "default").lower().strip()
+        return v if v in ("default", "benefit", "custom") else "default"
+
+    @field_validator("user_agent_ratios", mode="before")
+    @classmethod
+    def normalize_ratios(cls, v: Any) -> dict[str, int]:
+        return _normalize_user_agent_ratios(v)
 
 
 class AnswerConfigSection(BaseConfigModel):
     question_entries: list[QuestionEntry] = []
     questions_info: list[SurveyQuestionMeta] | None = []
     answer_rules: list[dict[str, Any]] = []
+
+    @field_validator("questions_info", mode="before")
+    @classmethod
+    def coerce_questions_info(cls, v: Any) -> list[SurveyQuestionMeta]:
+        if not isinstance(v, list):
+            return []
+        return v
 
 
 class RuntimeConfig(BaseConfigModel):

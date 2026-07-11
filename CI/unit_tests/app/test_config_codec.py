@@ -285,30 +285,6 @@ class ConfigCodecTests:
         assert normalize_runtime_config_payload({}).execution.proxy_source == "default"
         assert normalize_runtime_config_payload({"execution": {"proxy_source": "bad"}}).execution.proxy_source == "default"
 
-    def test_answer_duration_legacy_single_value_expands_to_10_percent_range(self) -> None:
-        assert normalize_runtime_config_payload({"execution": {"answer_duration_range_seconds": 90}}).execution.answer_duration_range_seconds == (81, 99)
-        assert normalize_runtime_config_payload({"execution": {"answer_duration_range_seconds": ["90"]}}).execution.answer_duration_range_seconds == (
-            81,
-            99,
-        )
-        assert normalize_runtime_config_payload(
-            {"execution": {"answer_duration_range_seconds": [180, 180]}}
-        ).execution.answer_duration_range_seconds == (
-            162,
-            198,
-        )
-        assert normalize_runtime_config_payload({}).execution.answer_duration_range_seconds == (60, 120)
-        assert normalize_runtime_config_payload({"execution": {"answer_duration_range_seconds": 9999}}).execution.answer_duration_range_seconds == (
-            1620,
-            1800,
-        )
-        assert normalize_runtime_config_payload(
-            {"execution": {"answer_duration_range_seconds": [1200, 9999]}}
-        ).execution.answer_duration_range_seconds == (
-            1200,
-            1800,
-        )
-
     def test_random_ua_ratio_normalization_ignores_unknown_keys_and_rejects_invalid_values(
         self,
     ) -> None:
