@@ -331,13 +331,13 @@ class AsyncRuntimeLoopLargeTests:
         monkeypatch.setattr(
             runner,
             "_release_round_resources",
-            lambda *, requeue_reverse_fill: release_flags.append(requeue_reverse_fill),
+            lambda *, submission_failed=False: release_flags.append(submission_failed),
         )
 
         await runner.run()
 
         assert submit_calls == []
-        assert release_flags == [True]
+        assert release_flags == [False]
         assert scheduler.release_calls[0]["requeue"] is True
 
     @pytest.mark.asyncio
@@ -390,12 +390,12 @@ class AsyncRuntimeLoopLargeTests:
         monkeypatch.setattr(
             runner,
             "_release_round_resources",
-            lambda *, requeue_reverse_fill: release_flags.append(requeue_reverse_fill),
+            lambda *, submission_failed=False: release_flags.append(submission_failed),
         )
 
         await runner.run()
 
-        assert release_flags == [True]
+        assert release_flags == [False]
         assert scheduler.release_calls[0]["requeue"] is True
 
     @pytest.mark.asyncio
@@ -569,7 +569,7 @@ class AsyncRuntimeLoopLargeTests:
         monkeypatch.setattr(
             runner,
             "_release_round_resources",
-            lambda *, requeue_reverse_fill: release_flags.append(requeue_reverse_fill),
+            lambda *, submission_failed=False: release_flags.append(submission_failed),
         )
 
         def handle_transport_error(exc: BaseException) -> bool:
@@ -581,7 +581,7 @@ class AsyncRuntimeLoopLargeTests:
         await runner.run()
 
         assert isinstance(seen_errors[0], runtime_loop.http_client.RemoteProtocolError)
-        assert release_flags == [True]
+        assert release_flags == [False]
         assert scheduler.release_calls[0]["requeue"] is True
         assert runner.stop_policy.failure_calls == []
 
@@ -599,11 +599,11 @@ class AsyncRuntimeLoopLargeTests:
         monkeypatch.setattr(
             runner,
             "_release_round_resources",
-            lambda *, requeue_reverse_fill: release_flags.append(requeue_reverse_fill),
+            lambda *, submission_failed=False: release_flags.append(submission_failed),
         )
 
         await runner.run()
 
-        assert release_flags == [True]
+        assert release_flags == [False]
         assert scheduler.release_calls[0]["requeue"] is True
         assert runner.stop_policy.failure_calls[0]["failure_reason"] == FailureReason.FILL_FAILED

@@ -10,7 +10,7 @@ from survey_submitter.core.task import ExecutionState, ProxyLease
 from survey_submitter.constants import PROXY_MAX_PROXIES
 from survey_submitter.network.proxy.api import fetch_proxy_batch_async
 
-from survey_submitter.network.proxy.submit_pool import (
+from survey_submitter.network.proxy.submit import (
     SubmitProxyLease,
     SubmitProxyUnavailableError,
     _blocked_proxy_addresses_locked,
