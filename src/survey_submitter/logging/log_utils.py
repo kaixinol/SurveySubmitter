@@ -244,7 +244,7 @@ def register_popup_handler(handler: Callable[[str, str, str], Any] | None) -> No
     _popup_handler = handler
 
 
-def _dispatch_popup(kind: str, title: str, message: str, default: Any = None) -> Any:
+def _dispatch_popup(kind: str, title: str, message: str, default: object = None) -> object:
     
     logging.log(
         logging.INFO if kind in {"info", "confirm"} else logging.ERROR if kind == "error" else logging.WARNING,
@@ -258,19 +258,19 @@ def _dispatch_popup(kind: str, title: str, message: str, default: Any = None) ->
     return default
 
 
-def log_popup_error(title: str, message: str, **kwargs: Any):
+def log_popup_error(title: str, message: str, **kwargs: object):
     
     _ = kwargs
     return _dispatch_popup("error", title, message, default=False)
 
 
-def log_popup_warning(title: str, message: str, **kwargs: Any):
+def log_popup_warning(title: str, message: str, **kwargs: object):
     
     _ = kwargs
     return _dispatch_popup("warning", title, message, default=True)
 
 
-def log_popup_confirm(title: str, message: str, **kwargs: Any) -> bool:
+def log_popup_confirm(title: str, message: str, **kwargs: object) -> bool:
     
     _ = kwargs
     return bool(_dispatch_popup("confirm", title, message, default=False))
