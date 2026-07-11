@@ -34,21 +34,26 @@ _ORDINARY_POOL_PROVINCE_CODES: set[str] = {
 }
 
 
-def _safe_to_string(value: object, default: str = "") -> str:
+def _safe_to_string(value: str | int | float | None, default: str = "") -> str:
     """Safely convert a value to string, returning default on exception."""
+    if value is None:
+        return default
+    
     try:
-        return str(value or "").strip()
-    except Exception:
+        return str(value).strip()
+    except (ValueError, TypeError):
         return default
 
 
-def _safe_to_int(value: object, default: int = 0) -> int:
+def _safe_to_int(value: str | int | float | None, default: int = 0) -> int:
     """Safely convert a value to non-negative integer, returning default on exception."""
+    if value is None:
+        return max(0, default)
+    
     try:
-        parsed = int(value)
-        return max(0, parsed)
-    except (ValueError, TypeError):
-        return max(0, int(default))
+        return max(0, int(float(value)))
+    except (ValueError, TypeError, OverflowError):
+        return max(0, default)
 
 
 class ProxySettings(BaseConfigModel):
@@ -295,7 +300,7 @@ def apply_custom_proxy_api(custom_api_url: str | None) -> ProxySettings:
     return get_proxy_settings()
 
 
-def _to_non_negative_int(value: object, default: int = 0) -> int:
+def _to_non_negative_int(value: str | int | float | None, default: int = 0) -> int:
     return _safe_to_int(value, default)
 
 

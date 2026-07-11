@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Any, Sequence
+from typing import Sequence
 
 
-def has_positive_weight_values(raw: Any) -> bool:
-    
+def has_positive_weight_values(raw: object) -> bool:
+
     if isinstance(raw, (int, float)):
         try:
             value = float(raw)
@@ -17,7 +17,7 @@ def has_positive_weight_values(raw: Any) -> bool:
     if not isinstance(raw, (list, tuple)):
         return False
 
-    stack: list[Any] = list(raw)
+    stack: list[object] = list(raw)
     while stack:
         item = stack.pop()
         if isinstance(item, (list, tuple)):
@@ -33,18 +33,18 @@ def has_positive_weight_values(raw: Any) -> bool:
 
 
 def is_strict_custom_ratio_mode(
-    distribution_mode: Any,
-    probabilities: Any,
-    custom_weights: Any,
+    distribution_mode: object,
+    probabilities: object,
+    custom_weights: object,
 ) -> bool:
-    
+
     mode = str(distribution_mode or "").strip().lower()
     if mode != "custom":
         return False
     return has_positive_weight_values(custom_weights) or has_positive_weight_values(probabilities)
 
 
-def is_strict_ratio_question(task_ctx: Any, question_number: Any) -> bool:
+def is_strict_ratio_question(task_ctx: object, question_number: object) -> bool:
     if task_ctx is None or question_number is None:
         return False
     try:

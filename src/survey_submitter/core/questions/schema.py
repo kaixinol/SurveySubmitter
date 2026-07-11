@@ -106,7 +106,7 @@ class LocationInfo:
 
 def _infer_option_count(entry: "QuestionEntry") -> int:
 
-    def _nested_length(raw: Any) -> int | None:
+    def _nested_length(raw: object) -> int | None:
         if not isinstance(raw, list):
             return None
         lengths: list[int] = []

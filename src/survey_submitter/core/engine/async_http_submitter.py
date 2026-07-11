@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
-
+from survey_submitter.core.config.codec import UserAgentProfile
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.providers.common import (
@@ -50,8 +49,8 @@ class AsyncHttpSubmitter:
         stop_signal: StopSignalLike,
         proxy_address: str | None,
         user_agent: str | None,
-        user_agent_profile: Any = None,
-        submit_proxy_lease_factory: Any = None,
+        user_agent_profile: UserAgentProfile | None = None,
+        submit_proxy_lease_factory: object | None = None,
     ) -> bool:
         return bool(
             await fill_survey_http(
