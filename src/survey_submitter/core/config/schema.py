@@ -28,7 +28,6 @@ class RuntimeConfig(BaseConfigModel):
     fail_stop_enabled: bool = True
     pause_on_aliyun_captcha: bool = True
     reliability_mode_enabled: bool = True
-    psycho_target_alpha: float = Field(default=0.85, ge=0, le=1)
     ai_api_key: str = ""
     ai_base_url: str = ""
     ai_api_protocol: str = "auto"

@@ -189,7 +189,6 @@ class ConfigCodecTests:
                 "is_location": True,
                 "location_parts": ["北京", "北京", "东城区"],
                 "dimension": " 未分组 ",
-                "psycho_bias": "bad",
             }
         )
 
@@ -204,7 +203,6 @@ class ConfigCodecTests:
         assert entry.is_location is True
         assert entry.location_parts == ["北京", "北京", "东城区"]
         assert entry.dimension is None
-        assert entry.psycho_bias == "custom"
 
         payload = serialize_question_entry(entry)
         assert payload["dimension"] is None

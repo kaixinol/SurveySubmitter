@@ -31,8 +31,8 @@ class ProviderCommonTests:
                 "survey_submitter.core.engine.provider_common.reset_persona"
             ) as reset_persona_mock,
         ):
-            with provider_run_context(config, psycho_plan="manual-plan") as resolved:
-                assert resolved == "manual-plan"
+            with provider_run_context(config) as resolved:
+                pass
         set_persona_mock.assert_called_once_with({"name": "p"})
         reset_context_mock.assert_called_once()
         reset_tendency_mock.assert_called_once()

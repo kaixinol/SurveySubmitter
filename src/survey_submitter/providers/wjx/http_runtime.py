@@ -21,10 +21,6 @@ from survey_submitter.core.config.codec import UserAgentProfile
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.modes.duration_control import sample_answer_duration_seconds
 from survey_submitter.core.persona.context import record_answer
-from survey_submitter.core.psychometrics.psychometric import (
-    DimensionPsychometricPlan,
-    PsychometricPlan,
-)
 from survey_submitter.core.questions.distribution import record_pending_distribution_choice
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.network.proxy.pool import mask_proxy_for_log
@@ -438,14 +434,12 @@ async def _build_actions(
     config: ExecutionConfig,
     ctx: ExecutionState,
     *,
-    psycho_plan: PsychometricPlan | DimensionPsychometricPlan | None,
     stop_signal: StopSignalLike | None,
     thread_name: str = "",
 ) -> list[AnswerAction]:
     plan = await _build_action_plan(
         config,
         ctx,
-        psycho_plan=psycho_plan,
         stop_signal=stop_signal,
         thread_name=thread_name,
     )
@@ -456,7 +450,6 @@ async def _build_action_plan(
     config: ExecutionConfig,
     ctx: ExecutionState,
     *,
-    psycho_plan: PsychometricPlan | DimensionPsychometricPlan | None,
     stop_signal: StopSignalLike | None,
     thread_name: str = "",
 ) -> HttpLogicPlan:
@@ -475,7 +468,6 @@ async def _build_action_plan(
         return await build_answer_action(
             question,
             ctx,
-            psycho_plan=psycho_plan,  # ty: ignore[invalid-argument-type]
             thread_name=thread_name,
             allow_ai_placeholder=True,
         )
@@ -517,7 +509,6 @@ async def _build_and_record_actions(
     config: ExecutionConfig,
     ctx: ExecutionState,
     *,
-    psycho_plan: PsychometricPlan | DimensionPsychometricPlan | None,
     stop_signal: StopSignalLike | None,
     thread_name: str,
 ) -> tuple[list[AnswerAction], HttpLogicPlan, str]:
@@ -526,7 +517,6 @@ async def _build_and_record_actions(
     plan = await _build_action_plan(
         config,
         ctx,
-        psycho_plan=psycho_plan,
         stop_signal=stop_signal,
         thread_name=thread_name,
     )
@@ -656,7 +646,6 @@ async def brush_wjx_http(
     *,
     stop_signal: StopSignalLike | None = None,
     thread_name: str = "",
-    psycho_plan: PsychometricPlan | DimensionPsychometricPlan | None = None,
     proxy_address: str | None = None,
     user_agent: str | None = None,
     user_agent_profile: UserAgentProfile | None = None,
@@ -676,7 +665,6 @@ async def brush_wjx_http(
         actions, _plan, submitdata = await _build_and_record_actions(
             config,
             ctx,
-            psycho_plan=psycho_plan,
             stop_signal=stop_signal,
             thread_name=thread_name,
         )

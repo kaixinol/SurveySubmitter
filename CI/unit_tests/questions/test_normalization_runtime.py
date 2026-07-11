@@ -38,7 +38,6 @@ class NormalizationRuntimeTests:
                 option_count=2,
                 question_num=2,
                 dimension="满意度",
-                psycho_bias="positive",
             ),
             QuestionEntry(
                 question_type="multiple",
@@ -54,14 +53,12 @@ class NormalizationRuntimeTests:
                 option_count=3,
                 question_num=4,
                 dimension="态度",
-                psycho_bias=["positive", "negative"],
             ),
             QuestionEntry(
                 question_type="scale",
                 probabilities=[1, 3],
                 option_count=2,
                 question_num=5,
-                psycho_bias="negative",
             ),
             QuestionEntry(
                 question_type="score", probabilities=[2, 2], option_count=2, question_num=6
@@ -117,12 +114,10 @@ class NormalizationRuntimeTests:
         assert ctx.single_option_fill_texts == [[None, "补充", None]]
         assert ctx.single_attached_option_selects == [[{"option_index": 1, "weights": [1, 0]}]]
         assert ctx.question_dimension_map[2] == "满意度"
-        assert ctx.question_psycho_bias_map[2] == "positive"
         assert ctx.multiple_prob == [[25.0, 75.0]]
         assert ctx.multiple_option_fill_texts == [["A", "B"]]
         assert ctx.matrix_prob == [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 1.0, 0.0]]
         assert ctx.question_dimension_map[4] == "态度"
-        assert ctx.question_psycho_bias_map[4] == ["positive", "negative"]
         assert ctx.scale_prob == [[0.25, 0.75], [0.5, 0.5]]
         assert ctx.slider_targets[0] == 75.0
         assert math.isnan(ctx.slider_targets[1])
@@ -219,7 +214,6 @@ class NormalizationRuntimeTests:
         configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
 
         assert ctx.question_dimension_map == {1: GLOBAL_RELIABILITY_DIMENSION}
-        assert ctx.question_ordinal_score_map == {1: [4, 3, 2, 1, 0]}
 
     def test_configure_probabilities_adds_obvious_attitude_single_to_reliability(self) -> None:
         ctx = SimpleNamespace(
@@ -252,7 +246,6 @@ class NormalizationRuntimeTests:
         configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
 
         assert ctx.question_dimension_map == {4: GLOBAL_RELIABILITY_DIMENSION}
-        assert ctx.question_ordinal_score_map == {4: [0, 1, 2, 3, 4]}
 
     @pytest.mark.parametrize(
         ("entry", "message"),

@@ -21,7 +21,6 @@ from survey_submitter.core.config.answer_datetime_window import (
 )
 from survey_submitter.core.config.codec import clone_questions_info
 from survey_submitter.core.config.schema import RuntimeConfig
-from survey_submitter.core.psychometrics.psychometric import normalize_target_alpha
 from survey_submitter.core.questions.config import (
     configure_probabilities,
     validate_question_config,
@@ -203,11 +202,6 @@ def _build_execution_config_template(
     reverse_fill_spec: ReverseFillSpec | None,
     questions_info: list[SurveyQuestionMeta],
 ) -> ExecutionConfig:
-    try:
-        psycho_target_alpha = normalize_target_alpha(config.psycho_target_alpha)
-    except (ValueError, TypeError):
-        psycho_target_alpha = normalize_target_alpha(None)
-
     thread_limit = _resolve_thread_limit(config)
     requested_target_num = max(1, int(config.target or 1))
     requested_num_threads = max(1, int(config.threads or 1))
@@ -244,7 +238,6 @@ def _build_execution_config_template(
         stop_on_fail_enabled=bool(config.fail_stop_enabled),
         answer_rules=copy.deepcopy(list(config.answer_rules or [])),
         reverse_fill_spec=copy.deepcopy(reverse_fill_spec),
-        psycho_target_alpha=psycho_target_alpha,
         ai_system_prompt=str(config.ai_system_prompt or "").strip(),
     )
     execution_config.questions_metadata = _build_questions_metadata(questions_info)
