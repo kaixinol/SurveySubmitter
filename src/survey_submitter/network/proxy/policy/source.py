@@ -65,17 +65,6 @@ def _safe_to_string(value: str | int | float | None, default: str = "") -> str:
         return default
 
 
-def _safe_to_int(value: str | int | float | None, default: int = 0) -> int:
-    """Safely convert a value to non-negative integer, returning default on exception."""
-    if value is None:
-        return max(0, default)
-
-    try:
-        return max(0, int(float(value)))
-    except (ValueError, TypeError, OverflowError):
-        return max(0, default)
-
-
 class ProxySettings(BaseConfigModel):
     model_config = ConfigDict(frozen=True)
     source: str
@@ -178,12 +167,23 @@ def set_proxy_occupy_minute_by_answer_duration(
     min_seconds = max_seconds = 0
     if isinstance(answer_duration_range_seconds, (list, tuple)):
         if len(answer_duration_range_seconds) >= 1:
-            min_seconds = _to_non_negative_int(answer_duration_range_seconds[0], 0)
-        max_seconds = (
-            _to_non_negative_int(answer_duration_range_seconds[1], min_seconds)
-            if len(answer_duration_range_seconds) >= 2
-            else min_seconds
-        )
+            first = answer_duration_range_seconds[0]
+            if isinstance(first, (int, float, str)):
+                try:
+                    min_seconds = max(0, int(float(first)))
+                except (ValueError, TypeError, OverflowError):
+                    min_seconds = 0
+        if len(answer_duration_range_seconds) >= 2:
+            second = answer_duration_range_seconds[1]
+            if isinstance(second, (int, float, str)):
+                try:
+                    max_seconds = max(min_seconds, int(float(second)))
+                except (ValueError, TypeError, OverflowError):
+                    max_seconds = min_seconds
+            else:
+                max_seconds = min_seconds
+        else:
+            max_seconds = min_seconds
     max_seconds = max(max_seconds, min_seconds)
     normalized_provider = str(survey_provider or "").strip().lower()
     minute = get_proxy_minute_by_answer_seconds(max_seconds, survey_provider=normalized_provider)
@@ -327,7 +327,3 @@ def apply_custom_proxy_api(custom_api_url: str | None) -> ProxySettings:
 
     set_proxy_api_override(custom_api_url if custom_api_url else None)
     return get_proxy_settings()
-
-
-def _to_non_negative_int(value: str | int | float | None, default: int = 0) -> int:
-    return _safe_to_int(value, default)

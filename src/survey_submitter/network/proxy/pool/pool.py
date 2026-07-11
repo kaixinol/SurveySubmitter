@@ -15,7 +15,6 @@ from survey_submitter.constants import (
 )
 from survey_submitter.logging.log_utils import log_suppressed_exception
 from survey_submitter.network.proxy.policy.source import (
-    _to_non_negative_int,
     get_proxy_minute_by_answer_seconds,
 )
 from survey_submitter.providers.common import (
@@ -140,9 +139,19 @@ def get_proxy_required_ttl_seconds(
     max_seconds = 0
     if isinstance(answer_duration_range_seconds, (list, tuple)):
         if len(answer_duration_range_seconds) >= 2:
-            max_seconds = _to_non_negative_int(answer_duration_range_seconds[1], 0)
+            second = answer_duration_range_seconds[1]
+            if isinstance(second, (int, float, str)):
+                try:
+                    max_seconds = max(0, int(float(second)))
+                except (ValueError, TypeError, OverflowError):
+                    max_seconds = 0
         elif len(answer_duration_range_seconds) >= 1:
-            max_seconds = _to_non_negative_int(answer_duration_range_seconds[0], 0)
+            first = answer_duration_range_seconds[0]
+            if isinstance(first, (int, float, str)):
+                try:
+                    max_seconds = max(0, int(float(first)))
+                except (ValueError, TypeError, OverflowError):
+                    max_seconds = 0
     normalized_provider = str(survey_provider or "").strip().lower()
     if normalized_provider == SURVEY_PROVIDER_WJX:
         return HTTP_PROXY_MIN_REMAINING_TTL_SECONDS

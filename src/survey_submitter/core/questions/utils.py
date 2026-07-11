@@ -331,22 +331,20 @@ def generate_random_generic_text() -> str:
 
 
 def try_parse_random_int_range(raw: Any) -> tuple[int, int] | None:
-
-    def _coerce_int(value: str | int | float | None) -> int | None:
-        if value is None:
+    def _to_int_or_none(value: Any) -> int | None:
+        if not isinstance(value, (int, float, str)):
             return None
-
         try:
             return int(float(value))
         except (ValueError, TypeError, OverflowError):
             return None
 
     if isinstance(raw, dict):
-        min_value = _coerce_int(raw.get("min"))
-        max_value = _coerce_int(raw.get("max"))
+        min_value = _to_int_or_none(raw.get("min"))
+        max_value = _to_int_or_none(raw.get("max"))
     elif isinstance(raw, (list, tuple)) and len(raw) >= 2:
-        min_value = _coerce_int(raw[0])
-        max_value = _coerce_int(raw[1])
+        min_value = _to_int_or_none(raw[0])
+        max_value = _to_int_or_none(raw[1])
     else:
         return None
 

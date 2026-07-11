@@ -3,9 +3,12 @@ from __future__ import annotations
 import copy
 import logging
 import random
-from typing import Any, cast
+from typing import TYPE_CHECKING
 
 from pydantic import ConfigDict
+
+if TYPE_CHECKING:
+    from survey_submitter.core.questions.config import QuestionEntry
 
 from survey_submitter.core.reverse_fill import (
     REVERSE_FILL_FORMAT_AUTO,
@@ -160,7 +163,9 @@ _RUNTIME_CONFIG_FIELDS.update({"question_entries", "questions_info"})
 
 def _coerce_int(value: object, default: int = 0) -> int:
     try:
-        return int(cast(Any, value))
+        if isinstance(value, (int, float, str)):
+            return int(value)
+        return default
     except (ValueError, TypeError):
         return default
 
@@ -185,6 +190,12 @@ def _as_bool(value: object, default: bool = False) -> bool:
             return False
         return default
     return bool(value)
+
+
+def _as_list(value: object) -> list[object]:
+    if isinstance(value, list):
+        return list(value)
+    return []
 
 
 def _normalize_user_agent_ratios(raw_ratios: object) -> dict[str, int]:
@@ -249,11 +260,12 @@ def _prob_config_is_unset(value: object) -> bool:
         if not value:
             return True
         for item in value:
-            try:
-                if float(cast(Any, item)) > 0:
-                    return False
-            except (ValueError, TypeError):
-                continue
+            if isinstance(item, (int, float, str)):
+                try:
+                    if float(item) > 0:
+                        return False
+                except (ValueError, TypeError):
+                    continue
         return True
     return False
 
@@ -268,7 +280,7 @@ def _custom_weights_has_positive(weights: object) -> bool:
             stack.extend(item)
             continue
         try:
-            if float(cast(Any, item)) > 0:
+            if isinstance(item, (int, float, str)) and float(item) > 0:
                 return True
         except (ValueError, TypeError):
             continue
@@ -325,17 +337,24 @@ def _normalize_answer_duration_range(value: object) -> tuple[int, int]:
     try:
         if isinstance(value, (list, tuple)):
             if len(value) >= 2:
-                low = min(MAX_ANSWER_DURATION_SECONDS, max(0, int(cast(Any, value[0]))))
-                high = min(MAX_ANSWER_DURATION_SECONDS, max(low, int(cast(Any, value[1]))))
+                first, second = value[0], value[1]
+                if not isinstance(first, (int, float, str)) or not isinstance(second, (int, float, str)):
+                    return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
+                low = min(MAX_ANSWER_DURATION_SECONDS, max(0, int(first)))
+                high = min(MAX_ANSWER_DURATION_SECONDS, max(low, int(second)))
                 if low == 0 and high == 0:
                     return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
                 if low == high:
                     return _legacy_answer_duration_to_range(low)
                 return low, high
             if len(value) == 1:
-                return _legacy_answer_duration_to_range(int(cast(Any, value[0])))
+                only = value[0]
+                if isinstance(only, (int, float, str)):
+                    return _legacy_answer_duration_to_range(int(only))
             return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
-        return _legacy_answer_duration_to_range(int(cast(Any, value)))
+        if isinstance(value, (int, float, str)):
+            return _legacy_answer_duration_to_range(int(value))
+        return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
     except (ValueError, TypeError) as exc:
         log_suppressed_exception(
             "_normalize_answer_duration_range failure",
@@ -407,17 +426,11 @@ def serialize_question_entry(entry) -> dict[str, object]:
     }
 
 
-def deserialize_question_entry(data: dict[str, object]):
+def deserialize_question_entry(data: dict[str, object]) -> QuestionEntry:
     from survey_submitter.core.questions.config import QuestionEntry
 
     if not isinstance(data, dict):
         raise ValueError(f"{_CONFIG_CORRUPTED_MESSAGE}：题目配置必须是字典类型")
-
-    def _as_int(value: object, default: int = 0) -> int:
-        try:
-            return int(cast(Any, value))
-        except (ValueError, TypeError):
-            return default
 
     normalized_data = dict(data)
 
@@ -443,8 +456,8 @@ def deserialize_question_entry(data: dict[str, object]):
         "probabilities": probabilities,
         "custom_weights": custom_weights,
         "question_type": str(normalized_data.get("question_type") or "text").strip(),
-        "rows": _as_int(normalized_data.get("rows"), 1),
-        "option_count": _as_int(normalized_data.get("option_count"), 0),
+        "rows": _coerce_int(normalized_data.get("rows"), 1),
+        "option_count": _coerce_int(normalized_data.get("option_count"), 0),
         "survey_provider": normalize_survey_provider(
             normalized_data.get("survey_provider"),
             default=SURVEY_PROVIDER_WJX,
@@ -467,9 +480,9 @@ def deserialize_question_entry(data: dict[str, object]):
         ),
         "option_fill_texts": normalized_data.get("option_fill_texts"),
         "fillable_option_indices": normalized_data.get("fillable_option_indices"),
-        "attached_option_selects": list(normalized_data.get("attached_option_selects") or []),
+        "attached_option_selects": _as_list(normalized_data.get("attached_option_selects")),
         "is_location": bool(normalized_data.get("is_location")),
-        "location_parts": list(normalized_data.get("location_parts") or []),
+        "location_parts": _as_list(normalized_data.get("location_parts")),
         "dimension": _normalize_dimension_value(normalized_data.get("dimension")),
         "psycho_bias": _normalize_psycho_bias(normalized_data),
     })
@@ -480,8 +493,8 @@ def deserialize_question_entry(data: dict[str, object]):
         raise ValueError(f"{_CONFIG_CORRUPTED_MESSAGE}：{exc}") from exc
 
 
-def clone_question_entries(entries: list[object] | None) -> list[object]:
-    cloned: list[object] = []
+def clone_question_entries(entries: list[object] | list[QuestionEntry] | None) -> list[QuestionEntry]:
+    cloned: list[QuestionEntry] = []
     for item in list(entries or []):
         try:
             cloned.append(deserialize_question_entry(serialize_question_entry(item)))
@@ -510,7 +523,7 @@ def build_runtime_config_snapshot(
     snapshot.survey_provider = default_provider
     entry_source = question_entries if question_entries is not None else snapshot.question_entries
     info_source = questions_info if questions_info is not None else snapshot.questions_info
-    snapshot.question_entries = cast(Any, clone_question_entries(cast(Any, entry_source)))
+    snapshot.question_entries = clone_question_entries(entry_source)
     snapshot.questions_info = clone_questions_info(info_source, default_provider=default_provider)
     snapshot.answer_rules = copy.deepcopy(list(snapshot.answer_rules or []))
     snapshot.dimension_groups = copy.deepcopy(list(snapshot.dimension_groups or []))
@@ -540,7 +553,8 @@ def _apply_basic_settings(config: RuntimeConfig, raw: dict[str, object]) -> None
 def _normalize_submit_interval(raw_value: object) -> tuple[int, int]:
     try:
         if isinstance(raw_value, (list, tuple)) and len(raw_value) >= 2:
-            return int(cast(Any, raw_value[0])), int(cast(Any, raw_value[1]))
+            first, second = raw_value[0], raw_value[1]
+            return int(first) if isinstance(first, (int, float, str)) else 0, int(second) if isinstance(second, (int, float, str)) else 0
         return (0, 0)
     except (ValueError, TypeError) as exc:
         log_suppressed_exception("_tuple_pair failure", exc, level=logging.WARNING)
@@ -550,9 +564,15 @@ def _normalize_submit_interval(raw_value: object) -> tuple[int, int]:
 def _apply_timing_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
     config.submit_interval = _normalize_submit_interval(raw.get("submit_interval"))
     config.answer_duration = _normalize_answer_duration_range(raw.get("answer_duration"))
-    config.answer_datetime_window = normalize_answer_datetime_window(
-        cast(Any, raw.get("answer_datetime_window"))
-    )
+    raw_window = raw.get("answer_datetime_window")
+    if isinstance(raw_window, list):
+        window_list = [str(x) for x in raw_window]
+        config.answer_datetime_window = normalize_answer_datetime_window(window_list)
+    elif isinstance(raw_window, tuple):
+        window_tuple = tuple(str(x) for x in raw_window)
+        config.answer_datetime_window = normalize_answer_datetime_window(window_tuple)
+    else:
+        config.answer_datetime_window = normalize_answer_datetime_window(None)
 
 
 def _apply_proxy_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
@@ -575,7 +595,10 @@ def _apply_feature_flags(config: RuntimeConfig, raw: dict[str, object]) -> None:
     config.fail_stop_enabled = bool(raw.get("fail_stop_enabled", True))
     config.pause_on_aliyun_captcha = bool(raw.get("pause_on_aliyun_captcha", True))
     config.reliability_mode_enabled = bool(raw.get("reliability_mode_enabled", True))
-    config.psycho_target_alpha = normalize_target_alpha(cast(Any, raw.get("psycho_target_alpha")))
+    raw_alpha = raw.get("psycho_target_alpha")
+    config.psycho_target_alpha = normalize_target_alpha(
+        raw_alpha if isinstance(raw_alpha, (int, float, str)) else None
+    )
 
 
 def _apply_reverse_fill_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
@@ -598,9 +621,11 @@ def _apply_answer_rules(config: RuntimeConfig, raw: dict[str, object]) -> None:
     raw_rules = raw.get("answer_rules")
     if isinstance(raw_rules, list):
         for item in raw_rules:
-            normalized_rule = normalize_rule_dict(cast(dict[str, object], item))
-            if normalized_rule:
-                config.answer_rules.append(normalized_rule)
+            if isinstance(item, dict):
+                rule_dict: dict[str, object] = {str(k): v for k, v in item.items()}
+                normalized_rule = normalize_rule_dict(rule_dict)
+                if normalized_rule:
+                    config.answer_rules.append(normalized_rule)
 
 
 def _apply_ai_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
@@ -623,8 +648,8 @@ def _apply_ai_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
 def _normalize_question_entries_list(
     raw_entries: list[dict[str, object]],
     survey_provider: str,
-) -> list[object]:
-    entries: list[object] = []
+) -> list[QuestionEntry]:
+    entries: list[QuestionEntry] = []
     for item in raw_entries:
         entry = deserialize_question_entry(item)
         if (
@@ -643,6 +668,7 @@ def _normalize_questions_info_data(
 ) -> list[SurveyQuestionMeta]:
     if not isinstance(raw_data, list):
         return []
+    dict_items: list[dict[str, object]] = []
     for item in raw_data:
         if isinstance(item, dict):
             unknown_question_keys = set(item) - _SURVEY_QUESTION_META_FIELDS
@@ -651,8 +677,10 @@ def _normalize_questions_info_data(
                     f"{_CONFIG_CORRUPTED_MESSAGE}：题目元数据包含不支持的字段（"
                     f"{', '.join(sorted(unknown_question_keys))}）"
                 )
+            question_dict: dict[str, object] = {str(k): v for k, v in item.items()}
+            dict_items.append(question_dict)
     normalized_questions = ensure_questions_provider_fields(
-        cast(Any, raw_data),
+        dict_items,
         default_provider=survey_provider,
     )
     return ensure_survey_question_metas(
@@ -675,10 +703,16 @@ def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
     config.dimension_groups = _normalize_dimension_groups(raw.get("dimension_groups"))
     _apply_ai_settings(config, raw)
 
-    config.question_entries = cast(Any, _normalize_question_entries_list(
-        cast(list[dict[str, object]], raw.get("question_entries") or []),
+    raw_question_entries = raw.get("question_entries") or []
+    question_entry_dicts: list[dict[str, object]] = [
+        {str(k): v for k, v in item.items()}
+        for item in raw_question_entries
+        if isinstance(item, dict)
+    ] if isinstance(raw_question_entries, list) else []
+    config.question_entries = _normalize_question_entries_list(
+        question_entry_dicts,
         config.survey_provider,
-    ))
+    )
     config.questions_info = _normalize_questions_info_data(
         raw.get("questions_info"),
         config.survey_provider,

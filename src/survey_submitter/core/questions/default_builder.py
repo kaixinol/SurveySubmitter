@@ -45,25 +45,20 @@ DEFAULT_MULTIPLE_PROBABILITY = 50.0
 DEFAULT_SLIDER_MAX = 100.0
 
 
-def _as_float(val: object, default: float) -> float:
-    try:
-        return float(cast(Any, val))
-    except (ValueError, TypeError):
-        return default
-
-
 def _build_mid_bias_weights(option_count: int) -> list[float]:
     count = max(1, int(option_count or 1))
     return [1.0] * count
 
 
 def _normalize_question_num(raw: object) -> int | None:
-    try:
-        if raw is None:
-            return None
-        return int(cast(Any, raw))
-    except (ValueError, TypeError):
+    if raw is None:
         return None
+    if isinstance(raw, (int, float, str)):
+        try:
+            return int(raw)
+        except (ValueError, TypeError):
+            return None
+    return None
 
 
 def _normalize_title(raw: object) -> str:
@@ -84,8 +79,10 @@ def _normalize_provider_key(
 
 
 def _normalize_forced_option_index(raw: object, option_count: int) -> int | None:
+    if not isinstance(raw, (int, float, str)):
+        return None
     try:
-        idx = int(cast(Any, raw))
+        idx = int(raw)
     except (ValueError, TypeError):
         return None
     total = max(0, int(option_count or 0))
@@ -283,11 +280,11 @@ def _extract_question_attrs(
         title_text=title_text,
         forced_option_text=forced_option_text,
         forced_option_index=forced_option_index,
-        attached_option_selects=cast(list[object], attached_option_selects),
+        attached_option_selects=list(attached_option_selects),
         survey_provider=detected_provider,
         provider_question_id=provider_question_id,
         provider_page_id=provider_page_id,
-        q_type=cast(QuestionType, q_type),
+        q_type=QuestionType(q_type) if isinstance(q_type, str) else q_type,
         parsed_title_key=parsed_title_key,
     )
 
@@ -413,10 +410,12 @@ def _resolve_default_config(
         custom_weights = None
         texts = None
     elif q_type == QuestionType.SLIDER:
-        min_val = _as_float(attrs.slider_min, 0.0)
-        max_val = _as_float(
-            attrs.slider_max, cast(float, DEFAULT_SLIDER_MAX if attrs.slider_max is None else attrs.slider_max)
-        )
+        min_val = float(attrs.slider_min) if isinstance(attrs.slider_min, (int, float, str)) else 0.0
+        max_val_raw = attrs.slider_max
+        if isinstance(max_val_raw, (int, float, str)):
+            max_val = float(max_val_raw)
+        else:
+            max_val = float(DEFAULT_SLIDER_MAX)
         if max_val <= min_val:
             max_val = min_val + DEFAULT_SLIDER_MAX
         midpoint = min_val + (max_val - min_val) / 2.0
