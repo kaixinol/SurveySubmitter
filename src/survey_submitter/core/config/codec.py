@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import logging
 import random
-from typing import Any
 
 from pydantic import ConfigDict
 
@@ -152,19 +151,19 @@ _RUNTIME_CONFIG_FIELDS = set(RuntimeConfig.model_fields.keys())
 _RUNTIME_CONFIG_FIELDS.update({"question_entries", "questions_info"})
 
 
-def _coerce_int(value: Any, default: int = 0) -> int:
+def _coerce_int(value: object, default: int = 0) -> int:
     try:
         return int(value)
     except (ValueError, TypeError):
         return default
 
 
-def _as_str(value: Any, default: str = "") -> str:
+def _as_str(value: object, default: str = "") -> str:
     text = str(value or default).strip()
     return text or default
 
 
-def _as_bool(value: Any, default: bool = False) -> bool:
+def _as_bool(value: object, default: bool = False) -> bool:
     if value is None:
         return default
     if isinstance(value, bool):
@@ -181,7 +180,7 @@ def _as_bool(value: Any, default: bool = False) -> bool:
     return bool(value)
 
 
-def _normalize_user_agent_ratios(raw_ratios: Any) -> dict[str, int]:
+def _normalize_user_agent_ratios(raw_ratios: object) -> dict[str, int]:
     if not isinstance(raw_ratios, dict):
         return dict(_DEFAULT_RANDOM_UA_RATIOS)
 
@@ -200,7 +199,7 @@ def _normalize_user_agent_ratios(raw_ratios: Any) -> dict[str, int]:
 def _select_user_agent_from_ratios(
     ratios: dict[str, int],
     *,
-    rng: Any = None,
+    rng: random.Random | None = None,
 ) -> UserAgentProfile | None:
     chooser = rng or random
     devices: list[str] = []
@@ -234,7 +233,7 @@ def _select_user_agent_from_ratios(
     )
 
 
-def _prob_config_is_unset(value: Any) -> bool:
+def _prob_config_is_unset(value: object) -> bool:
     if value is None:
         return True
     if value == -1:
@@ -252,10 +251,10 @@ def _prob_config_is_unset(value: Any) -> bool:
     return False
 
 
-def _custom_weights_has_positive(weights: Any) -> bool:
+def _custom_weights_has_positive(weights: object) -> bool:
     if not isinstance(weights, list) or not weights:
         return False
-    stack: list[Any] = list(weights)
+    stack: list[object] = list(weights)
     while stack:
         item = stack.pop()
         if isinstance(item, list):
@@ -269,14 +268,14 @@ def _custom_weights_has_positive(weights: Any) -> bool:
     return False
 
 
-def _normalize_psycho_bias(data: dict[str, Any]) -> str:
+def _normalize_psycho_bias(data: dict[str, object]) -> str:
     bias = str(data.get("psycho_bias") or "custom")
     if bias in ("left", "center", "right"):
         return bias
     return "custom"
 
 
-def _normalize_multi_text_blank_modes(raw: Any) -> list[str]:
+def _normalize_multi_text_blank_modes(raw: object) -> list[str]:
     if not isinstance(raw, list):
         return []
     normalized: list[str] = []
@@ -286,19 +285,19 @@ def _normalize_multi_text_blank_modes(raw: Any) -> list[str]:
     return normalized
 
 
-def _normalize_multi_text_blank_ai_flags(raw: Any) -> list[bool]:
+def _normalize_multi_text_blank_ai_flags(raw: object) -> list[bool]:
     if not isinstance(raw, list):
         return []
     return [bool(item) for item in raw]
 
 
-def _normalize_random_int_range(raw: Any) -> list[int]:
+def _normalize_random_int_range(raw: object) -> list[int]:
     if raw in (None, "", []):
         return []
     return serialize_random_int_range(raw)
 
 
-def _normalize_multi_text_blank_int_ranges(raw: Any) -> list[list[int]]:
+def _normalize_multi_text_blank_int_ranges(raw: object) -> list[list[int]]:
     if not isinstance(raw, list):
         return []
     return [_normalize_random_int_range(item) for item in raw]
@@ -313,7 +312,7 @@ def _legacy_answer_duration_to_range(value: int) -> tuple[int, int]:
     return low, high
 
 
-def _normalize_answer_duration_range(value: Any) -> tuple[int, int]:
+def _normalize_answer_duration_range(value: object) -> tuple[int, int]:
     if value in (None, "", []):
         return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
     try:
@@ -339,14 +338,14 @@ def _normalize_answer_duration_range(value: Any) -> tuple[int, int]:
         return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
 
 
-def _normalize_dimension_value(raw: Any) -> str | None:
+def _normalize_dimension_value(raw: object) -> str | None:
     text = str(raw or "").strip()
     if not text or text == "未分组":
         return None
     return text
 
 
-def _normalize_dimension_groups(raw: Any) -> list[str]:
+def _normalize_dimension_groups(raw: object) -> list[str]:
     if not isinstance(raw, list):
         return []
     groups: list[str] = []
@@ -360,7 +359,7 @@ def _normalize_dimension_groups(raw: Any) -> list[str]:
     return groups
 
 
-def serialize_question_entry(entry) -> dict[str, Any]:
+def serialize_question_entry(entry) -> dict[str, object]:
     probabilities = entry.probabilities
     if (
         entry.distribution_mode == "custom"
@@ -397,10 +396,10 @@ def serialize_question_entry(entry) -> dict[str, Any]:
     }
 
 
-def deserialize_question_entry(data: dict[str, Any]):
+def deserialize_question_entry(data: dict[str, object]):
     from survey_submitter.core.questions.config import QuestionEntry
 
-    def _as_int(value: Any, default: int = 0) -> int:
+    def _as_int(value: object, default: int = 0) -> int:
         try:
             return int(value)
         except (ValueError, TypeError):
@@ -448,8 +447,8 @@ def deserialize_question_entry(data: dict[str, Any]):
     )
 
 
-def clone_question_entries(entries: Any) -> list[Any]:
-    cloned: list[Any] = []
+def clone_question_entries(entries: list[object] | None) -> list[object]:
+    cloned: list[object] = []
     for item in list(entries or []):
         try:
             cloned.append(deserialize_question_entry(serialize_question_entry(item)))
@@ -458,15 +457,15 @@ def clone_question_entries(entries: Any) -> list[Any]:
     return cloned
 
 
-def clone_questions_info(questions: Any, *, default_provider: str = SURVEY_PROVIDER_WJX) -> list[SurveyQuestionMeta]:
+def clone_questions_info(questions: list[SurveyQuestionMeta] | None, *, default_provider: str = SURVEY_PROVIDER_WJX) -> list[SurveyQuestionMeta]:
     return clone_survey_question_metas(questions or [], default_provider=default_provider)
 
 
 def build_runtime_config_snapshot(
     config: RuntimeConfig,
     *,
-    question_entries: Any = None,
-    questions_info: Any = None,
+    question_entries: list[object] | None = None,
+    questions_info: list[SurveyQuestionMeta] | None = None,
 ) -> RuntimeConfig:
     snapshot = copy.deepcopy(config)
     default_provider = normalize_survey_provider(
@@ -484,7 +483,7 @@ def build_runtime_config_snapshot(
     return snapshot
 
 
-def _validate_no_unknown_keys(raw: dict[str, Any]) -> None:
+def _validate_no_unknown_keys(raw: dict[str, object]) -> None:
     unknown_keys = set(raw or {}) - _RUNTIME_CONFIG_FIELDS
     if unknown_keys:
         raise ValueError(
@@ -492,7 +491,7 @@ def _validate_no_unknown_keys(raw: dict[str, Any]) -> None:
         )
 
 
-def _apply_basic_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
+def _apply_basic_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
     config.url = _as_str(raw.get("url"))
     config.survey_title = _as_str(raw.get("survey_title"))
     config.survey_provider = normalize_survey_provider(
@@ -503,7 +502,7 @@ def _apply_basic_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
     config.threads = _coerce_int(raw.get("threads"), 1)
 
 
-def _normalize_submit_interval(raw_value: Any) -> tuple[int, int]:
+def _normalize_submit_interval(raw_value: object) -> tuple[int, int]:
     try:
         if isinstance(raw_value, (list, tuple)) and len(raw_value) >= 2:
             return int(raw_value[0]), int(raw_value[1])
@@ -513,7 +512,7 @@ def _normalize_submit_interval(raw_value: Any) -> tuple[int, int]:
         return (0, 0)
 
 
-def _apply_timing_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
+def _apply_timing_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
     config.submit_interval = _normalize_submit_interval(raw.get("submit_interval"))
     config.answer_duration = _normalize_answer_duration_range(raw.get("answer_duration"))
     config.answer_datetime_window = normalize_answer_datetime_window(
@@ -521,7 +520,7 @@ def _apply_timing_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
     )
 
 
-def _apply_proxy_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
+def _apply_proxy_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
     config.custom_proxy_api = _as_str(raw.get("custom_proxy_api"))
     proxy_source = _as_str(raw.get("proxy_source"), "default").lower()
     if proxy_source not in ("default", "benefit", "custom"):
@@ -532,19 +531,19 @@ def _apply_proxy_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
     config.proxy_area_code = None if raw_area_code is None else str(raw_area_code)
 
 
-def _apply_ua_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
+def _apply_ua_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
     config.random_ua_enabled = _as_bool(raw.get("random_ua_enabled"))
     config.random_ua_ratios = _normalize_user_agent_ratios(raw.get("random_ua_ratios"))
 
 
-def _apply_feature_flags(config: RuntimeConfig, raw: dict[str, Any]) -> None:
+def _apply_feature_flags(config: RuntimeConfig, raw: dict[str, object]) -> None:
     config.fail_stop_enabled = bool(raw.get("fail_stop_enabled", True))
     config.pause_on_aliyun_captcha = bool(raw.get("pause_on_aliyun_captcha", True))
     config.reliability_mode_enabled = bool(raw.get("reliability_mode_enabled", True))
     config.psycho_target_alpha = normalize_target_alpha(raw.get("psycho_target_alpha"))
 
 
-def _apply_reverse_fill_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
+def _apply_reverse_fill_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
     config.reverse_fill_enabled = _as_bool(raw.get("reverse_fill_enabled"))
     config.reverse_fill_source_path = _as_str(raw.get("reverse_fill_source_path"))
     reverse_fill_format = _as_str(raw.get("reverse_fill_format"), REVERSE_FILL_FORMAT_AUTO).lower()
@@ -555,7 +554,7 @@ def _apply_reverse_fill_settings(config: RuntimeConfig, raw: dict[str, Any]) -> 
     config.reverse_fill_threads = max(1, _coerce_int(raw.get("reverse_fill_threads"), config.threads or 1))
 
 
-def _apply_answer_rules(config: RuntimeConfig, raw: dict[str, Any]) -> None:
+def _apply_answer_rules(config: RuntimeConfig, raw: dict[str, object]) -> None:
     config.answer_rules = []
     raw_rules = raw.get("answer_rules")
     if isinstance(raw_rules, list):
@@ -565,7 +564,7 @@ def _apply_answer_rules(config: RuntimeConfig, raw: dict[str, Any]) -> None:
                 config.answer_rules.append(normalized_rule)
 
 
-def _apply_ai_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
+def _apply_ai_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
     ai_keys = {
         "ai_api_key",
         "ai_base_url",
@@ -583,10 +582,10 @@ def _apply_ai_settings(config: RuntimeConfig, raw: dict[str, Any]) -> None:
 
 
 def _normalize_question_entries_list(
-    raw_entries: list[dict[str, Any]],
+    raw_entries: list[dict[str, object]],
     survey_provider: str,
-) -> list[Any]:
-    entries: list[Any] = []
+) -> list[object]:
+    entries: list[object] = []
     for item in raw_entries:
         entry = deserialize_question_entry(item)
         if (
@@ -600,7 +599,7 @@ def _normalize_question_entries_list(
 
 
 def _normalize_questions_info_data(
-    raw_data: Any,
+    raw_data: object,
     survey_provider: str,
 ) -> list[SurveyQuestionMeta]:
     if not isinstance(raw_data, list):
@@ -623,7 +622,7 @@ def _normalize_questions_info_data(
     )
 
 
-def normalize_runtime_config_payload(raw: dict[str, Any]) -> RuntimeConfig:
+def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
     _validate_no_unknown_keys(raw)
     config = RuntimeConfig()
 
@@ -650,13 +649,13 @@ def normalize_runtime_config_payload(raw: dict[str, Any]) -> RuntimeConfig:
     return config
 
 
-def _ensure_supported_config_payload(payload: dict[str, Any], *, config_path: str) -> dict[str, Any]:
+def _ensure_supported_config_payload(payload: dict[str, object], *, config_path: str) -> dict[str, object]:
     del config_path
     return dict(payload)
 
 
-def serialize_runtime_config(config: RuntimeConfig) -> dict[str, Any]:
-    payload: dict[str, Any] = config.model_dump()
+def serialize_runtime_config(config: RuntimeConfig) -> dict[str, object]:
+    payload: dict[str, object] = config.model_dump()
     payload["question_entries"] = [
         serialize_question_entry(entry) for entry in list(config.question_entries or [])
     ]
@@ -664,7 +663,7 @@ def serialize_runtime_config(config: RuntimeConfig) -> dict[str, Any]:
     return payload
 
 
-def deserialize_runtime_config(payload: dict[str, Any]) -> RuntimeConfig:
+def deserialize_runtime_config(payload: dict[str, object]) -> RuntimeConfig:
     return normalize_runtime_config_payload(payload)
 
 

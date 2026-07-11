@@ -6,7 +6,6 @@ import logging
 import re
 import threading
 from importlib import resources
-from typing import Any
 
 import survey_submitter.network.http as http_client
 from survey_submitter.constants import DEFAULT_HTTP_HEADERS
@@ -50,14 +49,14 @@ def _read_asset_text(filename: str) -> str:
 
 
 
-_AREA_CODES_CACHE: dict[str, Any] | None = None
+_AREA_CODES_CACHE: dict[str, object] | None = None
 _SUPPORTED_CODES_CACHE: tuple[set[str], bool] | None = None
 _BENEFIT_CACHE_LOCK = threading.RLock()
-_BENEFIT_SUPPORTED_AREAS_CACHE: list[dict[str, Any]] | None = None
+_BENEFIT_SUPPORTED_AREAS_CACHE: list[dict[str, object]] | None = None
 _BENEFIT_CITY_CODE_INDEX_CACHE: dict[str, str] | None = None
 
 
-def _normalize_province_name(name: Any) -> str:
+def _normalize_province_name(name: object) -> str:
     text = re.sub(r"\s+", "", str(name or "").strip())
     for suffix in _PROVINCE_SUFFIXES:
         if text.endswith(suffix):
@@ -66,7 +65,7 @@ def _normalize_province_name(name: Any) -> str:
     return text
 
 
-def _normalize_city_name(name: Any) -> str:
+def _normalize_city_name(name: object) -> str:
     text = re.sub(r"\s+", "", str(name or "").strip())
     if text == "市辖区":
         return text
@@ -77,7 +76,7 @@ def _normalize_city_name(name: Any) -> str:
     return text
 
 
-def _normalize_area_code(area_code: Any) -> str:
+def _normalize_area_code(area_code: object) -> str:
     text = str(area_code or "").strip()
     return text if _AREA_CODE_PATTERN.fullmatch(text) else ""
 
@@ -116,7 +115,7 @@ def load_supported_area_codes() -> tuple[set[str], bool]:
     return codes, has_all
 
 
-def load_area_codes(supported_only: bool = False) -> list[dict[str, Any]]:
+def load_area_codes(supported_only: bool = False) -> list[dict[str, object]]:
     
     global _AREA_CODES_CACHE
 
@@ -126,7 +125,7 @@ def load_area_codes(supported_only: bool = False) -> list[dict[str, Any]]:
         except json.JSONDecodeError:
             _AREA_CODES_CACHE = {}
 
-    area_codes_cache: dict[str, Any] = _AREA_CODES_CACHE if isinstance(_AREA_CODES_CACHE, dict) else {}
+    area_codes_cache: dict[str, object] = _AREA_CODES_CACHE if isinstance(_AREA_CODES_CACHE, dict) else {}
     provinces = area_codes_cache.get("provinces")
     if not isinstance(provinces, list):
         return []
@@ -137,7 +136,7 @@ def load_area_codes(supported_only: bool = False) -> list[dict[str, Any]]:
     if not supported_codes:
         return []
 
-    filtered: list[dict[str, Any]] = []
+    filtered: list[dict[str, object]] = []
     for province in provinces:
         if not isinstance(province, dict):
             continue
@@ -156,9 +155,9 @@ def load_area_codes(supported_only: bool = False) -> list[dict[str, Any]]:
     return filtered
 
 
-def _build_local_area_lookup() -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
+def _build_local_area_lookup() -> tuple[list[dict[str, object]], dict[str, dict[str, object]]]:
     provinces = load_area_codes(supported_only=False)
-    province_lookup: dict[str, dict[str, Any]] = {}
+    province_lookup: dict[str, dict[str, object]] = {}
 
     for province in provinces:
         if not isinstance(province, dict):
@@ -171,7 +170,7 @@ def _build_local_area_lookup() -> tuple[list[dict[str, Any]], dict[str, dict[str
         cities = province.get("cities") or []
         if not isinstance(cities, list):
             cities = []
-        city_entries: list[dict[str, Any]] = []
+        city_entries: list[dict[str, object]] = []
         for city in cities:
             if not isinstance(city, dict):
                 continue
@@ -233,17 +232,17 @@ def _parse_benefit_area_text(content: str) -> dict[str, set[str]]:
     return {key: value for key, value in provinces.items() if value}
 
 
-def _build_benefit_supported_data_from_online() -> tuple[list[dict[str, Any]], dict[str, str]]:
+def _build_benefit_supported_data_from_online() -> tuple[list[dict[str, object]], dict[str, str]]:
     _, province_lookup = _build_local_area_lookup()
     online_supported = _parse_benefit_area_text(_download_benefit_area_text())
-    filtered_provinces: list[dict[str, Any]] = []
+    filtered_provinces: list[dict[str, object]] = []
     city_code_index: dict[str, str] = {}
 
     for normalized_province, online_cities in online_supported.items():
         local_province = province_lookup.get(normalized_province)
         if not local_province:
             continue
-        matched_cities: list[dict[str, Any]] = []
+        matched_cities: list[dict[str, object]] = []
         for city_entry in local_province["cities"]:
             city_normalized = str(city_entry.get("normalized_name") or "")
             if city_normalized in online_cities:
@@ -255,14 +254,14 @@ def _build_benefit_supported_data_from_online() -> tuple[list[dict[str, Any]], d
     return filtered_provinces, city_code_index
 
 
-def _build_benefit_supported_data_from_local_fallback() -> tuple[list[dict[str, Any]], dict[str, str]]:
+def _build_benefit_supported_data_from_local_fallback() -> tuple[list[dict[str, object]], dict[str, str]]:
     supported_codes, _ = load_supported_area_codes()
     _, province_lookup = _build_local_area_lookup()
-    filtered_provinces: list[dict[str, Any]] = []
+    filtered_provinces: list[dict[str, object]] = []
     city_code_index: dict[str, str] = {}
 
     for province in province_lookup.values():
-        matched_cities: list[dict[str, Any]] = []
+        matched_cities: list[dict[str, object]] = []
         for city_entry in province["cities"]:
             city_code = str(city_entry.get("code") or "")
             if city_code not in supported_codes:
@@ -297,7 +296,7 @@ def _ensure_benefit_cache(force_refresh: bool = False) -> None:
         _BENEFIT_CITY_CODE_INDEX_CACHE = city_code_index
 
 
-def load_benefit_supported_areas(force_refresh: bool = False) -> list[dict[str, Any]]:
+def load_benefit_supported_areas(force_refresh: bool = False) -> list[dict[str, object]]:
     
     _ensure_benefit_cache(force_refresh=force_refresh)
     with _BENEFIT_CACHE_LOCK:

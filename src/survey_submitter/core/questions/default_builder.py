@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import dataclasses
 import logging
-from typing import Any
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.questions.meta_helpers import (
@@ -34,7 +33,7 @@ DEFAULT_MULTIPLE_PROBABILITY = 50.0
 DEFAULT_SLIDER_MAX = 100.0
 
 
-def _as_float(val: Any, default: float) -> float:
+def _as_float(val: object, default: float) -> float:
     try:
         return float(val)
     except (ValueError, TypeError):
@@ -46,7 +45,7 @@ def _build_mid_bias_weights(option_count: int) -> list[float]:
     return [1.0] * count
 
 
-def _normalize_question_num(raw: Any) -> int | None:
+def _normalize_question_num(raw: object) -> int | None:
     try:
         if raw is None:
             return None
@@ -55,14 +54,14 @@ def _normalize_question_num(raw: Any) -> int | None:
         return None
 
 
-def _normalize_title(raw: Any) -> str:
+def _normalize_title(raw: object) -> str:
     text = str(raw or "").strip()
     if not text:
         return ""
     return "".join(text.split())
 
 
-def _normalize_provider_key(raw_provider: Any, raw_question_id: Any) -> tuple[str, str] | None:
+def _normalize_provider_key(raw_provider: object, raw_question_id: object) -> tuple[str, str] | None:
     provider = normalize_survey_provider(raw_provider, default=SURVEY_PROVIDER_WJX)
     question_id = str(raw_question_id or "").strip()
     if not question_id:
@@ -70,7 +69,7 @@ def _normalize_provider_key(raw_provider: Any, raw_question_id: Any) -> tuple[st
     return provider, question_id
 
 
-def _normalize_forced_option_index(raw: Any, option_count: int) -> int | None:
+def _normalize_forced_option_index(raw: object, option_count: int) -> int | None:
     try:
         idx = int(raw)
     except (ValueError, TypeError):
@@ -107,7 +106,7 @@ def _infer_multi_text_blank_modes(q: SurveyQuestionMeta, blank_count: int) -> li
 
 
 def _filter_option_fill_texts_to_fillable(
-    option_fill_texts: Any,
+    option_fill_texts: object,
     option_count: int,
     fillable_indices: list[int],
 ) -> list[str | None] | None:
@@ -140,17 +139,17 @@ def _filter_option_fill_texts_to_fillable(
 class _QuestionAttrs:
     """Attributes extracted from a single *SurveyQuestionMeta*."""
 
-    num: Any
+    num: object
     option_count: int
     rows: int
     is_location: bool
     text_inputs: int
-    slider_min: Any
-    slider_max: Any
+    slider_min: object
+    slider_max: object
     title_text: str
     forced_option_text: str
     forced_option_index: int | None
-    attached_option_selects: list
+    attached_option_selects: list[object]
     survey_provider: str
     provider_question_id: str
     provider_page_id: str
@@ -162,20 +161,20 @@ class _QuestionAttrs:
 class _ResolvedConfig:
     """Fully-resolved configuration values ready for *QuestionEntry* construction."""
 
-    probabilities: Any
+    probabilities: object
     distribution: str
-    custom_weights: Any
-    texts: Any
+    custom_weights: object
+    texts: object
     option_count: int
     ai_enabled: bool
     text_random_mode: str
-    text_random_int_range: list
-    multi_text_blank_modes: list
-    multi_text_blank_ai_flags: list
-    multi_text_blank_int_ranges: list
-    option_fill_texts: Any
-    fillable_indices: Any
-    attached_selects: list
+    text_random_int_range: list[object]
+    multi_text_blank_modes: list[str]
+    multi_text_blank_ai_flags: list[bool]
+    multi_text_blank_int_ranges: list[list[int]]
+    option_fill_texts: object
+    fillable_indices: object
+    attached_selects: list[object]
 
 
 # ---------------------------------------------------------------------------
@@ -352,10 +351,10 @@ def _resolve_default_config(
     option_count = attrs.option_count
 
     if q_type in {QuestionType.SINGLE, QuestionType.DROPDOWN, QuestionType.SCALE}:
-        probabilities: Any = -1
+        probabilities: object = -1
         distribution = "random"
-        custom_weights: Any = None
-        texts: Any = None
+        custom_weights: object = None
+        texts: object = None
     elif q_type == QuestionType.SCORE:
         option_count = max(option_count, 2)
         weights = _build_mid_bias_weights(option_count)

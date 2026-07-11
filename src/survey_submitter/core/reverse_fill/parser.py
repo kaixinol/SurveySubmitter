@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Iterable
+from typing import Iterable
 
 from survey_submitter.core.questions.schema import QuestionEntry
 from survey_submitter.core.questions.meta_helpers import infer_question_entry_type
@@ -25,7 +25,7 @@ _LEADING_INDEX_RE = re.compile(r"^[\(\[（【]?\s*\d+\s*[\)\]）】]?\s*")
 _NUMBER_TEXT_RE = re.compile(r"^\d+(?:\.0+)?$")
 
 
-def normalize_reverse_fill_text(value: Any) -> str:
+def normalize_reverse_fill_text(value: object) -> str:
     if value is None:
         return ""
     if isinstance(value, bool):
@@ -40,7 +40,7 @@ def normalize_reverse_fill_text(value: Any) -> str:
     return str(value).strip()
 
 
-def normalize_reverse_fill_key(value: Any) -> str:
+def normalize_reverse_fill_key(value: object) -> str:
     text = normalize_reverse_fill_text(value)
     if not text:
         return ""
@@ -52,7 +52,7 @@ def normalize_reverse_fill_key(value: Any) -> str:
     return text.casefold()
 
 
-def label_variants(value: Any) -> list[str]:
+def label_variants(value: object) -> list[str]:
     text = normalize_reverse_fill_text(value)
     if not text:
         return []
@@ -73,11 +73,11 @@ def label_variants(value: Any) -> list[str]:
     return variants
 
 
-def is_reverse_fill_blank(value: Any) -> bool:
+def is_reverse_fill_blank(value: object) -> bool:
     return not normalize_reverse_fill_text(value)
 
 
-def infer_reverse_fill_question_type(info: SurveyQuestionMeta | dict[str, Any], entry: QuestionEntry | None = None) -> str:
+def infer_reverse_fill_question_type(info: SurveyQuestionMeta | dict[str, object], entry: QuestionEntry | None = None) -> str:
     if isinstance(info, dict) and bool(info.get("is_multi_text")):
         return QuestionType.MULTI_TEXT
     inferred = infer_question_entry_type(info)
@@ -109,7 +109,7 @@ def supports_reverse_fill_runtime(question_type: str, info: SurveyQuestionMeta |
     return True
 
 
-def resolve_question_entry(info: SurveyQuestionMeta | dict[str, Any], entries: list[QuestionEntry]) -> QuestionEntry | None:
+def resolve_question_entry(info: SurveyQuestionMeta | dict[str, object], entries: list[QuestionEntry]) -> QuestionEntry | None:
     raw_question_num = info.num if isinstance(info, SurveyQuestionMeta) else info.get("num")
     question_num = int(raw_question_num) if raw_question_num is not None else None
     raw_title = info.title if isinstance(info, SurveyQuestionMeta) else info.get("title")
@@ -125,7 +125,7 @@ def resolve_question_entry(info: SurveyQuestionMeta | dict[str, Any], entries: l
     return matched_by_title
 
 
-def resolve_ordered_columns(columns: list[ReverseFillColumn], expected_labels: Iterable[Any]) -> list[ReverseFillColumn]:
+def resolve_ordered_columns(columns: list[ReverseFillColumn], expected_labels: Iterable[object]) -> list[ReverseFillColumn]:
     ordered_columns = sorted(list(columns or []), key=lambda item: int(item.column_index or 0))
     labels = list(expected_labels or [])
     if not ordered_columns or not labels or len(ordered_columns) != len(labels):
@@ -159,7 +159,7 @@ def resolve_ordered_columns(columns: list[ReverseFillColumn], expected_labels: I
     return [column for column in resolved if column is not None]
 
 
-def _parse_one_based_index(value: Any) -> int | None:
+def _parse_one_based_index(value: object) -> int | None:
     if value is None or isinstance(value, bool):
         return None
     if isinstance(value, int):
@@ -185,7 +185,7 @@ def _ensure_supported_choice_value(text: str) -> None:
         raise ValueError("检测到\u201c选项+附加填空\u201d复合值，V1 不支持")
 
 
-def _option_text_index_map(option_texts: Iterable[Any]) -> dict[str, int]:
+def _option_text_index_map(option_texts: Iterable[object]) -> dict[str, int]:
     mapping: dict[str, int] = {}
     for index, option_text in enumerate(list(option_texts or [])):
         for variant in label_variants(option_text):
@@ -197,9 +197,9 @@ def parse_choice_answer(
     *,
     question_num: int,
     question_type: str,
-    raw_value: Any,
+    raw_value: object,
     export_format: str,
-    option_texts: list[Any],
+    option_texts: list[object],
 ) -> ReverseFillAnswer | None:
     _ = question_type
     if is_reverse_fill_blank(raw_value):
@@ -235,7 +235,7 @@ def parse_choice_answer(
     raise ValueError(f"无法把值\u201c{text}\u201d匹配到题目选项")
 
 
-def parse_text_answer(*, question_num: int, raw_value: Any) -> ReverseFillAnswer | None:
+def parse_text_answer(*, question_num: int, raw_value: object) -> ReverseFillAnswer | None:
     if is_reverse_fill_blank(raw_value):
         return None
     return ReverseFillAnswer(
@@ -274,9 +274,9 @@ def parse_matrix_answer(
     ordered_columns: list[ReverseFillColumn],
     raw_row: ReverseFillRawRow,
     export_format: str,
-    option_texts: list[Any],
+    option_texts: list[object],
 ) -> ReverseFillAnswer | None:
-    values: list[Any] = []
+    values: list[object] = []
     for column in list(ordered_columns or []):
         values.append((raw_row.values_by_column or {}).get(int(column.column_index)))
     if all(is_reverse_fill_blank(value) for value in values):
