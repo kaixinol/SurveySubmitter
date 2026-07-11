@@ -50,14 +50,16 @@ class PsychometricPlanTests:
             "survey_submitter.core.psychometrics.psychometric.randn",
             side_effect=[1.0, 0.0, 0.0, 0.0],
         ):
-            plan = build_psychometric_plan(items, target_alpha=0.9)
+            plan = build_psychometric_plan(items, target_alpha=0.9)  # ty:ignore[invalid-argument-type]
         assert plan is not None
         assert plan is not None
         assert set(plan.choices.keys()) == {"q:1", "q:2", "q:3"}
         assert plan.get_choice(1) == 3
         assert plan.get_choice(2) == 3
         assert plan.get_choice(3) == 1
-        assert plan.get_choice(1) > plan.get_choice(3)
+        assert plan.get_choice(1) is not None
+        assert plan.get_choice(3) is not None
+        assert plan.get_choice(1) > plan.get_choice(3)  # ty:ignore[unsupported-operator]
 
     def test_build_dimension_psychometric_plan_skips_small_dimension_and_exposes_choices(
         self,
@@ -90,7 +92,7 @@ class PsychometricPlanTests:
             ],
         }
         with patch("survey_submitter.core.psychometrics.psychometric.randn", return_value=0.0):
-            plan = build_dimension_psychometric_plan(grouped_items, target_alpha=0.9)
+            plan = build_dimension_psychometric_plan(grouped_items, target_alpha=0.9)  # ty:ignore[invalid-argument-type]
         assert plan is not None
         assert plan is not None
         assert "engagement" in plan.plans

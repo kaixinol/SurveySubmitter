@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import TypeVar
+from typing import TypeVar, cast
 
 from survey_submitter.core.ai.runtime import AIRuntimeError, is_ai_timeout_runtime_error
 from survey_submitter.core.engine.failure_reason import FailureReason
@@ -39,7 +39,7 @@ def _get_session_proxy_address(session: object) -> str | None:
     if session is None:
         return None
     try:
-        return getattr(session, "proxy_address", None)  # type: ignore[return-value]
+        return cast("str | None", getattr(session, "proxy_address", None))
     except AttributeError:
         return None
 

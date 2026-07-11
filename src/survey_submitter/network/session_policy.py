@@ -256,6 +256,8 @@ def _resolve_proxy_provider_for_thread(ctx: ExecutionState, thread_name: str) ->
     try:
         with ctx.lock:
             lease = ctx.proxy_in_use_by_thread.get(thread_name)
+            if lease is None:
+                return "unknown"
             return str(lease.source or "unknown").strip() or "unknown"
     except (AttributeError, KeyError):
         logging.info("\u8bfb\u53d6\u4ee3\u7406\u6765\u6e90\u5931\u8d25", exc_info=True)

@@ -6,7 +6,7 @@ import logging
 import threading
 import time
 from dataclasses import dataclass
-from typing import Literal, overload
+from typing import Any, Awaitable, Callable, Literal, overload
 
 import httpx
 
@@ -33,7 +33,7 @@ class _AsyncClientEntry:
 
 
 class _AsyncStreamResponse:
-    def __init__(self, response: httpx.Response, stream_ctx: object, release: object) -> None:
+    def __init__(self, response: httpx.Response, stream_ctx: Any, release: Callable[[], Awaitable[object]]) -> None:
         self._response = response
         self._stream_ctx = stream_ctx
         self._release = release
@@ -199,7 +199,7 @@ class _AsyncClientManager:
             await self._close_clients(clients_to_close)
 
     async def request(
-        self, method: str, url: str, **kwargs: object
+        self, method: str, url: str, **kwargs: Any
     ) -> httpx.Response | _AsyncStreamResponse:
         stream = bool(kwargs.pop("stream", False))
         allow_redirects = bool(kwargs.pop("allow_redirects", True))
@@ -269,7 +269,7 @@ async def request(
 ) -> httpx.Response: ...
 
 
-async def request(method: str, url: str, **kwargs: object) -> httpx.Response | _AsyncStreamResponse:
+async def request(method: str, url: str, **kwargs: Any) -> httpx.Response | _AsyncStreamResponse:
     return await _client_manager.request(method, url, **kwargs)
 
 
@@ -281,7 +281,7 @@ async def get(url: str, *, stream: Literal[True], **kwargs: object) -> _AsyncStr
 async def get(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response: ...
 
 
-async def get(url: str, **kwargs: object) -> httpx.Response | _AsyncStreamResponse:
+async def get(url: str, **kwargs: Any) -> httpx.Response | _AsyncStreamResponse:
     return await request("GET", url, **kwargs)
 
 
@@ -293,7 +293,7 @@ async def post(url: str, *, stream: Literal[True], **kwargs: object) -> _AsyncSt
 async def post(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response: ...
 
 
-async def post(url: str, **kwargs: object) -> httpx.Response | _AsyncStreamResponse:
+async def post(url: str, **kwargs: Any) -> httpx.Response | _AsyncStreamResponse:
     return await request("POST", url, **kwargs)
 
 
@@ -305,7 +305,7 @@ async def put(url: str, *, stream: Literal[True], **kwargs: object) -> _AsyncStr
 async def put(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response: ...
 
 
-async def put(url: str, **kwargs: object) -> httpx.Response | _AsyncStreamResponse:
+async def put(url: str, **kwargs: Any) -> httpx.Response | _AsyncStreamResponse:
     return await request("PUT", url, **kwargs)
 
 
@@ -319,7 +319,7 @@ async def delete(
 ) -> httpx.Response: ...
 
 
-async def delete(url: str, **kwargs: object) -> httpx.Response | _AsyncStreamResponse:
+async def delete(url: str, **kwargs: Any) -> httpx.Response | _AsyncStreamResponse:
     return await request("DELETE", url, **kwargs)
 
 

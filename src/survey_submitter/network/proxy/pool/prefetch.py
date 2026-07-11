@@ -20,7 +20,6 @@ def prefetch_proxy_pool(
         fetch_proxy_batch_async(
             expected_count=max(1, expected_count),
             proxy_url=effective_url,
-            notify_on_area_error=False,
             stop_signal=stop_signal,
         )
     )

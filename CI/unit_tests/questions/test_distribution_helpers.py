@@ -58,7 +58,7 @@ class DistributionHelperTests:
         )
         ctx = _FakeCtx(counts=(10, [9, 1]))
 
-        result = distribution.resolve_distribution_probabilities([7, 3], 2, ctx, 8)
+        result = distribution.resolve_distribution_probabilities([7, 3], 2, ctx, 8)  # ty:ignore[invalid-argument-type]
 
         assert len(result) == 2
         assert abs(sum(result) - 1.0) < 1e-9
@@ -89,9 +89,9 @@ class DistributionHelperTests:
         result = distribution.resolve_distribution_probabilities(
             [6, 4],
             2,
-            ctx,
+            ctx,  # ty:ignore[invalid-argument-type]
             9,
-            psycho_plan=_FakePsychoPlan(choice=1),
+            psycho_plan=_FakePsychoPlan(choice=1),  # ty:ignore[invalid-argument-type]
         )
 
         assert len(result) == 2
@@ -102,9 +102,9 @@ class DistributionHelperTests:
     ) -> None:
         ctx = _FakeCtx()
 
-        distribution.record_pending_distribution_choice(ctx, None, 0, 2)
-        distribution.record_pending_distribution_choice(ctx, 1, -1, 2)
-        distribution.record_pending_distribution_choice(ctx, 1, 5, 2)
-        distribution.record_pending_distribution_choice(ctx, 1, 1, 2, row_index=3)
+        distribution.record_pending_distribution_choice(ctx, None, 0, 2)  # ty:ignore[invalid-argument-type]
+        distribution.record_pending_distribution_choice(ctx, 1, -1, 2)  # ty:ignore[invalid-argument-type]
+        distribution.record_pending_distribution_choice(ctx, 1, 5, 2)  # ty:ignore[invalid-argument-type]
+        distribution.record_pending_distribution_choice(ctx, 1, 1, 2, row_index=3)  # ty:ignore[invalid-argument-type]
 
         assert ctx.append_calls == [("matrix:1:3", 1, 2)]

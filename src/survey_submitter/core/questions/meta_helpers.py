@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Mapping
+from typing import Any, Mapping, cast
 
 from survey_submitter.core.questions.types import QuestionType, TypeCode
 from survey_submitter.providers.contracts import (
@@ -33,7 +33,7 @@ def count_positive_weights(raw_weights: object) -> int:
     count = 0
     for value in raw_weights:
         try:
-            if float(value) > 0:
+            if float(cast(Any, value)) > 0:
                 count += 1
         except (ValueError, TypeError):
             continue
@@ -58,7 +58,7 @@ def find_all_zero_matrix_rows(raw_weights: object) -> list[int]:
 
 def find_all_zero_attached_selects(attached_configs: object) -> list[tuple[int, str]]:
     issues: list[tuple[int, str]] = []
-    for cfg_idx, cfg in enumerate(list(attached_configs or []), start=1):
+    for cfg_idx, cfg in enumerate(list(cast(Any, attached_configs) or []), start=1):
         if not isinstance(cfg, dict):
             continue
         weights = cfg.get("weights")
@@ -130,10 +130,10 @@ def normalize_attached_option_selects(
             if raw_option_index is None:
                 continue
             try:
-                option_index = int(raw_option_index)
+                option_index = int(cast(Any, raw_option_index))
             except (ValueError, TypeError):
                 continue
-            existing_map[option_index] = item
+            existing_map[option_index] = cast(dict[str, object], item)
     normalized: list[dict[str, object]] = []
     for item in parsed_list:
         if not isinstance(item, dict):
@@ -142,7 +142,7 @@ def normalize_attached_option_selects(
         if raw_option_index is None:
             continue
         try:
-            option_index = int(raw_option_index)
+            option_index = int(cast(Any, raw_option_index))
         except (ValueError, TypeError):
             continue
         option_text = str(item.get("option_text") or "").strip()
@@ -163,7 +163,7 @@ def normalize_attached_option_selects(
                 for idx in range(len(select_options)):
                     raw_weight = existing_weights[idx] if idx < len(existing_weights) else 0.0
                     try:
-                        weights.append(max(0.0, float(raw_weight)))
+                        weights.append(max(0.0, float(cast(Any, raw_weight))))
                     except (ValueError, TypeError):
                         weights.append(0.0)
                 if not any(weight > 0 for weight in weights):
@@ -192,7 +192,7 @@ def normalize_fillable_option_indices(
     seen: set[int] = set()
     for raw in source:
         try:
-            index = int(raw)
+            index = int(cast(Any, raw))
         except (ValueError, TypeError):
             continue
         if index < 0 or index >= total or index in seen:

@@ -118,6 +118,7 @@ class WjxHtmlParserMatrixTests:
         assert html_parser_matrix._question_div_looks_like_slider_matrix(question_div)
         assert html_parser_matrix._format_slider_matrix_value(3.0) == "3"
         assert html_parser_matrix._format_slider_matrix_value(3.5) == "3.5"
+        assert question_div is not None
         assert html_parser_matrix._build_slider_matrix_option_texts_from_input(
             question_div.select("input.ui-slider-input")[0]
         ) == ["1", "3", "5"]

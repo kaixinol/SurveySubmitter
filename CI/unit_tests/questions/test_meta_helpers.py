@@ -97,7 +97,7 @@ class QuestionMetaHelperTests:
         )
         question = definition.questions[0]
         assert question.logic_parse_status == LOGIC_PARSE_STATUS_COMPLETE
-        assert question.question_media == [
+        assert question.question_media == [  # ty:ignore[unresolved-attribute]
             {
                 "kind": "image",
                 "scope": "title",

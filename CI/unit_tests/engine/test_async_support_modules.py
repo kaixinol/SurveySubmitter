@@ -83,7 +83,7 @@ class AsyncRunContextTests:
         pause_event = asyncio.Event()
         pause_event.set()
         ctx = AsyncRunContext(
-            state=SimpleNamespace(),
+            state=SimpleNamespace(),  # ty:ignore[invalid-argument-type]
             stop_event=stop_event,
             pause_event=pause_event,
         )
@@ -99,13 +99,13 @@ class AsyncRunContextTests:
         captured: list[dict[str, object]] = []
         payload = {"value": 1}
         ctx = AsyncRunContext(
-            state=SimpleNamespace(),
+            state=SimpleNamespace(),  # ty:ignore[invalid-argument-type]
             stop_event=asyncio.Event(),
             pause_event=asyncio.Event(),
             status_sink=lambda event: captured.append(event),
         )
 
-        ctx.emit(payload)
+        ctx.emit(payload)  # ty:ignore[invalid-argument-type]
         payload["value"] = 2
 
         assert captured == [{"value": 1}]
@@ -116,7 +116,7 @@ class AsyncRunContextTests:
         pause_event = asyncio.Event()
         pause_event.set()
         ctx = AsyncRunContext(
-            state=SimpleNamespace(),
+            state=SimpleNamespace(),  # ty:ignore[invalid-argument-type]
             stop_event=stop_event,
             pause_event=pause_event,
         )
@@ -141,7 +141,7 @@ class ThreadEventProxyTests:
                 calls.append(callback)
 
         event = asyncio.Event()
-        proxy = ThreadEventProxy(event, loop=_Loop())
+        proxy = ThreadEventProxy(event, loop=_Loop())  # ty:ignore[invalid-argument-type]
 
         proxy.set()
         proxy.clear()
@@ -156,14 +156,14 @@ class ThreadEventProxyTests:
             def call_soon_threadsafe(self, callback) -> None:
                 raise AssertionError(f"unexpected callback: {callback}")
 
-        proxy = ThreadEventProxy(asyncio.Event(), loop=_Loop())
+        proxy = ThreadEventProxy(asyncio.Event(), loop=_Loop())  # ty:ignore[invalid-argument-type]
         proxy.set()
         proxy.clear()
 
     def test_wait_returns_immediately_when_event_already_set(self) -> None:
         event = asyncio.Event()
         event.set()
-        proxy = ThreadEventProxy(event, loop=SimpleNamespace())
+        proxy = ThreadEventProxy(event, loop=SimpleNamespace())  # ty:ignore[invalid-argument-type]
 
         assert proxy.wait(timeout=0.1) is True
 

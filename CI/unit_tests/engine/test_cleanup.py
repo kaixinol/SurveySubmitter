@@ -41,7 +41,7 @@ class CleanupRunnerTests:
         runner = CleanupRunner()
         existing_thread = _FakeThread()
         existing_thread.alive = True
-        runner._thread = existing_thread
+        runner._thread = existing_thread  # ty:ignore[invalid-assignment]
         with patch("survey_submitter.core.engine.cleanup.threading.Thread") as thread_mock:
             runner.submit(lambda: None)
         thread_mock.assert_not_called()
@@ -51,7 +51,7 @@ class CleanupRunnerTests:
         runner = CleanupRunner()
         events: list[str] = []
         runner._queue.append((lambda: events.append("done"), 0.5))
-        runner._thread = object()
+        runner._thread = object()  # ty:ignore[invalid-assignment]
         with patch("survey_submitter.core.engine.cleanup.time.sleep") as sleep_mock:
             runner._worker()
         assert events == ["done"]
@@ -61,7 +61,7 @@ class CleanupRunnerTests:
     def test_worker_logs_suppressed_exception_when_task_fails(self) -> None:
         runner = CleanupRunner()
         runner._queue.append((lambda: (_ for _ in ()).throw(RuntimeError("boom")), 0.0))
-        runner._thread = object()
+        runner._thread = object()  # ty:ignore[invalid-assignment]
         with patch("survey_submitter.core.engine.cleanup.log_suppressed_exception") as log_mock:
             runner._worker()
         log_mock.assert_called_once()

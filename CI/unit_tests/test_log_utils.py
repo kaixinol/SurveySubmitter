@@ -72,6 +72,7 @@ class LogUtilsTests:
             target_path = os.path.join(temp_dir, "exported.log")
             handler = logging.FileHandler(source_path, mode="a", encoding="utf-8")
             try:
+                assert handler.stream is not None
                 handler.stream.write("第一行\n第二行\n")
                 handler.flush()
                 session_log._SESSION_LOG_HANDLER = handler
@@ -145,6 +146,7 @@ class LogUtilsTests:
             source_path = os.path.join(logs_dir, "session_20250101_000003.log")
             handler = logging.FileHandler(source_path, mode="a", encoding="utf-8")
             try:
+                assert handler.stream is not None
                 handler.stream.write("本次日志\n")
                 handler.flush()
                 session_log._SESSION_LOG_HANDLER = handler

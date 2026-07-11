@@ -177,8 +177,8 @@ class AIProtocolTests:
             calls.append("responses")
             return "回退成功"
 
-        client_module.acall_chat_completions = _fake_chat
-        client_module.acall_responses_api = _fake_responses
+        client_module.acall_chat_completions = _fake_chat  # ty:ignore[invalid-assignment]
+        client_module.acall_responses_api = _fake_responses  # ty:ignore[invalid-assignment]
         try:
             answer = asyncio.run(
                 client_module.agenerate_answer(

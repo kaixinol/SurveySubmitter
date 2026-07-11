@@ -69,7 +69,7 @@ def _text_random_mode_label(raw_mode: Any) -> str:
 
 def _display_question_num(raw_num: Any, question_info: SurveyQuestionMeta | None) -> Any:
     if question_info is not None:
-        display_num = question_info.display_num
+        display_num = getattr(question_info, "display_num", None)
         if display_num not in (None, ""):
             return display_num
     return raw_num

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 from survey_submitter.core.ai.runtime import AIRuntimeError
 from survey_submitter.core.engine.failure_reason import FailureReason
@@ -16,6 +17,14 @@ from survey_submitter.providers.errors import (
 )
 import survey_submitter.network.http as http_client
 
+if TYPE_CHECKING:
+    from survey_submitter.core.engine.async_events import AsyncRunContext, ThreadEventProxy
+    from survey_submitter.core.engine.async_http_submitter import AsyncHttpSubmitter
+    from survey_submitter.core.engine.async_proxy_session import AsyncProxySession
+    from survey_submitter.core.engine.async_scheduler import AsyncScheduler
+    from survey_submitter.core.engine.run_stop_policy import RunStopPolicy
+    from survey_submitter.core.task import ExecutionConfig, ExecutionState
+
 
 @dataclass(frozen=True)
 class _RoundOutcome:
@@ -26,6 +35,32 @@ class _RoundOutcome:
 
 class _HttpRuntimeMixin:
     """HTTP runtime execution loop and related helpers for a slot runner."""
+
+    # Attributes provided by the host class (AsyncSlotRunner) or sibling mixin
+    http_submitter: AsyncHttpSubmitter
+    slot_label: str
+    stop_policy: RunStopPolicy
+    stop_proxy: ThreadEventProxy
+    state: ExecutionState
+    run_context: AsyncRunContext
+    scheduler: AsyncScheduler
+    proxy_session: AsyncProxySession
+    config: ExecutionConfig
+    _update_status: Any
+    _should_stop_loop: Any
+    _release_session_proxy: Any
+    _resolve_finished_status_text: Any
+    _release_round_resources: Any
+    _update_http_step: Any
+    _prepare_round_context: Any
+    _select_session_proxy_and_ua: Any
+    _resolve_dispatch_delay_seconds: Any
+    _update_step: Any
+    _handle_proxy_unavailable: Any
+    _handle_ai_runtime_error: Any
+    _handle_submission_verification_error: Any
+    _handle_survey_provider_unavailable_error: Any
+    _handle_http_transport_error: Any
 
     def _uses_http_runtime(self) -> bool:
         return self.http_submitter.uses_http_runtime()

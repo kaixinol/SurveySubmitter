@@ -5,7 +5,7 @@ import re
 try:
     from bs4 import BeautifulSoup
 except ImportError:
-    BeautifulSoup = None
+    BeautifulSoup = None  # ty: ignore[invalid-assignment]
 
 from survey_submitter.core.questions.types import TypeCode
 from survey_submitter.providers.match_utils import normalize_match_text
@@ -263,8 +263,10 @@ def _extract_jump_rules_from_html(
             if unconditional_target:
                 break
         if unconditional_target and not any(
-            int(rule.get("option_index") or 0) < 0
-            and int(rule.get("jumpto") or 0) == unconditional_target
+            int(rule.get("option_index") or 0)  # ty: ignore[invalid-argument-type]
+            < 0
+            and int(rule.get("jumpto") or 0)  # ty: ignore[invalid-argument-type]
+            == unconditional_target
             for rule in jump_rules
             if isinstance(rule, dict)
         ):
@@ -337,7 +339,7 @@ def _attach_display_condition_metadata(questions_info: list[dict[str, object]]) 
     by_num: dict[int, dict[str, object]] = {}
     for info in questions_info:
         try:
-            question_num = int(info.get("num") or 0)
+            question_num = int(info.get("num") or 0)  # ty: ignore[invalid-argument-type]
         except (ValueError, TypeError):
             question_num = 0
         if question_num > 0 and question_num not in by_num:
@@ -348,14 +350,14 @@ def _attach_display_condition_metadata(questions_info: list[dict[str, object]]) 
         if not isinstance(display_conditions, list) or not display_conditions:
             continue
         try:
-            target_question_num = int(info.get("num") or 0)
+            target_question_num = int(info.get("num") or 0)  # ty: ignore[invalid-argument-type]
         except (ValueError, TypeError):
             target_question_num = 0
         for condition in display_conditions:
             if not isinstance(condition, dict):
                 continue
             try:
-                source_question_num = int(condition.get("condition_question_num") or 0)
+                source_question_num = int(condition.get("condition_question_num") or 0)  # ty: ignore[invalid-argument-type]
             except (ValueError, TypeError):
                 source_question_num = 0
             option_indices = condition.get("condition_option_indices") or []
@@ -372,7 +374,7 @@ def _attach_display_condition_metadata(questions_info: list[dict[str, object]]) 
             seen_indices = set()
             for raw_index in option_indices:
                 try:
-                    index = int(raw_index)
+                    index = int(raw_index)  # ty: ignore[invalid-argument-type]
                 except (ValueError, TypeError):
                     continue
                 if index < 0 or index in seen_indices:
@@ -386,20 +388,20 @@ def _attach_display_condition_metadata(questions_info: list[dict[str, object]]) 
                 if not isinstance(existing, dict):
                     continue
                 try:
-                    existing_target = int(existing.get("target_question_num") or 0)
+                    existing_target = int(existing.get("target_question_num") or 0)  # ty: ignore[invalid-argument-type]
                 except (ValueError, TypeError):
                     existing_target = 0
                 existing_indices = existing.get("condition_option_indices") or []
                 if (
                     existing_target == target_question_num
-                    and list(existing_indices) == normalized_indices
+                    and list(existing_indices) == normalized_indices  # ty: ignore[invalid-argument-type]
                 ):
                     duplicate = True
                     break
             if duplicate:
                 continue
             targets.append(
-                {
+                {  # ty: ignore[invalid-argument-type]
                     "target_question_num": target_question_num,
                     "condition_option_indices": normalized_indices,
                     "condition_mode": str(condition.get("condition_mode") or "selected").strip()

@@ -81,21 +81,22 @@ class ConfigCodecTests:
         )
         payload = serialize_runtime_config(config)
         restored = deserialize_runtime_config(payload)
-        assert payload["questions_info"][0]["provider_question_id"] == "question-3"
-        assert payload["questions_info"][0]["provider_page_id"] == "page-2"
-        assert payload["questions_info"][0]["required"]
-        assert payload["questions_info"][0]["logic_parse_status"] == "unknown"
+        assert payload["questions_info"][0]["provider_question_id"] == "question-3"  # ty:ignore[not-subscriptable]
+        assert payload["questions_info"][0]["provider_page_id"] == "page-2"  # ty:ignore[not-subscriptable]
+        assert payload["questions_info"][0]["required"]  # ty:ignore[not-subscriptable]
+        assert payload["questions_info"][0]["logic_parse_status"] == "unknown"  # ty:ignore[not-subscriptable]
         assert (
-            payload["questions_info"][0]["question_media"][0]["source_url"]
+            payload["questions_info"][0]["question_media"][0]["source_url"]  # ty:ignore[not-subscriptable]
             == "https://example.com/q3.png"
         )
         assert len(restored.questions_info or []) == 1
+        assert restored.questions_info is not None
         restored_info = restored.questions_info[0]
         assert restored_info.provider_question_id == "question-3"
         assert restored_info.provider_page_id == "page-2"
         assert restored_info.required
         assert restored_info.logic_parse_status == "unknown"
-        assert restored_info.question_media[0]["label"] == "题干图"
+        assert restored_info.question_media[0]["label"] == "题干图"  # ty:ignore[unresolved-attribute]
 
     def test_build_runtime_config_snapshot_returns_detached_copies(self) -> None:
         config = RuntimeConfig(
@@ -128,13 +129,17 @@ class ConfigCodecTests:
         assert snapshot.question_entries is not config.question_entries
         assert snapshot.questions_info is not config.questions_info
         assert snapshot.question_entries[0] is not config.question_entries[0]
+        assert snapshot.questions_info is not None
+        assert config.questions_info is not None
         assert snapshot.questions_info[0] is not config.questions_info[0]
+        assert snapshot.question_entries[0].texts is not None
         snapshot.question_entries[0].texts[0] = "已修改"
-        snapshot.questions_info[0].option_texts[0] = "已修改"
+        snapshot.questions_info[0].option_texts[0] = "已修改"  # ty:ignore[unresolved-attribute]
         snapshot.answer_rules[0]["equals"][0] = 9
         snapshot.dimension_groups[0] = "新维度"
+        assert config.question_entries[0].texts is not None
         assert config.question_entries[0].texts[0] == "A"
-        assert config.questions_info[0].option_texts[0] == "A"
+        assert config.questions_info[0].option_texts[0] == "A"  # ty:ignore[unresolved-attribute]
         assert config.answer_rules[0]["equals"][0] == 0
         assert config.dimension_groups[0] == "情绪维度"
 

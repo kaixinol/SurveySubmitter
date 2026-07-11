@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import Any, cast
 
 from survey_submitter.core.psychometrics.orientation import (
     build_bias_target_probabilities,
@@ -30,7 +31,7 @@ def normalize_target_alpha(
     fallback = float(default)
 
     try:
-        alpha = float(value)
+        alpha = float(cast(Any, value))
     except (ValueError, TypeError):
         alpha = fallback
 
@@ -155,16 +156,16 @@ def _coerce_psychometric_item(raw_item: object) -> PsychometricItem | None:
         probabilities = raw_item[5] if len(raw_item) >= 6 else None
         if not isinstance(probabilities, list) or not probabilities:
             probabilities = build_bias_target_probabilities(
-                int(opt_count or 5), str(bias or "center")
+                int(cast(Any, opt_count or 5)), str(cast(Any, bias or "center"))
             )
         kind = "matrix_row" if q_type == QuestionType.MATRIX and row_idx is not None else q_type
         return PsychometricItem(
             kind=str(kind or "scale"),
-            question_index=int(q_idx or 0),
-            row_index=row_idx if row_idx is None else int(row_idx),
-            option_count=max(2, int(opt_count or 5)),
+            question_index=int(cast(Any, q_idx or 0)),
+            row_index=row_idx if row_idx is None else int(cast(Any, row_idx)),
+            option_count=max(2, int(cast(Any, opt_count or 5))),
             bias=str(bias or "center"),
-            target_probabilities=list(probabilities),
+            target_probabilities=cast(Any, list(probabilities)),
             score_by_choice_index=None,
         )
 
@@ -173,7 +174,7 @@ def _coerce_psychometric_item(raw_item: object) -> PsychometricItem | None:
 
     to_runtime_item = attrs.get("to_runtime_item")
     if callable(to_runtime_item):
-        runtime_item = to_runtime_item()
+        runtime_item = cast(Any, to_runtime_item)()
         return _coerce_psychometric_item(runtime_item)
 
     question_index = attrs.get("question_index")
@@ -190,16 +191,16 @@ def _coerce_psychometric_item(raw_item: object) -> PsychometricItem | None:
     probabilities = attrs.get("target_probabilities")
 
     if not isinstance(probabilities, list) or not probabilities:
-        probabilities = build_bias_target_probabilities(option_count, bias)
+        probabilities = build_bias_target_probabilities(cast(int, option_count), cast(str, bias))
 
     return PsychometricItem(
         kind=str(kind or "scale"),
-        question_index=int(question_index or 0),
-        row_index=row_index if row_index is None else int(row_index),
-        option_count=option_count,
-        bias=bias,
-        target_probabilities=list(probabilities),
-        score_by_choice_index=attrs.get("score_by_choice_index"),
+        question_index=int(cast(Any, question_index or 0)),
+        row_index=row_index if row_index is None else int(cast(Any, row_index)),
+        option_count=cast(int, option_count),
+        bias=cast(str, bias),
+        target_probabilities=cast(Any, list(probabilities)),
+        score_by_choice_index=cast(Any, attrs.get("score_by_choice_index")),
     )
 
 

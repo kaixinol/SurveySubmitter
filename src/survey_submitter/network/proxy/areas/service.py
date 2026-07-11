@@ -6,6 +6,7 @@ import logging
 import re
 import threading
 from importlib import resources
+from typing import Any, cast
 
 import survey_submitter.network.http as http_client
 from survey_submitter.constants import DEFAULT_HTTP_HEADERS
@@ -131,7 +132,7 @@ def load_area_codes(supported_only: bool = False) -> list[dict[str, object]]:
     if not isinstance(provinces, list):
         return []
     if not supported_only:
-        return provinces
+        return cast("list[dict[str, object]]", provinces)
 
     supported_codes, _ = load_supported_area_codes()
     if not supported_codes:
@@ -141,8 +142,9 @@ def load_area_codes(supported_only: bool = False) -> list[dict[str, object]]:
     for province in provinces:
         if not isinstance(province, dict):
             continue
-        province_code = str(province.get("code") or "")
-        cities = province.get("cities") or []
+        province_typed = cast("dict[str, Any]", province)
+        province_code = str(province_typed.get("code") or "")
+        cities = province_typed.get("cities") or []
         if not isinstance(cities, list):
             cities = []
         supported_cities = [
@@ -152,7 +154,7 @@ def load_area_codes(supported_only: bool = False) -> list[dict[str, object]]:
         ]
         if province_code not in supported_codes and not supported_cities:
             continue
-        filtered.append({**province, "cities": supported_cities})
+        filtered.append({**province_typed, "cities": supported_cities})
     return filtered
 
 
@@ -163,7 +165,7 @@ def _build_local_area_lookup() -> tuple[list[dict[str, object]], dict[str, dict[
     for province in provinces:
         if not isinstance(province, dict):
             continue
-        province_code = _normalize_area_code(province.get("code"))
+        province_code = _normalize_area_code(cast("str | None", province.get("code")))
         province_name = str(province.get("name") or "").strip()
         if not province_code or not province_name:
             continue
@@ -177,7 +179,7 @@ def _build_local_area_lookup() -> tuple[list[dict[str, object]], dict[str, dict[
         for city in cities:
             if not isinstance(city, dict):
                 continue
-            city_code = _normalize_area_code(city.get("code"))
+            city_code = _normalize_area_code(cast("str | None", city.get("code")))
             city_name = str(city.get("name") or "").strip()
             if not city_code or not city_name:
                 continue
@@ -250,13 +252,13 @@ def _build_benefit_supported_data_from_online() -> tuple[list[dict[str, object]]
         if not local_province:
             continue
         matched_cities: list[dict[str, object]] = []
-        for city_entry in local_province["cities"]:
+        for city_entry in cast("list[dict[str, object]]", local_province["cities"]):
             city_normalized = str(city_entry.get("normalized_name") or "")
             if city_normalized in online_cities:
                 matched_cities.append(dict(city_entry["raw"]))
                 city_code_index[str(city_entry["code"])] = str(city_entry["request_name"])
         if matched_cities:
-            filtered_provinces.append({**local_province["raw"], "cities": matched_cities})
+            filtered_provinces.append({**cast("dict[str, object]", local_province["raw"]), "cities": matched_cities})
 
     return filtered_provinces, city_code_index
 
@@ -271,14 +273,14 @@ def _build_benefit_supported_data_from_local_fallback() -> tuple[
 
     for province in province_lookup.values():
         matched_cities: list[dict[str, object]] = []
-        for city_entry in province["cities"]:
+        for city_entry in cast("list[dict[str, object]]", province["cities"]):
             city_code = str(city_entry.get("code") or "")
             if city_code not in supported_codes:
                 continue
             matched_cities.append(dict(city_entry["raw"]))
             city_code_index[city_code] = str(city_entry["request_name"])
         if matched_cities:
-            filtered_provinces.append({**province["raw"], "cities": matched_cities})
+            filtered_provinces.append({**cast("dict[str, object]", province["raw"]), "cities": matched_cities})
 
     return filtered_provinces, city_code_index
 

@@ -277,6 +277,8 @@ def _extract_slider_range(
         )
 
     def _parse(raw: str | float | int | None) -> float | None:
+        if raw is None:
+            return None
         try:
             return float(raw)
         except (ValueError, TypeError):
@@ -310,6 +312,8 @@ def _format_slider_matrix_value(value: float) -> str:
 
 def _build_slider_matrix_option_texts_from_input(slider_input) -> list[str]:
     def _parse(raw: str | float | int | None) -> float | None:
+        if raw is None:
+            return None
         try:
             return float(raw)
         except (ValueError, TypeError):

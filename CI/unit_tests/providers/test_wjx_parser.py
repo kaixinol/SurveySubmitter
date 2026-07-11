@@ -219,6 +219,7 @@ class WjxParserTests:
 
         assert info == [{"num": 1, "title": "Q1", "type_code": "3"}]
         assert title == "标题"
+        assert aget.await_args is not None
         assert aget.await_args.kwargs.get("proxies") == {}
 
     @pytest.mark.asyncio

@@ -88,7 +88,7 @@ def _resolve_choice_forced_index(
     if reverse_fill_answer is not None and reverse_fill_answer.kind == REVERSE_FILL_KIND_CHOICE:
         forced_index = _valid_forced_choice_index(reverse_fill_answer.choice_index, option_count)
     if forced_index is None:
-        forced_index = _valid_forced_choice_index(question.forced_option_index, option_count)
+        forced_index = _valid_forced_choice_index(question.forced_option_index, option_count)  # ty: ignore[unresolved-attribute]
     return forced_index
 
 
@@ -344,7 +344,7 @@ async def _build_wjx_text_action(
 ) -> AnswerAction | None:
     config = ctx.config
     current = int(question.num or 0)
-    blank_count = max(1, int(question.text_inputs or 0))
+    blank_count = max(1, int(question.text_inputs or 0))  # ty: ignore[unresolved-attribute]
     reverse_fill_answer = resolve_current_reverse_fill_answer(
         ctx,
         current,
@@ -451,7 +451,7 @@ async def _build_wjx_score_like_action(
     if reverse_fill_answer is not None and reverse_fill_answer.kind == REVERSE_FILL_KIND_CHOICE:
         forced_index = _valid_forced_choice_index(reverse_fill_answer.choice_index, option_count)
     if forced_index is None:
-        forced_index = _valid_forced_choice_index(question.forced_option_index, option_count)
+        forced_index = _valid_forced_choice_index(question.forced_option_index, option_count)  # ty: ignore[unresolved-attribute]
 
     if forced_index is None:
         probabilities = (
@@ -587,6 +587,7 @@ def _sanitize_multiple_probabilities(
     strict_ratio: bool,
 ) -> list[float]:
     """Sanitize raw probabilities, apply persona boost, and zero out blocked/required indices."""
+    assert isinstance(selection_probabilities, list)
     sanitized: list[float] = []
     for raw_prob in selection_probabilities:
         try:

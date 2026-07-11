@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import os
 from collections.abc import Sequence
+from typing import Any, cast
 
 from survey_submitter.core.config.schema import RuntimeConfig
 from survey_submitter.core.questions.default_builder import build_default_question_entries
@@ -40,9 +41,9 @@ MAX_DISPLAYED_BLOCKING_ISSUES = 12
 
 def _detail_from_columns(columns: list[object]) -> str:
     headers = [
-        str(column.header or "").strip()
+        str(getattr(column, "header", "") or "").strip()
         for column in list(columns or [])
-        if str(column.header or "").strip()
+        if str(getattr(column, "header", "") or "").strip()
     ]
     return " / ".join(headers)
 
@@ -108,9 +109,9 @@ def _build_question_plan(
     fallback_resolved: bool = False,
 ) -> ReverseFillQuestionPlan:
     headers = [
-        str(column.header or "").strip()
+        str(getattr(column, "header", "") or "").strip()
         for column in list(columns or [])
-        if str(column.header or "").strip()
+        if str(getattr(column, "header", "") or "").strip()
     ]
     return ReverseFillQuestionPlan(
         question_num=question_num,
@@ -258,34 +259,36 @@ def _parse_answer_for_row(
 
     Raises ValueError on parse failure.
     """
-    values_by_column = raw_row.values_by_column or {}
+    typed_row = cast(Any, raw_row)
+    typed_export = cast(Any, export)
+    values_by_column = typed_row.values_by_column or {}
 
     if question_type in CHOICE_TYPES:
         return parse_choice_answer(
             question_num=question_num,
             question_type=question_type,
-            raw_value=values_by_column.get(int(ordered_columns[0].column_index)),
-            export_format=export.selected_format,
-            option_texts=option_texts,
+            raw_value=values_by_column.get(int(getattr(ordered_columns[0], "column_index"))),
+            export_format=typed_export.selected_format,
+            option_texts=cast(Any, option_texts),
         )
     if question_type == QuestionType.TEXT:
         return parse_text_answer(
             question_num=question_num,
-            raw_value=values_by_column.get(int(ordered_columns[0].column_index)),
+            raw_value=values_by_column.get(int(getattr(ordered_columns[0], "column_index"))),
         )
     if question_type == QuestionType.MULTI_TEXT:
         return parse_multi_text_answer(
             question_num=question_num,
-            ordered_columns=ordered_columns,
-            raw_row=raw_row,
+            ordered_columns=cast(Any, ordered_columns),
+            raw_row=cast(Any, raw_row),
         )
     if question_type == QuestionType.MATRIX:
         return parse_matrix_answer(
             question_num=question_num,
-            ordered_columns=ordered_columns,
-            raw_row=raw_row,
-            export_format=export.selected_format,
-            option_texts=option_texts,
+            ordered_columns=cast(Any, ordered_columns),
+            raw_row=cast(Any, raw_row),
+            export_format=typed_export.selected_format,
+            option_texts=cast(Any, option_texts),
         )
     return None
 
@@ -359,7 +362,7 @@ def _check_column_mapping(
 
     # Resolve matrix columns
     if question_type == QuestionType.MATRIX:
-        row_texts = list(info.row_texts or [])
+        row_texts = list(getattr(info, "row_texts", None) or [])
         if row_texts and len(columns) != len(row_texts):
             _append_question_issue_and_plan(
                 issues=issues,
@@ -375,11 +378,11 @@ def _check_column_mapping(
                 fallback_resolved=fallback_resolved,
             )
             return None
-        return resolve_ordered_columns(columns, row_texts)
+        return cast(Any, resolve_ordered_columns(cast(Any, columns), row_texts))
 
     # Resolve multi-text columns
     if question_type == QuestionType.MULTI_TEXT:
-        blank_labels = list(info.text_input_labels or [])
+        blank_labels = list(getattr(info, "text_input_labels", None) or [])
         if blank_labels and len(columns) != len(blank_labels):
             _append_question_issue_and_plan(
                 issues=issues,
@@ -395,9 +398,40 @@ def _check_column_mapping(
                 fallback_resolved=fallback_resolved,
             )
             return None
-        return resolve_ordered_columns(columns, blank_labels)
+        return cast(Any, resolve_ordered_columns(cast(Any, columns), blank_labels))
 
     return columns
+
+
+def _parse_question_answers(
+    *,
+    question_num: int,
+    question_type: str,
+    ordered_columns: list[object],
+    selected_rows: list[object],
+    answers_by_row: dict[int, dict[int, object]],
+    export: object,
+    option_texts: list[str],
+) -> list[int]:
+    """Parse answers for all selected rows. Returns list of row numbers that had errors."""
+    parse_errors: list[int] = []
+    for raw_row in selected_rows:
+        typed_row = cast(Any, raw_row)
+        row_number = int(typed_row.data_row_number)
+        try:
+            answer = _parse_answer_for_row(
+                question_num=question_num,
+                question_type=question_type,
+                ordered_columns=ordered_columns,
+                raw_row=raw_row,
+                export=export,
+                option_texts=option_texts,
+            )
+            if answer is not None:
+                answers_by_row[row_number][question_num] = answer
+        except (ValueError, TypeError):
+            parse_errors.append(row_number)
+    return parse_errors
 
 
 def _validate_and_collect_question(
@@ -425,7 +459,7 @@ def _validate_and_collect_question(
     title = str(info.title or f"第{question_num}题").strip()
     entry = resolve_question_entry(info, question_entries)
     question_type = infer_reverse_fill_question_type(info, entry)
-    columns = list((export.question_columns or {}).get(question_num) or [])
+    columns = list((getattr(export, "question_columns", None) or {}).get(question_num) or [])
     fallback_ready = _regular_config_ready(entry, info, question_type)
     fallback_resolved = fallback_ready and _entry_differs_from_default(
         entry, default_entry_by_num.get(question_num)
@@ -466,13 +500,13 @@ def _validate_and_collect_question(
             title=title,
             question_type=question_type,
             columns=columns,
-            detail=type_error["detail"],
-            category=type_error["category"],
-            reason=type_error["reason"],
+            detail=cast(str, type_error["detail"]),
+            category=cast(str, type_error["category"]),
+            reason=cast(str, type_error["reason"]),
             fallback_ready=fallback_ready,
             fallback_resolved=fallback_resolved,
-            severity=type_error.get("severity"),
-            suggestion=type_error.get("suggestion"),
+            severity=cast(str | None, type_error.get("severity")),
+            suggestion=cast(str | None, type_error.get("suggestion")),
         )
         return False
 
@@ -516,7 +550,7 @@ def _validate_and_collect_question(
         selected_rows=selected_rows,
         answers_by_row=answers_by_row,
         export=export,
-        option_texts=list(info.option_texts or []),
+        option_texts=list(getattr(info, "option_texts", None) or []),
     )
 
     if parse_errors:
@@ -566,7 +600,7 @@ def _handle_parse_errors(
 ) -> None:
     """Handle parsing errors by adding issue and cleaning answers."""
     if question_type in CHOICE_TYPES | {QuestionType.MATRIX}:
-        if export.selected_format == REVERSE_FILL_FORMAT_WJX_SEQUENCE:
+        if getattr(export, "selected_format", None) == REVERSE_FILL_FORMAT_WJX_SEQUENCE:
             reason = "这道题在样本中出现了超范围序号或 V1 不支持的复合值"
         else:
             reason = "这道题在样本中出现了无法匹配选项的值或 V1 不支持的复合值"
@@ -660,7 +694,7 @@ def build_reverse_fill_spec(
     # Assemble final samples
     samples: list[ReverseFillSampleRow] = []
     for raw_row in selected_rows:
-        answers = dict(answers_by_row.get(int(raw_row.data_row_number)) or {})
+        answers = cast(dict[int, Any], dict(answers_by_row.get(int(raw_row.data_row_number)) or {}))
         samples.append(
             ReverseFillSampleRow(
                 data_row_number=int(raw_row.data_row_number),

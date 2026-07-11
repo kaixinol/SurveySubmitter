@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Sequence
+from typing import Any, Awaitable, Callable, Sequence, cast
 
 from survey_submitter.providers.answering import AnswerAction
 from survey_submitter.providers.contracts import (
@@ -77,7 +77,7 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
             if not isinstance(condition, dict):
                 return f"第{question_num}题显隐条件格式异常"
             try:
-                source_question_num = int(condition.get("condition_question_num") or 0)
+                source_question_num = int(cast("str | None", condition.get("condition_question_num")) or 0)
             except (ValueError, TypeError):
                 source_question_num = 0
             condition_mode = (
@@ -94,7 +94,7 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
             if not isinstance(target, dict):
                 return f"第{question_num}题控制显示规则格式异常"
             try:
-                target_question_num = int(target.get("target_question_num") or 0)
+                target_question_num = int(cast("str | None", target.get("target_question_num")) or 0)
             except (ValueError, TypeError):
                 target_question_num = 0
             condition_mode = str(target.get("condition_mode") or "selected").strip() or "selected"
@@ -110,7 +110,7 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
                 jump_target = int(rule.get("jumpto") or 0)
             except (ValueError, TypeError):
                 jump_target = 0
-            if _jump_rule_terminates_survey(rule):
+            if _jump_rule_terminates_survey(cast("dict[str, object]", rule)):
                 continue
             if jump_target <= question_num:
                 return f"第{question_num}题跳题目标回跳到已过题目"
@@ -171,7 +171,7 @@ def _question_is_visible(
         if not isinstance(condition, dict):
             continue
         try:
-            source_question_num = int(condition.get("condition_question_num") or 0)
+            source_question_num = int(cast("str | None", condition.get("condition_question_num")) or 0)
         except (ValueError, TypeError):
             source_question_num = 0
         if source_question_num <= 0:
@@ -203,7 +203,7 @@ def _resolve_jump_target(
             jump_target = 0
         if jump_target <= 0:
             continue
-        terminates_survey = _jump_rule_terminates_survey(rule)
+        terminates_survey = _jump_rule_terminates_survey(cast("dict[str, object]", rule))
         try:
             option_index = int(rule.get("option_index") or 0)
         except (ValueError, TypeError):

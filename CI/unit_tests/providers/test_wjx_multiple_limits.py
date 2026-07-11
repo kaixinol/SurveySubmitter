@@ -73,7 +73,7 @@ class WjxMultipleLimitsTests:
 
     def test_extract_range_from_json_obj_walks_nested_lists(self) -> None:
         payload = [{"ignore": 1}, {"rules": [{"minValue": "2"}, {"maxValue": "6"}]}]
-        assert multiple_limits._extract_range_from_json_obj(payload) == (2, 6)
+        assert multiple_limits._extract_range_from_json_obj(payload) == (2, 6)  # ty:ignore[invalid-argument-type]
 
     def test_extract_range_from_possible_json_returns_empty_for_invalid_input(self) -> None:
         assert multiple_limits._extract_range_from_possible_json(None) == (None, None)

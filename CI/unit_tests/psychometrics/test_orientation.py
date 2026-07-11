@@ -17,7 +17,7 @@ class OrientationTests:
         item = SimpleNamespace(
             choice_key="q:1", option_count=5, target_probabilities=[0, 0, 0, 0, 1]
         )
-        orientation = infer_item_orientation(item)
+        orientation = infer_item_orientation(item)  # ty:ignore[invalid-argument-type]
         assert orientation.choice_key == "q:1"
         assert orientation.direction == "right"
         assert math.isclose(orientation.mean_ratio, 1.0)
@@ -29,7 +29,7 @@ class OrientationTests:
             SimpleNamespace(choice_key="q:2", option_count=5, target_probabilities=[1, 0, 0, 0, 0]),
             SimpleNamespace(choice_key="q:3", option_count=5, target_probabilities=[0, 0, 0, 0, 1]),
         ]
-        orientation = infer_dimension_orientation(items)
+        orientation = infer_dimension_orientation(items)  # ty:ignore[invalid-argument-type]
         assert orientation.anchor_direction == "left"
         assert not orientation.ambiguous_anchor
         assert orientation.reversed_keys == {"q:3"}
@@ -42,6 +42,6 @@ class OrientationTests:
             SimpleNamespace(choice_key="q:1", option_count=5, target_probabilities=[1, 0, 0, 0, 0]),
             SimpleNamespace(choice_key="q:2", option_count=5, target_probabilities=[0, 0, 0, 0, 1]),
         ]
-        orientation = infer_dimension_orientation(items)
+        orientation = infer_dimension_orientation(items)  # ty:ignore[invalid-argument-type]
         assert orientation.ambiguous_anchor
         assert orientation.reversed_keys == set()

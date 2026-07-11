@@ -51,7 +51,7 @@ class _Driver:
 class DurationControlTests:
     def test_has_configured_answer_duration_accepts_any_positive_bound(self) -> None:
         assert not duration_control.has_configured_answer_duration((0, 0))
-        assert not duration_control.has_configured_answer_duration(("bad",))
+        assert not duration_control.has_configured_answer_duration(("bad",))  # ty:ignore[invalid-argument-type]
         assert duration_control.has_configured_answer_duration((0, 5))
         assert duration_control.has_configured_answer_duration((3, 0))
 
@@ -133,7 +133,7 @@ class DurationControlTests:
     async def test_completion_page_detects_complete_url_and_provider_signal(
         self, patch_attrs
     ) -> None:
-        assert await duration_control.is_survey_completion_page(
+        assert await duration_control.is_survey_completion_page(  # ty:ignore[unresolved-attribute]
             _Driver(url="https://example.com/complete")
         )
 
@@ -155,25 +155,25 @@ class DurationControlTests:
             )
         )
 
-        assert await duration_control.is_survey_completion_page(_Driver(div_text="问卷提交成功"))
+        assert await duration_control.is_survey_completion_page(_Driver(div_text="问卷提交成功"))  # ty:ignore[unresolved-attribute]
 
     @pytest.mark.asyncio
     async def test_completion_page_uses_body_marker_only_when_no_action_button_visible(
         self,
     ) -> None:
-        assert await duration_control.is_survey_completion_page(
+        assert await duration_control.is_survey_completion_page(  # ty:ignore[unresolved-attribute]
             _Driver(page_text="感谢您的参与", action_visible=False)
         )
-        assert not await duration_control.is_survey_completion_page(
+        assert not await duration_control.is_survey_completion_page(  # ty:ignore[unresolved-attribute]
             _Driver(page_text="感谢您的参与", action_visible=True)
         )
-        assert not await duration_control.is_survey_completion_page(_Driver(page_text="继续填写"))
+        assert not await duration_control.is_survey_completion_page(_Driver(page_text="继续填写"))  # ty:ignore[unresolved-attribute]
 
     @pytest.mark.asyncio
     async def test_completion_page_body_text_script_tolerates_empty_body(self) -> None:
         driver = _Driver()
 
-        assert not await duration_control.is_survey_completion_page(driver)
+        assert not await duration_control.is_survey_completion_page(driver)  # ty:ignore[unresolved-attribute]
         assert any(
             "document.body && document.body.innerText" in script for script in driver.scripts
         )
@@ -211,6 +211,6 @@ class DurationControlTests:
 
         driver = _NavigatingDriver()
 
-        assert await duration_control.is_survey_completion_page(driver)
+        assert await duration_control.is_survey_completion_page(driver)  # ty:ignore[unresolved-attribute]
         assert driver.calls >= 2
         assert warnings == []

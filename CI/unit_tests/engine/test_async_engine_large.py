@@ -87,14 +87,14 @@ class _DoneFuture:
 
 
 def _build_engine() -> AsyncRuntimeEngine:
-    return AsyncRuntimeEngine(status_bus=SimpleNamespace(emit=lambda _event: None))
+    return AsyncRuntimeEngine(status_bus=SimpleNamespace(emit=lambda _event: None))  # ty:ignore[invalid-argument-type]
 
 
 class AsyncRuntimeEngineLargeTests:
     def test_start_reuses_live_thread_and_submit_requires_loop(self, monkeypatch) -> None:
         engine = _build_engine()
         alive_thread = SimpleNamespace(is_alive=lambda: True)
-        engine._thread = alive_thread
+        engine._thread = alive_thread  # ty:ignore[invalid-assignment]
         engine._loop_ready.set()
 
         engine.start()
@@ -147,14 +147,14 @@ class AsyncRuntimeEngineLargeTests:
         parse_future = _DoneFuture(result_value="parsed")
         returned_futures = [run_future, parse_future]
         loop = _FakeLoop()
-        engine._loop = loop
-        engine._run_future = _DoneFuture(done=True)
+        engine._loop = loop  # ty:ignore[invalid-assignment]
+        engine._run_future = _DoneFuture(done=True)  # ty:ignore[invalid-assignment]
         stop_event = SimpleNamespace(set=lambda: submitted.append("stop-event"))
         pause_event = SimpleNamespace(
             set=lambda: submitted.append("pause"), clear=lambda: submitted.append("resume")
         )
-        engine._stop_event = stop_event
-        engine._pause_event = pause_event
+        engine._stop_event = stop_event  # ty:ignore[invalid-assignment]
+        engine._pause_event = pause_event  # ty:ignore[invalid-assignment]
         engine._state = state
 
         def _fake_submit(coro):
@@ -171,10 +171,10 @@ class AsyncRuntimeEngineLargeTests:
         assert engine._run_future is run_future
 
         with pytest.raises(RuntimeError, match="运行中"):
-            engine._run_future = _DoneFuture(done=False)
+            engine._run_future = _DoneFuture(done=False)  # ty:ignore[invalid-assignment]
             engine.start_run(config=config, state=state)
 
-        engine._run_future = _DoneFuture(done=True)
+        engine._run_future = _DoneFuture(done=True)  # ty:ignore[invalid-assignment]
         engine.stop_run()
         engine.pause_run("reason")
         engine.resume_run()
@@ -202,7 +202,7 @@ class AsyncRuntimeEngineLargeTests:
         config = ExecutionConfig(num_threads=2, target_num=5, survey_provider="wjx")
         state = ExecutionState(config=config)
         bus_events: list[dict[str, object]] = []
-        engine._status_bus = SimpleNamespace(emit=lambda event: bus_events.append(event))
+        engine._status_bus = SimpleNamespace(emit=lambda event: bus_events.append(event))  # ty:ignore[invalid-assignment]
         created_runners: list[SimpleNamespace] = []
         created_schedulers: list[SimpleNamespace] = []
 
@@ -210,7 +210,7 @@ class AsyncRuntimeEngineLargeTests:
             def __init__(self, **kwargs) -> None:
                 self.slot_id = kwargs["slot_id"]
                 self.cancelled = False
-                created_runners.append(self)
+                created_runners.append(self)  # ty:ignore[invalid-argument-type]
 
             async def run(self) -> None:
                 if self.slot_id == 2:
@@ -225,7 +225,7 @@ class AsyncRuntimeEngineLargeTests:
             def __init__(self, *, concurrency: int) -> None:
                 self.concurrency = concurrency
                 self.close_calls = 0
-                created_schedulers.append(self)
+                created_schedulers.append(self)  # ty:ignore[invalid-argument-type]
 
             async def close(self) -> None:
                 self.close_calls += 1
@@ -294,7 +294,7 @@ class AsyncRuntimeEngineLargeTests:
         monkeypatch.setattr(async_engine, "AsyncSlotRunner", _FakeRunner)
         monkeypatch.setattr(async_engine, "fetch_proxy_batch_async", fake_fetch_proxy_batch_async)
 
-        await engine._run(config=config, state=state, runtime_bridge=_FakeBridge())
+        await engine._run(config=config, state=state, runtime_bridge=_FakeBridge())  # ty:ignore[invalid-argument-type]
 
         assert "slot-1" in events
         assert "slot-2" in events
@@ -484,11 +484,11 @@ class AsyncRuntimeEngineLargeTests:
         engine = _build_engine()
         engine._closed = False
         run_future = _DoneFuture(done=False, result_error=RuntimeError("future boom"))
-        engine._run_future = run_future
-        engine._loop = _FakeLoop()
+        engine._run_future = run_future  # ty:ignore[invalid-assignment]
+        engine._loop = _FakeLoop()  # ty:ignore[invalid-assignment]
         thread = _FakeThread(target=lambda: None, daemon=True, name="AsyncRuntimeEngine")
         thread.started = True
-        engine._thread = thread
+        engine._thread = thread  # ty:ignore[invalid-assignment]
 
         engine.shutdown(timeout=2.5)
 

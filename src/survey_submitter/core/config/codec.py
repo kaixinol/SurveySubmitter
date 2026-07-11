@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import logging
 import random
+from typing import Any, cast
 
 from pydantic import ConfigDict
 
@@ -159,7 +160,7 @@ _RUNTIME_CONFIG_FIELDS.update({"question_entries", "questions_info"})
 
 def _coerce_int(value: object, default: int = 0) -> int:
     try:
-        return int(value)
+        return int(cast(Any, value))
     except (ValueError, TypeError):
         return default
 
@@ -249,7 +250,7 @@ def _prob_config_is_unset(value: object) -> bool:
             return True
         for item in value:
             try:
-                if float(item) > 0:
+                if float(cast(Any, item)) > 0:
                     return False
             except (ValueError, TypeError):
                 continue
@@ -267,7 +268,7 @@ def _custom_weights_has_positive(weights: object) -> bool:
             stack.extend(item)
             continue
         try:
-            if float(item) > 0:
+            if float(cast(Any, item)) > 0:
                 return True
         except (ValueError, TypeError):
             continue
@@ -324,17 +325,17 @@ def _normalize_answer_duration_range(value: object) -> tuple[int, int]:
     try:
         if isinstance(value, (list, tuple)):
             if len(value) >= 2:
-                low = min(MAX_ANSWER_DURATION_SECONDS, max(0, int(value[0])))
-                high = min(MAX_ANSWER_DURATION_SECONDS, max(low, int(value[1])))
+                low = min(MAX_ANSWER_DURATION_SECONDS, max(0, int(cast(Any, value[0]))))
+                high = min(MAX_ANSWER_DURATION_SECONDS, max(low, int(cast(Any, value[1]))))
                 if low == 0 and high == 0:
                     return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
                 if low == high:
                     return _legacy_answer_duration_to_range(low)
                 return low, high
             if len(value) == 1:
-                return _legacy_answer_duration_to_range(int(value[0]))
+                return _legacy_answer_duration_to_range(int(cast(Any, value[0])))
             return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
-        return _legacy_answer_duration_to_range(int(value))
+        return _legacy_answer_duration_to_range(int(cast(Any, value)))
     except (ValueError, TypeError) as exc:
         log_suppressed_exception(
             "_normalize_answer_duration_range failure",
@@ -411,7 +412,7 @@ def deserialize_question_entry(data: dict[str, object]):
 
     def _as_int(value: object, default: int = 0) -> int:
         try:
-            return int(value)
+            return int(cast(Any, value))
         except (ValueError, TypeError):
             return default
 
@@ -436,15 +437,15 @@ def deserialize_question_entry(data: dict[str, object]):
     ):
         custom_weights = list(probabilities)
     return QuestionEntry(
-        question_type=data.get("question_type") or "text",
-        probabilities=probabilities,
-        texts=data.get("texts"),
+        question_type=cast(str, data.get("question_type") or "text"),
+        probabilities=cast(Any, probabilities),
+        texts=cast(Any, data.get("texts")),
         rows=_as_int(data.get("rows"), 1),
         option_count=_as_int(data.get("option_count"), 0),
-        distribution_mode=mode_raw,
-        custom_weights=custom_weights,
-        question_num=data.get("question_num"),
-        question_title=data.get("question_title"),
+        distribution_mode=cast(str, mode_raw),
+        custom_weights=cast(Any, custom_weights),
+        question_num=cast(Any, data.get("question_num")),
+        question_title=cast(Any, data.get("question_title")),
         survey_provider=normalize_survey_provider(
             data.get("survey_provider"),
             default=SURVEY_PROVIDER_WJX,
@@ -463,11 +464,11 @@ def deserialize_question_entry(data: dict[str, object]):
         ),
         text_random_mode=str(data.get("text_random_mode") or "none"),
         text_random_int_range=_normalize_random_int_range(data.get("text_random_int_range")),
-        option_fill_texts=data.get("option_fill_texts"),
-        fillable_option_indices=data.get("fillable_option_indices"),
-        attached_option_selects=list(data.get("attached_option_selects") or []),
+        option_fill_texts=cast(Any, data.get("option_fill_texts")),
+        fillable_option_indices=cast(Any, data.get("fillable_option_indices")),
+        attached_option_selects=cast(Any, list(cast(Any, data.get("attached_option_selects")) or [])),
         is_location=bool(data.get("is_location")),
-        location_parts=list(data.get("location_parts") or []),
+        location_parts=cast(Any, list(cast(Any, data.get("location_parts")) or [])),
         dimension=_normalize_dimension_value(data.get("dimension")),
         psycho_bias=_normalize_psycho_bias(data),
     )
@@ -503,7 +504,7 @@ def build_runtime_config_snapshot(
     snapshot.survey_provider = default_provider
     entry_source = question_entries if question_entries is not None else snapshot.question_entries
     info_source = questions_info if questions_info is not None else snapshot.questions_info
-    snapshot.question_entries = clone_question_entries(entry_source)
+    snapshot.question_entries = cast(Any, clone_question_entries(cast(Any, entry_source)))
     snapshot.questions_info = clone_questions_info(info_source, default_provider=default_provider)
     snapshot.answer_rules = copy.deepcopy(list(snapshot.answer_rules or []))
     snapshot.dimension_groups = copy.deepcopy(list(snapshot.dimension_groups or []))
@@ -533,7 +534,7 @@ def _apply_basic_settings(config: RuntimeConfig, raw: dict[str, object]) -> None
 def _normalize_submit_interval(raw_value: object) -> tuple[int, int]:
     try:
         if isinstance(raw_value, (list, tuple)) and len(raw_value) >= 2:
-            return int(raw_value[0]), int(raw_value[1])
+            return int(cast(Any, raw_value[0])), int(cast(Any, raw_value[1]))
         return (0, 0)
     except (ValueError, TypeError) as exc:
         log_suppressed_exception("_tuple_pair failure", exc, level=logging.WARNING)
@@ -544,7 +545,7 @@ def _apply_timing_settings(config: RuntimeConfig, raw: dict[str, object]) -> Non
     config.submit_interval = _normalize_submit_interval(raw.get("submit_interval"))
     config.answer_duration = _normalize_answer_duration_range(raw.get("answer_duration"))
     config.answer_datetime_window = normalize_answer_datetime_window(
-        raw.get("answer_datetime_window")
+        cast(Any, raw.get("answer_datetime_window"))
     )
 
 
@@ -568,7 +569,7 @@ def _apply_feature_flags(config: RuntimeConfig, raw: dict[str, object]) -> None:
     config.fail_stop_enabled = bool(raw.get("fail_stop_enabled", True))
     config.pause_on_aliyun_captcha = bool(raw.get("pause_on_aliyun_captcha", True))
     config.reliability_mode_enabled = bool(raw.get("reliability_mode_enabled", True))
-    config.psycho_target_alpha = normalize_target_alpha(raw.get("psycho_target_alpha"))
+    config.psycho_target_alpha = normalize_target_alpha(cast(Any, raw.get("psycho_target_alpha")))
 
 
 def _apply_reverse_fill_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
@@ -591,7 +592,7 @@ def _apply_answer_rules(config: RuntimeConfig, raw: dict[str, object]) -> None:
     raw_rules = raw.get("answer_rules")
     if isinstance(raw_rules, list):
         for item in raw_rules:
-            normalized_rule = normalize_rule_dict(item)
+            normalized_rule = normalize_rule_dict(cast(dict[str, object], item))
             if normalized_rule:
                 config.answer_rules.append(normalized_rule)
 
@@ -645,7 +646,7 @@ def _normalize_questions_info_data(
                     f"{', '.join(sorted(unknown_question_keys))}）"
                 )
     normalized_questions = ensure_questions_provider_fields(
-        raw_data,
+        cast(Any, raw_data),
         default_provider=survey_provider,
     )
     return ensure_survey_question_metas(
@@ -668,10 +669,10 @@ def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
     config.dimension_groups = _normalize_dimension_groups(raw.get("dimension_groups"))
     _apply_ai_settings(config, raw)
 
-    config.question_entries = _normalize_question_entries_list(
-        raw.get("question_entries") or [],
+    config.question_entries = cast(Any, _normalize_question_entries_list(
+        cast(list[dict[str, object]], raw.get("question_entries") or []),
         config.survey_provider,
-    )
+    ))
     config.questions_info = _normalize_questions_info_data(
         raw.get("questions_info"),
         config.survey_provider,

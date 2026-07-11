@@ -59,7 +59,7 @@ class ConsistencyRulesTests:
             {"bad": "rule"},
         ]
 
-        sanitized, stats = consistency.sanitize_answer_rules(rules, questions)
+        sanitized, stats = consistency.sanitize_answer_rules(rules, questions)  # ty:ignore[invalid-argument-type]
 
         assert len(sanitized) == 1
         assert stats == {"invalid": 1, "unsupported": 1}
@@ -109,7 +109,7 @@ class ConsistencyRulesTests:
             ]
         )
 
-        assert consistency.apply_single_like_consistency([1, -2, "bad"], 2) == [1.0, 0.0, 0.0]
+        assert consistency.apply_single_like_consistency([1, -2, "bad"], 2) == [1.0, 0.0, 0.0]  # ty:ignore[invalid-argument-type]
 
     def test_matrix_row_consistency_uses_row_answers_and_target_row(self) -> None:
         reset_context()
