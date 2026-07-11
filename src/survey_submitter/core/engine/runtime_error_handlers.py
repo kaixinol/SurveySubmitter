@@ -75,7 +75,7 @@ def handle_ai_runtime_error(
         threshold_override=AI_FILL_FAIL_THRESHOLD,
         terminal_stop_category="ai_unstable",
         force_stop_when_threshold_reached=True,
-        consume_reverse_fill_attempt=False,
+        submission_failed=False,
     )
     if stopped:
         logging.error("AI 连续失败达到阈值，任务停止：%s", exc, exc_info=True)
@@ -114,7 +114,7 @@ def handle_proxy_connection_error(
         stop_signal,
         thread_name=thread_name,
         failure_reason=FailureReason.PROXY_UNAVAILABLE,
-        consume_reverse_fill_attempt=False,
+        submission_failed=False,
     )
 
 
@@ -129,8 +129,8 @@ def handle_submission_verification_error(
     logging.warning("会话[%s]触发提交智能验证：%s", thread_name, message)
 
     _safe_state_operation(
-        lambda: state.release_reverse_fill_sample(thread_name, requeue=True),
-        "智能验证停止时回收反填样本",
+        lambda: state.end_round(thread_name),
+        "智能验证停止时回收轮次样本",
     )
     _safe_state_operation(
         lambda: state.increment_thread_fail(thread_name, status_text="触发智能验证"),
@@ -157,8 +157,8 @@ def handle_survey_provider_unavailable_error(
     logging.warning("会话[%s]发现问卷不可继续：%s", thread_name, message)
 
     _safe_state_operation(
-        lambda: state.release_reverse_fill_sample(thread_name, requeue=True),
-        "问卷不可继续时回收反填样本",
+        lambda: state.end_round(thread_name),
+        "问卷不可继续时回收轮次样本",
     )
     _safe_state_operation(
         lambda: state.increment_thread_fail(thread_name, status_text="问卷不可填写"),

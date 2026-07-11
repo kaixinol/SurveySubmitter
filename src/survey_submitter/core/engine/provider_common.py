@@ -22,8 +22,9 @@ def provider_run_context(
     thread_name: str = "",
 ) -> Iterator[object | None]:
 
-    persona = generate_persona()
-    set_current_persona(persona)
+    if config.persona_enabled:
+        persona = generate_persona()
+        set_current_persona(persona)
     _reset_answer_context()
     reset_tendency()
     reset_consistency_context(config.answer_rules, list((config.questions_metadata or {}).values()))

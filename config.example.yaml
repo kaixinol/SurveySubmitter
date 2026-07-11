@@ -65,6 +65,8 @@ pause_on_aliyun_captcha: true          # Pause when Aliyun CAPTCHA is detected
 # Reliability
 # ---------------------------------------------------------------------------
 reliability_mode_enabled: true
+persona_enabled: true
+ai_answering_enabled: true
 
 # ---------------------------------------------------------------------------
 # Reverse fill (optional)

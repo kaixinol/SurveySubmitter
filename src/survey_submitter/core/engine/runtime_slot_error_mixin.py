@@ -59,7 +59,7 @@ class _SlotErrorHandlerMixin:
             log_message=log_message,
             threshold_override=threshold_override,
             terminal_stop_category="proxy_unavailable_threshold",
-            consume_reverse_fill_attempt=False,
+            submission_failed=False,
         )
         if stopped:
             self.run_context.stop_event.set()
@@ -95,7 +95,7 @@ class _SlotErrorHandlerMixin:
                 log_message=f"当前随机 IP 触发问卷星智能验证，本轮丢弃并更换 IP：{exc}",
                 terminal_stop_category="submission_verification_threshold",
                 force_stop_when_threshold_reached=True,
-                consume_reverse_fill_attempt=False,
+                submission_failed=False,
             )
             if stopped:
                 self.run_context.stop_event.set()

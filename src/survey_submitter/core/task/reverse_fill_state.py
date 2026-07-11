@@ -23,6 +23,16 @@ if TYPE_CHECKING:
         def acquire_reverse_fill_sample(
             self, thread_name: str | None = None
         ) -> ReverseFillAcquireResult: ...
+        def commit_reverse_fill_sample(
+            self, thread_name: str | None = None
+        ) -> int | None: ...
+        def release_reverse_fill_sample(
+            self, thread_name: str | None = None, *, requeue: bool = False
+        ) -> int | None: ...
+        def mark_reverse_fill_submission_failed(
+            self, thread_name: str | None = None, *, max_retries: int = 1
+        ) -> tuple[int | None, bool]: ...
+        def is_reverse_fill_target_unreachable(self) -> bool: ...
 
         def notify_runtime_change(self) -> None: ...
         def wait_for_runtime_change(
@@ -199,3 +209,23 @@ class ReverseFillRuntimeMixin:
             if target_num <= 0:
                 return False
             return self._reverse_fill_possible_total_locked() < target_num
+
+    def complete_round(self: "_ReverseFillRuntimeHost", thread_name: str | None = None) -> int | None:
+        return self.commit_reverse_fill_sample(thread_name)
+
+    def end_round(
+        self: "_ReverseFillRuntimeHost",
+        thread_name: str | None = None,
+        *,
+        submission_failed: bool = False,
+        max_retries: int = 1,
+    ) -> int | None:
+        if submission_failed:
+            row_number, _discarded = self.mark_reverse_fill_submission_failed(
+                thread_name, max_retries=max_retries
+            )
+            return row_number
+        return self.release_reverse_fill_sample(thread_name, requeue=True)
+
+    def is_round_target_unreachable(self: "_ReverseFillRuntimeHost") -> bool:
+        return self.is_reverse_fill_target_unreachable()

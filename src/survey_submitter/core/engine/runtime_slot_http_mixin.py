@@ -80,7 +80,7 @@ class _HttpRuntimeMixin:
             log_message=message,
             terminal_stop_category="http_runtime_only",
             force_stop_when_threshold_reached=True,
-            consume_reverse_fill_attempt=False,
+            submission_failed=False,
         )
         self.state.mark_terminal_stop(
             "http_runtime_only",
@@ -134,7 +134,7 @@ class _HttpRuntimeMixin:
             return False
         self._block_http_runtime(block_reason)
         try:
-            self.state.release_reverse_fill_sample(self.slot_label, requeue=True)
+            self.state.end_round(self.slot_label)
             self.state.mark_thread_finished(
                 self.slot_label, status_text=self._resolve_finished_status_text()
             )
@@ -143,9 +143,9 @@ class _HttpRuntimeMixin:
         return True
 
     def _finalize_http_runtime(self) -> None:
-        """Post-loop cleanup: release reverse-fill sample and mark thread finished."""
+        """Post-loop cleanup: release round sample and mark thread finished."""
         try:
-            self.state.release_reverse_fill_sample(self.slot_label, requeue=True)
+            self.state.end_round(self.slot_label)
             self.state.mark_thread_finished(
                 self.slot_label, status_text=self._resolve_finished_status_text()
             )
@@ -163,7 +163,7 @@ class _HttpRuntimeMixin:
         try:
             return await self._http_round_try()
         except SubmitProxyUnavailableError as exc:
-            self._release_round_resources(requeue_reverse_fill=True)
+            self._release_round_resources()
             if self._handle_proxy_unavailable(
                 status_text="代理获取失败",
                 log_message=f"提交前未获取到随机 IP，本轮跳过提交：{exc}",
@@ -172,19 +172,19 @@ class _HttpRuntimeMixin:
         except AIRuntimeError as exc:
             if await self._handle_ai_runtime_error(exc):
                 return _RoundOutcome(requeue=False, stop=True)
-            self._release_round_resources(requeue_reverse_fill=True)
+            self._release_round_resources()
         except SubmissionVerificationRequiredError as exc:
             if await self._handle_submission_verification_error(exc):
                 return _RoundOutcome(requeue=False, stop=True)
-            self._release_round_resources(requeue_reverse_fill=True)
+            self._release_round_resources()
         except SurveyProviderUnavailableAtRuntimeError as exc:
             if await self._handle_survey_provider_unavailable_error(exc):
                 return _RoundOutcome(requeue=False, stop=True)
-            self._release_round_resources(requeue_reverse_fill=True)
+            self._release_round_resources()
         except (http_client.TransportError,) as exc:
             if self._handle_http_transport_error(exc):
                 return _RoundOutcome(requeue=False, stop=True)
-            self._release_round_resources(requeue_reverse_fill=True)
+            self._release_round_resources()
         except Exception as exc:
             if self.run_context.stop_requested():
                 return _RoundOutcome(requeue=False, stop=True)
@@ -194,10 +194,10 @@ class _HttpRuntimeMixin:
                 thread_name=self.slot_label,
                 failure_reason=FailureReason.FILL_FAILED,
                 log_message=f"HTTP 提交失败，本轮按失败处理：{exc}",
-                consume_reverse_fill_attempt=False,
+                submission_failed=False,
             ):
                 return _RoundOutcome(requeue=False, stop=True)
-            self._release_round_resources(requeue_reverse_fill=True)
+            self._release_round_resources()
         return _RoundOutcome()
 
     async def _http_round_try(self) -> _RoundOutcome:
@@ -233,7 +233,7 @@ class _HttpRuntimeMixin:
             submit_proxy_lease_factory=submit_proxy_lease_factory,
         )
         if self.run_context.stop_requested() or not finished:
-            self._release_round_resources(requeue_reverse_fill=True)
+            self._release_round_resources()
             if self.run_context.stop_requested():
                 return _RoundOutcome(requeue=False, stop=True)
             return _RoundOutcome()

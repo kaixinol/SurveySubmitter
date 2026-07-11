@@ -66,6 +66,8 @@ class ExecutionConfig(BaseConfigModel):
     user_agent_ratios: dict[str, int] = {"wechat": 33, "mobile": 33, "pc": 34}
     pause_on_aliyun_captcha: bool = True
     ai_system_prompt: str = ""
+    persona_enabled: bool = True
+    ai_answering_enabled: bool = True
 
 
 @dataclass
