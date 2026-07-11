@@ -48,16 +48,6 @@ _VALID_LOGIC_PARSE_STATUSES = {
 }
 
 
-def _as_int(value: object, default: int, *, minimum: int | None = None) -> int:
-    try:
-        number = int(value)  # ty:ignore[invalid-argument-type]
-    except (ValueError, TypeError):
-        number = default
-    if minimum is not None:
-        number = max(minimum, number)
-    return number
-
-
 def _normalize_text_list(raw: object) -> list[str]:
     if not isinstance(raw, list):
         return []
@@ -260,7 +250,11 @@ def _build_common_kwargs(
     unsupported_reason = str(normalized.get("unsupported_reason") or "").strip()
     if bool(normalized.get("unsupported")) and not unsupported_reason:
         unsupported_reason = "当前平台暂不支持该题型"
-    page_number = _as_int(normalized.get("page"), 1, minimum=1)
+    page_raw = normalized.get("page")
+    try:
+        page_number = max(1, int(page_raw)) if isinstance(page_raw, (int, float, str)) else 1
+    except (ValueError, TypeError):
+        page_number = 1
     return {
         "num": question_number,
         "title": str(normalized.get("title") or "").strip(),
@@ -331,21 +325,32 @@ def _build_choice_kwargs(normalized: dict[str, object]) -> dict[str, object]:
 
 def _build_matrix_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     row_texts = _normalize_text_list(normalized.get("row_texts"))
+    rows_raw = normalized.get("rows")
+    try:
+        rows = max(1, int(rows_raw)) if isinstance(rows_raw, (int, float, str)) else (len(row_texts) or 1)
+    except (ValueError, TypeError):
+        rows = len(row_texts) or 1
     return {
-        "rows": _as_int(normalized.get("rows"), len(row_texts) or 1, minimum=1),
+        "rows": rows,
         "row_texts": row_texts or None,
         "option_texts": _normalize_text_list(normalized.get("option_texts")) or None,
     }
 
 
 def _build_rating_kwargs(normalized: dict[str, object]) -> dict[str, object]:
-    option_count = _as_int(
-        normalized.get("options"),
-        len(_normalize_text_list(normalized.get("option_texts"))),
-        minimum=0,
-    )
+    options_raw = normalized.get("options")
+    option_texts = _normalize_text_list(normalized.get("option_texts"))
+    try:
+        option_count = max(0, int(options_raw)) if isinstance(options_raw, (int, float, str)) else len(option_texts)
+    except (ValueError, TypeError):
+        option_count = len(option_texts)
+    rating_max_raw = normalized.get("rating_max")
+    try:
+        rating_max = max(0, int(rating_max_raw)) if isinstance(rating_max_raw, (int, float, str)) else option_count
+    except (ValueError, TypeError):
+        rating_max = option_count
     return {
-        "rating_max": _as_int(normalized.get("rating_max"), option_count, minimum=0),
+        "rating_max": rating_max,
     }
 
 
@@ -353,7 +358,11 @@ def _build_text_kwargs(
     normalized: dict[str, object], type_code: TypeCode = TypeCode.UNKNOWN
 ) -> dict[str, object]:
     text_input_labels = _normalize_text_list(normalized.get("text_input_labels")) or None
-    text_inputs = _as_int(normalized.get("text_inputs"), 0, minimum=0)
+    text_inputs_raw = normalized.get("text_inputs")
+    try:
+        text_inputs = max(0, int(text_inputs_raw)) if isinstance(text_inputs_raw, (int, float, str)) else 0
+    except (ValueError, TypeError):
+        text_inputs = 0
     if text_inputs == 0 and text_input_labels:
         text_inputs = len(text_input_labels)
     if text_inputs == 0 and bool(normalized.get("is_multi_text")):
@@ -378,7 +387,11 @@ def _normalize_question(
     question: SurveyQuestionInput, provider: str, index: int
 ) -> SurveyQuestionMeta:
     normalized = dict(_survey_question_input_to_dict(question) or {})
-    question_number = _as_int(normalized.get("num"), index, minimum=1)
+    num_raw = normalized.get("num")
+    try:
+        question_number = max(1, int(num_raw)) if isinstance(num_raw, (int, float, str)) else index
+    except (ValueError, TypeError):
+        question_number = index
     type_code = _resolve_type_code(normalized)
 
     common = _build_common_kwargs(normalized, type_code, question_number)
