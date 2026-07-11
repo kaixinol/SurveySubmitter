@@ -670,9 +670,6 @@ async def brush_wjx_http(
         )
         if not actions:
             return False
-        if not bool(getattr(config, "submit_enabled", True)):
-            logging.info("问卷星 HTTP 单测已生成答案，未提交。")
-            return True
 
         params, scene_id, domain = _build_wjx_submit_params(
             config=config,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import logging
 import random
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import ConfigDict
 
@@ -16,7 +16,6 @@ from survey_submitter.core.reverse_fill import (
     REVERSE_FILL_FORMAT_WJX_SEQUENCE,
     REVERSE_FILL_FORMAT_WJX_TEXT,
 )
-from survey_submitter.core.config.answer_datetime_window import normalize_answer_datetime_window
 from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.config.schema import (
     AnswerConfigSection,
@@ -203,22 +202,6 @@ def _as_list(value: object) -> list[object]:
     return []
 
 
-def _normalize_user_agent_ratios(raw_ratios: object) -> dict[str, int]:
-    if not isinstance(raw_ratios, dict):
-        return dict(_DEFAULT_RANDOM_UA_RATIOS)
-
-    ratios: dict[str, int] = {}
-    for device_type in _DEFAULT_RANDOM_UA_RATIOS:
-        value = _coerce_int(raw_ratios.get(device_type), 0)
-        if value < 0 or value > 100:
-            return dict(_DEFAULT_RANDOM_UA_RATIOS)
-        ratios[device_type] = value
-
-    if sum(ratios.values()) != 100:
-        return dict(_DEFAULT_RANDOM_UA_RATIOS)
-    return ratios
-
-
 def _select_user_agent_from_ratios(
     ratios: dict[str, int],
     *,
@@ -327,39 +310,6 @@ def _legacy_answer_duration_to_range(value: int) -> tuple[int, int]:
     low = max(0, int(round(normalized * 0.9)))
     high = min(MAX_ANSWER_DURATION_SECONDS, max(low, int(round(normalized * 1.1))))
     return low, high
-
-
-def _normalize_answer_duration_range(value: object) -> tuple[int, int]:
-    if value in (None, "", []):
-        return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
-    try:
-        if isinstance(value, (list, tuple)):
-            if len(value) >= 2:
-                first, second = value[0], value[1]
-                if not isinstance(first, (int, float, str)) or not isinstance(second, (int, float, str)):
-                    return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
-                low = min(MAX_ANSWER_DURATION_SECONDS, max(0, int(first)))
-                high = min(MAX_ANSWER_DURATION_SECONDS, max(low, int(second)))
-                if low == 0 and high == 0:
-                    return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
-                if low == high:
-                    return _legacy_answer_duration_to_range(low)
-                return low, high
-            if len(value) == 1:
-                only = value[0]
-                if isinstance(only, (int, float, str)):
-                    return _legacy_answer_duration_to_range(int(only))
-            return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
-        if isinstance(value, (int, float, str)):
-            return _legacy_answer_duration_to_range(int(value))
-        return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
-    except (ValueError, TypeError) as exc:
-        log_suppressed_exception(
-            "_normalize_answer_duration_range failure",
-            exc,
-            level=logging.WARNING,
-        )
-        return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
 
 
 def _normalize_dimension_value(raw: object) -> str | None:
@@ -544,113 +494,6 @@ def _validate_no_unknown_keys(raw: dict[str, object]) -> None:
             )
 
 
-def _apply_survey_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
-    config.survey.url = _as_str(raw.get("url"))
-    config.survey.survey_title = _as_str(raw.get("survey_title"))
-    config.survey.survey_provider = normalize_survey_provider(
-        raw.get("survey_provider"),
-        default=detect_survey_provider(config.survey.url),
-    )
-
-
-def _apply_execution_basic(config: RuntimeConfig, raw: dict[str, object]) -> None:
-    config.execution.target_num = _coerce_int(raw.get("target_num"), 1)
-    config.execution.num_threads = _coerce_int(raw.get("num_threads"), 1)
-
-
-def _normalize_submit_interval(raw_value: object) -> tuple[int, int]:
-    try:
-        if isinstance(raw_value, (list, tuple)) and len(raw_value) >= 2:
-            first, second = raw_value[0], raw_value[1]
-            return int(first) if isinstance(first, (int, float, str)) else 0, int(second) if isinstance(second, (int, float, str)) else 0
-        return (0, 0)
-    except (ValueError, TypeError) as exc:
-        log_suppressed_exception("_tuple_pair failure", exc, level=logging.WARNING)
-        return (0, 0)
-
-
-def _apply_timing_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
-    config.execution.submit_interval_range_seconds = _normalize_submit_interval(
-        raw.get("submit_interval_range_seconds")
-    )
-    config.execution.answer_duration_range_seconds = _normalize_answer_duration_range(
-        raw.get("answer_duration_range_seconds")
-    )
-    raw_window = raw.get("answer_datetime_window")
-    if isinstance(raw_window, list):
-        window_list = [str(x) for x in raw_window]
-        config.execution.answer_datetime_window = normalize_answer_datetime_window(window_list)
-    elif isinstance(raw_window, tuple):
-        window_tuple = tuple(str(x) for x in raw_window)
-        config.execution.answer_datetime_window = normalize_answer_datetime_window(window_tuple)
-    else:
-        config.execution.answer_datetime_window = normalize_answer_datetime_window(None)
-
-
-def _apply_proxy_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
-    config.execution.custom_proxy_api = _as_str(raw.get("custom_proxy_api"))
-    proxy_source = _as_str(raw.get("proxy_source"), "default").lower()
-    if proxy_source not in ("default", "benefit", "custom"):
-        proxy_source = "default"
-    config.execution.proxy_source = proxy_source
-    config.execution.random_proxy_ip = _as_bool(raw.get("random_proxy_ip"))
-    raw_area_code = raw.get("proxy_area_code")
-    config.execution.proxy_area_code = None if raw_area_code is None else str(raw_area_code)
-
-
-def _apply_ua_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
-    config.execution.random_user_agent = _as_bool(raw.get("random_user_agent"))
-    config.execution.user_agent_ratios = _normalize_user_agent_ratios(raw.get("user_agent_ratios"))
-
-
-def _apply_feature_flags(config: RuntimeConfig, raw: dict[str, object]) -> None:
-    config.execution.stop_on_fail = bool(raw.get("stop_on_fail", True))
-    config.execution.pause_on_aliyun_captcha = bool(raw.get("pause_on_aliyun_captcha", True))
-    config.execution.reliability_mode = bool(raw.get("reliability_mode", True))
-    config.execution.persona = bool(raw.get("persona", True))
-
-
-def _apply_reverse_fill_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
-    rf = config.execution.reverse_fill
-    rf.enabled = _as_bool(raw.get("enabled"))
-    rf.source_path = _as_str(raw.get("source_path"))
-    reverse_fill_format = _as_str(raw.get("format"), REVERSE_FILL_FORMAT_AUTO).lower()
-    rf.format = (
-        reverse_fill_format
-        if reverse_fill_format in _REVERSE_FILL_FORMATS
-        else REVERSE_FILL_FORMAT_AUTO
-    )
-    rf.start_row = max(1, _coerce_int(raw.get("start_row"), 1))
-    rf.threads = max(
-        1, _coerce_int(raw.get("threads"), config.execution.num_threads or 1)
-    )
-
-
-def _apply_answer_rules(config: RuntimeConfig, raw: dict[str, object]) -> None:
-    config.answer_config.answer_rules = []
-    raw_rules = raw.get("answer_rules")
-    if isinstance(raw_rules, list):
-        for item in raw_rules:
-            if isinstance(item, dict):
-                rule_dict: dict[str, object] = {str(k): v for k, v in item.items()}
-                normalized_rule = normalize_rule_dict(rule_dict)
-                if normalized_rule:
-                    config.answer_config.answer_rules.append(normalized_rule)
-
-
-def _apply_ai_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:
-    ai = config.execution.ai
-    ai_keys = {"api_key", "base_url", "api_protocol", "model", "system_prompt"}
-    if not any(key in raw for key in ai_keys):
-        return
-    ai.answering = _as_bool(raw.get("answering", True))
-    ai.api_key = _as_str(raw.get("api_key"))
-    ai.base_url = _as_str(raw.get("base_url"))
-    ai.api_protocol = _as_str(raw.get("api_protocol"), "auto")
-    ai.model = _as_str(raw.get("model"))
-    ai.system_prompt = _as_str(raw.get("system_prompt"))
-
-
 def _normalize_question_entries_list(
     raw_entries: list[dict[str, object]],
     survey_provider: str,
@@ -697,27 +540,22 @@ def _normalize_questions_info_data(
 
 def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
     _validate_no_unknown_keys(raw)
-    config = RuntimeConfig()
 
-    survey_raw = cast("dict[str, object]", raw.get("survey") or {})
-    execution_raw = cast("dict[str, object]", raw.get("execution") or {})
+    # Extract fields that need special handling before Pydantic validation
     answer_config_raw = cast("dict[str, object]", raw.get("answer_config") or {})
 
-    _apply_survey_settings(config, survey_raw)
-    _apply_execution_basic(config, execution_raw)
-    _apply_timing_settings(config, execution_raw)
-    _apply_proxy_settings(config, execution_raw)
-    _apply_ua_settings(config, execution_raw)
-    _apply_feature_flags(config, execution_raw)
+    # Remove question_entries and questions_info from raw to avoid validation errors
+    raw_copy = dict(raw)
+    if "answer_config" in raw_copy and isinstance(raw_copy["answer_config"], dict):
+        answer_config_copy = dict(raw_copy["answer_config"])
+        answer_config_copy.pop("question_entries", None)
+        answer_config_copy.pop("questions_info", None)
+        raw_copy["answer_config"] = answer_config_copy
 
-    reverse_fill_raw = cast("dict[str, object]", execution_raw.get("reverse_fill") or {})
-    _apply_reverse_fill_settings(config, reverse_fill_raw)
+    # Let Pydantic validate the structure and apply validators
+    config = RuntimeConfig.model_validate(raw_copy)
 
-    ai_raw = cast("dict[str, object]", execution_raw.get("ai") or {})
-    _apply_ai_settings(config, ai_raw)
-
-    _apply_answer_rules(config, answer_config_raw)
-
+    # Post-process question_entries (needs provider context)
     raw_question_entries = answer_config_raw.get("question_entries") or []
     question_entry_dicts: list[dict[str, object]] = [
         {str(k): v for k, v in item.items()}
@@ -728,15 +566,31 @@ def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
         question_entry_dicts,
         config.survey.survey_provider,
     )
+
+    # Post-process questions_info (needs provider context)
     config.answer_config.questions_info = _normalize_questions_info_data(
         answer_config_raw.get("questions_info"),
         config.survey.survey_provider,
     )
 
+    # Normalize answer_rules from raw YAML data
+    raw_rules = answer_config_raw.get("answer_rules")
+    normalized_rules: list[dict[str, Any]] = []
+    if isinstance(raw_rules, list):
+        for item in raw_rules:
+            if isinstance(item, dict):
+                rule_dict: dict[str, object] = {str(k): v for k, v in item.items()}
+                normalized_rule = normalize_rule_dict(rule_dict)
+                if normalized_rule:
+                    normalized_rules.append(normalized_rule)
+    config.answer_config.answer_rules = normalized_rules
+
+    # Sanitize answer_rules (needs questions_info context)
     config.answer_config.answer_rules, _ = sanitize_answer_rules(
         config.answer_config.answer_rules,
         config.answer_config.questions_info or [],
     )
+
     return config
 
 
