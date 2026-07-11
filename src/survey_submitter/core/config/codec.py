@@ -410,20 +410,21 @@ def serialize_question_entry(entry) -> dict[str, object]:
 def deserialize_question_entry(data: dict[str, object]):
     from survey_submitter.core.questions.config import QuestionEntry
 
+    if not isinstance(data, dict):
+        raise ValueError(f"{_CONFIG_CORRUPTED_MESSAGE}：题目配置必须是字典类型")
+
     def _as_int(value: object, default: int = 0) -> int:
         try:
             return int(cast(Any, value))
         except (ValueError, TypeError):
             return default
 
-    unknown_keys = set(data or {}) - _QUESTION_ENTRY_FIELDS
-    if unknown_keys:
-        raise ValueError(
-            f"{_CONFIG_CORRUPTED_MESSAGE}：题目配置包含不支持的字段（{', '.join(sorted(unknown_keys))}）"
-        )
-    mode_raw = data.get("distribution_mode") or "random"
-    probabilities = data.get("probabilities")
-    custom_weights = data.get("custom_weights")
+    normalized_data = dict(data)
+
+    mode_raw = str(normalized_data.get("distribution_mode") or "random").strip()
+    probabilities = normalized_data.get("probabilities")
+    custom_weights = normalized_data.get("custom_weights")
+
     if (
         mode_raw == "custom"
         and _prob_config_is_unset(probabilities)
@@ -436,42 +437,47 @@ def deserialize_question_entry(data: dict[str, object]):
         and isinstance(probabilities, list)
     ):
         custom_weights = list(probabilities)
-    return QuestionEntry(
-        question_type=cast(str, data.get("question_type") or "text"),
-        probabilities=cast(Any, probabilities),
-        texts=cast(Any, data.get("texts")),
-        rows=_as_int(data.get("rows"), 1),
-        option_count=_as_int(data.get("option_count"), 0),
-        distribution_mode=cast(str, mode_raw),
-        custom_weights=cast(Any, custom_weights),
-        question_num=cast(Any, data.get("question_num")),
-        question_title=cast(Any, data.get("question_title")),
-        survey_provider=normalize_survey_provider(
-            data.get("survey_provider"),
+
+    normalized_data.update({
+        "distribution_mode": mode_raw,
+        "probabilities": probabilities,
+        "custom_weights": custom_weights,
+        "question_type": str(normalized_data.get("question_type") or "text").strip(),
+        "rows": _as_int(normalized_data.get("rows"), 1),
+        "option_count": _as_int(normalized_data.get("option_count"), 0),
+        "survey_provider": normalize_survey_provider(
+            normalized_data.get("survey_provider"),
             default=SURVEY_PROVIDER_WJX,
         ),
-        provider_question_id=str(data.get("provider_question_id") or "").strip() or None,
-        provider_page_id=str(data.get("provider_page_id") or "").strip() or None,
-        ai_enabled=bool(data.get("ai_enabled", False)),
-        multi_text_blank_modes=_normalize_multi_text_blank_modes(
-            data.get("multi_text_blank_modes")
+        "provider_question_id": str(normalized_data.get("provider_question_id") or "").strip() or None,
+        "provider_page_id": str(normalized_data.get("provider_page_id") or "").strip() or None,
+        "ai_enabled": bool(normalized_data.get("ai_enabled", False)),
+        "multi_text_blank_modes": _normalize_multi_text_blank_modes(
+            normalized_data.get("multi_text_blank_modes")
         ),
-        multi_text_blank_ai_flags=_normalize_multi_text_blank_ai_flags(
-            data.get("multi_text_blank_ai_flags")
+        "multi_text_blank_ai_flags": _normalize_multi_text_blank_ai_flags(
+            normalized_data.get("multi_text_blank_ai_flags")
         ),
-        multi_text_blank_int_ranges=_normalize_multi_text_blank_int_ranges(
-            data.get("multi_text_blank_int_ranges")
+        "multi_text_blank_int_ranges": _normalize_multi_text_blank_int_ranges(
+            normalized_data.get("multi_text_blank_int_ranges")
         ),
-        text_random_mode=str(data.get("text_random_mode") or "none"),
-        text_random_int_range=_normalize_random_int_range(data.get("text_random_int_range")),
-        option_fill_texts=cast(Any, data.get("option_fill_texts")),
-        fillable_option_indices=cast(Any, data.get("fillable_option_indices")),
-        attached_option_selects=cast(Any, list(cast(Any, data.get("attached_option_selects")) or [])),
-        is_location=bool(data.get("is_location")),
-        location_parts=cast(Any, list(cast(Any, data.get("location_parts")) or [])),
-        dimension=_normalize_dimension_value(data.get("dimension")),
-        psycho_bias=_normalize_psycho_bias(data),
-    )
+        "text_random_mode": str(normalized_data.get("text_random_mode") or "none").strip(),
+        "text_random_int_range": _normalize_random_int_range(
+            normalized_data.get("text_random_int_range")
+        ),
+        "option_fill_texts": normalized_data.get("option_fill_texts"),
+        "fillable_option_indices": normalized_data.get("fillable_option_indices"),
+        "attached_option_selects": list(normalized_data.get("attached_option_selects") or []),
+        "is_location": bool(normalized_data.get("is_location")),
+        "location_parts": list(normalized_data.get("location_parts") or []),
+        "dimension": _normalize_dimension_value(normalized_data.get("dimension")),
+        "psycho_bias": _normalize_psycho_bias(normalized_data),
+    })
+
+    try:
+        return QuestionEntry.model_validate(normalized_data)
+    except Exception as exc:
+        raise ValueError(f"{_CONFIG_CORRUPTED_MESSAGE}：{exc}") from exc
 
 
 def clone_question_entries(entries: list[object] | None) -> list[object]:
