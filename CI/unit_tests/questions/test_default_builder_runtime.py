@@ -2,24 +2,55 @@ from __future__ import annotations
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.questions.default_builder import build_default_question_entries
-from survey_submitter.core.questions.schema import QuestionEntry, _TEXT_RANDOM_MOBILE, _TEXT_RANDOM_NONE
+from survey_submitter.core.questions.schema import (
+    QuestionEntry,
+    _TEXT_RANDOM_MOBILE,
+    _TEXT_RANDOM_NONE,
+)
 from survey_submitter.providers.contracts import ensure_survey_question_meta
 
 
 class DefaultBuilderRuntimeTests:
     def test_build_default_question_entries_creates_defaults_for_common_types(self) -> None:
         questions = [
-            ensure_survey_question_meta({"num": 1, "title": "单选", "type_code": "3", "option_texts": ["A", "B", "C", "D"], "forced_option_index": 2, "forced_option_text": "C"}),
-            ensure_survey_question_meta({"num": 2, "title": "多选", "type_code": "4", "option_texts": ["A", "B", "C"]}),
+            ensure_survey_question_meta(
+                {
+                    "num": 1,
+                    "title": "单选",
+                    "type_code": "3",
+                    "option_texts": ["A", "B", "C", "D"],
+                    "forced_option_index": 2,
+                    "forced_option_text": "C",
+                }
+            ),
+            ensure_survey_question_meta(
+                {"num": 2, "title": "多选", "type_code": "4", "option_texts": ["A", "B", "C"]}
+            ),
             ensure_survey_question_meta({"num": 3, "title": "矩阵", "type_code": "6", "rows": 2}),
-            ensure_survey_question_meta({"num": 4, "title": "评分", "type_code": "5", "rating_max": 7}),
-            ensure_survey_question_meta({"num": 5, "title": "滑块", "type_code": "8", "slider_min": 10, "slider_max": 20}),
-            ensure_survey_question_meta({"num": 6, "title": "填空", "type_code": "1", "text_inputs": 1, "text_input_labels": ["指定文本"]}),
+            ensure_survey_question_meta(
+                {"num": 4, "title": "评分", "type_code": "5", "rating_max": 7}
+            ),
+            ensure_survey_question_meta(
+                {"num": 5, "title": "滑块", "type_code": "8", "slider_min": 10, "slider_max": 20}
+            ),
+            ensure_survey_question_meta(
+                {
+                    "num": 6,
+                    "title": "填空",
+                    "type_code": "1",
+                    "text_inputs": 1,
+                    "text_input_labels": ["指定文本"],
+                }
+            ),
             ensure_survey_question_meta({"num": 7, "title": "说明", "type_code": "description"}),
-            ensure_survey_question_meta({"num": 8, "title": "不支持", "type_code": "99", "unsupported": True}),
+            ensure_survey_question_meta(
+                {"num": 8, "title": "不支持", "type_code": "99", "unsupported": True}
+            ),
         ]
 
-        entries = build_default_question_entries(questions, survey_url="https://www.wjx.cn/vm/demo.aspx")
+        entries = build_default_question_entries(
+            questions, survey_url="https://www.wjx.cn/vm/demo.aspx"
+        )
 
         assert [entry.question_num for entry in entries] == [1, 2, 3, 4, 5, 6]
         assert entries[0].question_type == "single"
@@ -38,19 +69,27 @@ class DefaultBuilderRuntimeTests:
 
     def test_build_default_question_entries_infers_multi_text_mobile_blank(self) -> None:
         questions = [
-            ensure_survey_question_meta({
-                "num": 11,
-                "title": "多项填空",
-                "type_code": "multi_text",
-                "text_inputs": 3,
-                "text_input_labels": ["项目评价", "请输入手机号", "备注"],
-            })
+            ensure_survey_question_meta(
+                {
+                    "num": 11,
+                    "title": "多项填空",
+                    "type_code": "multi_text",
+                    "text_inputs": 3,
+                    "text_input_labels": ["项目评价", "请输入手机号", "备注"],
+                }
+            )
         ]
 
-        entries = build_default_question_entries(questions, survey_url="https://www.wjx.cn/vm/demo.aspx")
+        entries = build_default_question_entries(
+            questions, survey_url="https://www.wjx.cn/vm/demo.aspx"
+        )
 
         assert entries[0].question_type == "multi_text"
-        assert entries[0].multi_text_blank_modes == [_TEXT_RANDOM_NONE, _TEXT_RANDOM_MOBILE, _TEXT_RANDOM_NONE]
+        assert entries[0].multi_text_blank_modes == [
+            _TEXT_RANDOM_NONE,
+            _TEXT_RANDOM_MOBILE,
+            _TEXT_RANDOM_NONE,
+        ]
 
     def test_build_default_question_entries_reuses_existing_by_provider_num_and_title(self) -> None:
         existing_by_provider = QuestionEntry(
@@ -85,17 +124,29 @@ class DefaultBuilderRuntimeTests:
             ai_enabled=True,
         )
         questions = [
-            ensure_survey_question_meta({
-                "num": 1,
-                "title": "新标题",
-                "type_code": "3",
-                "option_texts": ["X", "Y"],
-                "provider_question_id": "provider-1",
-                "fillable_options": [1],
-                "attached_option_selects": [{"option_index": "1", "option_text": "其他", "select_options": ["北京", "上海"]}],
-            }),
-            ensure_survey_question_meta({"num": 2, "title": "多选题", "type_code": "4", "option_texts": ["A", "B"]}),
-            ensure_survey_question_meta({"num": 3, "title": "标题匹配", "type_code": "1", "text_inputs": 1}),
+            ensure_survey_question_meta(
+                {
+                    "num": 1,
+                    "title": "新标题",
+                    "type_code": "3",
+                    "option_texts": ["X", "Y"],
+                    "provider_question_id": "provider-1",
+                    "fillable_options": [1],
+                    "attached_option_selects": [
+                        {
+                            "option_index": "1",
+                            "option_text": "其他",
+                            "select_options": ["北京", "上海"],
+                        }
+                    ],
+                }
+            ),
+            ensure_survey_question_meta(
+                {"num": 2, "title": "多选题", "type_code": "4", "option_texts": ["A", "B"]}
+            ),
+            ensure_survey_question_meta(
+                {"num": 3, "title": "标题匹配", "type_code": "1", "text_inputs": 1}
+            ),
         ]
 
         entries = build_default_question_entries(
@@ -108,7 +159,12 @@ class DefaultBuilderRuntimeTests:
         assert entries[0].option_fill_texts == [None, "其他"]
         assert entries[0].fillable_option_indices == [1]
         assert entries[0].attached_option_selects == [
-            {"option_index": 1, "option_text": "其他", "select_options": ["北京", "上海"], "weights": [1.0, 0.0]}
+            {
+                "option_index": 1,
+                "option_text": "其他",
+                "select_options": ["北京", "上海"],
+                "weights": [1.0, 0.0],
+            }
         ]
         assert entries[1].probabilities == [10, 90]
         assert entries[1].distribution_mode == "custom"
@@ -126,7 +182,17 @@ class DefaultBuilderRuntimeTests:
             fillable_option_indices=[0],
         )
         entries = build_default_question_entries(
-            [ensure_survey_question_meta({"num": 1, "title": "单选题", "type_code": "3", "option_texts": ["A", "B"], "fillable_options": [5]})],
+            [
+                ensure_survey_question_meta(
+                    {
+                        "num": 1,
+                        "title": "单选题",
+                        "type_code": "3",
+                        "option_texts": ["A", "B"],
+                        "fillable_options": [5],
+                    }
+                )
+            ],
             existing_entries=[existing],
         )
 
@@ -143,7 +209,11 @@ class DefaultBuilderRuntimeTests:
             distribution_mode="custom",
             custom_weights=[0, 1],
         )
-        questions = [ensure_survey_question_meta({"num": 1, "title": "新标题", "type_code": "3", "option_texts": ["A", "B"]})]
+        questions = [
+            ensure_survey_question_meta(
+                {"num": 1, "title": "新标题", "type_code": "3", "option_texts": ["A", "B"]}
+            )
+        ]
 
         entries = build_default_question_entries(questions, existing_entries=[existing])
 

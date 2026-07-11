@@ -20,19 +20,25 @@ from survey_submitter.core.questions.schema import QuestionEntry
 from survey_submitter.core.reverse_fill.schema import REVERSE_FILL_FORMAT_WJX_SEQUENCE
 from survey_submitter.providers.contracts import ensure_survey_question_meta
 
-class ConfigCodecTests:
 
+class ConfigCodecTests:
     def test_default_user_agent_is_pc_web(self) -> None:
         assert DEFAULT_USER_AGENT == USER_AGENT_PRESETS["pc_web"]["ua"]
         assert "Windows NT" in DEFAULT_USER_AGENT
 
     def test_runtime_config_roundtrip_keeps_reverse_fill_fields(self) -> None:
-        config = RuntimeConfig(reverse_fill_enabled=True, reverse_fill_source_path='D:/demo.xlsx', reverse_fill_format=REVERSE_FILL_FORMAT_WJX_SEQUENCE, reverse_fill_start_row=3, reverse_fill_threads=4)
+        config = RuntimeConfig(
+            reverse_fill_enabled=True,
+            reverse_fill_source_path="D:/demo.xlsx",
+            reverse_fill_format=REVERSE_FILL_FORMAT_WJX_SEQUENCE,
+            reverse_fill_start_row=3,
+            reverse_fill_threads=4,
+        )
         payload = serialize_runtime_config(config)
         restored = deserialize_runtime_config(payload)
-        assert 'config_schema_version' not in payload
+        assert "config_schema_version" not in payload
         assert restored.reverse_fill_enabled
-        assert restored.reverse_fill_source_path == 'D:/demo.xlsx'
+        assert restored.reverse_fill_source_path == "D:/demo.xlsx"
         assert restored.reverse_fill_format == REVERSE_FILL_FORMAT_WJX_SEQUENCE
         assert restored.reverse_fill_start_row == 3
         assert restored.reverse_fill_threads == 4
@@ -47,44 +53,90 @@ class ConfigCodecTests:
         assert restored.answer_datetime_window == ("2026-02-10 09:00:00", "2026-02-10 10:00:00")
 
     def test_runtime_config_roundtrip_keeps_questions_info_provider_metadata(self) -> None:
-        config = RuntimeConfig(survey_provider='wjx', questions_info=[ensure_survey_question_meta({
-            "num": 3, "title": "联系方式", "type_code": "3",
-            "provider_question_id": "question-3", "provider_page_id": "page-2",
-            "option_texts": ["姓名", "电话"], "required": True,
-            "logic_parse_status": "unknown",
-            "question_media": [{"kind": "image", "scope": "title", "index": None, "source_url": "https://example.com/q3.png", "label": "题干图"}]
-        })])
+        config = RuntimeConfig(
+            survey_provider="wjx",
+            questions_info=[
+                ensure_survey_question_meta(
+                    {
+                        "num": 3,
+                        "title": "联系方式",
+                        "type_code": "3",
+                        "provider_question_id": "question-3",
+                        "provider_page_id": "page-2",
+                        "option_texts": ["姓名", "电话"],
+                        "required": True,
+                        "logic_parse_status": "unknown",
+                        "question_media": [
+                            {
+                                "kind": "image",
+                                "scope": "title",
+                                "index": None,
+                                "source_url": "https://example.com/q3.png",
+                                "label": "题干图",
+                            }
+                        ],
+                    }
+                )
+            ],
+        )
         payload = serialize_runtime_config(config)
         restored = deserialize_runtime_config(payload)
-        assert payload['questions_info'][0]['provider_question_id'] == 'question-3'
-        assert payload['questions_info'][0]['provider_page_id'] == 'page-2'
-        assert payload['questions_info'][0]['required']
-        assert payload['questions_info'][0]['logic_parse_status'] == 'unknown'
-        assert payload['questions_info'][0]['question_media'][0]['source_url'] == 'https://example.com/q3.png'
+        assert payload["questions_info"][0]["provider_question_id"] == "question-3"
+        assert payload["questions_info"][0]["provider_page_id"] == "page-2"
+        assert payload["questions_info"][0]["required"]
+        assert payload["questions_info"][0]["logic_parse_status"] == "unknown"
+        assert (
+            payload["questions_info"][0]["question_media"][0]["source_url"]
+            == "https://example.com/q3.png"
+        )
         assert len(restored.questions_info or []) == 1
         restored_info = restored.questions_info[0]
-        assert restored_info.provider_question_id == 'question-3'
-        assert restored_info.provider_page_id == 'page-2'
+        assert restored_info.provider_question_id == "question-3"
+        assert restored_info.provider_page_id == "page-2"
         assert restored_info.required
-        assert restored_info.logic_parse_status == 'unknown'
-        assert restored_info.question_media[0]['label'] == '题干图'
+        assert restored_info.logic_parse_status == "unknown"
+        assert restored_info.question_media[0]["label"] == "题干图"
 
     def test_build_runtime_config_snapshot_returns_detached_copies(self) -> None:
-        config = RuntimeConfig(survey_provider='wjx', answer_rules=[{'question_num': 1, 'equals': [0]}], dimension_groups=['情绪维度'], question_entries=[QuestionEntry(question_type='single', probabilities=[60.0, 40.0], texts=['A', 'B'], option_count=2, question_num=1)], questions_info=[ensure_survey_question_meta({"num": 1, "title": "单选题", "type_code": "3", "option_texts": ["A", "B"], "provider_question_id": "q1"})])
+        config = RuntimeConfig(
+            survey_provider="wjx",
+            answer_rules=[{"question_num": 1, "equals": [0]}],
+            dimension_groups=["情绪维度"],
+            question_entries=[
+                QuestionEntry(
+                    question_type="single",
+                    probabilities=[60.0, 40.0],
+                    texts=["A", "B"],
+                    option_count=2,
+                    question_num=1,
+                )
+            ],
+            questions_info=[
+                ensure_survey_question_meta(
+                    {
+                        "num": 1,
+                        "title": "单选题",
+                        "type_code": "3",
+                        "option_texts": ["A", "B"],
+                        "provider_question_id": "q1",
+                    }
+                )
+            ],
+        )
         snapshot = build_runtime_config_snapshot(config)
         assert snapshot is not config
         assert snapshot.question_entries is not config.question_entries
         assert snapshot.questions_info is not config.questions_info
         assert snapshot.question_entries[0] is not config.question_entries[0]
         assert snapshot.questions_info[0] is not config.questions_info[0]
-        snapshot.question_entries[0].texts[0] = '已修改'
-        snapshot.questions_info[0].option_texts[0] = '已修改'
-        snapshot.answer_rules[0]['equals'][0] = 9
-        snapshot.dimension_groups[0] = '新维度'
-        assert config.question_entries[0].texts[0] == 'A'
-        assert config.questions_info[0].option_texts[0] == 'A'
-        assert config.answer_rules[0]['equals'][0] == 0
-        assert config.dimension_groups[0] == '情绪维度'
+        snapshot.question_entries[0].texts[0] = "已修改"
+        snapshot.questions_info[0].option_texts[0] = "已修改"
+        snapshot.answer_rules[0]["equals"][0] = 9
+        snapshot.dimension_groups[0] = "新维度"
+        assert config.question_entries[0].texts[0] == "A"
+        assert config.questions_info[0].option_texts[0] == "A"
+        assert config.answer_rules[0]["equals"][0] == 0
+        assert config.dimension_groups[0] == "情绪维度"
 
     def test_unknown_fields_raise_corruption_error(self) -> None:
         with pytest.raises(ValueError, match="该配置文件损坏"):
@@ -105,7 +157,9 @@ class ConfigCodecTests:
             )
 
     def test_ensure_supported_config_payload_keeps_payload_without_schema_version(self) -> None:
-        payload = _ensure_supported_config_payload({"url": "https://example.test"}, config_path="demo.json")
+        payload = _ensure_supported_config_payload(
+            {"url": "https://example.test"}, config_path="demo.json"
+        )
         assert payload == {"url": "https://example.test"}
 
     def test_question_entry_normalizes_text_modes_ranges_provider_and_dimensions(self) -> None:
@@ -211,8 +265,13 @@ class ConfigCodecTests:
 
     def test_answer_duration_legacy_single_value_expands_to_10_percent_range(self) -> None:
         assert normalize_runtime_config_payload({"answer_duration": 90}).answer_duration == (81, 99)
-        assert normalize_runtime_config_payload({"answer_duration": ["90"]}).answer_duration == (81, 99)
-        assert normalize_runtime_config_payload({"answer_duration": [180, 180]}).answer_duration == (
+        assert normalize_runtime_config_payload({"answer_duration": ["90"]}).answer_duration == (
+            81,
+            99,
+        )
+        assert normalize_runtime_config_payload(
+            {"answer_duration": [180, 180]}
+        ).answer_duration == (
             162,
             198,
         )
@@ -221,12 +280,16 @@ class ConfigCodecTests:
             1620,
             1800,
         )
-        assert normalize_runtime_config_payload({"answer_duration": [1200, 9999]}).answer_duration == (
+        assert normalize_runtime_config_payload(
+            {"answer_duration": [1200, 9999]}
+        ).answer_duration == (
             1200,
             1800,
         )
 
-    def test_random_ua_ratio_normalization_ignores_unknown_keys_and_rejects_invalid_values(self) -> None:
+    def test_random_ua_ratio_normalization_ignores_unknown_keys_and_rejects_invalid_values(
+        self,
+    ) -> None:
         assert normalize_runtime_config_payload(
             {"random_ua_ratios": {"wechat": 100, "unknown": 0}}
         ).random_ua_ratios == {"wechat": 100, "mobile": 0, "pc": 0}

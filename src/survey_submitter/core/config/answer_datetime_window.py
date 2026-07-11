@@ -32,7 +32,9 @@ def normalize_answer_datetime_window(value: list[str] | tuple[str, ...] | None) 
     return start, end
 
 
-def answer_datetime_window_to_epoch_ms(value: list[str] | tuple[str, ...] | None) -> tuple[int, int]:
+def answer_datetime_window_to_epoch_ms(
+    value: list[str] | tuple[str, ...] | None,
+) -> tuple[int, int]:
     start_text, end_text = normalize_answer_datetime_window(value)
     start = parse_answer_datetime_string(start_text)
     end = parse_answer_datetime_string(end_text)
@@ -44,4 +46,3 @@ def answer_datetime_window_to_epoch_ms(value: list[str] | tuple[str, ...] | None
 def has_configured_answer_datetime_window(value: list[str] | tuple[str, ...] | None) -> bool:
     start_text, end_text = normalize_answer_datetime_window(value)
     return bool(start_text and end_text)
-

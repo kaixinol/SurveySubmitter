@@ -16,12 +16,12 @@ TARGET_DIRS = [
 ENTRY_FILES = [ROOT_DIR / "cli.py"]
 
 
-
-
 RUFF_SELECT = "F"
 CHILD_RESULT_PREFIX = "__WJX_CHECK__"
 IMPORT_TIMEOUT_SECONDS = 12
-UNIT_TEST_TIMEOUT_SECONDS = int(os.environ.get("SURVEY_CONTROLLER_UNIT_TEST_TIMEOUT_SECONDS", "120"))
+UNIT_TEST_TIMEOUT_SECONDS = int(
+    os.environ.get("SURVEY_CONTROLLER_UNIT_TEST_TIMEOUT_SECONDS", "120")
+)
 DEFAULT_UNIT_TEST_COVERAGE_FAIL_UNDER = "75"
 PYRIGHT_TIMEOUT_SECONDS = int(os.environ.get("SURVEY_CONTROLLER_PYRIGHT_TIMEOUT_SECONDS", "90"))
 PYTEST_FAILURE_LOG_TAIL_LINES = 40
@@ -29,34 +29,32 @@ TYPE_IGNORE_PATTERNS = (
     "# " + "type" + ": ignore",
     "# " + "pyright:",
 )
-TYPE_IGNORE_SCAN_ROOTS = (
-    ROOT_DIR / "src" / "survey_submitter",
-)
+TYPE_IGNORE_SCAN_ROOTS = (ROOT_DIR / "src" / "survey_submitter",)
 UNICODE_ESCAPE_PATTERNS = (
     "\\" + "u",
     "\\" + "U",
     "\\" + "N{",
 )
-UNICODE_ESCAPE_SCAN_ROOTS = (
-    ROOT_DIR / "CI",
+UNICODE_ESCAPE_SCAN_ROOTS = (ROOT_DIR / "CI",)
+UNICODE_SPACE_TRANSLATION = str.maketrans(
+    {
+        chr(0x00A0): " ",
+        chr(0x2000): " ",
+        chr(0x2001): " ",
+        chr(0x2002): " ",
+        chr(0x2003): " ",
+        chr(0x2004): " ",
+        chr(0x2005): " ",
+        chr(0x2006): " ",
+        chr(0x2007): " ",
+        chr(0x2008): " ",
+        chr(0x2009): " ",
+        chr(0x200A): " ",
+        chr(0x202F): " ",
+        chr(0x205F): " ",
+        chr(0x3000): " ",
+    }
 )
-UNICODE_SPACE_TRANSLATION = str.maketrans({
-    chr(0x00A0): " ",
-    chr(0x2000): " ",
-    chr(0x2001): " ",
-    chr(0x2002): " ",
-    chr(0x2003): " ",
-    chr(0x2004): " ",
-    chr(0x2005): " ",
-    chr(0x2006): " ",
-    chr(0x2007): " ",
-    chr(0x2008): " ",
-    chr(0x2009): " ",
-    chr(0x200A): " ",
-    chr(0x202F): " ",
-    chr(0x205F): " ",
-    chr(0x3000): " ",
-})
 
 IMPORT_SMOKE_CODE = r"""
 import importlib
@@ -95,7 +93,7 @@ os._exit(0)
 
 
 def configure_console_encoding() -> None:
-    
+
     for stream_name in ("stdout", "stderr"):
         stream = getattr(sys, stream_name, None)
         reconfigure = getattr(stream, "reconfigure", None)
@@ -110,10 +108,7 @@ def iter_target_dirs() -> list[Path]:
 def iter_python_files() -> list[Path]:
     files: list[Path] = []
     for target_dir in iter_target_dirs():
-        files.extend(
-            path for path in target_dir.rglob("*.py")
-            if "__pycache__" not in path.parts
-        )
+        files.extend(path for path in target_dir.rglob("*.py") if "__pycache__" not in path.parts)
     return sorted(set(files))
 
 
@@ -151,7 +146,9 @@ def make_child_env() -> dict[str, str]:
     current_python_path = env.get("PYTHONPATH", "")
     root_path = str(ROOT_DIR)
     src_path = str(ROOT_DIR / "src")
-    env["PYTHONPATH"] = os.pathsep.join([p for p in [src_path, root_path, current_python_path] if p])
+    env["PYTHONPATH"] = os.pathsep.join(
+        [p for p in [src_path, root_path, current_python_path] if p]
+    )
     env.setdefault("QT_QPA_PLATFORM", "offscreen")
     env.setdefault("WJX_IMPORT_CHECK", "1")
 
@@ -193,7 +190,7 @@ def extract_child_payload(stdout: str, stderr: str) -> dict | None:
     lines = stdout.splitlines() + stderr.splitlines()
     for line in reversed(lines):
         if line.startswith(CHILD_RESULT_PREFIX):
-            payload_raw = line[len(CHILD_RESULT_PREFIX):]
+            payload_raw = line[len(CHILD_RESULT_PREFIX) :]
             try:
                 return json.loads(payload_raw)
             except json.JSONDecodeError:
@@ -213,7 +210,7 @@ def summarize_child_output(stdout: str, stderr: str) -> str:
 
 
 def normalize_diagnostic_message(message: str) -> str:
-    
+
     normalized = message.translate(UNICODE_SPACE_TRANSLATION)
     normalized = normalized.replace("\r\n", "\n").replace("\r", "\n")
     lines = [line.rstrip() for line in normalized.split("\n")]
@@ -221,7 +218,9 @@ def normalize_diagnostic_message(message: str) -> str:
 
 
 def is_ci_environment() -> bool:
-    return os.environ.get("CI", "").strip().lower() == "true" or bool(os.environ.get("GITHUB_ACTIONS"))
+    return os.environ.get("CI", "").strip().lower() == "true" or bool(
+        os.environ.get("GITHUB_ACTIONS")
+    )
 
 
 def build_pytest_args(test_target: str, *, verbose_in_ci: bool) -> list[str]:
@@ -278,10 +277,15 @@ def run_ruff_check(target_dirs: Iterable[Path]) -> tuple[list[dict], str | None]
 
     result = subprocess.run(
         [
-            sys.executable, "-m", "ruff", "check",
+            sys.executable,
+            "-m",
+            "ruff",
+            "check",
             *target_args,
-            "--select", RUFF_SELECT,
-            "--output-format", "json",
+            "--select",
+            RUFF_SELECT,
+            "--output-format",
+            "json",
         ],
         cwd=str(ROOT_DIR),
         capture_output=True,
@@ -314,7 +318,7 @@ def run_ruff_check(target_dirs: Iterable[Path]) -> tuple[list[dict], str | None]
 
 
 def run_pyright_check(target_dirs: Iterable[Path]) -> tuple[list[dict], str | None]:
-    
+
     target_args = [str(path) for path in target_dirs]
     env = make_child_env()
     for entry_file in ENTRY_FILES:
@@ -327,7 +331,9 @@ def run_pyright_check(target_dirs: Iterable[Path]) -> tuple[list[dict], str | No
     try:
         result = subprocess.run(
             [
-                sys.executable, "-m", "pyright",
+                sys.executable,
+                "-m",
+                "pyright",
                 "--outputjson",
                 *target_args,
             ],
@@ -377,7 +383,6 @@ def run_pyright_check(target_dirs: Iterable[Path]) -> tuple[list[dict], str | No
             }
         )
 
-    
     if result.returncode == 2 and not issues:
         summary = payload.get("summary", {})
         message = summary.get("errorMessage") or stderr_text or "Pyright execution error."
@@ -387,7 +392,7 @@ def run_pyright_check(target_dirs: Iterable[Path]) -> tuple[list[dict], str | No
 
 
 def run_type_ignore_check(target_dirs: Iterable[Path]) -> list[dict]:
-    
+
     allowed_roots = {path.resolve() for path in TYPE_IGNORE_SCAN_ROOTS if path.exists()}
     issues: list[dict] = []
     for target_dir in target_dirs:
@@ -425,7 +430,7 @@ def run_type_ignore_check(target_dirs: Iterable[Path]) -> list[dict]:
 
 
 def run_unicode_escape_check(target_dirs: Iterable[Path]) -> list[dict]:
-    
+
     allowed_roots = {path.resolve() for path in UNICODE_ESCAPE_SCAN_ROOTS if path.exists()}
     issues: list[dict] = []
     for target_dir in target_dirs:
@@ -483,7 +488,7 @@ def run_module_import_checks(modules: Iterable[str]) -> list[dict]:
                     "message": signature[1],
                     "error_type": signature[0],
                     "traceback": signature[2],
-                }
+                },
             )
             issue["modules"].append(module_name)
             continue
@@ -505,7 +510,7 @@ def run_module_import_checks(modules: Iterable[str]) -> list[dict]:
                 "message": message,
                 "error_type": error_type,
                 "traceback": traceback_text,
-            }
+            },
         )
         issue["modules"].append(module_name)
 
@@ -584,8 +589,7 @@ def print_issues(title: str, issues: Iterable[dict]) -> None:
         phase = item["phase"]
         if phase == "ruff":
             print(
-                f"{index}. {item['path']}:{item['row']}:{item['column']}  "
-                f"[{item.get('code', '?')}]"
+                f"{index}. {item['path']}:{item['row']}:{item['column']}  [{item.get('code', '?')}]"
             )
             print(f"   {item['message']}")
             continue
@@ -639,4 +643,6 @@ def print_issues(title: str, issues: Iterable[dict]) -> None:
 
 
 def print_scan_targets(target_dirs: Iterable[Path]) -> None:
-    print(f"[INFO] Scan targets: {', '.join(str(path.relative_to(ROOT_DIR)) for path in target_dirs)}")
+    print(
+        f"[INFO] Scan targets: {', '.join(str(path.relative_to(ROOT_DIR)) for path in target_dirs)}"
+    )

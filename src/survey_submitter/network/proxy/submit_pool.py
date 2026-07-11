@@ -35,11 +35,15 @@ def _ensure_proxy_pool_deque_locked(ctx: ExecutionState) -> deque:
     return normalized_pool
 
 
-def _active_proxy_addresses_locked(ctx: ExecutionState, *, exclude_thread_name: str = "") -> set[str]:
+def _active_proxy_addresses_locked(
+    ctx: ExecutionState, *, exclude_thread_name: str = ""
+) -> set[str]:
     return ctx.active_proxy_addresses_locked(exclude_thread_name=exclude_thread_name)
 
 
-def _blocked_proxy_addresses_locked(ctx: ExecutionState, *, exclude_thread_name: str = "") -> set[str]:
+def _blocked_proxy_addresses_locked(
+    ctx: ExecutionState, *, exclude_thread_name: str = ""
+) -> set[str]:
     blocked = _active_proxy_addresses_locked(ctx, exclude_thread_name=exclude_thread_name)
     blocked.update(ctx.successful_proxy_addresses_locked())
     return blocked
@@ -88,7 +92,9 @@ def _purge_unusable_proxy_pool_locked(
     blocked_addresses: set[str] | None = None,
 ) -> set[str]:
     ctx._purge_expired_proxy_cooldowns_locked()
-    required_ttl_seconds = _required_proxy_ttl_seconds(ctx) if required_ttl is None else int(required_ttl)
+    required_ttl_seconds = (
+        _required_proxy_ttl_seconds(ctx) if required_ttl is None else int(required_ttl)
+    )
     pool = _ensure_proxy_pool_deque_locked(ctx)
     kept = deque()
     seen = set()
@@ -107,16 +113,25 @@ def _purge_unusable_proxy_pool_locked(
             continue
         if ctx._is_proxy_in_cooldown_locked(lease.address):
             removed += 1
-            logging.info("\u5df2\u79fb\u9664\u672c\u5730\u4e34\u65f6\u5c4f\u853d\u4e2d\u7684\u4ee3\u7406\uff1a%s", mask_proxy_for_log(lease.address))
+            logging.info(
+                "\u5df2\u79fb\u9664\u672c\u5730\u4e34\u65f6\u5c4f\u853d\u4e2d\u7684\u4ee3\u7406\uff1a%s",
+                mask_proxy_for_log(lease.address),
+            )
             continue
         if not proxy_lease_has_sufficient_ttl(lease, required_ttl_seconds=required_ttl_seconds):
             removed += 1
-            logging.info("\u5df2\u4e22\u5f03\u5373\u5c06\u8fc7\u671f\u7684\u4ee3\u7406\uff1a%s", mask_proxy_for_log(lease.address))
+            logging.info(
+                "\u5df2\u4e22\u5f03\u5373\u5c06\u8fc7\u671f\u7684\u4ee3\u7406\uff1a%s",
+                mask_proxy_for_log(lease.address),
+            )
             continue
         seen.add(lease.address)
         kept.append(lease)
     if removed:
-        logging.info("\u4ee3\u7406\u6c60\u5df2\u6e05\u7406\u65e0\u6548/\u91cd\u590d\u4ee3\u7406 %s \u4e2a", removed)
+        logging.info(
+            "\u4ee3\u7406\u6c60\u5df2\u6e05\u7406\u65e0\u6548/\u91cd\u590d\u4ee3\u7406 %s \u4e2a",
+            removed,
+        )
     ctx.config.proxy_ip_pool = kept
     if removed:
         ctx.notify_runtime_change()
@@ -137,13 +152,22 @@ def _pop_available_proxy_lease_locked(ctx: ExecutionState) -> ProxyLease | None:
         if lease is None:
             continue
         if not proxy_lease_has_sufficient_ttl(lease, required_ttl_seconds=required_ttl):
-            logging.info("\u5df2\u8df3\u8fc7\u5373\u5c06\u8fc7\u671f\u7684\u4ee3\u7406\uff1a%s", mask_proxy_for_log(lease.address))
+            logging.info(
+                "\u5df2\u8df3\u8fc7\u5373\u5c06\u8fc7\u671f\u7684\u4ee3\u7406\uff1a%s",
+                mask_proxy_for_log(lease.address),
+            )
             continue
         if ctx._is_proxy_in_cooldown_locked(lease.address):
-            logging.info("\u5df2\u8df3\u8fc7\u672c\u5730\u4e34\u65f6\u5c4f\u853d\u4e2d\u7684\u4ee3\u7406\uff1a%s", mask_proxy_for_log(lease.address))
+            logging.info(
+                "\u5df2\u8df3\u8fc7\u672c\u5730\u4e34\u65f6\u5c4f\u853d\u4e2d\u7684\u4ee3\u7406\uff1a%s",
+                mask_proxy_for_log(lease.address),
+            )
             continue
         if lease.address in blocked_addresses:
-            logging.info("\u5df2\u8df3\u8fc7\u5df2\u5360\u7528\u6216\u5df2\u6210\u529f\u4f7f\u7528\u8fc7\u7684\u4ee3\u7406\uff1a%s", mask_proxy_for_log(lease.address))
+            logging.info(
+                "\u5df2\u8df3\u8fc7\u5df2\u5360\u7528\u6216\u5df2\u6210\u529f\u4f7f\u7528\u8fc7\u7684\u4ee3\u7406\uff1a%s",
+                mask_proxy_for_log(lease.address),
+            )
             continue
         return lease
     return None
@@ -172,13 +196,22 @@ def _merge_fetched_proxy_leases_locked(
         if lease is None:
             continue
         if not proxy_lease_has_sufficient_ttl(lease, required_ttl_seconds=required_ttl):
-            logging.info("\u5df2\u4e22\u5f03\u5373\u5c06\u8fc7\u671f\u7684\u65b0\u4ee3\u7406\uff1a%s", mask_proxy_for_log(lease.address))
+            logging.info(
+                "\u5df2\u4e22\u5f03\u5373\u5c06\u8fc7\u671f\u7684\u65b0\u4ee3\u7406\uff1a%s",
+                mask_proxy_for_log(lease.address),
+            )
             continue
         if ctx._is_proxy_in_cooldown_locked(lease.address):
-            logging.info("\u5df2\u8df3\u8fc7\u672c\u5730\u4e34\u65f6\u5c4f\u853d\u4e2d\u7684\u65b0\u4ee3\u7406\uff1a%s", mask_proxy_for_log(lease.address))
+            logging.info(
+                "\u5df2\u8df3\u8fc7\u672c\u5730\u4e34\u65f6\u5c4f\u853d\u4e2d\u7684\u65b0\u4ee3\u7406\uff1a%s",
+                mask_proxy_for_log(lease.address),
+            )
             continue
         if lease.address in existing:
-            logging.info("\u5df2\u8df3\u8fc7\u91cd\u590d\u6216\u6b63\u5728\u5360\u7528\u7684\u65b0\u4ee3\u7406\uff1a%s", mask_proxy_for_log(lease.address))
+            logging.info(
+                "\u5df2\u8df3\u8fc7\u91cd\u590d\u6216\u6b63\u5728\u5360\u7528\u7684\u65b0\u4ee3\u7406\uff1a%s",
+                mask_proxy_for_log(lease.address),
+            )
             continue
         if select_first and selected is None:
             selected = lease
@@ -195,7 +228,9 @@ def _merge_fetched_proxy_leases_locked(
     return selected
 
 
-def _mark_proxy_in_use(ctx: ExecutionState, thread_name: str, lease: ProxyLease | None) -> str | None:
+def _mark_proxy_in_use(
+    ctx: ExecutionState, thread_name: str, lease: ProxyLease | None
+) -> str | None:
     if lease is None:
         return None
     if thread_name:
@@ -228,5 +263,7 @@ def _discard_unresponsive_proxy(ctx: ExecutionState, proxy_address: str) -> None
             retained.append(lease)
         ctx.config.proxy_ip_pool = retained
         if removed:
-            logging.info(f"\u5df2\u79fb\u9664\u65e0\u54cd\u5e94\u4ee3\u7406\uff1a{mask_proxy_for_log(proxy_address)}")
+            logging.info(
+                f"\u5df2\u79fb\u9664\u65e0\u54cd\u5e94\u4ee3\u7406\uff1a{mask_proxy_for_log(proxy_address)}"
+            )
             ctx.notify_runtime_change()

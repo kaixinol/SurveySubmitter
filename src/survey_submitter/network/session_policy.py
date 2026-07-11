@@ -58,7 +58,7 @@ def _record_bad_proxy_and_maybe_pause(
     ctx: ExecutionState,
     runtime_bridge: RuntimeUiBridge | None,
 ) -> bool:
-    
+
     _ = ctx, runtime_bridge
     return False
 
@@ -66,7 +66,9 @@ def _record_bad_proxy_and_maybe_pause(
 def _resolve_proxy_request_num_locked(ctx: ExecutionState) -> int:
     waiting_count = max(1, int(ctx.proxy_waiting_threads or 0))
     active_count = len(ctx.proxy_in_use_by_thread)
-    remaining_to_start = max(0, int(ctx.config.target_num or 0) - int(ctx.cur_num or 0) - active_count)
+    remaining_to_start = max(
+        0, int(ctx.config.target_num or 0) - int(ctx.cur_num or 0) - active_count
+    )
     if remaining_to_start <= 0:
         return 0
     request_capacity = min(waiting_count, _resolve_proxy_fetch_max_batch_size(ctx))
@@ -74,7 +76,7 @@ def _resolve_proxy_request_num_locked(ctx: ExecutionState) -> int:
 
 
 def merge_prefetched_proxy_leases(ctx: ExecutionState, fetched: Iterable[object]) -> int:
-    
+
     if not fetched:
         return 0
     with ctx.lock:
@@ -87,31 +89,37 @@ def merge_prefetched_proxy_leases(ctx: ExecutionState, fetched: Iterable[object]
 
 
 def resolve_proxy_prefetch_request_count(ctx: ExecutionState) -> int:
-    
+
     if not bool(ctx.config.random_proxy_ip_enabled):
         return 0
     with ctx.lock:
         active_count = len(ctx.proxy_in_use_by_thread)
-        remaining_to_start = max(0, int(ctx.config.target_num or 0) - int(ctx.cur_num or 0) - active_count)
+        remaining_to_start = max(
+            0, int(ctx.config.target_num or 0) - int(ctx.cur_num or 0) - active_count
+        )
         if remaining_to_start <= 0:
             return 0
         waiting_count = max(0, int(ctx.proxy_waiting_threads or 0))
         if waiting_count <= 0:
             return 0
-        target_buffer = min(waiting_count, remaining_to_start, _resolve_proxy_fetch_max_batch_size(ctx))
+        target_buffer = min(
+            waiting_count, remaining_to_start, _resolve_proxy_fetch_max_batch_size(ctx)
+        )
         current_pool_size = len(_ensure_proxy_pool_deque_locked(ctx))
     return max(0, int(target_buffer) - int(current_pool_size))
 
 
 def should_continue_proxy_prefetch(ctx: ExecutionState) -> bool:
-    
+
     if not bool(ctx.config.random_proxy_ip_enabled):
         return False
     if _should_stop_proxy_wait(ctx, ctx.stop_event):
         return False
     with ctx.lock:
         active_count = len(ctx.proxy_in_use_by_thread)
-        remaining_to_start = max(0, int(ctx.config.target_num or 0) - int(ctx.cur_num or 0) - active_count)
+        remaining_to_start = max(
+            0, int(ctx.config.target_num or 0) - int(ctx.cur_num or 0) - active_count
+        )
     return remaining_to_start > 0
 
 
@@ -200,7 +208,6 @@ async def _select_proxy_for_session_async(
                     return None
                 continue
 
-            
             fetch_lock_acquired = await _acquire_proxy_fetch_lock_async(ctx, stop_signal)
             if not fetch_lock_acquired:
                 return None
@@ -221,11 +228,15 @@ async def _select_proxy_for_session_async(
                             stop_signal=ctx.stop_event,
                         )
                     except (RuntimeError, OSError) as exc:
-                        logging.warning(f"\u83b7\u53d6\u968f\u673a\u4ee3\u7406\u5931\u8d25\uff1a{exc}")
+                        logging.warning(
+                            f"\u83b7\u53d6\u968f\u673a\u4ee3\u7406\u5931\u8d25\uff1a{exc}"
+                        )
                         fetched = None
                     if fetched:
                         with ctx.lock:
-                            selected = _merge_fetched_proxy_leases_locked(ctx, fetched, select_first=True)
+                            selected = _merge_fetched_proxy_leases_locked(
+                                ctx, fetched, select_first=True
+                            )
                         if selected is not None:
                             return _mark_proxy_in_use(ctx, thread_name, selected)
             finally:
@@ -237,7 +248,6 @@ async def _select_proxy_for_session_async(
                 return None
     finally:
         ctx.unregister_proxy_waiter()
-
 
 
 def _resolve_proxy_provider_for_thread(ctx: ExecutionState, thread_name: str) -> str:
@@ -284,4 +294,6 @@ def mark_submit_proxy_success(ctx: ExecutionState, proxy_address: str | None) ->
     try:
         ctx.mark_successful_proxy_address(proxy_address)
     except (AttributeError, KeyError):
-        logging.info("\u8bb0\u5f55\u6210\u529f\u4ee3\u7406\u5931\u8d25\uff1a%s", proxy_address, exc_info=True)
+        logging.info(
+            "\u8bb0\u5f55\u6210\u529f\u4ee3\u7406\u5931\u8d25\uff1a%s", proxy_address, exc_info=True
+        )

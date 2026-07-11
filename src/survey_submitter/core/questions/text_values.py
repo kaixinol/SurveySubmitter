@@ -3,7 +3,11 @@ from __future__ import annotations
 from typing import Any, Sequence
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
-from survey_submitter.core.ai.runtime import AIRuntimeError, agenerate_ai_answer, build_ai_option_fill_prompt
+from survey_submitter.core.ai.runtime import (
+    AIRuntimeError,
+    agenerate_ai_answer,
+    build_ai_option_fill_prompt,
+)
 from survey_submitter.core.task import ExecutionState
 from survey_submitter.core.questions.schema import (
     _TEXT_RANDOM_ID_CARD,
@@ -77,7 +81,7 @@ def resolve_text_values_from_config(
     if len(weights) < len(candidates):
         weights.extend([0.0] * (len(candidates) - len(weights)))
     elif len(weights) > len(candidates):
-        weights = weights[:len(candidates)]
+        weights = weights[: len(candidates)]
     try:
         numeric_weights = [float(value) for value in weights]
         normalized = normalize_probabilities(numeric_weights)
@@ -88,8 +92,7 @@ def resolve_text_values_from_config(
     resolved_blank_count = max(1, int(blank_count or 1))
     if str(entry_type or "").strip() == QuestionType.MULTI_TEXT:
         text_values = [
-            resolve_dynamic_text_token(part)
-            for part in selected_raw.split(MULTI_TEXT_DELIMITER)
+            resolve_dynamic_text_token(part) for part in selected_raw.split(MULTI_TEXT_DELIMITER)
         ]
     else:
         text_values = [resolve_dynamic_text_token(selected_raw)]

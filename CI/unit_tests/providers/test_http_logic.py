@@ -8,7 +8,10 @@ from survey_submitter.providers.contracts import (
     SurveyQuestionMeta,
     ensure_survey_question_meta,
 )
-from survey_submitter.providers.http_logic import build_http_logic_plan, get_http_logic_fallback_reason
+from survey_submitter.providers.http_logic import (
+    build_http_logic_plan,
+    get_http_logic_fallback_reason,
+)
 
 
 async def _choice_action(question: SurveyQuestionMeta):
@@ -21,7 +24,9 @@ async def _choice_action(question: SurveyQuestionMeta):
 
 
 def _question(num: int, **kwargs) -> SurveyQuestionMeta:
-    return ensure_survey_question_meta({"num": num, "title": f"Q{num}", "type_code": "3", "option_texts": ["A", "B"], **kwargs})
+    return ensure_survey_question_meta(
+        {"num": num, "title": f"Q{num}", "type_code": "3", "option_texts": ["A", "B"], **kwargs}
+    )
 
 
 def test_http_logic_rejects_unknown_unparsed_jump_rules() -> None:
@@ -121,7 +126,11 @@ async def test_http_logic_terminate_marker_can_end_on_submit_page() -> None:
         )
 
     questions = [
-        _question(1, has_jump=True, jump_rules=[{"option_index": 1, "jumpto": 1, "terminates_survey": True}]),
+        _question(
+            1,
+            has_jump=True,
+            jump_rules=[{"option_index": 1, "jumpto": 1, "terminates_survey": True}],
+        ),
         _question(2),
     ]
 

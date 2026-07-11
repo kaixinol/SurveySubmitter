@@ -16,8 +16,6 @@ class _ScheduledToken:
 
 
 class AsyncScheduler:
-    
-
     def __init__(self, *, concurrency: int) -> None:
         self._concurrency = max(1, int(concurrency or 1))
         self._ready: deque[int] = deque()
@@ -31,7 +29,9 @@ class AsyncScheduler:
 
     async def start(self) -> None:
         if self._waker_task is None:
-            self._waker_task = asyncio.create_task(self._wake_delayed_tokens(), name="AsyncSchedulerWake")
+            self._waker_task = asyncio.create_task(
+                self._wake_delayed_tokens(), name="AsyncSchedulerWake"
+            )
 
     async def acquire(self) -> int | None:
         await self.start()

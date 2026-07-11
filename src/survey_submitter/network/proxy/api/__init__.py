@@ -9,4 +9,3 @@ __all__ = [
     "fetch_proxy_batch_async",
     "test_custom_proxy_api",
 ]
-

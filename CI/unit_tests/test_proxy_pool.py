@@ -22,7 +22,9 @@ class ProxyPoolTests:
         lease = pool.coerce_proxy_lease("2.2.2.2:9000", source="custom")
         assert lease == ProxyLease(address="http://2.2.2.2:9000", source="custom")
 
-        existing = ProxyLease(address="3.3.3.3:7000", expire_at="bad", expire_ts=123, poolable=False, source="old")
+        existing = ProxyLease(
+            address="3.3.3.3:7000", expire_at="bad", expire_ts=123, poolable=False, source="old"
+        )
         assert pool.coerce_proxy_lease(existing) == ProxyLease(
             address="http://3.3.3.3:7000",
             expire_at="bad",
@@ -31,7 +33,9 @@ class ProxyPoolTests:
             source="old",
         )
 
-        assert pool.coerce_proxy_lease({"host": "4.4.4.4", "port": 6000, "poolable": False, "source": "dict"}) == ProxyLease(
+        assert pool.coerce_proxy_lease(
+            {"host": "4.4.4.4", "port": 6000, "poolable": False, "source": "dict"}
+        ) == ProxyLease(
             address="http://4.4.4.4:6000",
             poolable=False,
             source="dict",
@@ -41,7 +45,9 @@ class ProxyPoolTests:
 
     def test_mask_proxy_for_log_hides_credentials(self) -> None:
         assert pool.mask_proxy_for_log("http://user:pass@1.1.1.1:8000") == "1.1.1.1:8000"
-        assert pool.mask_proxy_for_log("http://user:pass@[2001:db8::1]:8080") == "[2001:db8::1]:8080"
+        assert (
+            pool.mask_proxy_for_log("http://user:pass@[2001:db8::1]:8080") == "[2001:db8::1]:8080"
+        )
         assert pool.mask_proxy_for_log("") == ""
         assert pool.mask_proxy_for_log("http://user:pass@9.9.9.9:8080") == "9.9.9.9:8080"
 
@@ -53,11 +59,18 @@ class ProxyPoolTests:
             == pool.HTTP_PROXY_MIN_REMAINING_TTL_SECONDS
         )
         assert pool.proxy_lease_has_sufficient_ttl(None, required_ttl_seconds=1) is False
-        assert pool.proxy_lease_has_sufficient_ttl(ProxyLease(address="x"), required_ttl_seconds=99999) is True
+        assert (
+            pool.proxy_lease_has_sufficient_ttl(ProxyLease(address="x"), required_ttl_seconds=99999)
+            is True
+        )
 
         patch_attrs((pool.time, "time", lambda: 100.0))
-        assert pool.proxy_lease_has_sufficient_ttl(ProxyLease(address="x", expire_ts=200.0), required_ttl_seconds=99)
-        assert not pool.proxy_lease_has_sufficient_ttl(ProxyLease(address="x", expire_ts=120.0), required_ttl_seconds=30)
+        assert pool.proxy_lease_has_sufficient_ttl(
+            ProxyLease(address="x", expire_ts=200.0), required_ttl_seconds=99
+        )
+        assert not pool.proxy_lease_has_sufficient_ttl(
+            ProxyLease(address="x", expire_ts=120.0), required_ttl_seconds=30
+        )
 
     def test_proxy_responsive_checks_proxy_via_http_client(self, patch_attrs) -> None:
         calls: list[dict[str, object]] = []
@@ -72,7 +85,10 @@ class ProxyPoolTests:
         )
 
         assert pool.is_proxy_responsive("5.5.5.5:9000")
-        assert calls[0]["proxies"] == {"http": "http://5.5.5.5:9000", "https": "http://5.5.5.5:9000"}
+        assert calls[0]["proxies"] == {
+            "http": "http://5.5.5.5:9000",
+            "https": "http://5.5.5.5:9000",
+        }
 
     def test_proxy_responsive_rejects_empty_error_and_http_error(self, patch_attrs) -> None:
         assert not pool.is_proxy_responsive("")
@@ -80,7 +96,13 @@ class ProxyPoolTests:
         patch_attrs((pool.http_client, "get", lambda *_args, **_kwargs: _Response(500)))
         assert not pool.is_proxy_responsive("1.1.1.1:8000")
 
-        patch_attrs((pool.http_client, "get", lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("down"))))
+        patch_attrs(
+            (
+                pool.http_client,
+                "get",
+                lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("down")),
+            )
+        )
         assert not pool.is_proxy_responsive("1.1.1.1:8000")
 
     def test_proxy_responsive_async_uses_async_http_client(self, patch_attrs) -> None:
@@ -98,7 +120,10 @@ class ProxyPoolTests:
         result = asyncio.run(pool.is_proxy_responsive_async("1.1.1.1:8000"))
 
         assert result is True
-        assert calls[0]["proxies"] == {"http": "http://1.1.1.1:8000", "https": "http://1.1.1.1:8000"}
+        assert calls[0]["proxies"] == {
+            "http": "http://1.1.1.1:8000",
+            "https": "http://1.1.1.1:8000",
+        }
 
     def test_parse_expire_at_handles_naive_aware_and_bad_values(self) -> None:
         assert pool._parse_expire_at_to_ts("") == 0.0

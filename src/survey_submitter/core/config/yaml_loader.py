@@ -1,4 +1,5 @@
 """YAML configuration loader for SurveyController."""
+
 from __future__ import annotations
 
 import os

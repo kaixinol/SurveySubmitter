@@ -134,7 +134,13 @@ class WjxParserTests:
     @pytest.mark.asyncio
     async def test_parse_wjx_survey_raises_paused_error_from_http_html(self, patch_attrs) -> None:
         patch_attrs(
-            (wjx_parser.http_client, "aget", AsyncMock(return_value=_FakeHttpResponse("<html><body>问卷已暂停，不能填写</body></html>"))),
+            (
+                wjx_parser.http_client,
+                "aget",
+                AsyncMock(
+                    return_value=_FakeHttpResponse("<html><body>问卷已暂停，不能填写</body></html>")
+                ),
+            ),
         )
 
         with pytest.raises(wjx_parser.SurveyPausedError, match="问卷已暂停"):
@@ -142,7 +148,9 @@ class WjxParserTests:
 
     @pytest.mark.asyncio
     async def test_parse_wjx_survey_raises_stopped_error_from_http_html(self, patch_attrs) -> None:
-        html = "<html><body><div id='divWorkError'>此问卷处于停止状态，无法作答！</div></body></html>"
+        html = (
+            "<html><body><div id='divWorkError'>此问卷处于停止状态，无法作答！</div></body></html>"
+        )
         patch_attrs(
             (wjx_parser.http_client, "aget", AsyncMock(return_value=_FakeHttpResponse(html))),
         )
@@ -151,7 +159,9 @@ class WjxParserTests:
             await wjx_parser.parse_wjx_survey("https://www.wjx.cn/vm/demo.aspx")
 
     @pytest.mark.asyncio
-    async def test_parse_wjx_survey_raises_enterprise_unavailable_from_http_html(self, patch_attrs) -> None:
+    async def test_parse_wjx_survey_raises_enterprise_unavailable_from_http_html(
+        self, patch_attrs
+    ) -> None:
         html = """
         <html><body>
           <div>问卷发布者还未购买企业标准版或企业标准版已到期，此问卷暂时不能被填写！</div>
@@ -167,7 +177,9 @@ class WjxParserTests:
 
     @pytest.mark.asyncio
     async def test_parse_wjx_survey_raises_not_open_error_from_http_html(self, patch_attrs) -> None:
-        html = "<html><body>此问卷将于 2026-05-06 09:30 开放，请到时再进入此页面进行填写</body></html>"
+        html = (
+            "<html><body>此问卷将于 2026-05-06 09:30 开放，请到时再进入此页面进行填写</body></html>"
+        )
         patch_attrs(
             (wjx_parser.http_client, "aget", AsyncMock(return_value=_FakeHttpResponse(html))),
         )
@@ -176,7 +188,9 @@ class WjxParserTests:
             await wjx_parser.parse_wjx_survey("https://www.wjx.cn/vm/demo.aspx")
 
     @pytest.mark.asyncio
-    async def test_parse_wjx_survey_raises_not_open_error_with_chinese_datetime(self, patch_attrs) -> None:
+    async def test_parse_wjx_survey_raises_not_open_error_with_chinese_datetime(
+        self, patch_attrs
+    ) -> None:
         html = "<html><body>此问卷将于 2026年5月6日 9:30:45 开放，请到时再进入此页面进行填写</body></html>"
         patch_attrs(
             (wjx_parser.http_client, "aget", AsyncMock(return_value=_FakeHttpResponse(html))),
@@ -186,12 +200,18 @@ class WjxParserTests:
             await wjx_parser.parse_wjx_survey("https://www.wjx.cn/vm/demo.aspx")
 
     @pytest.mark.asyncio
-    async def test_parse_wjx_survey_returns_http_parse_result_without_browser_fallback(self, patch_attrs) -> None:
+    async def test_parse_wjx_survey_returns_http_parse_result_without_browser_fallback(
+        self, patch_attrs
+    ) -> None:
         aget = AsyncMock(return_value=_FakeHttpResponse("<html><body>ok</body></html>"))
 
         patch_attrs(
             (wjx_parser.http_client, "aget", aget),
-            (wjx_parser, "parse_survey_questions_from_html", lambda _html: [{"num": 1, "title": "Q1", "type_code": "3"}]),
+            (
+                wjx_parser,
+                "parse_survey_questions_from_html",
+                lambda _html: [{"num": 1, "title": "Q1", "type_code": "3"}],
+            ),
             (wjx_parser, "extract_survey_title_from_html", lambda _html: "  标题  "),
         )
 
@@ -202,9 +222,15 @@ class WjxParserTests:
         assert aget.await_args.kwargs.get("proxies") == {}
 
     @pytest.mark.asyncio
-    async def test_parse_wjx_survey_raises_when_http_parse_result_is_empty(self, patch_attrs) -> None:
+    async def test_parse_wjx_survey_raises_when_http_parse_result_is_empty(
+        self, patch_attrs
+    ) -> None:
         patch_attrs(
-            (wjx_parser.http_client, "aget", AsyncMock(return_value=_FakeHttpResponse("<html><body>http-empty</body></html>"))),
+            (
+                wjx_parser.http_client,
+                "aget",
+                AsyncMock(return_value=_FakeHttpResponse("<html><body>http-empty</body></html>")),
+            ),
             (wjx_parser, "parse_survey_questions_from_html", lambda _html: []),
             (wjx_parser, "extract_survey_title_from_html", lambda _html: "HTTP 标题"),
             (wjx_parser.asyncio, "sleep", AsyncMock()),
@@ -214,7 +240,9 @@ class WjxParserTests:
             await wjx_parser.parse_wjx_survey("https://www.wjx.cn/vm/demo.aspx")
 
     @pytest.mark.asyncio
-    async def test_parse_wjx_survey_retries_when_http_page_is_temporarily_empty(self, patch_attrs) -> None:
+    async def test_parse_wjx_survey_retries_when_http_page_is_temporarily_empty(
+        self, patch_attrs
+    ) -> None:
         aget = AsyncMock(
             side_effect=[
                 _FakeHttpResponse("<html><body>temp-empty</body></html>"),
@@ -225,7 +253,13 @@ class WjxParserTests:
 
         patch_attrs(
             (wjx_parser.http_client, "aget", aget),
-            (wjx_parser, "parse_survey_questions_from_html", lambda html: [] if "temp-empty" in html else [{"num": 1, "title": "Q1", "type_code": "3"}]),
+            (
+                wjx_parser,
+                "parse_survey_questions_from_html",
+                lambda html: (
+                    [] if "temp-empty" in html else [{"num": 1, "title": "Q1", "type_code": "3"}]
+                ),
+            ),
             (wjx_parser, "extract_survey_title_from_html", lambda _html: "标题"),
             (wjx_parser.asyncio, "sleep", sleep),
         )
@@ -238,7 +272,9 @@ class WjxParserTests:
         sleep.assert_awaited_once_with(wjx_parser._PARSE_RETRY_DELAY_SECONDS)
 
     @pytest.mark.asyncio
-    async def test_parse_wjx_survey_keeps_http_fast_path_even_when_static_page_has_hidden_questions(self, patch_attrs) -> None:
+    async def test_parse_wjx_survey_keeps_http_fast_path_even_when_static_page_has_hidden_questions(
+        self, patch_attrs
+    ) -> None:
         static_html = """
         <html><body>
           <div id="divQuestion">
@@ -251,8 +287,16 @@ class WjxParserTests:
         """
 
         patch_attrs(
-            (wjx_parser.http_client, "aget", AsyncMock(return_value=_FakeHttpResponse(static_html))),
-            (wjx_parser, "parse_survey_questions_from_html", lambda _html: [{"num": 23, "display_num": 22, "title": "Q23", "type_code": "2"}]),
+            (
+                wjx_parser.http_client,
+                "aget",
+                AsyncMock(return_value=_FakeHttpResponse(static_html)),
+            ),
+            (
+                wjx_parser,
+                "parse_survey_questions_from_html",
+                lambda _html: [{"num": 23, "display_num": 22, "title": "Q23", "type_code": "2"}],
+            ),
             (wjx_parser, "extract_survey_title_from_html", lambda _html: "标题"),
         )
 
@@ -262,9 +306,17 @@ class WjxParserTests:
         assert title == "标题"
 
     @pytest.mark.asyncio
-    async def test_parse_wjx_survey_raises_paused_error_without_browser_fallback(self, patch_attrs) -> None:
+    async def test_parse_wjx_survey_raises_paused_error_without_browser_fallback(
+        self, patch_attrs
+    ) -> None:
         patch_attrs(
-            (wjx_parser.http_client, "aget", AsyncMock(return_value=_FakeHttpResponse("<html><body>问卷已暂停，不能填写</body></html>"))),
+            (
+                wjx_parser.http_client,
+                "aget",
+                AsyncMock(
+                    return_value=_FakeHttpResponse("<html><body>问卷已暂停，不能填写</body></html>")
+                ),
+            ),
         )
 
         with pytest.raises(wjx_parser.SurveyPausedError, match="问卷已暂停"):
@@ -273,6 +325,7 @@ class WjxParserTests:
     @pytest.mark.asyncio
     async def test_parse_wjx_survey_surfaces_http_error_directly(self, patch_attrs) -> None:
         import httpx
+
         http_exc = httpx.HTTPError("http failed")
 
         patch_attrs(

@@ -59,7 +59,7 @@ def is_strict_ratio_question(task_ctx: object, question_number: object) -> bool:
 
 
 def stochastic_round(value: float) -> int:
-    
+
     if not math.isfinite(value) or value <= 0.0:
         return 0
     lower = int(math.floor(value))
@@ -72,7 +72,7 @@ def weighted_sample_without_replacement(
     weights: Sequence[float],
     count: int,
 ) -> list[int]:
-    
+
     if count <= 0:
         return []
 
@@ -108,7 +108,7 @@ def weighted_sample_without_replacement(
 
 
 def build_rank_groups(probabilities: Sequence[float]) -> list[list[int]]:
-    
+
     buckets: dict[float, list[int]] = {}
     for idx, raw_weight in enumerate(probabilities):
         try:
@@ -125,8 +125,11 @@ def enforce_reference_rank_order(
     probabilities: Sequence[float],
     reference: Sequence[float],
 ) -> list[float]:
-    
-    adjusted = [max(0.0, float(value)) if isinstance(value, (int, float)) else 0.0 for value in probabilities]
+
+    adjusted = [
+        max(0.0, float(value)) if isinstance(value, (int, float)) else 0.0
+        for value in probabilities
+    ]
     groups = build_rank_groups(reference)
     if len(groups) <= 1:
         return adjusted
@@ -144,7 +147,9 @@ def enforce_reference_rank_order(
             group_values = [adjusted[idx] for idx in group if 0 <= idx < len(adjusted)]
         if group_values:
             current_min = min(group_values)
-            previous_floor = current_min if previous_floor is None else min(previous_floor, current_min)
+            previous_floor = (
+                current_min if previous_floor is None else min(previous_floor, current_min)
+            )
 
     total = sum(adjusted)
     if total <= 0.0:

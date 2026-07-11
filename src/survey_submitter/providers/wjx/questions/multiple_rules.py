@@ -5,8 +5,9 @@ import random
 
 _WARNED_PROB_MISMATCH: set[int] = set()
 
+
 def _normalize_selected_indices(indices: list[int], option_count: int) -> list[int]:
-    
+
     normalized: list[int] = []
     seen: set[int] = set()
     for idx in indices:
@@ -17,6 +18,7 @@ def _normalize_selected_indices(indices: list[int], option_count: int) -> list[i
         seen.add(idx)
         normalized.append(idx)
     return normalized
+
 
 def _resolve_rule_sets(
     must_select_indices: set[int],
@@ -37,6 +39,7 @@ def _resolve_rule_sets(
             sorted(overlap),
         )
     return required, blocked
+
 
 def _apply_rule_constraints(
     selected_indices: list[int],
@@ -62,12 +65,10 @@ def _apply_rule_constraints(
 
     base_selected = _normalize_selected_indices(selected_indices, option_count)
     filtered_selected = [
-        idx for idx in base_selected
-        if idx not in blocked_indices and idx not in required
+        idx for idx in base_selected if idx not in blocked_indices and idx not in required
     ]
     available = [
-        idx for idx in range(option_count)
-        if idx not in blocked_indices and idx not in required
+        idx for idx in range(option_count) if idx not in blocked_indices and idx not in required
     ]
 
     extra_capacity = max(0, max_allowed - len(required))
@@ -91,10 +92,7 @@ def _apply_rule_constraints(
                 continue
             seen.add(idx)
             priority.append(idx)
-        fallback = [
-            idx for idx in available
-            if idx not in seen and idx not in filtered_selected
-        ]
+        fallback = [idx for idx in available if idx not in seen and idx not in filtered_selected]
         random.shuffle(fallback)
         fill_pool = priority + fallback
         resolved.extend(fill_pool[:needed])

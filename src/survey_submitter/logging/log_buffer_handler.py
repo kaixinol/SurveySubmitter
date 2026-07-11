@@ -25,7 +25,6 @@ class LogBufferEntry:
 
 
 class LogBufferHandler(logging.Handler):
-
     def __init__(self, capacity: int = LOG_BUFFER_CAPACITY):
         super().__init__()
         self.capacity = capacity
@@ -50,9 +49,7 @@ class LogBufferHandler(logging.Handler):
 
         self._stop_event.clear()
         self._worker_thread = threading.Thread(
-            target=self._worker_loop,
-            daemon=True,
-            name="LogBufferWorker"
+            target=self._worker_loop, daemon=True, name="LogBufferWorker"
         )
         self._worker_thread.start()
 

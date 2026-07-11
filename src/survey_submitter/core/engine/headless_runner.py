@@ -4,6 +4,7 @@ Replaces the GUI RunController: loads a YAML config, parses the survey
 from the URL, builds execution artifacts, starts the AsyncRuntimeEngine,
 and polls progress until completion or stop signal.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -65,6 +66,7 @@ class HeadlessRunner:
     def _log_parsed_questions(definition: SurveyDefinition) -> None:
         """Output parsed question details for --parse-only mode."""
         from survey_submitter.core.questions.types import TypeCode
+
         for q in definition.questions:
             if q.type_code == TypeCode.DESCRIPTION:
                 continue

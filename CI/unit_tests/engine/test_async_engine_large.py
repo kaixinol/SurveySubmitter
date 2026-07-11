@@ -68,7 +68,9 @@ class _FakeThread:
 
 
 class _DoneFuture:
-    def __init__(self, *, done: bool = True, result_value=None, result_error: Exception | None = None) -> None:
+    def __init__(
+        self, *, done: bool = True, result_value=None, result_error: Exception | None = None
+    ) -> None:
         self._done = done
         self._result_value = result_value
         self._result_error = result_error
@@ -107,13 +109,19 @@ class AsyncRuntimeEngineLargeTests:
             engine._submit(coro)
         coro.close()
 
-    def test_start_initializes_background_loop_and_shutdown_clears_handles(self, monkeypatch) -> None:
+    def test_start_initializes_background_loop_and_shutdown_clears_handles(
+        self, monkeypatch
+    ) -> None:
         engine = _build_engine()
         fake_loop = _FakeLoop()
         real_all_tasks = asyncio.all_tasks
         monkeypatch.setattr(asyncio, "new_event_loop", lambda: fake_loop)
         monkeypatch.setattr(asyncio, "set_event_loop", lambda loop: None)
-        monkeypatch.setattr(asyncio, "all_tasks", lambda loop=None: set() if loop is fake_loop else real_all_tasks(loop))
+        monkeypatch.setattr(
+            asyncio,
+            "all_tasks",
+            lambda loop=None: set() if loop is fake_loop else real_all_tasks(loop),
+        )
         monkeypatch.setattr(async_engine.threading, "Thread", _FakeThread)
         _FakeThread.created.clear()
 
@@ -142,7 +150,9 @@ class AsyncRuntimeEngineLargeTests:
         engine._loop = loop
         engine._run_future = _DoneFuture(done=True)
         stop_event = SimpleNamespace(set=lambda: submitted.append("stop-event"))
-        pause_event = SimpleNamespace(set=lambda: submitted.append("pause"), clear=lambda: submitted.append("resume"))
+        pause_event = SimpleNamespace(
+            set=lambda: submitted.append("pause"), clear=lambda: submitted.append("resume")
+        )
         engine._stop_event = stop_event
         engine._pause_event = pause_event
         engine._state = state
@@ -152,7 +162,9 @@ class AsyncRuntimeEngineLargeTests:
             return returned_futures.pop(0)
 
         monkeypatch.setattr(engine, "_submit", _fake_submit)
-        monkeypatch.setattr(async_engine, "parse_survey", lambda url: asyncio.sleep(0, result=f"parsed:{url}"))
+        monkeypatch.setattr(
+            async_engine, "parse_survey", lambda url: asyncio.sleep(0, result=f"parsed:{url}")
+        )
 
         future = engine.start_run(config=config, state=state, runtime_bridge=None)
         assert future is run_future
@@ -183,7 +195,9 @@ class AsyncRuntimeEngineLargeTests:
         assert any(call[0] == pause_event.clear for call in loop.threadsafe_calls)
 
     @pytest.mark.asyncio
-    async def test_run_starts_slots_and_closes_scheduler_when_runner_fails(self, monkeypatch) -> None:
+    async def test_run_starts_slots_and_closes_scheduler_when_runner_fails(
+        self, monkeypatch
+    ) -> None:
         engine = _build_engine()
         config = ExecutionConfig(num_threads=2, target_num=5, survey_provider="wjx")
         state = ExecutionState(config=config)
@@ -217,7 +231,9 @@ class AsyncRuntimeEngineLargeTests:
                 self.close_calls += 1
 
         monkeypatch.setattr(async_engine, "AsyncScheduler", _FakeScheduler)
-        monkeypatch.setattr(async_engine, "AsyncRunContext", lambda **kwargs: SimpleNamespace(**kwargs))
+        monkeypatch.setattr(
+            async_engine, "AsyncRunContext", lambda **kwargs: SimpleNamespace(**kwargs)
+        )
         monkeypatch.setattr(async_engine, "AsyncSlotRunner", _FakeRunner)
 
         with pytest.raises(RuntimeError, match="slot boom"):
@@ -234,7 +250,9 @@ class AsyncRuntimeEngineLargeTests:
         assert engine._state is None
 
     @pytest.mark.asyncio
-    async def test_run_without_waiting_slots_does_not_prefetch_proxy_pool(self, monkeypatch) -> None:
+    async def test_run_without_waiting_slots_does_not_prefetch_proxy_pool(
+        self, monkeypatch
+    ) -> None:
         engine = _build_engine()
         config = ExecutionConfig(
             num_threads=2,
@@ -285,7 +303,9 @@ class AsyncRuntimeEngineLargeTests:
         assert loading_calls == []
 
     @pytest.mark.asyncio
-    async def test_run_keeps_prefetching_proxy_pool_after_first_batch_is_consumed(self, monkeypatch) -> None:
+    async def test_run_keeps_prefetching_proxy_pool_after_first_batch_is_consumed(
+        self, monkeypatch
+    ) -> None:
         engine = _build_engine()
         config = ExecutionConfig(
             num_threads=2,
@@ -305,7 +325,10 @@ class AsyncRuntimeEngineLargeTests:
                     state.register_proxy_waiter()
                     deadline = asyncio.get_running_loop().time() + 1.0
                     try:
-                        while not state.config.proxy_ip_pool and asyncio.get_running_loop().time() < deadline:
+                        while (
+                            not state.config.proxy_ip_pool
+                            and asyncio.get_running_loop().time() < deadline
+                        ):
                             await asyncio.sleep(0.01)
                         with state.lock:
                             if state.config.proxy_ip_pool:
@@ -335,7 +358,11 @@ class AsyncRuntimeEngineLargeTests:
         monkeypatch.setattr(async_engine, "AsyncScheduler", _FakeScheduler)
         monkeypatch.setattr(async_engine, "AsyncSlotRunner", _FakeRunner)
         monkeypatch.setattr(async_engine, "fetch_proxy_batch_async", fake_fetch_proxy_batch_async)
-        monkeypatch.setattr(async_engine, "wait_for_proxy_prefetch_cycle", lambda *_args, **_kwargs: asyncio.sleep(0, result=False))
+        monkeypatch.setattr(
+            async_engine,
+            "wait_for_proxy_prefetch_cycle",
+            lambda *_args, **_kwargs: asyncio.sleep(0, result=False),
+        )
 
         await engine._run(config=config, state=state, runtime_bridge=None)
 
@@ -425,7 +452,11 @@ class AsyncRuntimeEngineLargeTests:
         monkeypatch.setattr(async_engine, "AsyncScheduler", _FakeScheduler)
         monkeypatch.setattr(async_engine, "AsyncSlotRunner", _FakeRunner)
         monkeypatch.setattr(async_engine, "fetch_proxy_batch_async", fake_fetch_proxy_batch_async)
-        monkeypatch.setattr(async_engine, "_acquire_proxy_fetch_lock_async", lambda *_args, **_kwargs: asyncio.sleep(0.02, result=True))
+        monkeypatch.setattr(
+            async_engine,
+            "_acquire_proxy_fetch_lock_async",
+            lambda *_args, **_kwargs: asyncio.sleep(0.02, result=True),
+        )
 
         def fake_recheck(_state):
             return 0 if list(state.config.proxy_ip_pool) else 1
@@ -439,7 +470,11 @@ class AsyncRuntimeEngineLargeTests:
             return fake_recheck(_state)
 
         monkeypatch.setattr(async_engine, "resolve_proxy_prefetch_request_count", resolve_count)
-        monkeypatch.setattr(async_engine, "wait_for_proxy_prefetch_cycle", lambda *_args, **_kwargs: asyncio.sleep(0, result=False))
+        monkeypatch.setattr(
+            async_engine,
+            "wait_for_proxy_prefetch_cycle",
+            lambda *_args, **_kwargs: asyncio.sleep(0, result=False),
+        )
 
         await engine._run(config=config, state=state, runtime_bridge=None)
 

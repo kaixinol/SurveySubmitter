@@ -33,8 +33,6 @@ class _AsyncClientEntry:
 
 
 class _AsyncStreamResponse:
-    
-
     def __init__(self, response: httpx.Response, stream_ctx: object, release: object) -> None:
         self._response = response
         self._stream_ctx = stream_ctx
@@ -81,17 +79,19 @@ class _AsyncStreamResponse:
             try:
                 await self._release()
             except Exception as exc:
-                log_suppressed_exception("_AsyncStreamResponse.aclose release()", exc, level=logging.WARNING)
+                log_suppressed_exception(
+                    "_AsyncStreamResponse.aclose release()", exc, level=logging.WARNING
+                )
 
 
 class _AsyncClientManager:
-    
-
     def __init__(self) -> None:
         self._lock = threading.RLock()
         self._clients: dict[tuple[int, _AsyncClientKey], _AsyncClientEntry] = {}
 
-    def _make_storage_key(self, loop: asyncio.AbstractEventLoop, key: _AsyncClientKey) -> tuple[int, _AsyncClientKey]:
+    def _make_storage_key(
+        self, loop: asyncio.AbstractEventLoop, key: _AsyncClientKey
+    ) -> tuple[int, _AsyncClientKey]:
         return id(loop), key
 
     def _create_client(
@@ -142,7 +142,9 @@ class _AsyncClientManager:
             try:
                 await client.aclose()
             except Exception as exc:
-                log_suppressed_exception("_AsyncClientManager._close_clients client.aclose()", exc, level=logging.WARNING)
+                log_suppressed_exception(
+                    "_AsyncClientManager._close_clients client.aclose()", exc, level=logging.WARNING
+                )
 
     def acquire(
         self,
@@ -196,7 +198,9 @@ class _AsyncClientManager:
         if clients_to_close:
             await self._close_clients(clients_to_close)
 
-    async def request(self, method: str, url: str, **kwargs: object) -> httpx.Response | _AsyncStreamResponse:
+    async def request(
+        self, method: str, url: str, **kwargs: object
+    ) -> httpx.Response | _AsyncStreamResponse:
         stream = bool(kwargs.pop("stream", False))
         allow_redirects = bool(kwargs.pop("allow_redirects", True))
         verify = kwargs.pop("verify", True)
@@ -245,20 +249,24 @@ def close() -> None:
             return
         loop.create_task(_client_manager.close())
     except Exception as exc:
-        log_suppressed_exception("async_http_client.close _client_manager.close()", exc, level=logging.WARNING)
+        log_suppressed_exception(
+            "async_http_client.close _client_manager.close()", exc, level=logging.WARNING
+        )
 
 
 atexit.register(close)
 
 
 @overload
-async def request(method: str, url: str, *, stream: Literal[True], **kwargs: object) -> _AsyncStreamResponse:
-    ...
+async def request(
+    method: str, url: str, *, stream: Literal[True], **kwargs: object
+) -> _AsyncStreamResponse: ...
 
 
 @overload
-async def request(method: str, url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response:
-    ...
+async def request(
+    method: str, url: str, *, stream: Literal[False] = False, **kwargs: object
+) -> httpx.Response: ...
 
 
 async def request(method: str, url: str, **kwargs: object) -> httpx.Response | _AsyncStreamResponse:
@@ -266,13 +274,11 @@ async def request(method: str, url: str, **kwargs: object) -> httpx.Response | _
 
 
 @overload
-async def get(url: str, *, stream: Literal[True], **kwargs: object) -> _AsyncStreamResponse:
-    ...
+async def get(url: str, *, stream: Literal[True], **kwargs: object) -> _AsyncStreamResponse: ...
 
 
 @overload
-async def get(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response:
-    ...
+async def get(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response: ...
 
 
 async def get(url: str, **kwargs: object) -> httpx.Response | _AsyncStreamResponse:
@@ -280,13 +286,11 @@ async def get(url: str, **kwargs: object) -> httpx.Response | _AsyncStreamRespon
 
 
 @overload
-async def post(url: str, *, stream: Literal[True], **kwargs: object) -> _AsyncStreamResponse:
-    ...
+async def post(url: str, *, stream: Literal[True], **kwargs: object) -> _AsyncStreamResponse: ...
 
 
 @overload
-async def post(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response:
-    ...
+async def post(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response: ...
 
 
 async def post(url: str, **kwargs: object) -> httpx.Response | _AsyncStreamResponse:
@@ -294,13 +298,11 @@ async def post(url: str, **kwargs: object) -> httpx.Response | _AsyncStreamRespo
 
 
 @overload
-async def put(url: str, *, stream: Literal[True], **kwargs: object) -> _AsyncStreamResponse:
-    ...
+async def put(url: str, *, stream: Literal[True], **kwargs: object) -> _AsyncStreamResponse: ...
 
 
 @overload
-async def put(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response:
-    ...
+async def put(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response: ...
 
 
 async def put(url: str, **kwargs: object) -> httpx.Response | _AsyncStreamResponse:
@@ -308,13 +310,13 @@ async def put(url: str, **kwargs: object) -> httpx.Response | _AsyncStreamRespon
 
 
 @overload
-async def delete(url: str, *, stream: Literal[True], **kwargs: object) -> _AsyncStreamResponse:
-    ...
+async def delete(url: str, *, stream: Literal[True], **kwargs: object) -> _AsyncStreamResponse: ...
 
 
 @overload
-async def delete(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response:
-    ...
+async def delete(
+    url: str, *, stream: Literal[False] = False, **kwargs: object
+) -> httpx.Response: ...
 
 
 async def delete(url: str, **kwargs: object) -> httpx.Response | _AsyncStreamResponse:

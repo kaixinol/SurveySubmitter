@@ -4,18 +4,21 @@ import math
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from survey_submitter.core.psychometrics.psychometric import DimensionPsychometricPlan, PsychometricPlan
+    from survey_submitter.core.psychometrics.psychometric import (
+        DimensionPsychometricPlan,
+        PsychometricPlan,
+    )
     from survey_submitter.core.task.task_context import ExecutionState
 
 from survey_submitter.core.questions.reliability_mode import get_reliability_profile
 from survey_submitter.core.questions.utils import normalize_droplist_probs
 
 # Standard correction algorithm parameters:
-_STANDARD_WARMUP_SAMPLES = 12    # minimum samples before correction kicks in
-_STANDARD_GAIN = 4.2             # exponential gain factor for correction sensitivity
-_STANDARD_MIN_FACTOR = 0.45      # lower clamp bound for the correction multiplier
-_STANDARD_MAX_FACTOR = 2.2       # upper clamp bound for the correction multiplier
-_STANDARD_GAP_LIMIT = 0.42       # maximum allowed target-vs-actual gap per step
+_STANDARD_WARMUP_SAMPLES = 12  # minimum samples before correction kicks in
+_STANDARD_GAIN = 4.2  # exponential gain factor for correction sensitivity
+_STANDARD_MIN_FACTOR = 0.45  # lower clamp bound for the correction multiplier
+_STANDARD_MAX_FACTOR = 2.2  # upper clamp bound for the correction multiplier
+_STANDARD_GAP_LIMIT = 0.42  # maximum allowed target-vs-actual gap per step
 _STANDARD_CORRECTION_PARAMS = (
     _STANDARD_WARMUP_SAMPLES,
     _STANDARD_GAIN,
@@ -110,10 +113,9 @@ def resolve_distribution_probabilities(
     if total <= 0:
         return target
 
-    use_priority_profile = (
-        _has_active_runtime_dimension(ctx, question_index)
-        or _psycho_plan_covers_question(psycho_plan, question_index, row_index)
-    )
+    use_priority_profile = _has_active_runtime_dimension(
+        ctx, question_index
+    ) or _psycho_plan_covers_question(psycho_plan, question_index, row_index)
     warmup_samples, gain, min_factor, max_factor, gap_limit = _resolve_correction_params(
         use_priority_profile=use_priority_profile,
     )
@@ -160,4 +162,3 @@ def record_pending_distribution_choice(
         )
     except (AttributeError, TypeError):
         return
-

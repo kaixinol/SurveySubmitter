@@ -14,7 +14,11 @@ from survey_submitter.constants import (
     DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT,
     DEFAULT_AUTO_SAVE_LOGS,
 )
-from survey_submitter.io.config.settings_store import app_settings, get_bool_setting, get_int_setting
+from survey_submitter.io.config.settings_store import (
+    app_settings,
+    get_bool_setting,
+    get_int_setting,
+)
 from survey_submitter.system.paths import get_user_logs_directory
 
 import survey_submitter.logging.log_utils as _log_utils
@@ -38,8 +42,9 @@ def _backfill_session_log_from_buffer() -> None:
     global _SESSION_LOG_BACKFILLED
     if _SESSION_LOG_BACKFILLED or not _SESSION_LOG_PATH:
         return
-    
+
     from survey_submitter.logging.log_buffer_handler import LogBufferHandler
+
     records = _log_utils.LOG_BUFFER_HANDLER.get_records()
     if not records:
         _SESSION_LOG_BACKFILLED = True
@@ -104,10 +109,14 @@ def _ensure_logs_dir(runtime_directory: str) -> str:
 
 
 def get_auto_save_log_settings() -> tuple[bool, int]:
-    
+
     settings = app_settings()
     enabled = get_bool_setting(settings.value(AUTO_SAVE_LOGS_SETTING_KEY), DEFAULT_AUTO_SAVE_LOGS)
-    max_keep = max(AUTO_SAVE_LOG_RETENTION_OPTIONS) if AUTO_SAVE_LOG_RETENTION_OPTIONS else DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT
+    max_keep = (
+        max(AUTO_SAVE_LOG_RETENTION_OPTIONS)
+        if AUTO_SAVE_LOG_RETENTION_OPTIONS
+        else DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT
+    )
     keep_count = get_int_setting(
         settings.value(AUTO_SAVE_LOG_RETENTION_COUNT_SETTING_KEY),
         DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT,
@@ -117,7 +126,7 @@ def get_auto_save_log_settings() -> tuple[bool, int]:
 
 
 def prune_session_log_files(runtime_directory: str, keep_count: int) -> int:
-    
+
     logs_dir = _ensure_logs_dir(runtime_directory)
     keep_count = max(1, int(keep_count))
     candidates: list[tuple[float, str]] = []
@@ -144,7 +153,7 @@ def prune_session_log_files(runtime_directory: str, keep_count: int) -> int:
 
 
 def finalize_session_log_persistence(runtime_directory: str) -> None:
-    
+
     global _DELETE_SESSION_LOG_ON_SHUTDOWN
 
     enabled, keep_count = get_auto_save_log_settings()
@@ -166,7 +175,9 @@ def finalize_session_log_persistence(runtime_directory: str) -> None:
         if os.path.isfile(last_session_path):
             os.remove(last_session_path)
     except OSError as exc:
-        _log_utils._safe_internal_log("finalize_session_log_persistence failed to remove last_session.log", exc)
+        _log_utils._safe_internal_log(
+            "finalize_session_log_persistence failed to remove last_session.log", exc
+        )
 
 
 def save_log_records_to_file(
@@ -175,6 +186,7 @@ def save_log_records_to_file(
     file_path: str | None = None,
 ) -> str:
     from survey_submitter.logging.log_buffer_handler import LogBufferEntry
+
     if not runtime_directory:
         raise ValueError("runtime_directory \u4e0d\u80fd\u4e3a\u7a7a")
     if file_path:
@@ -216,11 +228,20 @@ def export_full_log_to_file(
         if os.path.normcase(src) == os.path.normcase(dst):
             return file_path
         try:
-            with open(src, "r", encoding="utf-8") as source, open(dst, "w", encoding="utf-8") as target:
+            with (
+                open(src, "r", encoding="utf-8") as source,
+                open(dst, "w", encoding="utf-8") as target,
+            ):
                 shutil.copyfileobj(source, target)
             return file_path
         except OSError as exc:
-            _log_utils._safe_internal_log("export_full_log_to_file fallback to buffer failed to read session log", exc)
+            _log_utils._safe_internal_log(
+                "export_full_log_to_file fallback to buffer failed to read session log", exc
+            )
 
-    records = fallback_records if fallback_records is not None else _log_utils.LOG_BUFFER_HANDLER.get_records()
+    records = (
+        fallback_records
+        if fallback_records is not None
+        else _log_utils.LOG_BUFFER_HANDLER.get_records()
+    )
     return save_log_records_to_file(records, runtime_directory, file_path)

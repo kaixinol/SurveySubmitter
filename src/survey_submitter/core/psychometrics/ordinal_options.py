@@ -39,7 +39,9 @@ _ORDINAL_GROUPS = [
     ["完全没有", "较少", "一般", "较多", "非常多"],
 ]
 
-_ATTITUDE_NEUTRAL_TEXTS = frozenset({"一般", "中立", "没意见", "无意见", "普通", "不好说", "说不清", "不确定"})
+_ATTITUDE_NEUTRAL_TEXTS = frozenset(
+    {"一般", "中立", "没意见", "无意见", "普通", "不好说", "说不清", "不确定"}
+)
 _ATTITUDE_EXTREME_MARKERS = ("非常", "很", "极其", "十分", "完全", "特别", "强烈")
 _ATTITUDE_MILD_MARKERS = ("比较", "较", "不太", "有点", "稍微", "略", "有些")
 _ATTITUDE_NEGATIVE_CORES = (

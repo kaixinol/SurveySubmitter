@@ -27,10 +27,30 @@ _current_proxy_source: str = PROXY_SOURCE_CUSTOM
 _proxy_occupy_minute: int = 1
 
 _ORDINARY_POOL_PROVINCE_CODES: set[str] = {
-    "110000", "120000", "130000", "140000", "150000", "210000", "220000",
-    "230000", "320000", "330000", "340000", "350000", "360000", "370000",
-    "410000", "420000", "430000", "440000", "460000", "500000", "510000",
-    "610000", "620000", "640000",
+    "110000",
+    "120000",
+    "130000",
+    "140000",
+    "150000",
+    "210000",
+    "220000",
+    "230000",
+    "320000",
+    "330000",
+    "340000",
+    "350000",
+    "360000",
+    "370000",
+    "410000",
+    "420000",
+    "430000",
+    "440000",
+    "460000",
+    "500000",
+    "510000",
+    "610000",
+    "620000",
+    "640000",
 }
 
 
@@ -38,7 +58,7 @@ def _safe_to_string(value: str | int | float | None, default: str = "") -> str:
     """Safely convert a value to string, returning default on exception."""
     if value is None:
         return default
-    
+
     try:
         return str(value).strip()
     except (ValueError, TypeError):
@@ -49,7 +69,7 @@ def _safe_to_int(value: str | int | float | None, default: int = 0) -> int:
     """Safely convert a value to non-negative integer, returning default on exception."""
     if value is None:
         return max(0, default)
-    
+
     try:
         return max(0, int(float(value)))
     except (ValueError, TypeError, OverflowError):
@@ -159,7 +179,11 @@ def set_proxy_occupy_minute_by_answer_duration(
     if isinstance(answer_duration_range_seconds, (list, tuple)):
         if len(answer_duration_range_seconds) >= 1:
             min_seconds = _to_non_negative_int(answer_duration_range_seconds[0], 0)
-        max_seconds = _to_non_negative_int(answer_duration_range_seconds[1], min_seconds) if len(answer_duration_range_seconds) >= 2 else min_seconds
+        max_seconds = (
+            _to_non_negative_int(answer_duration_range_seconds[1], min_seconds)
+            if len(answer_duration_range_seconds) >= 2
+            else min_seconds
+        )
     max_seconds = max(max_seconds, min_seconds)
     normalized_provider = str(survey_provider or "").strip().lower()
     minute = get_proxy_minute_by_answer_seconds(max_seconds, survey_provider=normalized_provider)
@@ -210,7 +234,12 @@ def _normalize_area_code(area_code: str | None) -> str:
 
 
 def _is_province_level_area_code(area_code: str) -> bool:
-    return bool(area_code) and len(area_code) == 6 and area_code.isdigit() and area_code.endswith("0000")
+    return (
+        bool(area_code)
+        and len(area_code) == 6
+        and area_code.isdigit()
+        and area_code.endswith("0000")
+    )
 
 
 def _resolve_default_pool_by_area(area_code: str | None) -> str | None:
@@ -302,5 +331,3 @@ def apply_custom_proxy_api(custom_api_url: str | None) -> ProxySettings:
 
 def _to_non_negative_int(value: str | int | float | None, default: int = 0) -> int:
     return _safe_to_int(value, default)
-
-

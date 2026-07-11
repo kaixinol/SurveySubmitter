@@ -18,7 +18,7 @@ _SMALL_SCALE_STATIC_MAX_OPTIONS = 3
 
 
 def reset_tendency() -> None:
-    
+
     _thread_local.dimension_bases = {}
 
 
@@ -26,19 +26,20 @@ def _generate_base_ratio(
     option_count: int,
     probabilities: list[float] | int | None,
 ) -> float:
-    
+
     if probabilities == -1 or probabilities is None:
-        
         try:
             from survey_submitter.core.persona.generator import get_current_persona
+
             persona = get_current_persona()
             if persona is not None:
-                
                 raw = persona.satisfaction_tendency
                 jitter = random.gauss(0, 0.1)
                 return max(0.0, min(1.0, raw + jitter))
         except ImportError as exc:
-            log_suppressed_exception("_generate_base_ratio: get_current_persona", exc, level=logging.ERROR)
+            log_suppressed_exception(
+                "_generate_base_ratio: get_current_persona", exc, level=logging.ERROR
+            )
         return random.random()
     if isinstance(probabilities, list) and probabilities:
         idx = weighted_index(probabilities)
@@ -48,12 +49,12 @@ def _generate_base_ratio(
 
 
 def _is_ungrouped(dimension: str | None) -> bool:
-    
+
     return dimension is None or dimension == DIMENSION_UNGROUPED
 
 
 def _random_by_probabilities(option_count: int, probabilities: list[float] | int | None) -> int:
-    
+
     if isinstance(probabilities, list) and len(probabilities) == option_count:
         return weighted_index(probabilities)
     return random.randrange(option_count)
@@ -63,7 +64,7 @@ def _normalize_probabilities_for_zero_guard(
     option_count: int,
     probabilities: list[float] | int | None,
 ) -> list[float] | None:
-    
+
     if option_count <= 0 or not isinstance(probabilities, list):
         return None
 
@@ -86,7 +87,7 @@ def _enforce_zero_weight_guard(
     probabilities: list[float] | int | None,
     anchor_index: int | None = None,
 ) -> int:
-    
+
     if option_count <= 0:
         return 0
 
@@ -97,7 +98,9 @@ def _enforce_zero_weight_guard(
 
     positive_indices = [idx for idx, weight in enumerate(normalized) if weight > 0.0]
     if not positive_indices:
-        raise ValueError("当前题目所有选项权重均为 0，无法在“0 权重禁选”约束下作答，请至少保留一个非 0 选项。")
+        raise ValueError(
+            "当前题目所有选项权重均为 0，无法在“0 权重禁选”约束下作答，请至少保留一个非 0 选项。"
+        )
     if selected in positive_indices:
         return selected
 
@@ -106,7 +109,6 @@ def _enforce_zero_weight_guard(
     else:
         target = max(0, min(option_count - 1, int(anchor_index)))
 
-    
     best = positive_indices[0]
     best_distance = abs(best - target)
     best_weight = normalized[best]
@@ -131,7 +133,11 @@ def _blend_psychometric_choice(
     probabilities: list[float] | int | None,
 ) -> int:
     anchor = max(0, min(option_count - 1, int(anchor_index)))
-    if option_count <= 0 or not isinstance(probabilities, list) or len(probabilities) != option_count:
+    if (
+        option_count <= 0
+        or not isinstance(probabilities, list)
+        or len(probabilities) != option_count
+    ):
         return anchor
 
     fluctuation_window = _resolve_fluctuation_window(option_count)
@@ -167,12 +173,11 @@ def get_tendency_index(
     option_count: int,
     probabilities: list[float] | int | None,
     dimension: str | None = None,
-    
     psycho_plan: Any | None = None,
     question_index: int | None = None,
     row_index: int | None = None,
 ) -> int:
-    
+
     if option_count <= 0:
         return 0
 
@@ -184,7 +189,6 @@ def get_tendency_index(
             anchor_index=anchor,
         )
 
-    
     if psycho_plan is not None and question_index is not None:
         choice = _get_psychometric_answer(psycho_plan, question_index, row_index, option_count)
         if choice is not None:
@@ -196,20 +200,17 @@ def get_tendency_index(
                 probabilities,
             )
             return _finalize_choice(blended_choice, anchor=choice)
-        
+
         logging.info(
-            "心理测量计划未命中答案（题%d 行%s），回退到常规倾向逻辑",
-            question_index, row_index
+            "心理测量计划未命中答案（题%d 行%s），回退到常规倾向逻辑", question_index, row_index
         )
 
-    
     if _is_ungrouped(dimension):
         result = _random_by_probabilities(option_count, probabilities)
         return _finalize_choice(result, anchor=result)
 
-    
-    assert dimension is not None  
-    bases: dict[str, float] = getattr(_thread_local, 'dimension_bases', {})
+    assert dimension is not None
+    bases: dict[str, float] = getattr(_thread_local, "dimension_bases", {})
     if not isinstance(bases, dict):
         bases = {}
         _thread_local.dimension_bases = bases
@@ -217,11 +218,9 @@ def get_tendency_index(
     base_ratio = bases.get(dimension)
 
     if base_ratio is None:
-        
         base_ratio = _generate_base_ratio(option_count, probabilities)
         bases[dimension] = base_ratio
 
-    
     base = int(round(base_ratio * (option_count - 1)))
     base = max(0, min(option_count - 1, base))
 
@@ -234,18 +233,15 @@ def _apply_consistency(
     option_count: int,
     probabilities: list[float] | int | None,
 ) -> int:
-    
-    
+
     effective_base = min(base, option_count - 1)
     fluctuation_window = _resolve_fluctuation_window(option_count)
     if fluctuation_window <= 0:
         return effective_base
 
-    
     low = max(0, effective_base - fluctuation_window)
     high = min(option_count - 1, effective_base + fluctuation_window)
 
-    
     if isinstance(probabilities, list) and len(probabilities) == option_count:
         adjusted_probs = []
         for i in range(option_count):
@@ -263,7 +259,6 @@ def _apply_consistency(
             adjusted_probs = [p / total for p in adjusted_probs]
             return weighted_index(adjusted_probs)
 
-    
     candidates = list(range(low, high + 1))
     weights = []
     for c in candidates:
@@ -281,9 +276,8 @@ def _apply_consistency(
 
 
 def _resolve_fluctuation_window(option_count: int) -> int:
-    
+
     if option_count <= _SMALL_SCALE_STATIC_MAX_OPTIONS:
-        
         return 0
 
     profile = get_reliability_profile()
@@ -295,7 +289,7 @@ def _resolve_fluctuation_window(option_count: int) -> int:
 
 
 def _window_decay(distance: int, window: int) -> float:
-    
+
     profile = get_reliability_profile()
     if distance <= 0:
         return profile.consistency_center_weight
@@ -314,21 +308,20 @@ def _get_psychometric_answer(
     row_index: int | None,
     option_count: int,
 ) -> int | None:
-    
+
     try:
         choice = plan.get_choice(question_index, row_index)
         if choice is None:
             return None
-        
-        
+
         choice = max(0, min(option_count - 1, choice))
-        
+
         return choice
     except Exception as exc:
         log_suppressed_exception(
             f"_get_psychometric_answer: question_index={question_index}, row_index={row_index}",
             exc,
-            level=logging.WARNING
+            level=logging.WARNING,
         )
         return None
 
@@ -349,7 +342,3 @@ def _is_distribution_locked_plan(
             level=logging.WARNING,
         )
         return False
-
-
-
-

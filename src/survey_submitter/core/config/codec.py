@@ -6,7 +6,12 @@ import random
 
 from pydantic import ConfigDict
 
-from survey_submitter.core.reverse_fill import REVERSE_FILL_FORMAT_AUTO, REVERSE_FILL_FORMAT_WJX_SCORE, REVERSE_FILL_FORMAT_WJX_SEQUENCE, REVERSE_FILL_FORMAT_WJX_TEXT
+from survey_submitter.core.reverse_fill import (
+    REVERSE_FILL_FORMAT_AUTO,
+    REVERSE_FILL_FORMAT_WJX_SCORE,
+    REVERSE_FILL_FORMAT_WJX_SEQUENCE,
+    REVERSE_FILL_FORMAT_WJX_TEXT,
+)
 from survey_submitter.core.config.answer_datetime_window import normalize_answer_datetime_window
 from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.config.schema import RuntimeConfig
@@ -51,6 +56,7 @@ class UserAgentProfile(BaseConfigModel):
     preset_key: str
     ua: str
     label: str
+
 
 __all__ = [
     "CURRENT_CONFIG_SCHEMA_VERSION",
@@ -382,8 +388,12 @@ def serialize_question_entry(entry) -> dict[str, object]:
         "provider_page_id": str(entry.provider_page_id or ""),
         "ai_enabled": bool(entry.ai_enabled),
         "multi_text_blank_modes": _normalize_multi_text_blank_modes(entry.multi_text_blank_modes),
-        "multi_text_blank_ai_flags": _normalize_multi_text_blank_ai_flags(entry.multi_text_blank_ai_flags),
-        "multi_text_blank_int_ranges": _normalize_multi_text_blank_int_ranges(entry.multi_text_blank_int_ranges),
+        "multi_text_blank_ai_flags": _normalize_multi_text_blank_ai_flags(
+            entry.multi_text_blank_ai_flags
+        ),
+        "multi_text_blank_int_ranges": _normalize_multi_text_blank_int_ranges(
+            entry.multi_text_blank_int_ranges
+        ),
         "text_random_mode": str(entry.text_random_mode or "none"),
         "text_random_int_range": _normalize_random_int_range(entry.text_random_int_range),
         "option_fill_texts": entry.option_fill_texts,
@@ -407,13 +417,23 @@ def deserialize_question_entry(data: dict[str, object]):
 
     unknown_keys = set(data or {}) - _QUESTION_ENTRY_FIELDS
     if unknown_keys:
-        raise ValueError(f"{_CONFIG_CORRUPTED_MESSAGE}：题目配置包含不支持的字段（{', '.join(sorted(unknown_keys))}）")
+        raise ValueError(
+            f"{_CONFIG_CORRUPTED_MESSAGE}：题目配置包含不支持的字段（{', '.join(sorted(unknown_keys))}）"
+        )
     mode_raw = data.get("distribution_mode") or "random"
     probabilities = data.get("probabilities")
     custom_weights = data.get("custom_weights")
-    if mode_raw == "custom" and _prob_config_is_unset(probabilities) and _custom_weights_has_positive(custom_weights):
+    if (
+        mode_raw == "custom"
+        and _prob_config_is_unset(probabilities)
+        and _custom_weights_has_positive(custom_weights)
+    ):
         probabilities = custom_weights
-    if mode_raw == "custom" and (custom_weights is None or custom_weights == []) and isinstance(probabilities, list):
+    if (
+        mode_raw == "custom"
+        and (custom_weights is None or custom_weights == [])
+        and isinstance(probabilities, list)
+    ):
         custom_weights = list(probabilities)
     return QuestionEntry(
         question_type=data.get("question_type") or "text",
@@ -432,9 +452,15 @@ def deserialize_question_entry(data: dict[str, object]):
         provider_question_id=str(data.get("provider_question_id") or "").strip() or None,
         provider_page_id=str(data.get("provider_page_id") or "").strip() or None,
         ai_enabled=bool(data.get("ai_enabled", False)),
-        multi_text_blank_modes=_normalize_multi_text_blank_modes(data.get("multi_text_blank_modes")),
-        multi_text_blank_ai_flags=_normalize_multi_text_blank_ai_flags(data.get("multi_text_blank_ai_flags")),
-        multi_text_blank_int_ranges=_normalize_multi_text_blank_int_ranges(data.get("multi_text_blank_int_ranges")),
+        multi_text_blank_modes=_normalize_multi_text_blank_modes(
+            data.get("multi_text_blank_modes")
+        ),
+        multi_text_blank_ai_flags=_normalize_multi_text_blank_ai_flags(
+            data.get("multi_text_blank_ai_flags")
+        ),
+        multi_text_blank_int_ranges=_normalize_multi_text_blank_int_ranges(
+            data.get("multi_text_blank_int_ranges")
+        ),
         text_random_mode=str(data.get("text_random_mode") or "none"),
         text_random_int_range=_normalize_random_int_range(data.get("text_random_int_range")),
         option_fill_texts=data.get("option_fill_texts"),
@@ -457,7 +483,9 @@ def clone_question_entries(entries: list[object] | None) -> list[object]:
     return cloned
 
 
-def clone_questions_info(questions: list[SurveyQuestionMeta] | None, *, default_provider: str = SURVEY_PROVIDER_WJX) -> list[SurveyQuestionMeta]:
+def clone_questions_info(
+    questions: list[SurveyQuestionMeta] | None, *, default_provider: str = SURVEY_PROVIDER_WJX
+) -> list[SurveyQuestionMeta]:
     return clone_survey_question_metas(questions or [], default_provider=default_provider)
 
 
@@ -548,10 +576,14 @@ def _apply_reverse_fill_settings(config: RuntimeConfig, raw: dict[str, object]) 
     config.reverse_fill_source_path = _as_str(raw.get("reverse_fill_source_path"))
     reverse_fill_format = _as_str(raw.get("reverse_fill_format"), REVERSE_FILL_FORMAT_AUTO).lower()
     config.reverse_fill_format = (
-        reverse_fill_format if reverse_fill_format in _REVERSE_FILL_FORMATS else REVERSE_FILL_FORMAT_AUTO
+        reverse_fill_format
+        if reverse_fill_format in _REVERSE_FILL_FORMATS
+        else REVERSE_FILL_FORMAT_AUTO
     )
     config.reverse_fill_start_row = max(1, _coerce_int(raw.get("reverse_fill_start_row"), 1))
-    config.reverse_fill_threads = max(1, _coerce_int(raw.get("reverse_fill_threads"), config.threads or 1))
+    config.reverse_fill_threads = max(
+        1, _coerce_int(raw.get("reverse_fill_threads"), config.threads or 1)
+    )
 
 
 def _apply_answer_rules(config: RuntimeConfig, raw: dict[str, object]) -> None:
@@ -649,7 +681,9 @@ def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
     return config
 
 
-def _ensure_supported_config_payload(payload: dict[str, object], *, config_path: str) -> dict[str, object]:
+def _ensure_supported_config_payload(
+    payload: dict[str, object], *, config_path: str
+) -> dict[str, object]:
     del config_path
     return dict(payload)
 
@@ -665,5 +699,3 @@ def serialize_runtime_config(config: RuntimeConfig) -> dict[str, object]:
 
 def deserialize_runtime_config(payload: dict[str, object]) -> RuntimeConfig:
     return normalize_runtime_config_payload(payload)
-
-

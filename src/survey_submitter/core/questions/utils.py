@@ -35,7 +35,7 @@ _ID_CARD_CHECKSUM_CHARS = "10X98765432"
 def _normalize_question_type_code(value: str | int | None) -> str:
     if value is None:
         return ""
-    
+
     try:
         return str(value).strip()
     except (ValueError, TypeError):
@@ -62,7 +62,6 @@ def _should_treat_question_as_text_like(
 
 
 def weighted_index(probabilities: list[float]) -> int:
-    
 
     if not probabilities:
         raise ValueError("probabilities cannot be empty")
@@ -89,14 +88,14 @@ def weighted_index(probabilities: list[float]) -> int:
             continue
         running += weight
         last_positive_index = index
-        
+
         if pivot < running:
             return index
     return last_positive_index
 
 
 def normalize_probabilities(values: list[float]) -> list[float]:
-    
+
     if not values:
         raise ValueError("概率列表不能为空")
     total = sum(values)
@@ -106,27 +105,59 @@ def normalize_probabilities(values: list[float]) -> list[float]:
 
 
 def generate_random_chinese_name() -> str:
-    
+
     surname_pool = [
-        "张", "王", "李", "赵", "陈", "杨", "刘", "黄", "周", "吴", "徐", "孙", "马", "朱", "胡", "林",
-        "郭", "何", "高", "罗", "郑", "梁", "谢", "宋", "唐", "韩", "曹", "许", "邓", "冯",
+        "张",
+        "王",
+        "李",
+        "赵",
+        "陈",
+        "杨",
+        "刘",
+        "黄",
+        "周",
+        "吴",
+        "徐",
+        "孙",
+        "马",
+        "朱",
+        "胡",
+        "林",
+        "郭",
+        "何",
+        "高",
+        "罗",
+        "郑",
+        "梁",
+        "谢",
+        "宋",
+        "唐",
+        "韩",
+        "曹",
+        "许",
+        "邓",
+        "冯",
     ]
-    
+
     male_given_pool = "伟俊涛强磊刚凯鹏鑫宇浩瑞博杰宁豪轩皓浩宇子豪思远家豪文博宇航志强明浩志伟文涛梓豪志鹏伟豪君豪承泽"
-    
+
     female_given_pool = "婷雅静怡欣萱琳玲芳颖慧敏雪晶莉倩蕾佳媛茜悦岚蓉瑶诗梦菲琪韵彤璐"
-    
+
     neutral_given_pool = "嘉明华建安晨泽文超洋"
 
-    
     gender = None
     try:
         from survey_submitter.core.persona.generator import get_current_persona
+
         persona = get_current_persona()
         if persona is not None:
             gender = persona.gender
     except ImportError as exc:
-        log_suppressed_exception("generate_random_chinese_name: from survey_submitter.core.persona.generator import get_current_persona", exc, level=logging.ERROR)
+        log_suppressed_exception(
+            "generate_random_chinese_name: from survey_submitter.core.persona.generator import get_current_persona",
+            exc,
+            level=logging.ERROR,
+        )
 
     surname = random.choice(surname_pool)
     given_len = 1 if random.random() < 0.65 else 2
@@ -143,12 +174,48 @@ def generate_random_chinese_name() -> str:
 
 
 def generate_random_mobile() -> str:
-    
+
     prefixes = (
-        "130", "131", "132", "133", "134", "135", "136", "137", "138", "139",
-        "147", "150", "151", "152", "153", "155", "156", "157", "158", "159",
-        "166", "171", "172", "173", "175", "176", "177", "178", "180", "181",
-        "182", "183", "184", "185", "186", "187", "188", "189", "198", "199",
+        "130",
+        "131",
+        "132",
+        "133",
+        "134",
+        "135",
+        "136",
+        "137",
+        "138",
+        "139",
+        "147",
+        "150",
+        "151",
+        "152",
+        "153",
+        "155",
+        "156",
+        "157",
+        "158",
+        "159",
+        "166",
+        "171",
+        "172",
+        "173",
+        "175",
+        "176",
+        "177",
+        "178",
+        "180",
+        "181",
+        "182",
+        "183",
+        "184",
+        "185",
+        "186",
+        "187",
+        "188",
+        "189",
+        "198",
+        "199",
     )
     tail = "".join(str(random.randint(0, 9)) for _ in range(8))
     return random.choice(prefixes) + tail
@@ -156,14 +223,16 @@ def generate_random_mobile() -> str:
 
 @lru_cache(maxsize=1)
 def _load_id_card_area_codes() -> tuple[str, ...]:
-    
+
     asset_path = get_resource_path(os.path.join("software", "assets", "area_codes_2022.json"))
     fallback_codes = ("110100", "310100", "440100", "330100", "510100")
     try:
         with open(asset_path, "r", encoding="utf-8") as fp:
             area_data = json.load(fp)
     except (OSError, json.JSONDecodeError, ValueError) as exc:
-        log_suppressed_exception("questions.utils._load_id_card_area_codes open", exc, level=logging.ERROR)
+        log_suppressed_exception(
+            "questions.utils._load_id_card_area_codes open", exc, level=logging.ERROR
+        )
         return fallback_codes
 
     codes: list[str] = []
@@ -185,14 +254,17 @@ def _load_id_card_area_codes() -> tuple[str, ...]:
 def _resolve_current_persona() -> Any:
     try:
         from survey_submitter.core.persona.generator import get_current_persona
+
         return get_current_persona()
     except ImportError as exc:
-        log_suppressed_exception("questions.utils._resolve_current_persona import", exc, level=logging.ERROR)
+        log_suppressed_exception(
+            "questions.utils._resolve_current_persona import", exc, level=logging.ERROR
+        )
         return None
 
 
 def _choose_random_birth_date_for_id_card() -> date:
-    
+
     today = date.today()
     persona = _resolve_current_persona()
     age_range_map = {
@@ -210,7 +282,7 @@ def _choose_random_birth_date_for_id_card() -> date:
 
 
 def _choose_id_card_sequence_tail() -> str:
-    
+
     persona = _resolve_current_persona()
     gender = str(getattr(persona, "gender", "") or "").strip()
     seq_prefix = random.randint(0, 99)
@@ -224,12 +296,14 @@ def _choose_id_card_sequence_tail() -> str:
 
 
 def _calculate_id_card_checksum(first_seventeen_digits: str) -> str:
-    total = sum(int(num) * weight for num, weight in zip(first_seventeen_digits, _ID_CARD_CHECKSUM_WEIGHTS))
+    total = sum(
+        int(num) * weight for num, weight in zip(first_seventeen_digits, _ID_CARD_CHECKSUM_WEIGHTS)
+    )
     return _ID_CARD_CHECKSUM_CHARS[total % 11]
 
 
 def generate_random_id_card() -> str:
-    
+
     area_code = random.choice(_load_id_card_area_codes())
     birth_date = _choose_random_birth_date_for_id_card()
     sequence_tail = _choose_id_card_sequence_tail()
@@ -238,9 +312,18 @@ def generate_random_id_card() -> str:
 
 
 def generate_random_generic_text() -> str:
-    
+
     samples = [
-        "已填写", "同上", "无", "OK", "收到", "确认", "正常", "通过", "测试数据", "自动填写",
+        "已填写",
+        "同上",
+        "无",
+        "OK",
+        "收到",
+        "确认",
+        "正常",
+        "通过",
+        "测试数据",
+        "自动填写",
     ]
     base = random.choice(samples)
     suffix = str(random.randint(10, 999))
@@ -248,12 +331,11 @@ def generate_random_generic_text() -> str:
 
 
 def try_parse_random_int_range(raw: Any) -> tuple[int, int] | None:
-    
 
     def _coerce_int(value: str | int | float | None) -> int | None:
         if value is None:
             return None
-        
+
         try:
             return int(float(value))
         except (ValueError, TypeError, OverflowError):
@@ -276,7 +358,7 @@ def try_parse_random_int_range(raw: Any) -> tuple[int, int] | None:
 
 
 def normalize_random_int_range(raw: Any) -> tuple[int, int]:
-    
+
     parsed = try_parse_random_int_range(raw)
     if parsed is None:
         raise ValueError("随机整数范围无效")
@@ -284,7 +366,7 @@ def normalize_random_int_range(raw: Any) -> tuple[int, int]:
 
 
 def serialize_random_int_range(raw: Any) -> list[int]:
-    
+
     parsed = try_parse_random_int_range(raw)
     if parsed is None:
         return []
@@ -293,7 +375,7 @@ def serialize_random_int_range(raw: Any) -> list[int]:
 
 
 def describe_random_int_range(raw: Any) -> str:
-    
+
     parsed = try_parse_random_int_range(raw)
     if parsed is None:
         return "未设置"
@@ -302,19 +384,19 @@ def describe_random_int_range(raw: Any) -> str:
 
 
 def build_random_int_token(min_value: Any, max_value: Any) -> str:
-    
+
     normalized_min, normalized_max = normalize_random_int_range([min_value, max_value])
     return f"{RANDOM_INT_TOKEN_PREFIX}{normalized_min}:{normalized_max}"
 
 
 def parse_random_int_token(token: Any) -> tuple[int, int] | None:
-    
+
     if token is None:
         return None
     text = str(token).strip()
     if not text.startswith(RANDOM_INT_TOKEN_PREFIX):
         return None
-    payload = text[len(RANDOM_INT_TOKEN_PREFIX):]
+    payload = text[len(RANDOM_INT_TOKEN_PREFIX) :]
     parts = payload.split(":", 1)
     if len(parts) != 2:
         return None
@@ -322,13 +404,13 @@ def parse_random_int_token(token: Any) -> tuple[int, int] | None:
 
 
 def generate_random_integer_text(min_value: Any, max_value: Any) -> str:
-    
+
     normalized_min, normalized_max = normalize_random_int_range([min_value, max_value])
     return str(random.randint(normalized_min, normalized_max))
 
 
 def resolve_dynamic_text_token(token: Any) -> str:
-    
+
     if token is None:
         return DEFAULT_FILL_TEXT
     text = str(token).strip()
@@ -357,8 +439,10 @@ def extract_text_from_element(element) -> str:
     return text
 
 
-def get_fill_text_from_config(fill_entries: Sequence[str | None] | None, option_index: int) -> str | None:
-    
+def get_fill_text_from_config(
+    fill_entries: Sequence[str | None] | None, option_index: int
+) -> str | None:
+
     if not fill_entries or option_index < 0 or option_index >= len(fill_entries):
         return None
     value = fill_entries[option_index]
@@ -368,15 +452,19 @@ def get_fill_text_from_config(fill_entries: Sequence[str | None] | None, option_
     return text or None
 
 
-def normalize_single_like_prob_config(prob_config: list[float] | int | float | None, option_count: int) -> list[float] | int:
-    
+def normalize_single_like_prob_config(
+    prob_config: list[float] | int | float | None, option_count: int
+) -> list[float] | int:
+
     if prob_config == -1 or prob_config is None:
         return -1
     return normalize_droplist_probs(prob_config, option_count)
 
 
-def normalize_droplist_probs(prob_config: list[float] | int | float | None, option_count: int) -> list[float]:
-    
+def normalize_droplist_probs(
+    prob_config: list[float] | int | float | None, option_count: int
+) -> list[float]:
+
     if option_count <= 0:
         return []
     if prob_config == -1 or prob_config is None:
@@ -401,8 +489,10 @@ def normalize_droplist_probs(prob_config: list[float] | int | float | None, opti
         return [1.0 / option_count] * option_count
 
 
-def normalize_option_fill_texts(option_texts: list[str | None] | None, option_count: int) -> list[str | None] | None:
-    
+def normalize_option_fill_texts(
+    option_texts: list[str | None] | None, option_count: int
+) -> list[str | None] | None:
+
     if not option_texts:
         return None
     normalized_count = option_count if option_count > 0 else len(option_texts)
@@ -455,10 +545,11 @@ def _custom_weights_has_positive(weights: Any) -> bool:
 
 
 def resolve_prob_config(prob_config: Any, custom_weights: Any, prefer_custom: bool = False) -> Any:
-    
-    if prefer_custom and _prob_config_is_unset(prob_config) and _custom_weights_has_positive(custom_weights):
+
+    if (
+        prefer_custom
+        and _prob_config_is_unset(prob_config)
+        and _custom_weights_has_positive(custom_weights)
+    ):
         return custom_weights
     return prob_config
-
-
-

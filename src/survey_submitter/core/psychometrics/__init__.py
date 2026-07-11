@@ -39,4 +39,3 @@ __all__ = [
     "cronbach_alpha",
     "infer_reversed_keys",
 ]
-

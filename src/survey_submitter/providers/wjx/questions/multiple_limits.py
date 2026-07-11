@@ -72,8 +72,12 @@ _CHINESE_MULTI_LIMIT_PATTERNS = (
 )
 
 _CHINESE_MULTI_RANGE_PATTERNS = (
-    re.compile(r"(?:请[选選择擇]?|可选|可選|需选|需選|选择|選擇|勾选|勾選)\s*(\d+)\s*(?:-|－|—|–|~|～|至|到)\s*(\d+)(?:\s*[个項项条])?"),
-    re.compile(r"至少\s*(\d+)\s*[个項项条]?(?:[^0-9]{0,6})(?:最多|至多|不超过|不超過)\s*(\d+)\s*[个項项条]?"),
+    re.compile(
+        r"(?:请[选選择擇]?|可选|可選|需选|需選|选择|選擇|勾选|勾選)\s*(\d+)\s*(?:-|－|—|–|~|～|至|到)\s*(\d+)(?:\s*[个項项条])?"
+    ),
+    re.compile(
+        r"至少\s*(\d+)\s*[个項项条]?(?:[^0-9]{0,6})(?:最多|至多|不超过|不超過)\s*(\d+)\s*[个項项条]?"
+    ),
     re.compile(r"(?:限选|限選)\s*(\d+)\s*(?:-|－|—|–|~|～|至|到)\s*(\d+)(?:\s*[个項项条])?"),
 )
 
@@ -87,8 +91,13 @@ _CHINESE_MULTI_MIN_PATTERNS = (
 )
 
 _ENGLISH_MULTI_LIMIT_PATTERNS = (
-    re.compile(r"(?:select|choose|pick)\s+(?:up\s+to|at\s+most|no\s+more\s+than)\s+(\d+)", re.IGNORECASE),
-    re.compile(r"(?:up\s+to|at\s+most|no\s+more\s+than)\s+(\d+)\s+(?:options?|choices?|items?)", re.IGNORECASE),
+    re.compile(
+        r"(?:select|choose|pick)\s+(?:up\s+to|at\s+most|no\s+more\s+than)\s+(\d+)", re.IGNORECASE
+    ),
+    re.compile(
+        r"(?:up\s+to|at\s+most|no\s+more\s+than)\s+(\d+)\s+(?:options?|choices?|items?)",
+        re.IGNORECASE,
+    ),
 )
 
 _ENGLISH_MULTI_RANGE_PATTERNS = (
@@ -108,8 +117,7 @@ _ENGLISH_MULTI_MIN_PATTERNS = (
 
 def _compile_key_value_patterns(keys) -> tuple[re.Pattern[str], ...]:
     return tuple(
-        re.compile(rf"{re.escape(str(key))}\s*[:=]\s*(\d+)", re.IGNORECASE)
-        for key in sorted(keys)
+        re.compile(rf"{re.escape(str(key))}\s*[:=]\s*(\d+)", re.IGNORECASE) for key in sorted(keys)
     )
 
 
@@ -139,7 +147,9 @@ def _safe_positive_int(value: str | int | float | None) -> int | None:
     return None
 
 
-def _extract_range_from_json_obj(obj: dict[str, object] | list[object]) -> tuple[int | None, int | None]:
+def _extract_range_from_json_obj(
+    obj: dict[str, object] | list[object],
+) -> tuple[int | None, int | None]:
 
     min_limit: int | None = None
     max_limit: int | None = None
@@ -271,9 +281,13 @@ def _extract_multi_limit_range_from_text(text: str | None) -> tuple[int | None, 
     contains_cn_keyword = any(keyword in normalized for keyword in _SELECTION_KEYWORDS_CN)
     contains_en_keyword = any(keyword in normalized_lower for keyword in _SELECTION_KEYWORDS_EN)
     contains_cn_min_hint = any(keyword in normalized for keyword in ("至少", "最少", "不少于"))
-    contains_cn_max_hint = any(keyword in normalized for keyword in ("最多", "至多", "不超过", "不超過", "限选", "限選"))
+    contains_cn_max_hint = any(
+        keyword in normalized for keyword in ("最多", "至多", "不超过", "不超過", "限选", "限選")
+    )
     contains_en_min_hint = any(keyword in normalized_lower for keyword in ("at least", "minimum"))
-    contains_en_max_hint = any(keyword in normalized_lower for keyword in ("up to", "at most", "no more than"))
+    contains_en_max_hint = any(
+        keyword in normalized_lower for keyword in ("up to", "at most", "no more than")
+    )
 
     min_limit: int | None = None
     max_limit: int | None = None
@@ -285,11 +299,23 @@ def _extract_multi_limit_range_from_text(text: str | None) -> tuple[int | None, 
         min_limit, max_limit = _try_pattern_range(_ENGLISH_MULTI_RANGE_PATTERNS, normalized_lower)
 
     # Step 2: Try exact patterns (for non-range cases)
-    if min_limit is None and max_limit is None and contains_cn_keyword and not contains_cn_min_hint and not contains_cn_max_hint:
+    if (
+        min_limit is None
+        and max_limit is None
+        and contains_cn_keyword
+        and not contains_cn_min_hint
+        and not contains_cn_max_hint
+    ):
         exact = _try_pattern_exact(_CHINESE_MULTI_EXACT_PATTERNS, normalized)
         if exact:
             min_limit = max_limit = exact
-    if min_limit is None and max_limit is None and contains_en_keyword and not contains_en_min_hint and not contains_en_max_hint:
+    if (
+        min_limit is None
+        and max_limit is None
+        and contains_en_keyword
+        and not contains_en_min_hint
+        and not contains_en_max_hint
+    ):
         exact = _try_pattern_exact(_ENGLISH_MULTI_EXACT_PATTERNS, normalized_lower)
         if exact:
             min_limit = max_limit = exact

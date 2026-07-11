@@ -3,14 +3,14 @@ from __future__ import annotations
 import logging
 import re
 
-_ANSI_ESCAPE_PATTERN = re.compile(r'\x1b\[[0-9;]*m')
+_ANSI_ESCAPE_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def strip_ansi_codes(text: str) -> str:
     """Remove ANSI escape codes from *text*."""
     if not text:
         return text
-    return _ANSI_ESCAPE_PATTERN.sub('', text)
+    return _ANSI_ESCAPE_PATTERN.sub("", text)
 
 
 def should_filter_sensitive(message: str) -> bool:
@@ -56,7 +56,13 @@ def determine_category(record: logging.LogRecord, message: str) -> str:
         "\u5df2\u52a0\u8f7d\u4e0a\u6b21\u914d\u7f6e",
         "\u52a0\u8f7d\u5b8c\u6210",
     )
-    negative_keywords = ("\u672a\u6210\u529f", "\u672a\u5b8c\u6210", "\u5931\u8d25", "\u9519\u8bef", "\u5f02\u5e38")
+    negative_keywords = (
+        "\u672a\u6210\u529f",
+        "\u672a\u5b8c\u6210",
+        "\u5931\u8d25",
+        "\u9519\u8bef",
+        "\u5f02\u5e38",
+    )
     if any(marker in message for marker in ok_markers):
         return "OK"
     if normalized_message.startswith("OK"):
@@ -93,10 +99,10 @@ def _collapse_adjacent_label(message: str, original_label: str, target_label: st
     index = message.find(original_label)
     if index == -1:
         return None
-    remainder = message[index + len(original_label):]
+    remainder = message[index + len(original_label) :]
     trimmed = remainder.lstrip()
     if not trimmed.startswith(target_label):
         return None
     whitespace = remainder[: len(remainder) - len(trimmed)]
-    suffix = trimmed[len(target_label):]
+    suffix = trimmed[len(target_label) :]
     return f"{message[:index]}{target_label}{whitespace}{suffix}"

@@ -15,8 +15,16 @@ from .html_parser_choice import (
     _collect_select_option_texts,
     _question_div_has_shared_text_input,
 )
-from .html_parser_common import _cleanup_question_title, _is_select_placeholder_option, _normalize_html_text
-from .html_parser_matrix import _collect_matrix_option_texts, _collect_slider_matrix_metadata, _question_div_looks_like_slider_matrix
+from .html_parser_common import (
+    _cleanup_question_title,
+    _is_select_placeholder_option,
+    _normalize_html_text,
+)
+from .html_parser_matrix import (
+    _collect_matrix_option_texts,
+    _collect_slider_matrix_metadata,
+    _question_div_looks_like_slider_matrix,
+)
 from .regexes import WJX_JUMP_TARGET_RE, WJX_RELATION_CHUNK_RE
 
 
@@ -33,8 +41,9 @@ def _extract_question_title(question_div, fallback_number: int) -> str:
             return title_text
     return f"第{fallback_number}题"
 
+
 def _collect_multi_limit_text_fragments(question_div) -> list[str]:
-    
+
     if question_div is None:
         return []
 
@@ -86,8 +95,11 @@ def _collect_multi_limit_text_fragments(question_div) -> list[str]:
         deduped.append(fragment)
     return deduped
 
-def _extract_multiple_choice_limits(question_div, question_number: int) -> tuple[int | None, int | None]:
-    
+
+def _extract_multiple_choice_limits(
+    question_div, question_number: int
+) -> tuple[int | None, int | None]:
+
     _ = question_number
     if question_div is None:
         return None, None
@@ -101,14 +113,12 @@ def _extract_multiple_choice_limits(question_div, question_number: int) -> tuple
     min_limit: int | None = None
     max_limit: int | None = None
 
-    
     attr_min, attr_max = _extract_min_max_from_attributes(question_div)
     if attr_min is not None:
         min_limit = attr_min
     if attr_max is not None:
         max_limit = attr_max
 
-    
     if min_limit is None or max_limit is None:
         for attr_name in ("data", "data-setting", "data-validate"):
             attr_value = question_div.get(attr_name)
@@ -120,7 +130,6 @@ def _extract_multiple_choice_limits(question_div, question_number: int) -> tuple
             if min_limit is not None and max_limit is not None:
                 break
 
-    
     if min_limit is None or max_limit is None:
         for fragment in _collect_multi_limit_text_fragments(question_div):
             cand_min, cand_max = _extract_multi_limit_range_from_text(fragment)
@@ -136,6 +145,7 @@ def _extract_multiple_choice_limits(question_div, question_number: int) -> tuple
 
     return min_limit, max_limit
 
+
 def _extract_question_metadata_from_html(soup, question_div, question_number: int, type_code: str):
     option_texts: list[str] = []
     option_count = 0
@@ -145,29 +155,50 @@ def _extract_question_metadata_from_html(soup, question_div, question_number: in
     multi_min_limit: int | None = None
     multi_max_limit: int | None = None
 
-    if type_code in {TypeCode.SINGLE, TypeCode.MULTIPLE, TypeCode.SCORE, TypeCode.SCALE, TypeCode.ORDER}:
+    if type_code in {
+        TypeCode.SINGLE,
+        TypeCode.MULTIPLE,
+        TypeCode.SCORE,
+        TypeCode.SCALE,
+        TypeCode.ORDER,
+    }:
         option_texts, fillable_indices = _collect_choice_option_texts(question_div)
         option_count = len(option_texts)
-        
+
         if type_code == TypeCode.MULTIPLE:
-            multi_min_limit, multi_max_limit = _extract_multiple_choice_limits(question_div, question_number)
+            multi_min_limit, multi_max_limit = _extract_multiple_choice_limits(
+                question_div, question_number
+            )
     elif type_code == TypeCode.DROPDOWN:
         option_texts = _collect_select_option_texts(question_div, soup, question_number)
         option_count = len(option_texts)
         if option_count > 0 and _question_div_has_shared_text_input(question_div):
             fillable_indices = [option_count - 1]
     elif type_code == TypeCode.MATRIX:
-        matrix_rows, option_texts, row_texts = _collect_matrix_option_texts(soup, question_div, question_number)
+        matrix_rows, option_texts, row_texts = _collect_matrix_option_texts(
+            soup, question_div, question_number
+        )
         option_count = len(option_texts)
     elif _question_div_looks_like_slider_matrix(question_div):
         matrix_rows, option_texts, row_texts = _collect_slider_matrix_metadata(question_div)
         option_count = len(option_texts)
     elif type_code == TypeCode.SLIDER:
         option_count = 1
-    return option_texts, option_count, matrix_rows, row_texts, fillable_indices, multi_min_limit, multi_max_limit
+    return (
+        option_texts,
+        option_count,
+        matrix_rows,
+        row_texts,
+        fillable_indices,
+        multi_min_limit,
+        multi_max_limit,
+    )
 
-def _extract_jump_rules_from_html(question_div, question_number: int, option_texts: list[str]) -> tuple[bool, list[dict[str, object]]]:
-    
+
+def _extract_jump_rules_from_html(
+    question_div, question_number: int, option_texts: list[str]
+) -> tuple[bool, list[dict[str, object]]]:
+
     _ = question_number
     has_jump_attr = str(question_div.get("hasjump") or "").strip() == "1"
     jump_rules: list[dict[str, object]] = []
@@ -189,7 +220,7 @@ def _extract_jump_rules_from_html(question_div, question_number: int, option_tex
     def _jump_target_terminates(jumpto_num: int, option_text: str | None) -> bool:
         if option_text and any(keyword in option_text for keyword in terminate_keywords):
             return True
-        
+
         return int(jumpto_num or 0) in {1, -1}
 
     selectable_nodes = []
@@ -215,12 +246,14 @@ def _extract_jump_rules_from_html(question_div, question_number: int, option_tex
         jumpto_num = _parse_jump_target(jumpto_raw)
         if jumpto_num:
             option_text = option_texts[option_idx] if option_idx < len(option_texts) else None
-            jump_rules.append({
-                "option_index": option_idx,
-                "jumpto": jumpto_num,
-                "option_text": option_text,
-                "terminates_survey": _jump_target_terminates(jumpto_num, option_text),
-            })
+            jump_rules.append(
+                {
+                    "option_index": option_idx,
+                    "jumpto": jumpto_num,
+                    "option_text": option_text,
+                    "terminates_survey": _jump_target_terminates(jumpto_num, option_text),
+                }
+            )
         option_idx += 1
 
     if has_jump_attr:
@@ -230,19 +263,25 @@ def _extract_jump_rules_from_html(question_div, question_number: int, option_tex
             if unconditional_target:
                 break
         if unconditional_target and not any(
-            int(rule.get("option_index") or 0) < 0 and int(rule.get("jumpto") or 0) == unconditional_target
+            int(rule.get("option_index") or 0) < 0
+            and int(rule.get("jumpto") or 0) == unconditional_target
             for rule in jump_rules
             if isinstance(rule, dict)
         ):
-            jump_rules.append({
-                "option_index": -1,
-                "jumpto": unconditional_target,
-                "option_text": None,
-            })
+            jump_rules.append(
+                {
+                    "option_index": -1,
+                    "jumpto": unconditional_target,
+                    "option_text": None,
+                }
+            )
     return has_jump_attr or bool(jump_rules), jump_rules
 
-def _extract_display_conditions_from_html(question_div, question_number: int) -> tuple[bool, list[dict[str, object]]]:
-    
+
+def _extract_display_conditions_from_html(
+    question_div, question_number: int
+) -> tuple[bool, list[dict[str, object]]]:
+
     _ = question_number
     relation_raw = str(question_div.get("relation") or "").strip()
     if not relation_raw:
@@ -282,16 +321,19 @@ def _extract_display_conditions_from_html(question_div, question_number: int) ->
         if dedupe_key in seen:
             continue
         seen.add(dedupe_key)
-        conditions.append({
-            "condition_question_num": source_question_num,
-            "condition_mode": "selected",
-            "condition_option_indices": option_indices,
-            "raw_relation": text,
-        })
+        conditions.append(
+            {
+                "condition_question_num": source_question_num,
+                "condition_mode": "selected",
+                "condition_option_indices": option_indices,
+                "raw_relation": text,
+            }
+        )
     return bool(conditions), conditions
 
+
 def _attach_display_condition_metadata(questions_info: list[dict[str, object]]) -> None:
-    
+
     by_num: dict[int, dict[str, object]] = {}
     for info in questions_info:
         try:
@@ -348,24 +390,34 @@ def _attach_display_condition_metadata(questions_info: list[dict[str, object]]) 
                 except (ValueError, TypeError):
                     existing_target = 0
                 existing_indices = existing.get("condition_option_indices") or []
-                if existing_target == target_question_num and list(existing_indices) == normalized_indices:
+                if (
+                    existing_target == target_question_num
+                    and list(existing_indices) == normalized_indices
+                ):
                     duplicate = True
                     break
             if duplicate:
                 continue
-            targets.append({
-                "target_question_num": target_question_num,
-                "condition_option_indices": normalized_indices,
-                "condition_mode": str(condition.get("condition_mode") or "selected").strip() or "selected",
-            })
+            targets.append(
+                {
+                    "target_question_num": target_question_num,
+                    "condition_option_indices": normalized_indices,
+                    "condition_mode": str(condition.get("condition_mode") or "selected").strip()
+                    or "selected",
+                }
+            )
 
     for info in questions_info:
         targets = info.get("controls_display_targets")
         if isinstance(targets, list) and targets:
-            targets.sort(key=lambda item: (
-                int(item.get("target_question_num") or 0) if isinstance(item, dict) else 0,
-                tuple(item.get("condition_option_indices") or []) if isinstance(item, dict) else (),
-            ))
+            targets.sort(
+                key=lambda item: (
+                    int(item.get("target_question_num") or 0) if isinstance(item, dict) else 0,
+                    tuple(item.get("condition_option_indices") or [])
+                    if isinstance(item, dict)
+                    else (),
+                )
+            )
             info["has_dependent_display_logic"] = True
         else:
             info["controls_display_targets"] = []

@@ -13,16 +13,26 @@ from urllib.parse import urlparse
 
 import survey_submitter.network.http as http_client
 from survey_submitter.constants import DEFAULT_HTTP_HEADERS, DEFAULT_USER_AGENT, USER_AGENT_PRESETS
-from survey_submitter.core.ai.batch_runtime import assert_no_ai_placeholders_in_actions, prefill_ai_answers_for_questions
+from survey_submitter.core.ai.batch_runtime import (
+    assert_no_ai_placeholders_in_actions,
+    prefill_ai_answers_for_questions,
+)
 from survey_submitter.core.config.codec import UserAgentProfile
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.modes.duration_control import sample_answer_duration_seconds
 from survey_submitter.core.persona.context import record_answer
-from survey_submitter.core.psychometrics.psychometric import DimensionPsychometricPlan, PsychometricPlan
+from survey_submitter.core.psychometrics.psychometric import (
+    DimensionPsychometricPlan,
+    PsychometricPlan,
+)
 from survey_submitter.core.questions.distribution import record_pending_distribution_choice
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.network.proxy.pool import mask_proxy_for_log
-from survey_submitter.network.session_policy import SubmitProxyUnavailableError, mark_submit_proxy_success, release_submit_proxy
+from survey_submitter.network.session_policy import (
+    SubmitProxyUnavailableError,
+    mark_submit_proxy_success,
+    release_submit_proxy,
+)
 from survey_submitter.providers.answering import AnswerAction
 from survey_submitter.providers.answering.recording import record_answer_action
 from survey_submitter.providers.http_logic import HttpLogicPlan, build_http_logic_plan
@@ -43,7 +53,9 @@ from survey_submitter.providers.wjx.regexes import WJX_SCENE_ID_PATTERNS
 
 
 WJX_SUBMISSION_VERIFICATION_MESSAGE = "问卷星触发智能验证，当前链路已停止。请启用随机 IP 后再提交。"
-WJX_PROXY_SUBMISSION_VERIFICATION_MESSAGE = "问卷星触发智能验证，当前随机 IP 已被风控，正在更换随机 IP 重试。"
+WJX_PROXY_SUBMISSION_VERIFICATION_MESSAGE = (
+    "问卷星触发智能验证，当前随机 IP 已被风控，正在更换随机 IP 重试。"
+)
 _WJX_SUBMISSION_VERIFICATION_TEXT = "需要安全校验，请重新提交"
 _WJX_SUBMISSION_VERIFICATION_MARKERS = (
     _WJX_SUBMISSION_VERIFICATION_TEXT,
@@ -55,6 +67,7 @@ _WJX_SUBMIT_TIMEOUT_SECONDS = 30
 
 class SubmitProxyLease(Protocol):
     """Protocol for submit proxy lease objects."""
+
     @property
     def address(self) -> str | None: ...
 
@@ -119,7 +132,9 @@ def _resolve_wjx_submit_start_seconds(*, current_ms: int, ktimes: int) -> int:
     return max(1, current_seconds - duration_seconds)
 
 
-def _resolve_wjx_submit_timing(*, page_html: str, current_ms: int, sampled_ktimes: int) -> tuple[int, int]:
+def _resolve_wjx_submit_timing(
+    *, page_html: str, current_ms: int, sampled_ktimes: int
+) -> tuple[int, int]:
     ktimes = max(1, int(sampled_ktimes or 1))
     return _resolve_wjx_submit_start_seconds(
         current_ms=current_ms,
@@ -156,7 +171,9 @@ def _resolve_wjx_channel_profile(
     user_agent: str | None,
     user_agent_profile: UserAgentProfile | None = None,
 ) -> WjxChannelProfile:
-    category = str(user_agent_profile.category if user_agent_profile is not None else "").strip().lower()
+    category = (
+        str(user_agent_profile.category if user_agent_profile is not None else "").strip().lower()
+    )
     if not category:
         category = "wechat" if _is_wechat_user_agent(user_agent) else "pc"
     if category == "wechat":
@@ -206,7 +223,9 @@ def _question_items(config: ExecutionConfig) -> list[SurveyQuestionMeta]:
     )
 
 
-def _format_selected_indices(indices: tuple[int, ...], *, option_fill_texts: tuple[tuple[int, str], ...] = ()) -> str:
+def _format_selected_indices(
+    indices: tuple[int, ...], *, option_fill_texts: tuple[tuple[int, str], ...] = ()
+) -> str:
     fills = {
         int(index): _escape_wjx_submit_text(value)
         for index, value in option_fill_texts
@@ -245,17 +264,35 @@ def _submitdata_answer(action: AnswerAction) -> str:
 
 def _skipped_submitdata_answer(question: SurveyQuestionMeta) -> str:
     from survey_submitter.providers.contracts import ChoiceQuestionMeta, MatrixQuestionMeta
+
     type_code = question.type_code
-    option_count = max(1, len(question.option_texts) if isinstance(question, ChoiceQuestionMeta) and question.option_texts else 0)
+    option_count = max(
+        1,
+        len(question.option_texts)
+        if isinstance(question, ChoiceQuestionMeta) and question.option_texts
+        else 0,
+    )
     rows = max(1, question.rows if isinstance(question, MatrixQuestionMeta) else 1)
     match type_code:
-        case TypeCode.SINGLE | TypeCode.MULTIPLE | TypeCode.DROPDOWN | TypeCode.SCORE | TypeCode.SCALE:
+        case (
+            TypeCode.SINGLE
+            | TypeCode.MULTIPLE
+            | TypeCode.DROPDOWN
+            | TypeCode.SCORE
+            | TypeCode.SCALE
+        ):
             return "-3"
         case TypeCode.ORDER:
             return ",".join("-3" for _ in range(option_count))
         case TypeCode.MATRIX:
             return ",".join(f"{row_index + 1}!-3" for row_index in range(rows))
-        case TypeCode.TEXT | TypeCode.LOCATION | TypeCode.SLIDER | TypeCode.MULTI_TEXT | TypeCode.UNKNOWN:
+        case (
+            TypeCode.TEXT
+            | TypeCode.LOCATION
+            | TypeCode.SLIDER
+            | TypeCode.MULTI_TEXT
+            | TypeCode.UNKNOWN
+        ):
             return "(跳过)"
         case _:
             return "-3"
@@ -267,7 +304,11 @@ def _submitdata_from_actions(
     questions: list[SurveyQuestionMeta] | None = None,
     skipped_question_nums: tuple[int, ...] = (),
 ) -> str:
-    action_by_num = {int(action.question_num or 0): action for action in actions if int(action.question_num or 0) > 0}
+    action_by_num = {
+        int(action.question_num or 0): action
+        for action in actions
+        if int(action.question_num or 0) > 0
+    }
     skipped_nums = {int(item) for item in skipped_question_nums if int(item) > 0}
     question_by_num = {
         int(question.num or 0): question
@@ -310,7 +351,12 @@ def _question_error_label(config: ExecutionConfig, question_num: int) -> str:
     if question is None:
         return f"第{int(question_num)}题"
     from survey_submitter.providers.contracts import _QuestionMetaBase
-    display_num = int(question.display_num or 0) if isinstance(question, _QuestionMetaBase) and question.display_num else 0
+
+    display_num = (
+        int(question.display_num or 0)
+        if isinstance(question, _QuestionMetaBase) and question.display_num
+        else 0
+    )
     title = str(question.title or "").strip()
     prefix = f"第{display_num if display_num > 0 else int(question_num)}题"
     return f"{prefix}（{title}）" if title else prefix
@@ -368,8 +414,12 @@ def _raise_submit_rejected(
     raise RuntimeError(f"问卷星提交被拒绝：{reason}")
 
 
-async def _load_wjx_page(url: str, *, headers: dict[str, str], proxies: dict[str, str] | str) -> str:
-    response = await http_client.aget(url, timeout=_WJX_PAGE_LOAD_TIMEOUT_SECONDS, headers=headers, proxies=proxies)
+async def _load_wjx_page(
+    url: str, *, headers: dict[str, str], proxies: dict[str, str] | str
+) -> str:
+    response = await http_client.aget(
+        url, timeout=_WJX_PAGE_LOAD_TIMEOUT_SECONDS, headers=headers, proxies=proxies
+    )
     response.raise_for_status()
     try:
         _raise_wjx_page_state_errors(response.text)
@@ -415,7 +465,9 @@ async def _build_action_plan(
         if stop_signal is not None and stop_signal.is_set():
             return HttpLogicPlan(actions=())
         if question.unsupported:
-            raise RuntimeError(f"问卷星第{question.num}题暂不支持：{question.unsupported_reason or question.type_code}")
+            raise RuntimeError(
+                f"问卷星第{question.num}题暂不支持：{question.unsupported_reason or question.type_code}"
+            )
 
     async def _build_action(question: SurveyQuestionMeta) -> AnswerAction | None:
         if stop_signal is not None and stop_signal.is_set():
@@ -552,7 +604,9 @@ async def _post_wjx_submit_request(
     submit_proxy_lease = None
     if submit_proxy_lease_factory is not None:
         submit_proxy_lease = await submit_proxy_lease_factory()
-        submit_proxy_address = submit_proxy_lease.address.strip() if submit_proxy_lease.address else None
+        submit_proxy_address = (
+            submit_proxy_lease.address.strip() if submit_proxy_lease.address else None
+        )
     if bool(config.random_proxy_ip_enabled) and not submit_proxy_address:
         raise SubmitProxyUnavailableError("提交前未获取到随机 IP")
     submit_proxies = _proxy_arg(submit_proxy_address)

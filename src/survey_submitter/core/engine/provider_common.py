@@ -5,7 +5,11 @@ from contextlib import contextmanager
 from typing import Iterator
 
 from survey_submitter.core.persona.context import reset_context as _reset_answer_context
-from survey_submitter.core.persona.generator import generate_persona, reset_persona, set_current_persona
+from survey_submitter.core.persona.generator import (
+    generate_persona,
+    reset_persona,
+    set_current_persona,
+)
 from survey_submitter.core.questions.config import GLOBAL_RELIABILITY_DIMENSION
 from survey_submitter.core.questions.consistency import reset_consistency_context
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
@@ -20,7 +24,7 @@ def provider_run_context(
     thread_name: str = "",
     psycho_plan: object | None = None,
 ) -> Iterator[object | None]:
-    
+
     persona = generate_persona()
     set_current_persona(persona)
     _reset_answer_context()
@@ -48,6 +52,7 @@ def provider_run_context(
         yield resolved_plan
     finally:
         reset_persona()
+
 
 __all__ = [
     "provider_run_context",

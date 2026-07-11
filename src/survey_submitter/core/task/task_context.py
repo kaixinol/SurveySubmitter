@@ -15,6 +15,7 @@ from survey_submitter.core.task.proxy_state import ProxyLease, ProxyRuntimeMixin
 from survey_submitter.core.task.reverse_fill_state import ReverseFillRuntimeMixin
 from survey_submitter.providers.contracts import SurveyQuestionMeta
 
+
 class ExecutionConfig(BaseConfigModel):
     url: str = ""
     survey_title: str = ""
@@ -70,6 +71,7 @@ class ExecutionConfig(BaseConfigModel):
     pause_on_aliyun_captcha: bool = True
     ai_system_prompt: str = ""
 
+
 @dataclass
 class ExecutionState(
     ThreadProgressMixin,
@@ -77,8 +79,6 @@ class ExecutionState(
     DistributionRuntimeMixin,
     ReverseFillRuntimeMixin,
 ):
-    
-
     config: ExecutionConfig = field(default_factory=ExecutionConfig)
 
     cur_num: int = 0
@@ -89,7 +89,9 @@ class ExecutionState(
     terminal_stop_message: str = ""
     thread_progress: dict[str, ThreadProgressState] = field(default_factory=dict)
     distribution_runtime_stats: dict[str, dict[str, Any]] = field(default_factory=dict)
-    distribution_pending_by_thread: dict[str, list[tuple[str, int, int]]] = field(default_factory=dict)
+    distribution_pending_by_thread: dict[str, list[tuple[str, int, int]]] = field(
+        default_factory=dict
+    )
 
     proxy_waiting_threads: int = 0
     proxy_in_use_by_thread: dict[str, ProxyLease] = field(default_factory=dict)
@@ -112,12 +114,14 @@ class ExecutionState(
     _runtime_change_seq: int = field(default=0, init=False, repr=False)
 
     def __setattr__(self, name: str, value: Any) -> None:
-        
+
         if name in _EXECUTION_STATE_FIELD_NAMES:
             object.__setattr__(self, name, value)
             return
         if name in _EXECUTION_CONFIG_FIELD_NAMES:
-            raise AttributeError(f"ExecutionState 不允许直接设置配置字段 '{name}'，请改用 state.config.{name}")
+            raise AttributeError(
+                f"ExecutionState 不允许直接设置配置字段 '{name}'，请改用 state.config.{name}"
+            )
         object.__setattr__(self, name, value)
 
     def mark_terminal_stop(
@@ -148,6 +152,7 @@ class ExecutionState(
                 str(self.terminal_failure_reason or ""),
                 str(self.terminal_stop_message or ""),
             )
+
 
 _EXECUTION_CONFIG_FIELD_NAMES = frozenset(ExecutionConfig.model_fields.keys())
 _EXECUTION_STATE_FIELD_NAMES = frozenset(ExecutionState.__dataclass_fields__.keys())

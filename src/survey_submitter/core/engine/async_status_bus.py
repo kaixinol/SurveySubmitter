@@ -7,8 +7,6 @@ from typing import Any, Callable
 
 
 class AsyncStatusBus:
-    
-
     def __init__(
         self,
         *,
@@ -31,7 +29,11 @@ class AsyncStatusBus:
             event_type = str(payload.get("type") or "")
             high_frequency = event_type in {"progress", "status"}
             last_emit = self._last_emit_by_slot.get(slot_id, 0.0)
-            if high_frequency and self._throttle_seconds > 0 and (now - last_emit) < self._throttle_seconds:
+            if (
+                high_frequency
+                and self._throttle_seconds > 0
+                and (now - last_emit) < self._throttle_seconds
+            ):
                 return
             self._last_emit_by_slot[slot_id] = now
 

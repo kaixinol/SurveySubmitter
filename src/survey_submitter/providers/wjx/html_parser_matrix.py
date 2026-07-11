@@ -6,7 +6,7 @@ from .html_parser_common import _normalize_html_text
 
 
 def _postprocess_matrix_option_texts(option_texts: list[str]) -> list[str]:
-    
+
     if not option_texts:
         return []
     cleaned: list[str] = []
@@ -15,7 +15,7 @@ def _postprocess_matrix_option_texts(option_texts: list[str]) -> list[str]:
         text = _normalize_html_text(raw_text)
         if not text:
             continue
-        
+
         if text in seen:
             continue
         seen.add(text)
@@ -24,7 +24,7 @@ def _postprocess_matrix_option_texts(option_texts: list[str]) -> list[str]:
 
 
 def _extract_matrix_header_texts(table) -> list[str]:
-    
+
     if table is None:
         return []
 
@@ -42,11 +42,12 @@ def _extract_matrix_header_texts(table) -> list[str]:
         score = len(non_empty_texts)
         if score < 2:
             continue
-        
+
         if score > best_score:
             best_score = score
             best_texts = non_empty_texts
     return best_texts
+
 
 def _extract_attr_text(node) -> str:
     if node is None:
@@ -157,7 +158,8 @@ def _collect_data_rows(table, question_number: int) -> tuple[int, list[str], lis
 
 
 def _collect_from_input_names(
-    question_div, question_number: int,
+    question_div,
+    question_number: int,
 ) -> tuple[int, list[str], list[str]]:
     inputs = question_div.find_all("input")
     row_indices: list[int] = []
@@ -194,7 +196,9 @@ def _collect_from_input_names(
     return matrix_rows, option_texts, row_texts
 
 
-def _fill_row_texts_from_selectors(question_div, matrix_rows: int, row_texts: list[str]) -> tuple[int, list[str]]:
+def _fill_row_texts_from_selectors(
+    question_div, matrix_rows: int, row_texts: list[str]
+) -> tuple[int, list[str]]:
     candidates = []
     for selector in (".itemTitleSpan", ".itemTitle", ".item-title", ".row-title"):
         nodes = question_div.select(selector)
@@ -217,7 +221,9 @@ def _fill_row_texts_from_selectors(question_div, matrix_rows: int, row_texts: li
     return matrix_rows, row_texts
 
 
-def _collect_matrix_option_texts(soup, question_div, question_number: int) -> tuple[int, list[str], list[str]]:
+def _collect_matrix_option_texts(
+    soup, question_div, question_number: int
+) -> tuple[int, list[str], list[str]]:
     table = _find_matrix_table(soup, question_div, question_number)
 
     matrix_rows = 0
@@ -234,12 +240,15 @@ def _collect_matrix_option_texts(soup, question_div, question_number: int) -> tu
 
     if matrix_rows == 0 and question_div is not None:
         matrix_rows, option_texts, row_texts = _collect_from_input_names(
-            question_div, question_number,
+            question_div,
+            question_number,
         )
 
     if question_div is not None and (not row_texts or any(not text for text in row_texts)):
         matrix_rows, row_texts = _fill_row_texts_from_selectors(
-            question_div, matrix_rows, row_texts,
+            question_div,
+            matrix_rows,
+            row_texts,
         )
 
     if not option_texts and table:
@@ -254,13 +263,18 @@ def _collect_matrix_option_texts(soup, question_div, question_number: int) -> tu
 
     return matrix_rows, option_texts, row_texts
 
-def _extract_slider_range(question_div, question_number: int) -> tuple[float | None, float | None, float | None]:
-    
+
+def _extract_slider_range(
+    question_div, question_number: int
+) -> tuple[float | None, float | None, float | None]:
+
     slider_input = question_div.find("input", id=f"q{question_number}")
     if not slider_input:
         slider_input = question_div.find("input", attrs={"type": "range"})
     if not slider_input:
-        slider_input = question_div.find("input", class_=lambda value: value and "ui-slider-input" in str(value))
+        slider_input = question_div.find(
+            "input", class_=lambda value: value and "ui-slider-input" in str(value)
+        )
 
     def _parse(raw: str | float | int | None) -> float | None:
         try:
@@ -276,8 +290,9 @@ def _extract_slider_range(question_div, question_number: int) -> tuple[float | N
         )
     return None, None, None
 
+
 def _question_div_looks_like_slider_matrix(question_div) -> bool:
-    
+
     if question_div is None:
         return False
     slider_inputs = question_div.select("input.ui-slider-input[rowid]")
@@ -286,10 +301,12 @@ def _question_div_looks_like_slider_matrix(question_div) -> bool:
     slider_tracks = question_div.select(".rangeslider, .range-slider, .wjx-slider")
     return len(slider_tracks) >= len(slider_inputs)
 
+
 def _format_slider_matrix_value(value: float) -> str:
     if abs(value - round(value)) < 1e-6:
         return str(int(round(value)))
     return f"{value:.6f}".rstrip("0").rstrip(".")
+
 
 def _build_slider_matrix_option_texts_from_input(slider_input) -> list[str]:
     def _parse(raw: str | float | int | None) -> float | None:
@@ -315,8 +332,9 @@ def _build_slider_matrix_option_texts_from_input(slider_input) -> list[str]:
         current += step_value
     return values
 
+
 def _collect_slider_matrix_metadata(question_div) -> tuple[int, list[str], list[str]]:
-    
+
     if question_div is None:
         return 0, [], []
 

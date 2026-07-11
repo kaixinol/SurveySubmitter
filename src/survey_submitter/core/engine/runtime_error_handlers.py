@@ -56,11 +56,15 @@ def handle_ai_runtime_error(
     if is_ai_timeout_runtime_error(exc):
         logging.warning("AI 调用超时，本轮丢弃并继续下一轮：%s", exc)
         status_text = "AI超时"
-        log_message = f"AI调用超时，本轮按失败处理；连续达到 {AI_FILL_FAIL_THRESHOLD} 次才停止：{exc}"
+        log_message = (
+            f"AI调用超时，本轮按失败处理；连续达到 {AI_FILL_FAIL_THRESHOLD} 次才停止：{exc}"
+        )
     else:
         logging.warning("AI 填空失败，本轮丢弃并继续下一轮：%s", exc, exc_info=True)
         status_text = "AI失败"
-        log_message = f"AI填空失败，本轮按失败处理；连续达到 {AI_FILL_FAIL_THRESHOLD} 次才停止：{exc}"
+        log_message = (
+            f"AI填空失败，本轮按失败处理；连续达到 {AI_FILL_FAIL_THRESHOLD} 次才停止：{exc}"
+        )
 
     stopped = stop_policy.record_failure(
         stop_signal,
@@ -126,11 +130,11 @@ def handle_submission_verification_error(
 
     _safe_state_operation(
         lambda: state.release_reverse_fill_sample(thread_name, requeue=True),
-        "智能验证停止时回收反填样本"
+        "智能验证停止时回收反填样本",
     )
     _safe_state_operation(
         lambda: state.increment_thread_fail(thread_name, status_text="触发智能验证"),
-        "智能验证停止时更新线程状态"
+        "智能验证停止时更新线程状态",
     )
 
     state.mark_terminal_stop(
@@ -154,11 +158,11 @@ def handle_survey_provider_unavailable_error(
 
     _safe_state_operation(
         lambda: state.release_reverse_fill_sample(thread_name, requeue=True),
-        "问卷不可继续时回收反填样本"
+        "问卷不可继续时回收反填样本",
     )
     _safe_state_operation(
         lambda: state.increment_thread_fail(thread_name, status_text="问卷不可填写"),
-        "问卷不可继续时更新线程状态"
+        "问卷不可继续时更新线程状态",
     )
 
     state.mark_terminal_stop(

@@ -12,7 +12,13 @@ from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_surv
 _thread_local = threading.local()
 _CONDITION_MODES = {"selected", "not_selected"}
 _ACTION_MODES = {"must_select", "must_not_select"}
-_SUPPORTED_RULE_TYPE_CODES = {TypeCode.SINGLE, TypeCode.MULTIPLE, TypeCode.MATRIX, TypeCode.SCORE, TypeCode.SCALE}
+_SUPPORTED_RULE_TYPE_CODES = {
+    TypeCode.SINGLE,
+    TypeCode.MULTIPLE,
+    TypeCode.MATRIX,
+    TypeCode.SCORE,
+    TypeCode.SCALE,
+}
 
 
 @dataclass
@@ -24,8 +30,8 @@ class AnswerRule:
     target_question_num: int
     action_mode: str
     target_option_indices: list[int]
-    condition_row_index: int | None = None  
-    target_row_index: int | None = None     
+    condition_row_index: int | None = None
+    target_row_index: int | None = None
 
 
 def _to_int(value: str | int | float | None, default: int = 0) -> int:
@@ -61,7 +67,9 @@ def question_supports_answer_rule(question: dict[str, object] | SurveyQuestionMe
     return type_code in _SUPPORTED_RULE_TYPE_CODES
 
 
-def _build_question_info_map(questions_info: Sequence[SurveyQuestionMeta | dict[str, object]] | None) -> dict[int, SurveyQuestionMeta]:
+def _build_question_info_map(
+    questions_info: Sequence[SurveyQuestionMeta | dict[str, object]] | None,
+) -> dict[int, SurveyQuestionMeta]:
     question_map: dict[int, SurveyQuestionMeta] = {}
     for item in questions_info or []:
         if not isinstance(item, (dict, SurveyQuestionMeta)):
@@ -78,7 +86,7 @@ def sanitize_answer_rules(
     answer_rules: Sequence[dict[str, object]] | None,
     questions_info: Sequence[SurveyQuestionMeta | dict[str, object]] | None = None,
 ) -> tuple[list[dict[str, object]], dict[str, int]]:
-    
+
     stats = {"invalid": 0, "unsupported": 0}
     sanitized: list[dict[str, object]] = []
     question_map = _build_question_info_map(questions_info)
@@ -95,7 +103,9 @@ def sanitize_answer_rules(
             if not condition_info or not target_info:
                 stats["unsupported"] += 1
                 continue
-            if not question_supports_answer_rule(condition_info) or not question_supports_answer_rule(target_info):
+            if not question_supports_answer_rule(
+                condition_info
+            ) or not question_supports_answer_rule(target_info):
                 stats["unsupported"] += 1
                 continue
         sanitized.append(normalized)
@@ -119,7 +129,7 @@ def normalize_rule_dict(raw: dict[str, object]) -> dict[str, object] | None:
     target_option_indices = _to_int_list(raw.get("target_option_indices"))
     if not condition_option_indices or not target_option_indices:
         return None
-    
+
     condition_row_index: int | None = None
     target_row_index: int | None = None
     raw_cri = raw.get("condition_row_index")
@@ -172,7 +182,7 @@ def reset_consistency_context(
     answer_rules: Sequence[dict[str, object]] | None = None,
     questions_info: Sequence[SurveyQuestionMeta | dict[str, object]] | None = None,
 ) -> None:
-    
+
     parsed_rules: list[AnswerRule] = []
     sanitized_rules, _ = sanitize_answer_rules(answer_rules, questions_info)
     for item in sanitized_rules:
@@ -211,7 +221,7 @@ def _is_rule_triggered(rule: AnswerRule) -> bool:
     record = answered.get(rule.condition_question_num)
     if record is None:
         return False
-    
+
     if rule.condition_row_index is not None:
         selected_indices = set(_to_int_list(record.row_answers.get(rule.condition_row_index, [])))
     else:
@@ -226,7 +236,9 @@ def _is_rule_triggered(rule: AnswerRule) -> bool:
     return False
 
 
-def _pick_latest_triggered_rule(question_number: int, row_index: int | None = None) -> AnswerRule | None:
+def _pick_latest_triggered_rule(
+    question_number: int, row_index: int | None = None
+) -> AnswerRule | None:
     selected_rule: AnswerRule | None = None
     for rule in _get_answer_rules():
         if rule.target_question_num != question_number:
@@ -234,7 +246,6 @@ def _pick_latest_triggered_rule(question_number: int, row_index: int | None = No
         if rule.target_row_index != row_index:
             continue
         if _is_rule_triggered(rule):
-            
             selected_rule = rule
     return selected_rule
 
@@ -258,9 +269,13 @@ def _apply_rule(
         )
         return list(base_probabilities)
     if rule.action_mode == "must_select":
-        adjusted = [weight if idx in valid_indices else 0.0 for idx, weight in enumerate(base_probabilities)]
+        adjusted = [
+            weight if idx in valid_indices else 0.0 for idx, weight in enumerate(base_probabilities)
+        ]
     else:
-        adjusted = [0.0 if idx in valid_indices else weight for idx, weight in enumerate(base_probabilities)]
+        adjusted = [
+            0.0 if idx in valid_indices else weight for idx, weight in enumerate(base_probabilities)
+        ]
     if sum(adjusted) <= 0:
         logging.warning(
             "条件规则[%s]命中后无可用选项，已回退原概率（题号=%s）",
@@ -283,7 +298,7 @@ def apply_single_like_consistency(
     probabilities: Sequence[float],
     question_number: int,
 ) -> list[float]:
-    
+
     base_probabilities = _sanitize_probabilities(probabilities)
     rule = _pick_latest_triggered_rule(question_number, row_index=None)
     if rule is None:
@@ -296,7 +311,7 @@ def apply_matrix_row_consistency(
     question_number: int,
     row_index: int,
 ) -> list[float]:
-    
+
     base_probabilities = _sanitize_probabilities(probabilities)
     rule = _pick_latest_triggered_rule(question_number, row_index=row_index)
     if rule is None:
@@ -308,7 +323,7 @@ def get_multiple_rule_constraint(
     question_number: int,
     option_count: int,
 ) -> tuple[set[int], set[int], str | None]:
-    
+
     rule = _pick_latest_triggered_rule(question_number, row_index=None)
     if rule is None:
         return set(), set(), None
@@ -331,5 +346,3 @@ def get_multiple_rule_constraint(
     if rule.action_mode == "must_select":
         return set(valid_indices), set(), rule.id
     return set(), set(valid_indices), rule.id
-
-

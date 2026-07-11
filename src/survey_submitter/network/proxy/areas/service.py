@@ -48,7 +48,6 @@ def _read_asset_text(filename: str) -> str:
         return ""
 
 
-
 _AREA_CODES_CACHE: dict[str, object] | None = None
 _SUPPORTED_CODES_CACHE: tuple[set[str], bool] | None = None
 _BENEFIT_CACHE_LOCK = threading.RLock()
@@ -82,7 +81,7 @@ def _normalize_area_code(area_code: str | None) -> str:
 
 
 def load_supported_area_codes() -> tuple[set[str], bool]:
-    
+
     global _SUPPORTED_CODES_CACHE
 
     if _SUPPORTED_CODES_CACHE is not None:
@@ -116,7 +115,7 @@ def load_supported_area_codes() -> tuple[set[str], bool]:
 
 
 def load_area_codes(supported_only: bool = False) -> list[dict[str, object]]:
-    
+
     global _AREA_CODES_CACHE
 
     if _AREA_CODES_CACHE is None:
@@ -125,7 +124,9 @@ def load_area_codes(supported_only: bool = False) -> list[dict[str, object]]:
         except json.JSONDecodeError:
             _AREA_CODES_CACHE = {}
 
-    area_codes_cache: dict[str, object] = _AREA_CODES_CACHE if isinstance(_AREA_CODES_CACHE, dict) else {}
+    area_codes_cache: dict[str, object] = (
+        _AREA_CODES_CACHE if isinstance(_AREA_CODES_CACHE, dict) else {}
+    )
     provinces = area_codes_cache.get("provinces")
     if not isinstance(provinces, list):
         return []
@@ -166,7 +167,9 @@ def _build_local_area_lookup() -> tuple[list[dict[str, object]], dict[str, dict[
         province_name = str(province.get("name") or "").strip()
         if not province_code or not province_name:
             continue
-        province_request_name = _MUNICIPALITY_REQUEST_NAMES.get(province_code, _normalize_province_name(province_name))
+        province_request_name = _MUNICIPALITY_REQUEST_NAMES.get(
+            province_code, _normalize_province_name(province_name)
+        )
         cities = province.get("cities") or []
         if not isinstance(cities, list):
             cities = []
@@ -178,7 +181,11 @@ def _build_local_area_lookup() -> tuple[list[dict[str, object]], dict[str, dict[
             city_name = str(city.get("name") or "").strip()
             if not city_code or not city_name:
                 continue
-            request_name = province_request_name if city_name == "市辖区" and province_code in _MUNICIPALITY_REQUEST_NAMES else _normalize_city_name(city_name)
+            request_name = (
+                province_request_name
+                if city_name == "市辖区" and province_code in _MUNICIPALITY_REQUEST_NAMES
+                else _normalize_city_name(city_name)
+            )
             city_entries.append(
                 {
                     "code": city_code,
@@ -254,7 +261,9 @@ def _build_benefit_supported_data_from_online() -> tuple[list[dict[str, object]]
     return filtered_provinces, city_code_index
 
 
-def _build_benefit_supported_data_from_local_fallback() -> tuple[list[dict[str, object]], dict[str, str]]:
+def _build_benefit_supported_data_from_local_fallback() -> tuple[
+    list[dict[str, object]], dict[str, str]
+]:
     supported_codes, _ = load_supported_area_codes()
     _, province_lookup = _build_local_area_lookup()
     filtered_provinces: list[dict[str, object]] = []
@@ -288,7 +297,11 @@ def _ensure_benefit_cache(force_refresh: bool = False) -> None:
             supported_areas, city_code_index = _build_benefit_supported_data_from_online()
             if not supported_areas or not city_code_index:
                 raise RuntimeError("benefit 在线地区列表为空")
-            logging.info("benefit 地区支持列表已从在线 TXT 刷新：省份=%s 城市=%s", len(supported_areas), len(city_code_index))
+            logging.info(
+                "benefit 地区支持列表已从在线 TXT 刷新：省份=%s 城市=%s",
+                len(supported_areas),
+                len(city_code_index),
+            )
         except Exception as exc:
             logging.warning("benefit 在线地区查询失败，回退本地地区交集：%s", exc)
             supported_areas, city_code_index = _build_benefit_supported_data_from_local_fallback()
@@ -297,21 +310,21 @@ def _ensure_benefit_cache(force_refresh: bool = False) -> None:
 
 
 def load_benefit_supported_areas(force_refresh: bool = False) -> list[dict[str, object]]:
-    
+
     _ensure_benefit_cache(force_refresh=force_refresh)
     with _BENEFIT_CACHE_LOCK:
         return copy.deepcopy(_BENEFIT_SUPPORTED_AREAS_CACHE or [])
 
 
 def build_benefit_city_code_index(force_refresh: bool = False) -> dict[str, str]:
-    
+
     _ensure_benefit_cache(force_refresh=force_refresh)
     with _BENEFIT_CACHE_LOCK:
         return dict(_BENEFIT_CITY_CODE_INDEX_CACHE or {})
 
 
 def resolve_proxy_area_for_source(source: str, area_code: str | None) -> str:
-    
+
     normalized_code = _normalize_area_code(area_code)
     if not normalized_code:
         return ""
@@ -319,5 +332,3 @@ def resolve_proxy_area_for_source(source: str, area_code: str | None) -> str:
     if source_key == "benefit":
         return str(build_benefit_city_code_index().get(normalized_code) or "")
     return normalized_code
-
-

@@ -22,11 +22,12 @@ _NAVIGATION_TRANSIENT_ERRORS = (
     "most likely because of a navigation",
 )
 
+
 def _is_navigation_transient_error(exc: BaseException) -> bool:
-    
 
     message = str(exc or "").lower()
     return any(pattern in message for pattern in _NAVIGATION_TRANSIENT_ERRORS)
+
 
 def has_configured_answer_duration(answer_duration_range_seconds: tuple[int, int] = (0, 0)) -> bool:
     try:
@@ -34,6 +35,7 @@ def has_configured_answer_duration(answer_duration_range_seconds: tuple[int, int
     except (ValueError, TypeError):
         return False
     return max(0, int(raw_min), int(raw_max)) > 0
+
 
 def sample_answer_duration_seconds(
     answer_duration_range_seconds: tuple[int, int] = (0, 0),
@@ -69,11 +71,11 @@ def sample_answer_duration_seconds(
 
     return max(min_delay, min(max_delay, wait_seconds))
 
+
 async def wait_answer_duration_seconds(
     stop_signal: StopSignalLike | None = None,
     seconds: float = 0.0,
 ) -> bool:
-    
 
     wait_seconds = max(0.0, float(seconds or 0.0))
     if wait_seconds <= 0:
@@ -84,17 +86,16 @@ async def wait_answer_duration_seconds(
     )
     return bool(await sleep_or_stop(stop_signal, wait_seconds))
 
+
 async def simulate_answer_duration_delay(
     stop_signal: StopSignalLike | None = None,
     answer_duration_range_seconds: tuple[int, int] = (0, 0),
     *,
     survey_provider: str | None = None,
 ) -> bool:
-    
 
     wait_seconds = sample_answer_duration_seconds(
         answer_duration_range_seconds,
         survey_provider=survey_provider,
     )
     return await wait_answer_duration_seconds(stop_signal, wait_seconds)
-

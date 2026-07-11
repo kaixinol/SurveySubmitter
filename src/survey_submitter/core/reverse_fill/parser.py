@@ -77,7 +77,9 @@ def is_reverse_fill_blank(value: object) -> bool:
     return not normalize_reverse_fill_text(value)
 
 
-def infer_reverse_fill_question_type(info: SurveyQuestionMeta | dict[str, object], entry: QuestionEntry | None = None) -> str:
+def infer_reverse_fill_question_type(
+    info: SurveyQuestionMeta | dict[str, object], entry: QuestionEntry | None = None
+) -> str:
     if isinstance(info, dict) and bool(info.get("is_multi_text")):
         return QuestionType.MULTI_TEXT
     inferred = infer_question_entry_type(info)
@@ -88,12 +90,15 @@ def infer_reverse_fill_question_type(info: SurveyQuestionMeta | dict[str, object
     return "single"
 
 
-def supports_reverse_fill_runtime(question_type: str, info: SurveyQuestionMeta | dict[str, Any]) -> bool:
+def supports_reverse_fill_runtime(
+    question_type: str, info: SurveyQuestionMeta | dict[str, Any]
+) -> bool:
     normalized = str(question_type or "").strip().lower()
     if normalized not in REVERSE_FILL_RUNTIME_SUPPORTED_TYPES:
         return False
     if isinstance(info, SurveyQuestionMeta):
         from survey_submitter.providers.contracts import ChoiceQuestionMeta, TextQuestionMeta
+
         is_location = info.is_location if isinstance(info, TextQuestionMeta) else False
         fillable = info.fillable_options if isinstance(info, ChoiceQuestionMeta) else None
         attached = info.attached_option_selects if isinstance(info, ChoiceQuestionMeta) else None
@@ -109,7 +114,9 @@ def supports_reverse_fill_runtime(question_type: str, info: SurveyQuestionMeta |
     return True
 
 
-def resolve_question_entry(info: SurveyQuestionMeta | dict[str, object], entries: list[QuestionEntry]) -> QuestionEntry | None:
+def resolve_question_entry(
+    info: SurveyQuestionMeta | dict[str, object], entries: list[QuestionEntry]
+) -> QuestionEntry | None:
     raw_question_num = info.num if isinstance(info, SurveyQuestionMeta) else info.get("num")
     question_num = int(raw_question_num) if raw_question_num is not None else None
     raw_title = info.title if isinstance(info, SurveyQuestionMeta) else info.get("title")
@@ -120,12 +127,18 @@ def resolve_question_entry(info: SurveyQuestionMeta | dict[str, object], entries
         entry_num = int(raw_entry_num) if raw_entry_num is not None else None
         if entry_num is not None and question_num is not None and question_num == entry_num:
             return entry
-        if matched_by_title is None and title_key and normalize_reverse_fill_key(entry.question_title) == title_key:
+        if (
+            matched_by_title is None
+            and title_key
+            and normalize_reverse_fill_key(entry.question_title) == title_key
+        ):
             matched_by_title = entry
     return matched_by_title
 
 
-def resolve_ordered_columns(columns: list[ReverseFillColumn], expected_labels: Iterable[object]) -> list[ReverseFillColumn]:
+def resolve_ordered_columns(
+    columns: list[ReverseFillColumn], expected_labels: Iterable[object]
+) -> list[ReverseFillColumn]:
     ordered_columns = sorted(list(columns or []), key=lambda item: int(item.column_index or 0))
     labels = list(expected_labels or [])
     if not ordered_columns or not labels or len(ordered_columns) != len(labels):
@@ -214,7 +227,9 @@ def parse_choice_answer(
         zero_based = one_based - 1
         if zero_based < 0 or zero_based >= len(option_texts):
             raise ValueError(f"序号 {one_based} 超出选项范围")
-        return ReverseFillAnswer(question_num=question_num, kind=REVERSE_FILL_KIND_CHOICE, choice_index=zero_based)
+        return ReverseFillAnswer(
+            question_num=question_num, kind=REVERSE_FILL_KIND_CHOICE, choice_index=zero_based
+        )
 
     option_map = _option_text_index_map(option_texts)
     for variant in label_variants(raw_value):
@@ -230,7 +245,11 @@ def parse_choice_answer(
         if one_based is not None:
             zero_based = one_based - 1
             if 0 <= zero_based < len(option_texts):
-                return ReverseFillAnswer(question_num=question_num, kind=REVERSE_FILL_KIND_CHOICE, choice_index=zero_based)
+                return ReverseFillAnswer(
+                    question_num=question_num,
+                    kind=REVERSE_FILL_KIND_CHOICE,
+                    choice_index=zero_based,
+                )
 
     raise ValueError(f"无法把值\u201c{text}\u201d匹配到题目选项")
 

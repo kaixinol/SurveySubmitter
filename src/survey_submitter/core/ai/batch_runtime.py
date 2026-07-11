@@ -19,12 +19,14 @@ from survey_submitter.providers.contracts import SurveyQuestionMeta
 
 _PROVIDER_BATCH_MAX_CONCURRENCY = 4
 
+
 @dataclass(frozen=True)
 class AIBatchItem:
     item_id: str
     question_type: str
     question_content: str
     blank_count: int | None = None
+
 
 @dataclass(frozen=True)
 class AIBatchResolvedResult:
@@ -33,6 +35,7 @@ class AIBatchResolvedResult:
     pending: set = field(default_factory=set)
     task_ids: list[str] = field(default_factory=list)
 
+
 @dataclass(frozen=True)
 class AIPrefillSummary:
     requested: int = 0
@@ -40,14 +43,18 @@ class AIPrefillSummary:
     failed: int = 0
     pending: int = 0
 
+
 def _item_id_for_question(question_num: int) -> str:
     return f"q{int(question_num or 0)}"
+
 
 def _item_id_for_option_fill(question_num: int, option_index: int) -> str:
     return f"q{int(question_num or 0)}_opt{int(option_index or 0)}"
 
+
 def _question_type_for_blank_count(blank_count: int) -> str:
     return QuestionType.MULTI_FILL_BLANK if int(blank_count or 0) > 1 else QuestionType.FILL_BLANK
+
 
 def _question_map(questions: Iterable[SurveyQuestionMeta]) -> dict[int, SurveyQuestionMeta]:
     result: dict[int, SurveyQuestionMeta] = {}
@@ -56,6 +63,7 @@ def _question_map(questions: Iterable[SurveyQuestionMeta]) -> dict[int, SurveyQu
         if question_num > 0:
             result[question_num] = question
     return result
+
 
 def _build_ai_batch_items_for_actions(
     questions: Iterable[SurveyQuestionMeta],
@@ -94,7 +102,9 @@ def _build_ai_batch_items_for_actions(
                 )
                 item_question_map[item_id] = question_num
 
-        option_texts = [str(item or "").strip() for item in list(getattr(question, "option_texts", []) or [])]
+        option_texts = [
+            str(item or "").strip() for item in list(getattr(question, "option_texts", []) or [])
+        ]
         for option_index, fill_value in tuple(action.option_fill_texts or ()):
             if not is_ai_option_fill_placeholder(fill_value):
                 continue
@@ -102,7 +112,9 @@ def _build_ai_batch_items_for_actions(
             option_prompt = build_ai_option_fill_prompt(
                 question_title=str(question.title or ""),
                 question_number=question_num,
-                option_text=option_texts[normalized_option_index] if normalized_option_index < len(option_texts) else "",
+                option_text=option_texts[normalized_option_index]
+                if normalized_option_index < len(option_texts)
+                else "",
             )
             option_item_id = _item_id_for_option_fill(question_num, normalized_option_index)
             items.append(
@@ -115,6 +127,7 @@ def _build_ai_batch_items_for_actions(
             item_option_fill_map[option_item_id] = (question_num, normalized_option_index)
     return items, item_question_map, item_option_fill_map
 
+
 def _resolved_answers_by_question_num(
     result: AIBatchResolvedResult,
     item_question_map: dict[str, int],
@@ -124,10 +137,13 @@ def _resolved_answers_by_question_num(
         question_num = item_question_map.get(item_id)
         if question_num is None:
             continue
-        normalized = tuple(str(item or "").strip() for item in list(answers or []) if str(item or "").strip())
+        normalized = tuple(
+            str(item or "").strip() for item in list(answers or []) if str(item or "").strip()
+        )
         if normalized:
             resolved[int(question_num)] = normalized
     return resolved
+
 
 def _resolved_option_fill_answers(
     result: AIBatchResolvedResult,
@@ -138,10 +154,13 @@ def _resolved_option_fill_answers(
         option_key = item_option_fill_map.get(item_id)
         if option_key is None:
             continue
-        normalized_answers = [str(item or "").strip() for item in list(answers or []) if str(item or "").strip()]
+        normalized_answers = [
+            str(item or "").strip() for item in list(answers or []) if str(item or "").strip()
+        ]
         if normalized_answers:
             resolved[option_key] = normalized_answers[0]
     return resolved
+
 
 def _raise_prefill_incomplete_error(
     result: AIBatchResolvedResult,
@@ -183,6 +202,7 @@ def _raise_prefill_incomplete_error(
     detail = "；".join(parts) if parts else "存在未完成题目"
     raise RuntimeError(f"{label} 批量预取未完成，已停止本轮提交：{detail}")
 
+
 def _normalize_item_answers(item: AIBatchItem, raw_answer: str | list[str]) -> list[str]:
     if item.question_type == QuestionType.MULTI_FILL_BLANK:
         if isinstance(raw_answer, list):
@@ -201,6 +221,7 @@ def _normalize_item_answers(item: AIBatchItem, raw_answer: str | list[str]) -> l
     if not answer:
         raise RuntimeError("AI 未返回有效答案")
     return [answer]
+
 
 async def _wait_batch_result_async(
     items: Iterable[AIBatchItem],
@@ -233,12 +254,15 @@ async def _wait_batch_result_async(
         task_ids=[],
     )
 
+
 def _rebuild_selected_texts(
     action: AnswerAction,
     question: SurveyQuestionMeta | None,
     fill_map: dict[int, str],
 ) -> tuple[str, ...]:
-    option_texts = [str(item or "").strip() for item in list(getattr(question, "option_texts", []) or [])]
+    option_texts = [
+        str(item or "").strip() for item in list(getattr(question, "option_texts", []) or [])
+    ]
     existing = list(action.selected_texts or ())
     rebuilt: list[str] = []
     for position, option_index in enumerate(tuple(action.selected_indices or ())):
@@ -252,6 +276,7 @@ def _rebuild_selected_texts(
         else:
             rebuilt.append(base_text)
     return tuple(rebuilt)
+
 
 def _apply_prefilled_answers_to_actions(
     questions: Iterable[SurveyQuestionMeta],
@@ -283,7 +308,9 @@ def _apply_prefilled_answers_to_actions(
                 normalized_value = str(raw_value or "").strip()
                 if is_ai_option_fill_placeholder(normalized_value):
                     normalized_value = str(
-                        resolved_option_fill_answers.get((question_num, normalized_option_index), "")
+                        resolved_option_fill_answers.get(
+                            (question_num, normalized_option_index), ""
+                        )
                     ).strip()
                     changed = True
                 if normalized_value:
@@ -303,6 +330,7 @@ def _apply_prefilled_answers_to_actions(
         updated_actions.append(updated_action)
     return updated_actions
 
+
 async def prefill_ai_answers_for_questions(
     questions: Iterable[SurveyQuestionMeta],
     actions: list[AnswerAction],
@@ -313,7 +341,9 @@ async def prefill_ai_answers_for_questions(
     if not actions:
         return AIPrefillSummary()
 
-    items, item_question_map, item_option_fill_map = _build_ai_batch_items_for_actions(questions, actions)
+    items, item_question_map, item_option_fill_map = _build_ai_batch_items_for_actions(
+        questions, actions
+    )
     if not items:
         return AIPrefillSummary()
 
@@ -341,6 +371,7 @@ async def prefill_ai_answers_for_questions(
         pending=len(result.pending),
     )
 
+
 def assert_no_ai_placeholders_in_actions(
     actions: Sequence[AnswerAction],
     *,
@@ -351,7 +382,10 @@ def assert_no_ai_placeholders_in_actions(
         values = list(action.text_values or ())
         values.extend(value for _, value in tuple(action.option_fill_texts or ()))
         values.extend(action.selected_texts or ())
-        if any(is_ai_text_placeholder(value) or is_ai_option_fill_placeholder(value) for value in values):
+        if any(
+            is_ai_text_placeholder(value) or is_ai_option_fill_placeholder(value)
+            for value in values
+        ):
             question_num = int(action.question_num or 0)
             if question_num > 0:
                 question_nums.add(question_num)
@@ -359,6 +393,7 @@ def assert_no_ai_placeholders_in_actions(
     if question_nums:
         labels = "、".join(f"第{num}题" for num in sorted(question_nums)[:8])
         raise RuntimeError(f"{provider_label}存在未替换的 AI 占位符，已停止提交：{labels}")
+
 
 __all__ = [
     "AIPrefillSummary",

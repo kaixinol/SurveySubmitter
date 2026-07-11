@@ -11,7 +11,10 @@ from survey_submitter.core.engine.async_events import AsyncRunContext
 from survey_submitter.core.engine.async_runtime_loop import AsyncSlotRunner
 from survey_submitter.core.engine.async_scheduler import AsyncScheduler
 from survey_submitter.core.engine.async_status_bus import AsyncStatusBus
-from survey_submitter.core.engine.runtime_control_port import RuntimeControlPort, on_random_ip_loading_changed
+from survey_submitter.core.engine.runtime_control_port import (
+    RuntimeControlPort,
+    on_random_ip_loading_changed,
+)
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.network.proxy.api import fetch_proxy_batch_async
 import survey_submitter.network.http as http_client
@@ -91,7 +94,6 @@ async def _run_proxy_prefetch(
 
 
 class AsyncRuntimeEngine:
-
     def __init__(self, *, status_bus: AsyncStatusBus | None = None) -> None:
         self._status_bus = status_bus or AsyncStatusBus()
         self._thread: threading.Thread | None = None
@@ -194,9 +196,13 @@ class AsyncRuntimeEngine:
             name="AsyncProxyPrefetch",
         )
         try:
-            await self._run_slots(worker_count, config, state, run_context, scheduler, runtime_bridge)
+            await self._run_slots(
+                worker_count, config, state, run_context, scheduler, runtime_bridge
+            )
         except* Exception as exc_group:
-            errors = [exc for exc in exc_group.exceptions if not isinstance(exc, asyncio.CancelledError)]
+            errors = [
+                exc for exc in exc_group.exceptions if not isinstance(exc, asyncio.CancelledError)
+            ]
             if not errors:
                 raise
             if len(errors) == 1:

@@ -5,8 +5,6 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class ReliabilityProfile:
-    
-
     distribution_warmup_samples: int
     distribution_gain: float
     distribution_min_factor: float
@@ -35,4 +33,3 @@ DEFAULT_RELIABILITY_PROFILE = ReliabilityProfile(
 
 def get_reliability_profile() -> ReliabilityProfile:
     return DEFAULT_RELIABILITY_PROFILE
-

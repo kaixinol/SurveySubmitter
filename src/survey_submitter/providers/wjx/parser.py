@@ -55,8 +55,9 @@ def _build_unparseable_page_summary(html: str) -> str:
         text = f"{text[:_PAGE_SUMMARY_MAX_LENGTH]}..."
     return text
 
+
 def is_paused_survey_page(html: str) -> bool:
-    
+
     text = normalize_match_text(html)
     if not text or "已暂停" not in text:
         return False
@@ -82,7 +83,7 @@ def _html_has_question_content(html: str) -> bool:
 
 
 def is_stopped_survey_page(html: str) -> bool:
-    
+
     text = normalize_match_text(html)
     if not text or "停止状态" not in text or "无法作答" not in text:
         return False
@@ -109,7 +110,7 @@ def is_stopped_survey_page(html: str) -> bool:
 
 
 def is_enterprise_unavailable_survey_page(html: str) -> bool:
-    
+
     text = normalize_match_text(html)
     if not text:
         return False
@@ -124,7 +125,7 @@ def is_enterprise_unavailable_survey_page(html: str) -> bool:
 
 
 def build_not_open_survey_message(html: str) -> str | None:
-    
+
     text = normalize_match_text(html)
     if not text:
         return None
@@ -133,8 +134,7 @@ def build_not_open_survey_message(html: str) -> str | None:
         return None
 
     normalized = "".join(text.split())
-    
-    
+
     keywords = (
         "此问卷将于",
         "请到时再进入此页面进行填写",

@@ -1,4 +1,5 @@
 """SurveyController CLI entry point."""
+
 from __future__ import annotations
 
 import argparse
@@ -19,6 +20,7 @@ def _enable_fault_handler() -> None:
         return
     try:
         from survey_submitter.system.paths import get_fatal_crash_log_path
+
         fault_log_path = get_fatal_crash_log_path()
         logs_dir = os.path.dirname(fault_log_path)
         os.makedirs(logs_dir, exist_ok=True)
@@ -61,6 +63,7 @@ def bootstrap() -> None:
 def shutdown() -> None:
     try:
         from survey_submitter.logging.log_utils import shutdown_logging
+
         shutdown_logging()
     except Exception:
         pass
@@ -73,8 +76,12 @@ def main() -> None:
 
     run_parser = subparsers.add_parser("run", help="Run survey submission")
     run_parser.add_argument("config", help="Path to YAML config file")
-    run_parser.add_argument("--parse-only", action="store_true", help="Only parse survey, don't submit")
-    run_parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
+    run_parser.add_argument(
+        "--parse-only", action="store_true", help="Only parse survey, don't submit"
+    )
+    run_parser.add_argument(
+        "--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"]
+    )
 
     args = parser.parse_args()
     if args.command is None:
@@ -92,6 +99,7 @@ def main() -> None:
     try:
         if args.command == "run":
             from survey_submitter.core.engine.headless_runner import HeadlessRunner
+
             runner = HeadlessRunner(args.config, parse_only=args.parse_only)
 
             loop = asyncio.new_event_loop()

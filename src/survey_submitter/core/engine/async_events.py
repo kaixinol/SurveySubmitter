@@ -8,8 +8,6 @@ from survey_submitter.core.task import ExecutionState
 
 
 class AsyncRunContext:
-    
-
     def __init__(
         self,
         *,
@@ -37,8 +35,6 @@ class AsyncRunContext:
 
 
 class ThreadEventProxy:
-    
-
     def __init__(self, event: asyncio.Event, *, loop: asyncio.AbstractEventLoop) -> None:
         self._event = event
         self._loop = loop
