@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from survey_submitter.core.psychometrics.psychometric import DimensionPsychometricPlan, PsychometricPlan
+    from survey_submitter.core.task.task_context import ExecutionState
 
 from survey_submitter.core.questions.reliability_mode import get_reliability_profile
 from survey_submitter.core.questions.utils import normalize_droplist_probs
@@ -37,7 +41,7 @@ def _normalize_distribution_target(
 
 
 def _resolve_runtime_counts(
-    ctx: Any | None,
+    ctx: ExecutionState | None,
     stat_key: str,
     option_count: int,
 ) -> tuple[int, list[int]]:
@@ -50,7 +54,7 @@ def _resolve_runtime_counts(
     return (max(0, int(total or 0)), list(counts or []))
 
 
-def _has_active_runtime_dimension(ctx: Any | None, question_index: int | None) -> bool:
+def _has_active_runtime_dimension(ctx: ExecutionState | None, question_index: int | None) -> bool:
     if ctx is None or question_index is None:
         return False
     config = getattr(ctx, "config", ctx)
@@ -60,7 +64,7 @@ def _has_active_runtime_dimension(ctx: Any | None, question_index: int | None) -
 
 
 def _psycho_plan_covers_question(
-    psycho_plan: Any | None,
+    psycho_plan: PsychometricPlan | DimensionPsychometricPlan | None,
     question_index: int | None,
     row_index: int | None,
 ) -> bool:
@@ -91,11 +95,11 @@ def _resolve_correction_params(
 def resolve_distribution_probabilities(
     probabilities: list[float] | int | float | None,
     option_count: int,
-    ctx: Any | None,
+    ctx: ExecutionState | None,
     question_index: int | None,
     *,
     row_index: int | None = None,
-    psycho_plan: Any | None = None,
+    psycho_plan: PsychometricPlan | DimensionPsychometricPlan | None = None,
 ) -> list[float]:
     target = _normalize_distribution_target(probabilities, option_count)
     if option_count <= 0 or not target or question_index is None or ctx is None:
@@ -135,7 +139,7 @@ def resolve_distribution_probabilities(
 
 
 def record_pending_distribution_choice(
-    ctx: Any | None,
+    ctx: ExecutionState | None,
     question_index: int | None,
     option_index: int,
     option_count: int,
