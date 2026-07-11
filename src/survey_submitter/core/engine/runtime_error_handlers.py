@@ -1,16 +1,45 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable
+from typing import Any, Callable, TypeVar
 
 from survey_submitter.core.ai.runtime import AIRuntimeError, is_ai_timeout_runtime_error
 from survey_submitter.core.engine.failure_reason import FailureReason
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
-from survey_submitter.providers.errors import SubmissionVerificationRequiredError, SurveyProviderUnavailableAtRuntimeError
+from survey_submitter.providers.errors import (
+    SubmissionVerificationRequiredError,
+    SurveyProviderUnavailableAtRuntimeError,
+)
+
+T = TypeVar("T")
+
 AI_FILL_FAIL_THRESHOLD = 5
 SUBMISSION_VERIFICATION_STOP_CATEGORY = "submission_verification"
 SURVEY_PROVIDER_UNAVAILABLE_STOP_CATEGORY = "survey_provider_unavailable"
+
+
+def _safe_state_operation(
+    operation: Callable[[], T],
+    operation_name: str,
+) -> None:
+    """Execute a state operation safely, logging failures without raising."""
+    try:
+        operation()
+    except (AttributeError, ValueError, RuntimeError) as exc:
+        logging.debug("%s 失败：%s", operation_name, exc, exc_info=True)
+    except Exception:
+        logging.debug("%s 失败", operation_name, exc_info=True)
+
+
+def _get_session_proxy_address(session: Any) -> str | None:
+    """Safely get proxy address from session object."""
+    if session is None:
+        return None
+    try:
+        return getattr(session, "proxy_address", None)
+    except AttributeError:
+        return None
 
 
 def handle_ai_runtime_error(
@@ -62,8 +91,9 @@ def handle_proxy_connection_error(
     if stop_signal.is_set():
         return True
     logging.warning("代理连接失败，当前会话将废弃并重新尝试")
-    if session is not None and getattr(session, "proxy_address", None):
-        mark_proxy_temporarily_bad(state, session.proxy_address)
+    proxy_address = _get_session_proxy_address(session)
+    if proxy_address:
+        mark_proxy_temporarily_bad(state, proxy_address)
     if config.random_proxy_ip_enabled:
         update_thread_status(thread_name, "代理失效，切换中")
         if handle_proxy_unavailable(
@@ -91,14 +121,16 @@ def handle_submission_verification_error(
 ) -> bool:
     message = str(exc or "").strip() or "提交触发智能验证，请启用随机 IP 后再试"
     logging.warning("会话[%s]触发提交智能验证：%s", thread_name, message)
-    try:
-        state.release_reverse_fill_sample(thread_name, requeue=True)
-    except Exception:
-        logging.debug("智能验证停止时回收反填样本失败", exc_info=True)
-    try:
-        state.increment_thread_fail(thread_name, status_text="触发智能验证")
-    except Exception:
-        logging.debug("智能验证停止时更新线程状态失败", exc_info=True)
+
+    _safe_state_operation(
+        lambda: state.release_reverse_fill_sample(thread_name, requeue=True),
+        "智能验证停止时回收反填样本"
+    )
+    _safe_state_operation(
+        lambda: state.increment_thread_fail(thread_name, status_text="触发智能验证"),
+        "智能验证停止时更新线程状态"
+    )
+
     state.mark_terminal_stop(
         SUBMISSION_VERIFICATION_STOP_CATEGORY,
         failure_reason=FailureReason.SUBMISSION_VERIFICATION_REQUIRED.value,
@@ -117,14 +149,16 @@ def handle_survey_provider_unavailable_error(
 ) -> bool:
     message = str(exc or "").strip() or "问卷当前不可填写"
     logging.warning("会话[%s]发现问卷不可继续：%s", thread_name, message)
-    try:
-        state.release_reverse_fill_sample(thread_name, requeue=True)
-    except Exception:
-        logging.debug("问卷不可继续时回收反填样本失败", exc_info=True)
-    try:
-        state.increment_thread_fail(thread_name, status_text="问卷不可填写")
-    except Exception:
-        logging.debug("问卷不可继续时更新线程状态失败", exc_info=True)
+
+    _safe_state_operation(
+        lambda: state.release_reverse_fill_sample(thread_name, requeue=True),
+        "问卷不可继续时回收反填样本"
+    )
+    _safe_state_operation(
+        lambda: state.increment_thread_fail(thread_name, status_text="问卷不可填写"),
+        "问卷不可继续时更新线程状态"
+    )
+
     state.mark_terminal_stop(
         SURVEY_PROVIDER_UNAVAILABLE_STOP_CATEGORY,
         failure_reason=FailureReason.SURVEY_PROVIDER_UNAVAILABLE.value,

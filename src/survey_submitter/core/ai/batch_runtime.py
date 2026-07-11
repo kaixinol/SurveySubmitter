@@ -67,7 +67,7 @@ def _build_ai_batch_items_for_actions(
     question_by_num = _question_map(questions)
 
     for action in list(actions or []):
-        question_num = int(getattr(action, "question_num", 0) or 0)
+        question_num = int(action.question_num or 0)
         if question_num <= 0:
             continue
         question = question_by_num.get(question_num)
@@ -262,7 +262,7 @@ def _apply_prefilled_answers_to_actions(
     question_by_num = _question_map(questions)
     updated_actions: list[AnswerAction] = []
     for action in list(actions or []):
-        question_num = int(getattr(action, "question_num", 0) or 0)
+        question_num = int(action.question_num or 0)
         updated_action = action
 
         if question_num in resolved_answers and tuple(action.text_values or ()):
@@ -352,7 +352,7 @@ def assert_no_ai_placeholders_in_actions(
         values.extend(value for _, value in tuple(action.option_fill_texts or ()))
         values.extend(action.selected_texts or ())
         if any(is_ai_text_placeholder(value) or is_ai_option_fill_placeholder(value) for value in values):
-            question_num = int(getattr(action, "question_num", 0) or 0)
+            question_num = int(action.question_num or 0)
             if question_num > 0:
                 question_nums.add(question_num)
 

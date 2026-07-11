@@ -84,7 +84,7 @@ def infer_reverse_fill_question_type(info: SurveyQuestionMeta | dict[str, Any], 
     if inferred:
         return inferred
     if entry is not None:
-        return str(getattr(entry, "question_type", "") or "single").strip() or "single"
+        return str(entry.question_type or "single").strip() or "single"
     return "single"
 
 
@@ -116,11 +116,11 @@ def resolve_question_entry(info: SurveyQuestionMeta | dict[str, Any], entries: l
     title_key = normalize_reverse_fill_key(raw_title)
     matched_by_title: QuestionEntry | None = None
     for entry in list(entries or []):
-        raw_entry_num = getattr(entry, "question_num", None)
+        raw_entry_num = entry.question_num
         entry_num = int(raw_entry_num) if raw_entry_num is not None else None
         if entry_num is not None and question_num is not None and question_num == entry_num:
             return entry
-        if matched_by_title is None and title_key and normalize_reverse_fill_key(getattr(entry, "question_title", None)) == title_key:
+        if matched_by_title is None and title_key and normalize_reverse_fill_key(entry.question_title) == title_key:
             matched_by_title = entry
     return matched_by_title
 

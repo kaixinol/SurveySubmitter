@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Any, Callable, Protocol
 
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 
@@ -11,6 +11,15 @@ class RuntimeControlPort(Protocol):
     def on_random_ip_submission(self, stop_signal: StopSignalLike | None = None) -> None: ...
 
     def on_random_ip_loading_changed(self, loading: bool, message: str = "") -> None: ...
+
+
+def _get_method_by_priority(obj: Any, names: list[str]) -> Callable | None:
+    """Get the first callable method from a list of method names."""
+    for name in names:
+        method = getattr(obj, name, None)
+        if method is not None and callable(method):
+            return method
+    return None
 
 
 def wait_if_paused(runtime_port: RuntimeControlPort | None, stop_signal: StopSignalLike | None) -> None:
@@ -25,16 +34,22 @@ def on_random_ip_submission(
 ) -> None:
     if runtime_port is None:
         return
-    handler = getattr(runtime_port, "on_random_ip_submission", None)
-    if callable(handler):
-        handler(stop_signal)
+
+    handler = _get_method_by_priority(
+        runtime_port,
+        ["on_random_ip_submission", "handle_random_ip_submission"]
+    )
+    if handler is None:
         return
-    legacy_handler = getattr(runtime_port, "handle_random_ip_submission", None)
-    if callable(legacy_handler):
-        try:
-            legacy_handler(stop_signal)
-        except TypeError:
-            legacy_handler(stop_signal=stop_signal)
+
+    try:
+        handler(stop_signal)
+    except TypeError:
+        # Fallback for legacy handlers that require keyword argument
+        if hasattr(handler, '__name__') and 'legacy' in handler.__name__.lower():
+            handler(stop_signal=stop_signal)
+        else:
+            raise
 
 
 def on_random_ip_loading_changed(
@@ -44,13 +59,13 @@ def on_random_ip_loading_changed(
 ) -> None:
     if runtime_port is None:
         return
-    setter = getattr(runtime_port, "on_random_ip_loading_changed", None)
-    if callable(setter):
+
+    setter = _get_method_by_priority(
+        runtime_port,
+        ["on_random_ip_loading_changed", "set_random_ip_loading"]
+    )
+    if setter is not None:
         setter(bool(loading), str(message or ""))
-        return
-    legacy_setter = getattr(runtime_port, "set_random_ip_loading", None)
-    if callable(legacy_setter):
-        legacy_setter(bool(loading), str(message or ""))
 
 
 __all__ = [

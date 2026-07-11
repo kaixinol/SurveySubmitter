@@ -164,7 +164,7 @@ def get_proxy_required_ttl_seconds(
 def proxy_lease_has_sufficient_ttl(lease: ProxyLease | None, *, required_ttl_seconds: int) -> bool:
     if lease is None:
         return False
-    expire_ts = float(getattr(lease, "expire_ts", 0.0) or 0.0)
+    expire_ts = float(lease.expire_ts or 0.0)
     if expire_ts <= 0:
         return True
     return (expire_ts - time.time()) >= max(0, int(required_ttl_seconds or 0))

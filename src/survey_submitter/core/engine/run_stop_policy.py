@@ -1,21 +1,46 @@
 from __future__ import annotations
 
-import math
 import logging
+import math
 import time
+from typing import Callable, TypeVar
 
 from survey_submitter.core.engine.failure_reason import FailureReason
 from survey_submitter.core.engine.runtime_control_port import (
     RuntimeControlPort,
+)
+from survey_submitter.core.engine.runtime_control_port import (
     on_random_ip_submission as trigger_random_ip_submission,
+)
+from survey_submitter.core.engine.runtime_control_port import (
     wait_if_paused as runtime_wait_if_paused,
 )
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 
+T = TypeVar("T")
+
+
+def _safe_cleanup_call(
+    operation: Callable[[], T],
+    operation_name: str,
+) -> T | None:
+    """Execute a cleanup operation safely, logging any failures without raising.
+
+    Used for cleanup/update operations that should not interrupt the main flow.
+    """
+    try:
+        return operation()
+    except (AttributeError, ValueError, TypeError, RuntimeError) as exc:
+        logging.debug("%s 失败：%s", operation_name, exc, exc_info=True)
+        return None
+    except Exception:
+        # Catch-all for unexpected errors in cleanup operations
+        logging.debug("%s 失败", operation_name, exc_info=True)
+        return None
+
 
 class RunStopPolicy:
-    
 
     def __init__(
         self,
@@ -28,10 +53,10 @@ class RunStopPolicy:
         self.runtime_bridge = runtime_bridge
 
     def wait_if_paused(self, stop_signal: StopSignalLike | None) -> None:
-        try:
-            runtime_wait_if_paused(self.runtime_bridge, stop_signal)
-        except Exception:
-            logging.debug("暂停等待失败", exc_info=True)
+        _safe_cleanup_call(
+            lambda: runtime_wait_if_paused(self.runtime_bridge, stop_signal),
+            "暂停等待"
+        )
 
     def failure_threshold(self) -> int:
         base_threshold = max(1, int(self.config.fail_threshold or 1))
@@ -82,7 +107,7 @@ class RunStopPolicy:
             else:
                 logging.warning("已连续失败%s次（失败止损已关闭）", consecutive_failures)
         if thread_name:
-            try:
+            def _handle_reverse_fill_failure():
                 if consume_reverse_fill_attempt:
                     row_number, discarded = self.state.mark_reverse_fill_submission_failed(
                         thread_name,
@@ -97,12 +122,15 @@ class RunStopPolicy:
                     row_number = self.state.release_reverse_fill_sample(thread_name, requeue=True)
                     if row_number is not None:
                         logging.info("反填样本第%s行已回队，本次失败不计入样本作废次数。", row_number)
-            except Exception:
-                logging.debug("失败后回收反填样本失败", exc_info=True)
-            try:
-                self.state.increment_thread_fail(thread_name, status_text=status_text)
-            except Exception:
-                logging.debug("更新线程失败计数失败", exc_info=True)
+
+            _safe_cleanup_call(
+                _handle_reverse_fill_failure,
+                "回收反填样本"
+            )
+            _safe_cleanup_call(
+                lambda: self.state.increment_thread_fail(thread_name, status_text=status_text),
+                "更新线程失败计数"
+            )
         if self.state.is_reverse_fill_target_unreachable():
             message = "反填样本已耗尽，剩余样本不足以完成目标份数"
             logging.critical("%s", message)
@@ -119,7 +147,7 @@ class RunStopPolicy:
             logging.critical("连续失败次数过多，强制停止，请检查配置是否正确")
             self.state.mark_terminal_stop(
                 terminal_stop_category,
-                failure_reason=getattr(failure_reason, "value", str(failure_reason or "")),
+                failure_reason=failure_reason.value,
                 message=message or status_text,
             )
             if stop_signal:
@@ -163,27 +191,27 @@ class RunStopPolicy:
                 should_break = True
 
         if record_thread_success and thread_name:
-            try:
-                self.state.commit_reverse_fill_sample(thread_name)
-            except Exception:
-                logging.debug("提交成功后核销反填样本失败", exc_info=True)
-            try:
-                self.state.commit_pending_distribution(thread_name)
-            except Exception:
-                logging.debug("提交成功后写入比例统计失败", exc_info=True)
-            try:
-                self.state.increment_thread_success(thread_name, status_text=status_text)
-            except Exception:
-                logging.debug("更新线程成功计数失败", exc_info=True)
+            _safe_cleanup_call(
+                lambda: self.state.commit_reverse_fill_sample(thread_name),
+                "核销反填样本"
+            )
+            _safe_cleanup_call(
+                lambda: self.state.commit_pending_distribution(thread_name),
+                "写入比例统计"
+            )
+            _safe_cleanup_call(
+                lambda: self.state.increment_thread_success(thread_name, status_text=status_text),
+                "更新线程成功计数"
+            )
         if should_break:
             stop_signal.set()
         if trigger_target_stop:
             self.trigger_target_reached_stop(stop_signal, message=terminal_message)
         if should_handle_random_ip:
-            try:
-                trigger_random_ip_submission(self.runtime_bridge, stop_signal)
-            except Exception:
-                logging.debug("提交成功后刷新随机IP失败", exc_info=True)
+            _safe_cleanup_call(
+                lambda: trigger_random_ip_submission(self.runtime_bridge, stop_signal),
+                "刷新随机IP"
+            )
         return should_break or trigger_target_stop
 
     def trigger_target_reached_stop(

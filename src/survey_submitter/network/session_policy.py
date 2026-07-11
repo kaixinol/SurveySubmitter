@@ -49,7 +49,7 @@ def release_proxy_fetch_lock(ctx: ExecutionState) -> None:
 
 
 def _resolve_proxy_fetch_max_batch_size(ctx: ExecutionState) -> int:
-    worker_count = max(1, int(getattr(ctx.config, "num_threads", 1) or 1))
+    worker_count = max(1, int(ctx.config.num_threads or 1))
     dynamic_limit = worker_count
     return max(1, min(int(PROXY_MAX_PROXIES or dynamic_limit), dynamic_limit))
 
@@ -88,7 +88,7 @@ def merge_prefetched_proxy_leases(ctx: ExecutionState, fetched: Iterable[object]
 
 def resolve_proxy_prefetch_request_count(ctx: ExecutionState) -> int:
     
-    if not bool(getattr(ctx.config, "random_proxy_ip_enabled", False)):
+    if not bool(ctx.config.random_proxy_ip_enabled):
         return 0
     with ctx.lock:
         active_count = len(ctx.proxy_in_use_by_thread)
@@ -105,9 +105,9 @@ def resolve_proxy_prefetch_request_count(ctx: ExecutionState) -> int:
 
 def should_continue_proxy_prefetch(ctx: ExecutionState) -> bool:
     
-    if not bool(getattr(ctx.config, "random_proxy_ip_enabled", False)):
+    if not bool(ctx.config.random_proxy_ip_enabled):
         return False
-    if _should_stop_proxy_wait(ctx, getattr(ctx, "stop_event", None)):
+    if _should_stop_proxy_wait(ctx, ctx.stop_event):
         return False
     with ctx.lock:
         active_count = len(ctx.proxy_in_use_by_thread)
@@ -121,7 +121,7 @@ def _should_stop_proxy_wait(
 ) -> bool:
     if stop_signal is not None and stop_signal.is_set():
         return True
-    return bool(getattr(ctx, "stop_event", None) and ctx.stop_event.is_set())
+    return bool(ctx.stop_event and ctx.stop_event.is_set())
 
 
 def _wait_for_next_proxy_cycle(
@@ -246,7 +246,7 @@ def _resolve_proxy_provider_for_thread(ctx: ExecutionState, thread_name: str) ->
     try:
         with ctx.lock:
             lease = ctx.proxy_in_use_by_thread.get(thread_name)
-            return str(getattr(lease, "source", "") or "unknown").strip() or "unknown"
+            return str(lease.source or "unknown").strip() or "unknown"
     except (AttributeError, KeyError):
         logging.info("\u8bfb\u53d6\u4ee3\u7406\u6765\u6e90\u5931\u8d25", exc_info=True)
     return "unknown"

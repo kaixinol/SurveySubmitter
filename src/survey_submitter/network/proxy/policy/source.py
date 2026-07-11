@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import re
 import threading
-from dataclasses import dataclass
 from typing import Any
 
 from pydantic import ConfigDict, field_validator
@@ -33,6 +32,23 @@ _ORDINARY_POOL_PROVINCE_CODES: set[str] = {
     "410000", "420000", "430000", "440000", "460000", "500000", "510000",
     "610000", "620000", "640000",
 }
+
+
+def _safe_to_string(value: Any, default: str = "") -> str:
+    """Safely convert a value to string, returning default on exception."""
+    try:
+        return str(value or "").strip()
+    except Exception:
+        return default
+
+
+def _safe_to_int(value: Any, default: int = 0) -> int:
+    """Safely convert a value to non-negative integer, returning default on exception."""
+    try:
+        parsed = int(value)
+        return max(0, parsed)
+    except Exception:
+        return max(0, int(default))
 
 
 class ProxySettings(BaseConfigModel):
@@ -65,13 +81,8 @@ class ProxySettings(BaseConfigModel):
         return v
 
 
-
-
 def normalize_proxy_source(source: str | None) -> str:
-    try:
-        cleaned = str(source or "").strip().lower()
-    except Exception:
-        cleaned = ""
+    cleaned = _safe_to_string(source).lower()
     if cleaned in _SUPPORTED_PROXY_SOURCES:
         return cleaned
     return PROXY_SOURCE_CUSTOM
@@ -97,8 +108,6 @@ def is_custom_proxy_source(source: str | None = None) -> bool:
 
 def source_uses_custom_api_override(source: str | None = None) -> bool:
     return is_custom_proxy_source(source)
-
-
 
 
 def _map_answer_seconds_to_proxy_minute(total_seconds: int) -> int:
@@ -179,13 +188,8 @@ def get_proxy_occupy_minute() -> int:
     return minute
 
 
-
-
 def _validate_proxy_api_url(api_url: str | None) -> str:
-    try:
-        cleaned = str(api_url or "").strip()
-    except Exception:
-        cleaned = ""
+    cleaned = _safe_to_string(api_url)
     if not cleaned:
         return ""
     if not (cleaned.lower().startswith("http://") or cleaned.lower().startswith("https://")):
@@ -194,10 +198,7 @@ def _validate_proxy_api_url(api_url: str | None) -> str:
 
 
 def _normalize_area_code(area_code: str | None) -> str:
-    try:
-        cleaned = str(area_code or "").strip()
-    except Exception:
-        cleaned = ""
+    cleaned = _safe_to_string(area_code)
     if not cleaned or not cleaned.isdigit() or len(cleaned) != 6:
         return ""
     return cleaned
@@ -261,7 +262,7 @@ def set_proxy_api_override(api_url: str | None) -> str:
 
 
 def get_proxy_settings() -> ProxySettings:
-    
+
     return ProxySettings(
         source=normalize_proxy_source(get_proxy_source()),
         custom_api_url=get_custom_proxy_api_override(),
@@ -272,7 +273,7 @@ def get_proxy_settings() -> ProxySettings:
 
 
 def apply_proxy_source_settings(source: str, *, custom_api_url: str | None = None) -> ProxySettings:
-    
+
     normalized = normalize_proxy_source(source)
     if normalized == PROXY_SOURCE_CUSTOM:
         set_proxy_api_override(custom_api_url if custom_api_url else None)
@@ -283,24 +284,18 @@ def apply_proxy_source_settings(source: str, *, custom_api_url: str | None = Non
 
 
 def apply_proxy_area_code(area_code: str | None) -> ProxySettings:
-    
+
     set_proxy_area_code(area_code)
     return get_proxy_settings()
 
 
 def apply_custom_proxy_api(custom_api_url: str | None) -> ProxySettings:
-    
+
     set_proxy_api_override(custom_api_url if custom_api_url else None)
     return get_proxy_settings()
 
 
-
-
 def _to_non_negative_int(value: Any, default: int = 0) -> int:
-    try:
-        parsed = int(value)
-    except Exception:
-        return max(0, int(default))
-    return max(0, parsed)
+    return _safe_to_int(value, default)
 
 

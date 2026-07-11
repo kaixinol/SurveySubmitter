@@ -5,13 +5,31 @@ import logging
 import threading
 import time
 from dataclasses import dataclass
-from typing import Any, Iterator, Literal, overload
+from typing import Any, Callable, Iterator, Literal, TypeVar, overload
 from urllib.parse import urlsplit
 
 import httpx
 from packaging.version import InvalidVersion, Version
 
 from survey_submitter.logging.log_utils import log_suppressed_exception
+
+T = TypeVar("T")
+
+
+def _safe_suppress_and_log(
+    operation: Callable[[], T],
+    operation_name: str,
+    level: int = logging.WARNING,
+) -> T | None:
+    """Execute an operation safely, logging any exceptions without raising.
+
+    Used for cleanup operations that should not interrupt the main flow.
+    """
+    try:
+        return operation()
+    except Exception as exc:
+        log_suppressed_exception(operation_name, exc, level=level)
+        return None
 
 
 _MIN_HTTPX_VERSION = Version("0.27.0")
@@ -69,7 +87,6 @@ class _ClientEntry:
 
 
 class _StreamResponse:
-    
 
     def __init__(
         self,
@@ -116,22 +133,20 @@ class _StreamResponse:
         if self._closed:
             return
         self._closed = True
-        try:
-            self._stream_ctx.__exit__(None, None, None)
-        except Exception as exc:
-            log_suppressed_exception("_StreamResponse.close stream_ctx.__exit__", exc, level=logging.WARNING)
-        finally:
-            try:
-                self._release()
-            except Exception as exc:
-                log_suppressed_exception("_StreamResponse.close release()", exc, level=logging.WARNING)
+        _safe_suppress_and_log(
+            self._stream_ctx.__exit__,
+            "_StreamResponse.close stream_ctx.__exit__",
+        )
+        _safe_suppress_and_log(
+            self._release,
+            "_StreamResponse.close release()",
+        )
 
-    def __del__(self) -> None:  
+    def __del__(self) -> None:
         self.close()
 
 
 class _SyncClientManager:
-    
 
     def __init__(self) -> None:
         self._lock = threading.RLock()
@@ -182,10 +197,10 @@ class _SyncClientManager:
 
     def _close_clients(self, clients: list[httpx.Client]) -> None:
         for client in clients:
-            try:
-                client.close()
-            except Exception as exc:
-                log_suppressed_exception("_SyncClientManager._close_clients client.close()", exc, level=logging.WARNING)
+            _safe_suppress_and_log(
+                client.close,
+                "_SyncClientManager._close_clients client.close()",
+            )
 
     def acquire(
         self,
@@ -300,7 +315,10 @@ class _SyncClientManager:
             self.release(key)
             return response
         except Exception:
-            self.release(key)
+            _safe_suppress_and_log(
+                lambda: self.release(key),
+                "_SyncClientManager.request release on exception",
+            )
             raise
 
     def close(self) -> None:
@@ -311,7 +329,7 @@ class _SyncClientManager:
 
 
 def _resolve_proxy(proxies: Any, url: str) -> tuple[str | None, bool]:
-    
+
     if proxies is None:
         return None, True
     if proxies == {}:
@@ -331,7 +349,7 @@ def _resolve_proxy(proxies: Any, url: str) -> tuple[str | None, bool]:
 
 
 def _normalize_timeout(timeout: Any) -> Any:
-    
+
     if timeout is None:
         return None
     if isinstance(timeout, (int, float)):
@@ -357,7 +375,7 @@ _client_manager = _SyncClientManager()
 
 
 def prewarm() -> None:
-    
+
     global _PREWARMED
 
     if _PREWARMED:
@@ -368,7 +386,7 @@ def prewarm() -> None:
             return
         temp_client: httpx.Client | None = None
         try:
-            
+
             temp_client = httpx.Client(
                 timeout=None,
                 limits=_CLIENT_LIMITS,
@@ -380,18 +398,18 @@ def prewarm() -> None:
             log_suppressed_exception("http_client.prewarm httpx.Client()", exc, level=logging.WARNING)
         finally:
             if temp_client is not None:
-                try:
-                    temp_client.close()
-                except Exception as exc:
-                    log_suppressed_exception("http_client.prewarm temp_client.close()", exc, level=logging.WARNING)
+                _safe_suppress_and_log(
+                    temp_client.close,
+                    "http_client.prewarm temp_client.close()",
+                )
 
 
 def close() -> None:
-    
-    try:
-        _client_manager.close()
-    except Exception as exc:
-        log_suppressed_exception("http_client.close _client_manager.close()", exc, level=logging.WARNING)
+
+    _safe_suppress_and_log(
+        _client_manager.close,
+        "http_client.close _client_manager.close()",
+    )
 
 
 atexit.register(close)
