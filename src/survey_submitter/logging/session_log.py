@@ -14,7 +14,7 @@ from survey_submitter.constants import (
     DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT,
     DEFAULT_AUTO_SAVE_LOGS,
 )
-from survey_submitter.io.config.settings_store import app_settings, get_bool_from_qsettings, get_int_from_qsettings
+from survey_submitter.io.config.settings_store import app_settings, get_bool_setting, get_int_setting
 from survey_submitter.system.paths import get_user_logs_directory
 
 import survey_submitter.logging.log_utils as _log_utils
@@ -106,9 +106,9 @@ def _ensure_logs_dir(runtime_directory: str) -> str:
 def get_auto_save_log_settings() -> tuple[bool, int]:
     
     settings = app_settings()
-    enabled = get_bool_from_qsettings(settings.value(AUTO_SAVE_LOGS_SETTING_KEY), DEFAULT_AUTO_SAVE_LOGS)
+    enabled = get_bool_setting(settings.value(AUTO_SAVE_LOGS_SETTING_KEY), DEFAULT_AUTO_SAVE_LOGS)
     max_keep = max(AUTO_SAVE_LOG_RETENTION_OPTIONS) if AUTO_SAVE_LOG_RETENTION_OPTIONS else DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT
-    keep_count = get_int_from_qsettings(
+    keep_count = get_int_setting(
         settings.value(AUTO_SAVE_LOG_RETENTION_COUNT_SETTING_KEY),
         DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT,
     )
