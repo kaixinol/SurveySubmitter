@@ -99,3 +99,94 @@ async def simulate_answer_duration_delay(
         survey_provider=survey_provider,
     )
     return await wait_answer_duration_seconds(stop_signal, wait_seconds)
+
+
+async def is_survey_completion_page(driver: object, provider: str | None = None) -> bool:
+    try:
+        current_url = str(await driver.current_url() or "")
+        if "complete" in current_url.lower():
+            return True
+    except Exception as exc:
+        log_suppressed_exception("is_survey_completion_page: current_url", exc, level=logging.WARNING)
+
+    try:
+        from survey_submitter.providers.registry import is_completion_page as _provider_is_completion_page
+
+        if await _provider_is_completion_page(driver, provider=provider):
+            return True
+    except Exception as exc:
+        log_suppressed_exception("is_survey_completion_page: provider_is_completion_page", exc, level=logging.WARNING)
+
+    detected = False
+    try:
+        divdsc = None
+        try:
+            divdsc = await driver.find_element("id", "divdsc")
+        except Exception:
+            divdsc = None
+        if divdsc and await divdsc.is_displayed():
+            text = await divdsc.text() or ""
+            if any(marker in text for marker in _COMPLETION_MARKERS):
+                detected = True
+    except Exception as exc:
+        log_suppressed_exception("is_survey_completion_page: divdsc = None", exc, level=logging.WARNING)
+    if not detected:
+        for attempt in range(2):
+            try:
+                page_text = await driver.execute_script(
+                    "return (document.body && document.body.innerText) || '';"
+                ) or ""
+                has_marker = any(marker in page_text for marker in _COMPLETION_MARKERS)
+                if has_marker:
+                    action_visible = bool(
+                        await driver.execute_script(
+                            r"""
+                            return (() => {
+                                const selectors = [
+                                    '#submit_button',
+                                    '#divSubmit',
+                                    '#ctlNext',
+                                    '#divNext',
+                                    '#btnNext',
+                                    '#SM_BTN_1',
+                                    '#SubmitBtnGroup .submitbtn',
+                                    '.btn-next',
+                                    '.btn-submit',
+                                    '.page-control button',
+                                    'button[type="submit"]',
+                                    'a.button.mainBgColor'
+                                ];
+                                const visible = (el) => {
+                                    if (!el) return false;
+                                    const style = window.getComputedStyle(el);
+                                    if (!style) return false;
+                                    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+                                    const rect = el.getBoundingClientRect();
+                                    return rect.width > 0 && rect.height > 0;
+                                };
+                                for (const sel of selectors) {
+                                    const nodes = document.querySelectorAll(sel);
+                                    for (const node of nodes) {
+                                        if (visible(node)) return true;
+                                    }
+                                }
+                                return false;
+                            })();
+                            """
+                        )
+                    )
+                    detected = not action_visible
+                break
+            except Exception as exc:
+                if _is_navigation_transient_error(exc):
+                    if attempt == 0:
+                        await sleep_or_stop(None, 0.2)
+                        continue
+                    logging.debug(
+                        "[Suppressed] is_survey_completion_page: page_text during navigation: %s",
+                        exc,
+                    )
+                    break
+                log_suppressed_exception("is_survey_completion_page: page_text", exc, level=logging.WARNING)
+                break
+    return bool(detected)
