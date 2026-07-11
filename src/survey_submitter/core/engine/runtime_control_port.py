@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Protocol
+from typing import Protocol, cast
 
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 
@@ -21,7 +21,7 @@ def _get_method_by_priority(
     for name in names:
         method = getattr(obj, name, None)
         if method is not None and callable(method):
-            return method  # type: ignore[return-value]
+            return cast("Callable[..., object]", method)
     return None
 
 
@@ -50,7 +50,7 @@ def on_random_ip_submission(
         handler(stop_signal)
     except TypeError:
         # Fallback for legacy handlers that require keyword argument
-        if hasattr(handler, "__name__") and "legacy" in handler.__name__.lower():
+        if hasattr(handler, "__name__") and "legacy" in str(handler.__name__).lower():
             handler(stop_signal=stop_signal)
         else:
             raise

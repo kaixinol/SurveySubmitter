@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import cast
+from typing import TYPE_CHECKING, Any, cast
 
 from survey_submitter.core.ai.runtime import AIRuntimeError
 from survey_submitter.core.engine.failure_reason import FailureReason
@@ -22,9 +22,26 @@ from survey_submitter.core.engine.runtime_error_handlers import (
     handle_survey_provider_unavailable_error,
 )
 
+if TYPE_CHECKING:
+    from survey_submitter.core.engine.async_events import AsyncRunContext, ThreadEventProxy
+    from survey_submitter.core.engine.async_proxy_session import AsyncProxySession
+    from survey_submitter.core.engine.runtime_control_port import RuntimeControlPort
+    from survey_submitter.core.engine.run_stop_policy import RunStopPolicy
+    from survey_submitter.core.task import ExecutionConfig, ExecutionState
+
 
 class _SlotErrorHandlerMixin:
     """Error handling strategies for slot-level failures."""
+
+    # Attributes provided by the host class (AsyncSlotRunner)
+    stop_policy: RunStopPolicy
+    config: ExecutionConfig
+    stop_proxy: ThreadEventProxy
+    slot_label: str
+    run_context: AsyncRunContext
+    state: ExecutionState
+    runtime_bridge: RuntimeControlPort | None
+    proxy_session: AsyncProxySession
 
     def _handle_proxy_unavailable(self, *, status_text: str, log_message: str) -> bool:
         threshold_getter = getattr(self.stop_policy, "proxy_unavailable_threshold", None)

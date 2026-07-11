@@ -47,11 +47,11 @@ class ProviderCommonTests:
         assert result["unsupported_reason"] == "暂不支持"
 
     def test_ensure_question_provider_fields_returns_empty_dict_for_non_mapping(self) -> None:
-        assert ensure_question_provider_fields("bad") == {}
+        assert ensure_question_provider_fields("bad") == {}  # ty:ignore[invalid-argument-type]
 
     def test_ensure_questions_provider_fields_filters_invalid_items(self) -> None:
         result = ensure_questions_provider_fields(
-            [{"provider": "wjx", "provider_question_id": " q1 "}, "bad", {"provider": "nope"}],
+            [{"provider": "wjx", "provider_question_id": " q1 "}, "bad", {"provider": "nope"}],  # ty:ignore[invalid-argument-type]
             default_provider=SURVEY_PROVIDER_WJX,
         )
         assert len(result) == 2

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import threading
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Any, Sequence, cast
 
 from survey_submitter.core.persona.context import get_answered
 from survey_submitter.core.questions.types import TypeCode
@@ -36,7 +36,7 @@ class AnswerRule:
 
 def _to_int(value: str | int | float | None, default: int = 0) -> int:
     try:
-        return int(value)
+        return int(cast(Any, value))
     except (ValueError, TypeError):
         return int(default)
 
@@ -115,8 +115,8 @@ def sanitize_answer_rules(
 def normalize_rule_dict(raw: dict[str, object]) -> dict[str, object] | None:
     if not isinstance(raw, dict):
         return None
-    condition_question_num = _to_int(raw.get("condition_question_num"), -1)
-    target_question_num = _to_int(raw.get("target_question_num"), -1)
+    condition_question_num = _to_int(cast(Any, raw.get("condition_question_num")), -1)
+    target_question_num = _to_int(cast(Any, raw.get("target_question_num")), -1)
     condition_mode = str(raw.get("condition_mode") or "").strip()
     action_mode = str(raw.get("action_mode") or "").strip()
     if condition_question_num <= 0 or target_question_num <= 0:
@@ -125,8 +125,8 @@ def normalize_rule_dict(raw: dict[str, object]) -> dict[str, object] | None:
         return None
     if action_mode not in _ACTION_MODES:
         return None
-    condition_option_indices = _to_int_list(raw.get("condition_option_indices"))
-    target_option_indices = _to_int_list(raw.get("target_option_indices"))
+    condition_option_indices = _to_int_list(cast(Any, raw.get("condition_option_indices")))
+    target_option_indices = _to_int_list(cast(Any, raw.get("target_option_indices")))
     if not condition_option_indices or not target_option_indices:
         return None
 
@@ -134,12 +134,12 @@ def normalize_rule_dict(raw: dict[str, object]) -> dict[str, object] | None:
     target_row_index: int | None = None
     raw_cri = raw.get("condition_row_index")
     if raw_cri is not None:
-        cri = _to_int(raw_cri, -1)
+        cri = _to_int(cast(Any, raw_cri), -1)
         if cri >= 0:
             condition_row_index = cri
     raw_tri = raw.get("target_row_index")
     if raw_tri is not None:
-        tri = _to_int(raw_tri, -1)
+        tri = _to_int(cast(Any, raw_tri), -1)
         if tri >= 0:
             target_row_index = tri
     rule_id = str(raw.get("id") or "").strip() or (
@@ -166,15 +166,15 @@ def _normalize_rule(raw: dict[str, object]) -> AnswerRule | None:
     if not normalized:
         return None
     return AnswerRule(
-        id=normalized["id"],
-        condition_question_num=normalized["condition_question_num"],
-        condition_mode=normalized["condition_mode"],
-        condition_option_indices=normalized["condition_option_indices"],
-        target_question_num=normalized["target_question_num"],
-        action_mode=normalized["action_mode"],
-        target_option_indices=normalized["target_option_indices"],
-        condition_row_index=normalized.get("condition_row_index"),
-        target_row_index=normalized.get("target_row_index"),
+        id=cast(str, normalized["id"]),
+        condition_question_num=cast(int, normalized["condition_question_num"]),
+        condition_mode=cast(str, normalized["condition_mode"]),
+        condition_option_indices=cast(list[int], normalized["condition_option_indices"]),
+        target_question_num=cast(int, normalized["target_question_num"]),
+        action_mode=cast(str, normalized["action_mode"]),
+        target_option_indices=cast(list[int], normalized["target_option_indices"]),
+        condition_row_index=cast(int | None, normalized.get("condition_row_index")),
+        target_row_index=cast(int | None, normalized.get("target_row_index")),
     )
 
 
@@ -223,7 +223,7 @@ def _is_rule_triggered(rule: AnswerRule) -> bool:
         return False
 
     if rule.condition_row_index is not None:
-        selected_indices = set(_to_int_list(record.row_answers.get(rule.condition_row_index, [])))
+        selected_indices = set(_to_int_list(cast(Any, record.row_answers.get(rule.condition_row_index, []))))
     else:
         selected_indices = set(_to_int_list(getattr(record, "selected_indices", [])))
     condition_set = set(rule.condition_option_indices)

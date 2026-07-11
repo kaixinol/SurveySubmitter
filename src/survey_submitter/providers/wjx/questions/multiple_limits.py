@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import re
 
+from collections.abc import Sequence
+
 from survey_submitter.providers.match_utils import get_element_attribute, normalize_match_text
 
 _MULTI_LIMIT_ATTRIBUTE_NAMES = (
@@ -157,14 +159,14 @@ def _extract_range_from_json_obj(
         for key, value in obj.items():
             normalized_key = str(key).lower()
             if normalized_key in _MULTI_MIN_LIMIT_VALUE_KEYSET:
-                candidate = _safe_positive_int(value)
+                candidate = _safe_positive_int(value)  # ty: ignore[invalid-argument-type]
                 if candidate:
                     min_limit = min_limit or candidate
             if normalized_key in _MULTI_LIMIT_VALUE_KEYSET:
-                candidate = _safe_positive_int(value)
+                candidate = _safe_positive_int(value)  # ty: ignore[invalid-argument-type]
                 if candidate:
                     max_limit = max_limit or candidate
-            nested_min, nested_max = _extract_range_from_json_obj(value)  # type: ignore[arg-type]
+            nested_min, nested_max = _extract_range_from_json_obj(value)  # ty: ignore[invalid-argument-type]
             if min_limit is None and nested_min is not None:
                 min_limit = nested_min
             if max_limit is None and nested_max is not None:
@@ -173,7 +175,7 @@ def _extract_range_from_json_obj(
                 break
     elif isinstance(obj, list):
         for item in obj:
-            nested_min, nested_max = _extract_range_from_json_obj(item)  # type: ignore[arg-type]
+            nested_min, nested_max = _extract_range_from_json_obj(item)  # ty: ignore[invalid-argument-type]
             if min_limit is None and nested_min is not None:
                 min_limit = nested_min
             if max_limit is None and nested_max is not None:
@@ -245,7 +247,7 @@ def _extract_min_max_from_attributes(element) -> tuple[int | None, int | None]:
     return min_limit, max_limit
 
 
-def _try_pattern_range(patterns: list, text: str) -> tuple[int | None, int | None]:
+def _try_pattern_range(patterns: Sequence, text: str) -> tuple[int | None, int | None]:
     """Try to match range patterns (e.g., '5-10') and return min, max."""
     for pattern in patterns:
         match = pattern.search(text)
@@ -257,7 +259,7 @@ def _try_pattern_range(patterns: list, text: str) -> tuple[int | None, int | Non
     return None, None
 
 
-def _try_pattern_exact(patterns: list, text: str) -> int | None:
+def _try_pattern_exact(patterns: Sequence, text: str) -> int | None:
     """Try to match exact value patterns and return the value."""
     for pattern in patterns:
         match = pattern.search(text)

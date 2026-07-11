@@ -53,6 +53,7 @@ class RunStopPolicyTests:
         )
         assert not stopped
         assert not stop_signal.is_set()
+        assert state.reverse_fill_runtime is not None
         assert list(state.reverse_fill_runtime.queued_row_numbers) == [1]
 
     def test_record_failure_requeues_reverse_fill_row_without_consuming_attempt(self) -> None:
@@ -69,6 +70,7 @@ class RunStopPolicyTests:
         )
         assert not stopped
         assert not stop_signal.is_set()
+        assert state.reverse_fill_runtime is not None
         assert list(state.reverse_fill_runtime.queued_row_numbers) == [1]
         assert state.reverse_fill_runtime.failure_count_by_row == {}
         assert state.reverse_fill_runtime.discarded_row_numbers == set()
@@ -163,6 +165,7 @@ class RunStopPolicyTests:
         stop_signal = threading.Event()
         should_stop = policy.record_success(stop_signal, thread_name="Worker-1")
         assert should_stop
+        assert state.reverse_fill_runtime is not None
         assert 1 in state.reverse_fill_runtime.committed_row_numbers
 
     def test_record_failure_stops_when_reverse_fill_sample_is_exhausted(self) -> None:
@@ -199,5 +202,6 @@ class RunStopPolicyTests:
         )
         assert second_stopped
         assert stop_signal.is_set()
+        assert state.reverse_fill_runtime is not None
         assert 2 in state.reverse_fill_runtime.discarded_row_numbers
         assert state.get_terminal_stop_snapshot()[0] == "reverse_fill_exhausted"

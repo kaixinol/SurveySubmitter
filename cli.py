@@ -11,7 +11,9 @@ import signal
 import sys
 from typing import Optional
 
-_FAULT_HANDLER_STREAM: Optional[object] = None
+import io
+
+_FAULT_HANDLER_STREAM: Optional[io.IOBase] = None
 
 
 def _enable_fault_handler() -> None:

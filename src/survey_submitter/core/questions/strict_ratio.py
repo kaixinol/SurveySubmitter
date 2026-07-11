@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Sequence
+from typing import Any, Sequence, cast
 
 
 def has_positive_weight_values(raw: object) -> bool:
@@ -24,7 +24,7 @@ def has_positive_weight_values(raw: object) -> bool:
             stack.extend(item)
             continue
         try:
-            value = float(item)
+            value = float(cast(Any, item))
         except (ValueError, TypeError):
             continue
         if math.isfinite(value) and value > 0.0:
@@ -48,7 +48,7 @@ def is_strict_ratio_question(task_ctx: object, question_number: object) -> bool:
     if task_ctx is None or question_number is None:
         return False
     try:
-        q_num = int(question_number)
+        q_num = int(cast(Any, question_number))
     except (ValueError, TypeError):
         return False
     config = getattr(task_ctx, "config", task_ctx)

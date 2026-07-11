@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Mapping
+from typing import Iterable, Mapping, cast
 
 from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.questions.types import TypeCode, convert_wire_type_code
@@ -50,7 +50,7 @@ _VALID_LOGIC_PARSE_STATUSES = {
 
 def _as_int(value: object, default: int, *, minimum: int | None = None) -> int:
     try:
-        number = int(value)
+        number = int(value)  # ty:ignore[invalid-argument-type]
     except (ValueError, TypeError):
         number = default
     if minimum is not None:
@@ -88,7 +88,7 @@ def _normalize_jump_rules(raw: object) -> list[JumpRule]:
             )
         else:
             normalized_rule["terminates_survey"] = bool(normalized_rule.get("terminates_survey"))
-        normalized_rules.append(normalized_rule)
+        normalized_rules.append(cast(JumpRule, normalized_rule))
     return normalized_rules
 
 
@@ -138,7 +138,7 @@ def _normalize_question_media_list(raw: object) -> list[QuestionMedia]:
             if index is None:
                 continue
             try:
-                normalized_index = int(index)
+                normalized_index = int(index)  # ty:ignore[invalid-argument-type]
             except (ValueError, TypeError):
                 continue
             if normalized_index < 0:
@@ -241,7 +241,7 @@ def _survey_question_input_to_dict(question: object) -> dict[str, object] | None
     if isinstance(question, SurveyQuestionMeta):
         return survey_question_meta_to_dict(question)
     if isinstance(question, Mapping):
-        return dict(question)
+        return dict[str, object](question)  # ty:ignore[no-matching-overload]
     return None
 
 
@@ -282,7 +282,7 @@ def _build_logic_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     display_number: int | None = None
     if raw_display_num not in (None, ""):
         try:
-            display_number = int(raw_display_num)
+            display_number = int(raw_display_num)  # ty:ignore[invalid-argument-type]
         except (ValueError, TypeError):
             display_number = None
     return {
@@ -304,7 +304,7 @@ def _build_choice_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     forced_option_index = normalized.get("forced_option_index")
     try:
         if forced_option_index is not None:
-            forced_option_index = int(forced_option_index)
+            forced_option_index = int(forced_option_index)  # ty:ignore[invalid-argument-type]
     except (ValueError, TypeError):
         forced_option_index = None
     fillable_options_raw = normalized.get("fillable_options")
@@ -312,7 +312,7 @@ def _build_choice_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     if isinstance(fillable_options_raw, list):
         for raw in fillable_options_raw:
             try:
-                fillable_options.append(int(raw))
+                fillable_options.append(int(raw))  # ty:ignore[invalid-argument-type]
             except (ValueError, TypeError):
                 continue
     attached = normalized.get("attached_option_selects")
@@ -390,56 +390,56 @@ def _normalize_question(
                 **_filter_kwargs(
                     SingleChoiceQuestionMeta,
                     {**common, **logic, **_build_choice_kwargs(normalized)},
-                )
+                )  # ty:ignore[invalid-argument-type]
             )
         case TypeCode.MULTIPLE:
             kwargs = {**common, **logic, **_build_choice_kwargs(normalized)}
             kwargs["multi_min_limit"] = normalized.get("multi_min_limit")
             kwargs["multi_max_limit"] = normalized.get("multi_max_limit")
-            return MultipleChoiceQuestionMeta(**_filter_kwargs(MultipleChoiceQuestionMeta, kwargs))
+            return MultipleChoiceQuestionMeta(**_filter_kwargs(MultipleChoiceQuestionMeta, kwargs))  # ty:ignore[invalid-argument-type]
         case TypeCode.DROPDOWN | TypeCode.ORDER:
             return SingleChoiceQuestionMeta(
                 **_filter_kwargs(
                     SingleChoiceQuestionMeta,
                     {**common, **logic, **_build_choice_kwargs(normalized)},
-                )
+                )  # ty:ignore[invalid-argument-type]
             )
         case TypeCode.MATRIX:
             return MatrixQuestionMeta(
                 **_filter_kwargs(
                     MatrixQuestionMeta,
                     {**common, **logic, **_build_matrix_kwargs(normalized)},
-                )
+                )  # ty:ignore[invalid-argument-type]
             )
         case TypeCode.SCORE | TypeCode.SCALE:
             return RatingQuestionMeta(
                 **_filter_kwargs(
                     RatingQuestionMeta,
                     {**common, **logic, **_build_rating_kwargs(normalized)},
-                )
+                )  # ty:ignore[invalid-argument-type]
             )
         case TypeCode.SLIDER:
             return SliderQuestionMeta(
                 **_filter_kwargs(
                     SliderQuestionMeta,
                     {**common, **logic, **_build_slider_kwargs(normalized)},
-                )
+                )  # ty:ignore[invalid-argument-type]
             )
         case TypeCode.TEXT | TypeCode.MULTI_TEXT | TypeCode.LOCATION:
             return TextQuestionMeta(
                 **_filter_kwargs(
                     TextQuestionMeta,
                     {**common, **logic, **_build_text_kwargs(normalized, type_code)},
-                )
+                )  # ty:ignore[invalid-argument-type]
             )
         case TypeCode.DESCRIPTION:
-            return _QuestionMetaBase(**_filter_kwargs(_QuestionMetaBase, {**common, **logic}))
+            return _QuestionMetaBase(**_filter_kwargs(_QuestionMetaBase, {**common, **logic}))  # ty:ignore[invalid-argument-type]
         case _:
             return ChoiceQuestionMeta(
                 **_filter_kwargs(
                     ChoiceQuestionMeta,
                     {**common, **logic, **_build_choice_kwargs(normalized)},
-                )
+                )  # ty:ignore[invalid-argument-type]
             )
 
 

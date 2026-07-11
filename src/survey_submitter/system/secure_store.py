@@ -29,7 +29,8 @@ _KEYRING_SERVICE = "SurveyController"
 
 
 def _windows_dlls() -> ctypes.LibraryLoader:
-    return cast(ctypes.LibraryLoader, ctypes.windll)
+    windll = getattr(ctypes, "windll", None)
+    return cast(ctypes.LibraryLoader, windll)
 
 
 _win_error = getattr(ctypes, "WinError", OSError)

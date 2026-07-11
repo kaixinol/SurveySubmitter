@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 import threading
-from typing import Any
+from typing import Any, cast
 
 from survey_submitter.system.paths import get_user_config_root
 
@@ -82,6 +82,6 @@ def get_bool_setting(value: object, default: bool = False) -> bool:
 
 def get_int_setting(value: object, default: int = 0) -> int:
     try:
-        return int(value)
+        return int(cast(Any, value))
     except (TypeError, ValueError):
         return default

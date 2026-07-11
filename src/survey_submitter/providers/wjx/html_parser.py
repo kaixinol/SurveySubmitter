@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 from survey_submitter.core.questions.types import TypeCode, convert_wire_type_code
 from survey_submitter.core.questions.utils import _should_treat_question_as_text_like
 from survey_submitter.providers.contracts import (
@@ -10,7 +12,7 @@ from survey_submitter.providers.contracts import (
 try:
     from bs4 import BeautifulSoup
 except ImportError:
-    BeautifulSoup = None
+    BeautifulSoup = None  # ty: ignore[invalid-assignment]
 
 from .html_parser_choice import (
     _extract_choice_attached_selects,
@@ -79,7 +81,7 @@ def _append_media_item(
         "label": str(label or "").strip(),
     }
     if item not in media:
-        media.append(item)
+        media.append(item)  # ty: ignore[invalid-argument-type]
 
 
 def _collect_question_media(
@@ -93,7 +95,7 @@ def _collect_question_media(
     for selector in (".topichtml", ".field-label"):
         title_nodes.extend(list(question_div.select(selector) or []))
     for node in title_nodes:
-        images = node.select("img")
+        images = node.select("img")  # ty: ignore[unresolved-attribute]
         for image in images:
             _append_media_item(
                 media,
@@ -114,7 +116,7 @@ def _collect_question_media(
             if option_index < len(option_texts)
             else f"选项 {option_index + 1}"
         )
-        images = node.select("img")
+        images = node.select("img")  # ty: ignore[unresolved-attribute]
         for image in images:
             _append_media_item(
                 media,
@@ -135,7 +137,7 @@ def _collect_question_media(
             if row_index < len(row_texts)
             else f"第 {row_index + 1} 行"
         )
-        images = node.select("img")
+        images = node.select("img")  # ty: ignore[unresolved-attribute]
         for image in images:
             _append_media_item(
                 media,
@@ -433,15 +435,15 @@ def _process_question_div(
             current_display_num = heading_num
         return None, current_display_num, visible_question_counter
 
-    raw_type_code = str(question_div.get("type") or "").strip() or "0"
+    raw_type_code = str(question_div.get("type") or "").strip() or "0"  # ty: ignore[unresolved-attribute]
     resolved = _resolve_question_type(question_div, raw_type_code)
-    type_code = resolved["type_code"]
-    is_description = resolved["is_description"]
-    is_required = resolved["is_required"]
-    is_rating = resolved["is_rating"]
-    rating_max = resolved["rating_max"]
-    is_location = resolved["is_location"]
-    location_verify_type = resolved["location_verify_type"]
+    type_code = cast(str, resolved["type_code"])
+    is_description = cast(bool, resolved["is_description"])
+    is_required = cast(bool, resolved["is_required"])
+    is_rating = cast(bool, resolved["is_rating"])
+    rating_max = cast(int, resolved["rating_max"])
+    is_location = cast(bool, resolved["is_location"])
+    location_verify_type = cast(str, resolved["location_verify_type"])
 
     display_num, current_display_num, visible_question_counter = _resolve_display_number(
         raw_heading_text, question_div, current_display_num, visible_question_counter
@@ -476,13 +478,13 @@ def _process_question_div(
         title_text,
         is_location,
     )
-    type_code = features["type_code"]
+    type_code = cast(str, features["type_code"])
 
     # Build question info dict by separating fillable_indices
     features["fillable_indices"] = fillable_indices
     question_info = _build_question_info_dict(
         question_number=question_number,
-        display_num=display_num,
+        display_num=display_num,  # ty: ignore[invalid-argument-type]
         title_text=title_text,
         type_code=type_code,
         option_count=option_count,

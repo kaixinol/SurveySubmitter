@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Iterable
+from typing import Any, Iterable, cast
 
 from survey_submitter.core.questions.schema import QuestionEntry
 from survey_submitter.core.questions.meta_helpers import infer_question_entry_type
@@ -118,7 +118,7 @@ def resolve_question_entry(
     info: SurveyQuestionMeta | dict[str, object], entries: list[QuestionEntry]
 ) -> QuestionEntry | None:
     raw_question_num = info.num if isinstance(info, SurveyQuestionMeta) else info.get("num")
-    question_num = int(raw_question_num) if raw_question_num is not None else None
+    question_num = int(cast(Any, raw_question_num)) if raw_question_num is not None else None
     raw_title = info.title if isinstance(info, SurveyQuestionMeta) else info.get("title")
     title_key = normalize_reverse_fill_key(raw_title)
     matched_by_title: QuestionEntry | None = None

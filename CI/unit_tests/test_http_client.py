@@ -166,17 +166,17 @@ class HttpClientTests:
         assert http_client._normalize_timeout(None) is None
         assert http_client._normalize_timeout(3) == 3.0
         pair_timeout = http_client._normalize_timeout((1, 2))
-        assert pair_timeout.connect == 1.0
-        assert pair_timeout.read == 2.0
+        assert pair_timeout.connect == 1.0  # ty:ignore[unresolved-attribute]
+        assert pair_timeout.read == 2.0  # ty:ignore[unresolved-attribute]
         quad_timeout = http_client._normalize_timeout((1, 2, 3, 4))
-        assert quad_timeout.pool == 4.0
+        assert quad_timeout.pool == 4.0  # ty:ignore[unresolved-attribute]
 
     def test_stream_response_iter_content_closes_once(self) -> None:
         response = _FakeResponse(chunks=[b"a", b"", b"b"])
         stream_ctx = _FakeStreamCtx(response)
         released: list[str] = []
         wrapper = http_client._StreamResponse(
-            response, stream_ctx, lambda: released.append("released")
+            response, stream_ctx, lambda: released.append("released")  # ty:ignore[invalid-argument-type]
         )
 
         assert list(wrapper.iter_content(chunk_size=16)) == [b"a", b"b"]
@@ -212,7 +212,7 @@ class HttpClientTests:
         manager = http_client._SyncClientManager()
         response = _FakeResponse()
         client = _FakeClient(request_response=response)
-        entry = http_client._ClientEntry(client=client, last_used=0.0)
+        entry = http_client._ClientEntry(client=client, last_used=0.0)  # ty:ignore[invalid-argument-type]
         release_calls: list[object] = []
         monkeypatch.setattr(
             manager,
@@ -225,7 +225,7 @@ class HttpClientTests:
         assert resolved is response
         assert len(release_calls) == 1
 
-        client.request = lambda **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))
+        client.request = lambda **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))  # ty:ignore[invalid-assignment]
         with pytest.raises(RuntimeError, match="boom"):
             manager.request("GET", "https://example.com")
         assert len(release_calls) == 2
@@ -235,7 +235,7 @@ class HttpClientTests:
         response = _FakeResponse()
         stream_ctx = _FakeStreamCtx(response)
         client = _FakeClient(stream_ctx=stream_ctx)
-        entry = http_client._ClientEntry(client=client, last_used=0.0)
+        entry = http_client._ClientEntry(client=client, last_used=0.0)  # ty:ignore[invalid-argument-type]
         release_calls: list[object] = []
         monkeypatch.setattr(
             manager,
@@ -274,7 +274,7 @@ class HttpClientTests:
         release_calls: list[str] = []
         stream_ctx = _FakeAsyncStreamCtx(response)
         wrapper = async_http_client._AsyncStreamResponse(
-            response, stream_ctx, lambda: asyncio.sleep(0, result=release_calls.append("released"))
+            response, stream_ctx, lambda: asyncio.sleep(0, result=release_calls.append("released"))  # ty:ignore[invalid-argument-type]
         )
 
         chunks = [chunk async for chunk in wrapper.aiter_content(chunk_size=16)]
@@ -305,10 +305,10 @@ class HttpClientTests:
         assert len(fake_client.stream_calls) == 1
         assert fake_client.stream_calls[0]["method"] == "GET"
         timeout = fake_client.stream_calls[0]["timeout"]
-        assert timeout.connect == 1.0
-        assert timeout.read == 2.0
-        assert timeout.write == 2.0
-        assert timeout.pool == 1.0
+        assert timeout.connect == 1.0  # ty:ignore[unresolved-attribute]
+        assert timeout.read == 2.0  # ty:ignore[unresolved-attribute]
+        assert timeout.write == 2.0  # ty:ignore[unresolved-attribute]
+        assert timeout.pool == 1.0  # ty:ignore[unresolved-attribute]
         assert fake_client.close_calls == 0
         assert stream_ctx.enter_calls == 1
 
@@ -358,7 +358,7 @@ class HttpClientTests:
                 proxy=None, verify=True, follow_redirects=True, trust_env=True
             ),
         )
-        manager._clients[key] = async_http_client._AsyncClientEntry(client=client, last_used=0.0)
+        manager._clients[key] = async_http_client._AsyncClientEntry(client=client, last_used=0.0)  # ty:ignore[invalid-argument-type]
         monkeypatch.setattr(async_http_client, "_client_manager", manager)
 
         async_http_client.close()

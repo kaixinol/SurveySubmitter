@@ -45,7 +45,7 @@ class RuntimePreparationTests:
                 provider_page_id="p1",
             )
         ]
-        config.questions_info = [
+        config.questions_info = [  # ty:ignore[invalid-assignment]
             {"num": 1, "title": "Q1", "provider_question_id": "q1", "provider_page_id": "p1"}
         ]
         return config
@@ -178,7 +178,7 @@ class RuntimePreparationTests:
             artifacts = prepare_execution_artifacts(config, fallback_survey_title="解析得到的标题")
         assert artifacts.execution_config_template.survey_title == "解析得到的标题"
         assert artifacts.survey_provider == "wjx"
-        assert artifacts.questions_info[0] is not config.questions_info[0]
+        assert artifacts.questions_info[0] is not config.questions_info[0]  # ty:ignore[not-subscriptable]
 
     def test_prepare_execution_artifacts_clamps_threads_by_http_limit(self) -> None:
         config = self._build_config()

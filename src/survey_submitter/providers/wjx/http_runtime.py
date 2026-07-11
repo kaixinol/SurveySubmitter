@@ -5,7 +5,7 @@ import random
 import html as html_lib
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
@@ -72,7 +72,7 @@ class SubmitProxyLease(Protocol):
     def address(self) -> str | None: ...
 
 
-SubmitProxyLeaseFactory = Callable[[], SubmitProxyLease]
+SubmitProxyLeaseFactory = Callable[[], Awaitable[SubmitProxyLease]]
 
 
 class WjxSubmitResult:
@@ -475,7 +475,7 @@ async def _build_action_plan(
         return await build_answer_action(
             question,
             ctx,
-            psycho_plan=psycho_plan,
+            psycho_plan=psycho_plan,  # ty: ignore[invalid-argument-type]
             thread_name=thread_name,
             allow_ai_placeholder=True,
         )

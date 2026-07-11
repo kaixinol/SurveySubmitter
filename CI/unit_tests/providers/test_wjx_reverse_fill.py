@@ -80,7 +80,7 @@ class WjxReverseFillTests:
         spec = build_reverse_fill_spec(
             source_path=workbook_path,
             survey_provider="wjx",
-            questions_info=questions_info,
+            questions_info=questions_info,  # ty:ignore[invalid-argument-type]
             question_entries=[],
             selected_format=REVERSE_FILL_FORMAT_WJX_SEQUENCE,
             start_row=1,
@@ -102,7 +102,7 @@ class WjxReverseFillTests:
         spec = build_reverse_fill_spec(
             source_path=workbook_path,
             survey_provider="wjx",
-            questions_info=questions_info,
+            questions_info=questions_info,  # ty:ignore[invalid-argument-type]
             question_entries=[],
             selected_format=REVERSE_FILL_FORMAT_WJX_TEXT,
             start_row=1,
@@ -264,6 +264,7 @@ class WjxReverseFillTests:
                 )
             ],
         )
+        assert spec is not None
         assert spec.blocking_issue_count == 0
         assert spec.question_plans[0].status == REVERSE_FILL_STATUS_FALLBACK
         assert spec.question_plans[0].fallback_ready

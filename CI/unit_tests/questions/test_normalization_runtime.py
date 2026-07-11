@@ -109,7 +109,7 @@ class NormalizationRuntimeTests:
             ),
         ]
 
-        configure_probabilities(entries, ctx)
+        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
 
         assert ctx.question_config_index_map[1] == ("single", 0)
         assert ctx.provider_question_config_index_map == {}
@@ -160,7 +160,7 @@ class NormalizationRuntimeTests:
             ),
         ]
 
-        configure_probabilities(entries, ctx)
+        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
 
         assert ctx.question_config_index_map[2] == ("scale", 1)
         assert ctx.provider_question_config_index_map == {
@@ -181,7 +181,7 @@ class NormalizationRuntimeTests:
             ),
         ]
 
-        configure_probabilities(entries, ctx)
+        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
 
         assert ctx.question_dimension_map == {
             1: GLOBAL_RELIABILITY_DIMENSION,
@@ -216,7 +216,7 @@ class NormalizationRuntimeTests:
             ),
         ]
 
-        configure_probabilities(entries, ctx)
+        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
 
         assert ctx.question_dimension_map == {1: GLOBAL_RELIABILITY_DIMENSION}
         assert ctx.question_ordinal_score_map == {1: [4, 3, 2, 1, 0]}
@@ -249,7 +249,7 @@ class NormalizationRuntimeTests:
             ),
         ]
 
-        configure_probabilities(entries, ctx)
+        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
 
         assert ctx.question_dimension_map == {4: GLOBAL_RELIABILITY_DIMENSION}
         assert ctx.question_ordinal_score_map == {4: [0, 1, 2, 3, 4]}
@@ -337,7 +337,7 @@ class NormalizationRuntimeTests:
         self, entry: QuestionEntry, message: str
     ) -> None:
         with pytest.raises(ValueError, match=message):
-            configure_probabilities([entry], SimpleNamespace())
+            configure_probabilities([entry], SimpleNamespace())  # ty:ignore[invalid-argument-type]
 
     @pytest.mark.parametrize(
         ("mode", "expected"),
@@ -362,7 +362,7 @@ class NormalizationRuntimeTests:
                     text_random_mode=mode,
                 )
             ],
-            ctx,
+            ctx,  # ty:ignore[invalid-argument-type]
         )
 
         assert ctx.texts == [[expected]]
@@ -382,7 +382,7 @@ class NormalizationRuntimeTests:
                     text_random_int_range=[9, 3],
                 )
             ],
-            ctx,
+            ctx,  # ty:ignore[invalid-argument-type]
         )
 
         assert ctx.texts == [["__RANDOM_INT__:3:9"]]

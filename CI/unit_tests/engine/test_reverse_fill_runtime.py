@@ -51,7 +51,9 @@ class ReverseFillRuntimeStateTests:
         second = state.acquire_reverse_fill_sample("Worker-2")
         assert first.status == "acquired"
         assert second.status == "acquired"
+        assert first.sample is not None
         assert first.sample.data_row_number == 1
+        assert second.sample is not None
         assert second.sample.data_row_number == 2
         state.commit_reverse_fill_sample("Worker-1")
         failed_row, discarded = state.mark_reverse_fill_submission_failed("Worker-2", max_retries=1)
@@ -59,6 +61,7 @@ class ReverseFillRuntimeStateTests:
         assert not discarded
         retried = state.acquire_reverse_fill_sample("Worker-2")
         assert retried.status == "acquired"
+        assert retried.sample is not None
         assert retried.sample.data_row_number == 2
 
     def test_discarded_row_can_make_target_unreachable(self) -> None:
@@ -85,8 +88,10 @@ class ReverseFillRuntimeStateTests:
         released_row = state.release_reverse_fill_sample("Worker-1", requeue=False)
         second = state.acquire_reverse_fill_sample("Worker-2")
         exhausted = state.acquire_reverse_fill_sample("Worker-3")
+        assert first.sample is not None
         assert first.sample.data_row_number == 1
         assert released_row == 1
+        assert second.sample is not None
         assert second.sample.data_row_number == 2
         assert exhausted.status == "exhausted"
 

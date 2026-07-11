@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 
+from typing import Any, cast
+
 from survey_submitter.core.config.codec import (
     normalize_runtime_config_payload,
     serialize_runtime_config,
@@ -27,7 +29,7 @@ def load_yaml_config(path: str) -> RuntimeConfig:
     if not isinstance(data, dict):
         raise ValueError(f"配置文件格式错误，期望字典类型：{abs_path}")
 
-    return normalize_runtime_config_payload(data)
+    return normalize_runtime_config_payload(cast(dict[str, object], data))
 
 
 def save_yaml_config(config: RuntimeConfig, path: str) -> None:

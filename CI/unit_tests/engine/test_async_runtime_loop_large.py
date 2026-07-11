@@ -73,8 +73,8 @@ def _build_runner(
     )
     state = state or ExecutionState(config=config)
     state.step_updates = []
-    state.update_thread_status = lambda *_args, **_kwargs: None
-    state.update_thread_step = lambda *args, **kwargs: state.step_updates.append((args, kwargs))
+    state.update_thread_status = lambda *_args, **_kwargs: None  # ty:ignore[invalid-assignment]
+    state.update_thread_step = lambda *args, **kwargs: state.step_updates.append((args, kwargs))  # ty:ignore[invalid-assignment, unresolved-attribute]
     stop_event = asyncio.Event()
     if stop_set:
         stop_event.set()
@@ -89,10 +89,10 @@ def _build_runner(
         config=config,
         state=state,
         run_context=run_context,
-        scheduler=scheduler,
+        scheduler=scheduler,  # ty:ignore[invalid-argument-type]
         runtime_bridge=None,
     )
-    runner.stop_policy = _FakeStopPolicy(state)
+    runner.stop_policy = _FakeStopPolicy(state)  # ty:ignore[invalid-assignment]
     return runner, state, run_context, scheduler
 
 
@@ -126,10 +126,10 @@ class AsyncRuntimeLoopLargeTests:
         runner, _state, _ctx, _scheduler = _build_runner(config=config)
         assert runner._resolve_dispatch_delay_seconds() == 0.0
 
-        config.submit_interval_range_seconds = [2, 2]
+        config.submit_interval_range_seconds = (2, 2)
         assert runner._resolve_dispatch_delay_seconds() == 2.0
 
-        config.submit_interval_range_seconds = [1, 3]
+        config.submit_interval_range_seconds = (1, 3)
         monkeypatch.setattr(runtime_loop.random, "uniform", lambda _a, _b: 2.5)
         assert runner._resolve_dispatch_delay_seconds() == 2.5
 
@@ -170,12 +170,12 @@ class AsyncRuntimeLoopLargeTests:
     ) -> None:
         config = ExecutionConfig(target_num=2, survey_provider="wjx")
         state = ExecutionState(config=config)
-        state.reset_pending_distribution = lambda *_args, **_kwargs: None
-        state.acquire_reverse_fill_sample = lambda *_args, **_kwargs: SimpleNamespace(
+        state.reset_pending_distribution = lambda *_args, **_kwargs: None  # ty:ignore[invalid-assignment]
+        state.acquire_reverse_fill_sample = lambda *_args, **_kwargs: SimpleNamespace(  # ty:ignore[invalid-assignment]
             status="exhausted", sample=None
         )
         terminal: list[tuple[str, str, str]] = []
-        state.mark_terminal_stop = lambda category, *, failure_reason, message: terminal.append(
+        state.mark_terminal_stop = lambda category, *, failure_reason, message: terminal.append(  # ty:ignore[invalid-assignment]
             (category, failure_reason, message)
         )
         runner, _state, ctx, _scheduler = _build_runner(config=config, state=state)
@@ -291,7 +291,7 @@ class AsyncRuntimeLoopLargeTests:
 
         assert pre_submit_active == [set()]
         assert submit_calls[0]["proxy_address"] is None
-        assert submit_calls[0]["lease"].address == "http://1.1.1.1:80"
+        assert submit_calls[0]["lease"].address == "http://1.1.1.1:80"  # ty:ignore[unresolved-attribute]
         assert state.snapshot_active_proxy_addresses() == set()
         assert scheduler.release_calls[0]["requeue"] is True
 

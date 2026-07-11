@@ -52,7 +52,7 @@ def _build_live_test_config(url: str) -> RuntimeConfig:
         raise ValueError("问卷链接为空")
 
     definition = asyncio.run(parse_survey(normalized_url))
-    questions_info = [question for question in definition.questions if not question.is_description]
+    questions_info = [question for question in definition.questions if not question.is_description]  # ty:ignore[unresolved-attribute]
     question_entries = build_default_question_entries(
         questions_info,
         survey_url=normalized_url,

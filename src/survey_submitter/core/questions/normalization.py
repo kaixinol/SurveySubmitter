@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT, DIMENSION_UNGROUPED
 from survey_submitter.core.psychometrics.ordinal_options import infer_ordinal_option_mapping
@@ -201,7 +201,7 @@ def _handle_single(
         target.question_psycho_bias_map[question_num] = str(entry.psycho_bias or "custom")
         reliability_candidates.append((question_num, strict_ratio, entry.question_type))
     idx += 1
-    target.single_prob.append(_normalize_single_like_prob_config(probs, entry.option_count))
+    target.single_prob.append(_normalize_single_like_prob_config(cast(Any, probs), entry.option_count))
     target.single_option_fill_texts.append(
         _normalize_option_fill_texts(entry.option_fill_texts, entry.option_count)
     )
@@ -231,7 +231,7 @@ def _handle_dropdown(
     target.question_psycho_bias_map[question_num] = str(entry.psycho_bias or "custom")
     reliability_candidates.append((question_num, strict_ratio, entry.question_type))
     idx += 1
-    target.droplist_prob.append(_normalize_single_like_prob_config(probs, entry.option_count))
+    target.droplist_prob.append(_normalize_single_like_prob_config(cast(Any, probs), entry.option_count))
     target.droplist_option_fill_texts.append(
         _normalize_option_fill_texts(entry.option_fill_texts, entry.option_count)
     )
@@ -251,7 +251,7 @@ def _handle_multiple(
     idx += 1
     if not isinstance(probs, list):
         raise ValueError("多选题必须提供概率列表，数值范围0-100")
-    target.multiple_prob.append([float(value) for value in probs])
+    target.multiple_prob.append([float(cast(Any, value)) for value in probs])
     target.multiple_option_fill_texts.append(
         _normalize_option_fill_texts(entry.option_fill_texts, entry.option_count)
     )
@@ -264,7 +264,7 @@ def _normalize_matrix_row(raw_row: object, option_count: int) -> list[float] | N
     cleaned: list[float] = []
     for value in raw_row:
         try:
-            cleaned.append(max(0.0, float(value)))
+            cleaned.append(max(0.0, float(cast(Any, value))))
         except (ValueError, TypeError):
             continue
     if not cleaned:
@@ -309,11 +309,11 @@ def _handle_matrix(
 
     row_weights_source: list[object] | None = None
     if isinstance(probs, list) and any(isinstance(item, (list, tuple)) for item in probs):
-        row_weights_source = probs
+        row_weights_source = cast(Any, probs)
     elif isinstance(entry.custom_weights, list) and any(
         isinstance(item, (list, tuple)) for item in entry.custom_weights
     ):
-        row_weights_source = entry.custom_weights
+        row_weights_source = cast(Any, entry.custom_weights)
 
     if row_weights_source is not None:
         last_row: object | None = None
@@ -358,7 +358,7 @@ def _handle_scale(
     target.question_psycho_bias_map[question_num] = str(entry.psycho_bias or "custom")
     reliability_candidates.append((question_num, strict_ratio, entry.question_type))
     idx += 1
-    target.scale_prob.append(_normalize_single_like_prob_config(probs, entry.option_count))
+    target.scale_prob.append(_normalize_single_like_prob_config(cast(Any, probs), entry.option_count))
     return idx
 
 
@@ -387,7 +387,7 @@ def _handle_slider(
             target_value = float(probs)
         elif isinstance(probs, list) and probs:
             try:
-                target_value = float(probs[0])
+                target_value = float(cast(Any, probs[0]))
             except (ValueError, TypeError):
                 target_value = None
     target.slider_targets.append(DEFAULT_SLIDER_TARGET if target_value is None else target_value)
@@ -493,7 +493,7 @@ def _handle_text(
         else:
             raise ValueError("填空题至少需要一个候选答案")
     if isinstance(probs, list) and len(probs) == len(normalized_values):
-        normalized = normalize_probabilities([float(value) for value in probs])
+        normalized = normalize_probabilities([float(cast(Any, value)) for value in probs])
     else:
         normalized = normalize_probabilities([1.0] * len(normalized_values))
     target.texts.append(normalized_values)

@@ -6,7 +6,7 @@ import re
 try:
     from bs4 import BeautifulSoup
 except ImportError:
-    BeautifulSoup = None
+    BeautifulSoup = None  # ty: ignore[invalid-assignment]
 
 from survey_submitter.core.questions.types import TypeCode
 from survey_submitter.core.questions.utils import _normalize_question_type_code

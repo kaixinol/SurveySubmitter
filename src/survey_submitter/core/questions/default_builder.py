@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import dataclasses
 import logging
+from typing import Any, cast
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.questions.meta_helpers import (
@@ -46,7 +47,7 @@ DEFAULT_SLIDER_MAX = 100.0
 
 def _as_float(val: object, default: float) -> float:
     try:
-        return float(val)
+        return float(cast(Any, val))
     except (ValueError, TypeError):
         return default
 
@@ -60,7 +61,7 @@ def _normalize_question_num(raw: object) -> int | None:
     try:
         if raw is None:
             return None
-        return int(raw)
+        return int(cast(Any, raw))
     except (ValueError, TypeError):
         return None
 
@@ -84,7 +85,7 @@ def _normalize_provider_key(
 
 def _normalize_forced_option_index(raw: object, option_count: int) -> int | None:
     try:
-        idx = int(raw)
+        idx = int(cast(Any, raw))
     except (ValueError, TypeError):
         return None
     total = max(0, int(option_count or 0))
@@ -282,11 +283,11 @@ def _extract_question_attrs(
         title_text=title_text,
         forced_option_text=forced_option_text,
         forced_option_index=forced_option_index,
-        attached_option_selects=attached_option_selects,
+        attached_option_selects=cast(list[object], attached_option_selects),
         survey_provider=detected_provider,
         provider_question_id=provider_question_id,
         provider_page_id=provider_page_id,
-        q_type=q_type,
+        q_type=cast(QuestionType, q_type),
         parsed_title_key=parsed_title_key,
     )
 
@@ -341,7 +342,8 @@ def _resolve_config_from_existing(
             if q_type == QuestionType.TEXT
             else "none"
         ),
-        text_random_int_range=(
+        text_random_int_range=cast(
+            list[object],
             copy.deepcopy(existing_config.text_random_int_range)
             if q_type == QuestionType.TEXT
             else []
@@ -371,7 +373,7 @@ def _resolve_config_from_existing(
             if q_type in CHOICE_LIKE_TYPES
             else None
         ),
-        attached_selects=copy.deepcopy(existing_config.attached_option_selects or []),
+        attached_selects=cast(list[object], copy.deepcopy(existing_config.attached_option_selects or [])),
     )
 
 
@@ -413,7 +415,7 @@ def _resolve_default_config(
     elif q_type == QuestionType.SLIDER:
         min_val = _as_float(attrs.slider_min, 0.0)
         max_val = _as_float(
-            attrs.slider_max, DEFAULT_SLIDER_MAX if attrs.slider_max is None else attrs.slider_max
+            attrs.slider_max, cast(float, DEFAULT_SLIDER_MAX if attrs.slider_max is None else attrs.slider_max)
         )
         if max_val <= min_val:
             max_val = min_val + DEFAULT_SLIDER_MAX
@@ -509,12 +511,12 @@ def _assemble_question_entry(
 
     return QuestionEntry(
         question_type=attrs.q_type,
-        probabilities=config.probabilities,
-        texts=config.texts,
+        probabilities=cast(Any, config.probabilities),
+        texts=cast(Any, config.texts),
         rows=attrs.rows,
         option_count=option_count,
         distribution_mode=config.distribution,
-        custom_weights=config.custom_weights,
+        custom_weights=cast(Any, config.custom_weights),
         question_num=q.num,
         question_title=attrs.title_text or None,
         survey_provider=attrs.survey_provider,
@@ -531,7 +533,7 @@ def _assemble_question_entry(
         if attrs.q_type == QuestionType.MULTI_TEXT
         else [],
         text_random_mode=config.text_random_mode if attrs.q_type == QuestionType.TEXT else "none",
-        text_random_int_range=config.text_random_int_range
+        text_random_int_range=cast(Any, config.text_random_int_range)
         if attrs.q_type == QuestionType.TEXT
         else [],
         option_fill_texts=option_fill_texts,

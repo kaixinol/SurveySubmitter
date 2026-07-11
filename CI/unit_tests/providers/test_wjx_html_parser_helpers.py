@@ -406,7 +406,7 @@ class WjxHtmlParserHelperTests:
             },
         ]
 
-        html_parser_rules._attach_display_condition_metadata(questions)
+        html_parser_rules._attach_display_condition_metadata(questions)  # ty:ignore[invalid-argument-type]
 
         assert questions[0]["has_dependent_display_logic"] is True
         assert questions[0]["controls_display_targets"] == [
@@ -620,7 +620,7 @@ class WjxHtmlParserHelperTests:
             {"num": 3, "display_conditions": "bad", "controls_display_targets": []},
         ]
 
-        html_parser_rules._attach_display_condition_metadata(questions)
+        html_parser_rules._attach_display_condition_metadata(questions)  # ty:ignore[invalid-argument-type]
 
         assert questions[0]["controls_display_targets"] == [
             {

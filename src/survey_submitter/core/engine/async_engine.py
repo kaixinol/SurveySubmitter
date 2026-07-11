@@ -265,7 +265,7 @@ class AsyncRuntimeEngine:
             self._loop.call_soon_threadsafe(pause_event.clear)
 
     def parse_survey(self, url: str) -> concurrent.futures.Future[Any]:
-        return self._submit(parse_survey(url))  # type: ignore[arg-type]
+        return self._submit(parse_survey(url))
 
     def shutdown(self, *, timeout: float = 5.0) -> None:
         if self._closed:
