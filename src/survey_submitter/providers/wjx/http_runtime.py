@@ -597,7 +597,7 @@ async def _post_wjx_submit_request(
         submit_proxy_address = (
             submit_proxy_lease.address.strip() if submit_proxy_lease.address else None
         )
-    if bool(config.random_proxy_ip_enabled) and not submit_proxy_address:
+    if bool(config.random_proxy_ip) and not submit_proxy_address:
         raise SubmitProxyUnavailableError("提交前未获取到随机 IP")
     submit_proxies = _proxy_arg(submit_proxy_address)
     if submit_proxy_address:

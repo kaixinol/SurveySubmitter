@@ -740,19 +740,20 @@ def build_enabled_reverse_fill_spec(
     questions_info: list[SurveyQuestionMeta | dict[str, object]],
     question_entries: list[QuestionEntry],
 ) -> ReverseFillSpec | None:
-    if not bool(config.reverse_fill_enabled):
+    rf = config.execution.reverse_fill
+    if not bool(rf.enabled):
         return None
-    source_path = str(config.reverse_fill_source_path or "").strip()
+    source_path = str(rf.source_path or "").strip()
     if not source_path:
         return None
     spec = build_reverse_fill_spec(
         source_path=source_path,
-        survey_provider=str(config.survey_provider or SURVEY_PROVIDER_WJX),
+        survey_provider=str(config.survey.survey_provider or SURVEY_PROVIDER_WJX),
         questions_info=list(questions_info or []),
         question_entries=list(question_entries or []),
-        selected_format=str(config.reverse_fill_format or REVERSE_FILL_FORMAT_AUTO),
-        start_row=max(1, int(config.reverse_fill_start_row or 1)),
-        target_num=max(0, int(config.target or 0)),
+        selected_format=str(rf.format or REVERSE_FILL_FORMAT_AUTO),
+        start_row=max(1, int(rf.start_row or 1)),
+        target_num=max(0, int(config.execution.target_num or 0)),
     )
     if spec.blocking_issue_count > 0:
         raise ValueError(format_reverse_fill_blocking_message(spec))

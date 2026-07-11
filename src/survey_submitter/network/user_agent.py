@@ -5,6 +5,6 @@ from survey_submitter.core.config.codec import UserAgentProfile, _select_user_ag
 
 
 def _select_user_agent_for_session(ctx: ExecutionState) -> UserAgentProfile | None:
-    if not ctx.config.random_user_agent_enabled:
+    if not ctx.config.random_user_agent:
         return None
     return _select_user_agent_from_ratios(ctx.config.user_agent_ratios)

@@ -86,20 +86,20 @@ class HeadlessRunner:
         logger.info("加载配置文件: %s", self._config_path)
         config = load_yaml_config(self._config_path)
 
-        if not config.url:
+        if not config.survey.url:
             raise ValueError("配置文件中未指定问卷 URL")
 
-        definition = await self._parse_survey(config.url)
+        definition = await self._parse_survey(config.survey.url)
 
-        config.questions_info = definition.questions
-        config.survey_title = config.survey_title or definition.title
-        config.survey_provider = definition.provider
+        config.answer_config.questions_info = definition.questions
+        config.survey.survey_title = config.survey.survey_title or definition.title
+        config.survey.survey_provider = definition.provider
 
-        if not config.question_entries:
+        if not config.answer_config.question_entries:
             logger.info("未配置题目权重，自动生成默认配置")
-            config.question_entries = build_default_question_entries(
+            config.answer_config.question_entries = build_default_question_entries(
                 definition.questions,
-                survey_url=config.url,
+                survey_url=config.survey.url,
             )
 
         if self._parse_only:

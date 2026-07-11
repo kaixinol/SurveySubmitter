@@ -15,7 +15,13 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from survey_submitter.core.config.schema import RuntimeConfig
+from survey_submitter.core.config.schema import (
+    RuntimeConfig,
+    SurveySection,
+    ExecutionSection,
+    AnswerConfigSection,
+    ReverseFillSection,
+)
 from survey_submitter.core.engine.async_engine import AsyncRuntimeEngine
 from survey_submitter.core.questions.config import build_default_question_entries
 from survey_submitter.core.task import ExecutionState
@@ -59,21 +65,27 @@ def _build_live_test_config(url: str) -> RuntimeConfig:
     )
 
     config = RuntimeConfig(
-        url=normalized_url,
-        survey_title=definition.title or "",
-        survey_provider=definition.provider,
-        target=1,
-        threads=1,
-        submit_interval=(0, 0),
-        answer_duration=(0, 0),
-        random_ip_enabled=False,
-        random_ua_enabled=False,
-        fail_stop_enabled=True,
-        reliability_mode_enabled=True,
-        reverse_fill_enabled=False,
+        survey=SurveySection(
+            url=normalized_url,
+            survey_title=definition.title or "",
+            survey_provider=definition.provider,
+        ),
+        execution=ExecutionSection(
+            target_num=1,
+            num_threads=1,
+            submit_interval_range_seconds=(0, 0),
+            answer_duration_range_seconds=(0, 0),
+            random_proxy_ip=False,
+            random_user_agent=False,
+            stop_on_fail=True,
+            reliability_mode=True,
+            reverse_fill=ReverseFillSection(enabled=False),
+        ),
+        answer_config=AnswerConfigSection(
+            questions_info=list(questions_info),
+            question_entries=list(question_entries),
+        ),
     )
-    config.questions_info = list(questions_info)
-    config.question_entries = list(question_entries)
     return config
 
 
@@ -87,14 +99,14 @@ def main() -> int:
         logging.disable(logging.CRITICAL)
         config = _build_live_test_config(args.url)
 
-        prepared = prepare_execution_artifacts(config, fallback_survey_title=config.survey_title)
+        prepared = prepare_execution_artifacts(config, fallback_survey_title=config.survey.survey_title)
         execution_config = prepared.execution_config_template
         execution_config.target_num = 1
         execution_config.num_threads = 1
         execution_config.submit_interval_range_seconds = (0, 0)
         execution_config.answer_duration_range_seconds = (0, 0)
-        execution_config.random_proxy_ip_enabled = False
-        execution_config.random_user_agent_enabled = False
+        execution_config.random_proxy_ip = False
+        execution_config.random_user_agent = False
         state = ExecutionState(config=execution_config)
         state.initialize_reverse_fill_runtime()
 

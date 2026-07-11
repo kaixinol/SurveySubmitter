@@ -43,7 +43,7 @@ class SessionPolicyTests:
 
     def test_resolve_proxy_prefetch_request_count_only_refills_for_waiting_slots(self) -> None:
         ctx = ExecutionState(
-            config=ExecutionConfig(random_proxy_ip_enabled=True, target_num=50, num_threads=6)
+            config=ExecutionConfig(random_proxy_ip=True, target_num=50, num_threads=6)
         )
         ctx.config.proxy_ip_pool = [
             ProxyLease(address=f"http://1.1.1.{index}:8000") for index in range(1, 4)
@@ -149,7 +149,7 @@ class SessionPolicyTests:
         assert list(ctx.config.proxy_ip_pool) == []
 
     def test_select_proxy_for_session_returns_none_when_random_proxy_disabled(self) -> None:
-        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip_enabled=False))
+        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip=False))
         with patch.object(session_policy, "fetch_proxy_batch_async") as fetch_proxy_batch:
             assert (
                 asyncio.run(session_policy._select_proxy_for_session_async(ctx, "Worker-1")) is None
@@ -157,7 +157,7 @@ class SessionPolicyTests:
         fetch_proxy_batch.assert_not_called()
 
     def test_select_proxy_for_session_marks_existing_pool_proxy_in_use(self) -> None:
-        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip_enabled=True))
+        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip=True))
         ctx.config.proxy_ip_pool = [ProxyLease(address="http://1.1.1.1:8000", source="unit")]
         selected = asyncio.run(session_policy._select_proxy_for_session_async(ctx, "Worker-1"))
         assert selected == "http://1.1.1.1:8000"
@@ -165,7 +165,7 @@ class SessionPolicyTests:
         assert ctx.proxy_in_use_by_thread["Worker-1"].address == selected
 
     def test_select_proxy_for_session_consumes_deque_in_order(self) -> None:
-        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip_enabled=True))
+        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip=True))
         ctx.config.proxy_ip_pool = deque(
             [
                 ProxyLease(address="http://1.1.1.1:8000", source="unit"),
@@ -177,7 +177,7 @@ class SessionPolicyTests:
         assert [lease.address for lease in ctx.config.proxy_ip_pool] == ["http://2.2.2.2:8000"]
 
     def test_select_proxy_for_session_fetches_one_and_pools_extra_leases(self) -> None:
-        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip_enabled=True, target_num=3))
+        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip=True, target_num=3))
         ctx.cur_num = 0
         ctx.proxy_waiting_threads = 2
         fetched = [
@@ -200,7 +200,7 @@ class SessionPolicyTests:
     def test_select_proxy_for_session_skips_fetched_proxy_already_used_by_other_session(
         self,
     ) -> None:
-        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip_enabled=True, target_num=2))
+        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip=True, target_num=2))
         ctx.proxy_in_use_by_thread = {
             "Worker-2": ProxyLease(address="http://1.1.1.1:8000", source="api")
         }
@@ -224,7 +224,7 @@ class SessionPolicyTests:
         assert ctx.proxy_in_use_by_thread["Worker-1"].address == "http://2.2.2.2:8000"
 
     def test_select_proxy_for_session_skips_fetched_proxy_in_cooldown(self) -> None:
-        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip_enabled=True, target_num=2))
+        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip=True, target_num=2))
         ctx.mark_proxy_in_cooldown("http://1.1.1.1:8000", 180.0)
         fetched = [
             ProxyLease(address="http://1.1.1.1:8000", source="api"),
@@ -246,7 +246,7 @@ class SessionPolicyTests:
         assert ctx.proxy_in_use_by_thread["Worker-1"].address == "http://2.2.2.2:8000"
 
     def test_select_proxy_for_session_skips_fetched_proxy_used_by_previous_success(self) -> None:
-        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip_enabled=True, target_num=2))
+        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip=True, target_num=2))
         ctx.mark_successful_proxy_address("http://1.1.1.1:8000")
         fetched = [
             ProxyLease(address="http://1.1.1.1:8000", source="api"),
@@ -270,7 +270,7 @@ class SessionPolicyTests:
     def test_select_proxy_for_session_waits_for_new_proxy_when_runtime_requests_blocking_mode(
         self,
     ) -> None:
-        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip_enabled=True, target_num=1))
+        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip=True, target_num=1))
         results = iter([[], [ProxyLease(address="http://9.9.9.9:8000", source="api")]])
 
         async def fake_fetch_proxy_batch_async(**_kwargs):
@@ -298,7 +298,7 @@ class SessionPolicyTests:
         assert ctx.proxy_in_use_by_thread["Worker-1"].address == "http://9.9.9.9:8000"
 
     def test_async_proxy_fetch_lock_wait_does_not_block_event_loop(self) -> None:
-        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip_enabled=True, target_num=1))
+        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip=True, target_num=1))
 
         async def scenario() -> None:
             lock = session_policy._get_proxy_fetch_async_lock(ctx)
@@ -353,7 +353,7 @@ class SessionPolicyTests:
         assert not ctx.is_proxy_in_cooldown(lease.address)
 
     def test_merge_prefetched_proxy_leases_adds_unique_poolable_items(self) -> None:
-        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip_enabled=True))
+        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip=True))
         ctx.config.proxy_ip_pool = [ProxyLease(address="http://1.1.1.1:8000")]
         fetched = [
             ProxyLease(address="http://1.1.1.1:8000"),
@@ -373,7 +373,7 @@ class SessionPolicyTests:
 
     def test_merge_prefetched_proxy_leases_discards_proxy_below_http_ttl_floor(self) -> None:
         ctx = ExecutionState(
-            config=ExecutionConfig(random_proxy_ip_enabled=True, survey_provider="wjx")
+            config=ExecutionConfig(random_proxy_ip=True, survey_provider="wjx")
         )
         fetched = [
             ProxyLease(address="http://1.1.1.1:8000", expire_ts=time.time() + 10),
@@ -385,7 +385,7 @@ class SessionPolicyTests:
         assert [lease.address for lease in ctx.config.proxy_ip_pool] == ["http://2.2.2.2:8000"]
 
     def test_select_user_agent_returns_none_when_disabled(self) -> None:
-        ctx = ExecutionState(config=ExecutionConfig(random_user_agent_enabled=False))
+        ctx = ExecutionState(config=ExecutionConfig(random_user_agent=False))
         with patch.object(user_agent, "_select_user_agent_from_ratios") as select_user_agent:
             assert session_policy._select_user_agent_for_session(ctx) is None
         select_user_agent.assert_not_called()

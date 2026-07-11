@@ -65,7 +65,7 @@ class RunStopPolicy:
 
     def proxy_unavailable_threshold(self) -> int:
         base_threshold = self.failure_threshold()
-        if not bool(self.config.random_proxy_ip_enabled):
+        if not bool(self.config.random_proxy_ip):
             return base_threshold
         return max(base_threshold, int(self.config.num_threads or 1))
 
@@ -97,7 +97,7 @@ class RunStopPolicy:
             if message:
                 logging.warning("%s", message)
             threshold_enabled = bool(
-                self.config.stop_on_fail_enabled or force_stop_when_threshold_reached
+                self.config.stop_on_fail or force_stop_when_threshold_reached
             )
             if threshold_enabled:
                 logging.warning(
@@ -131,7 +131,7 @@ class RunStopPolicy:
                 stop_signal.set()
             return True
         threshold_enabled = bool(
-            self.config.stop_on_fail_enabled or force_stop_when_threshold_reached
+            self.config.stop_on_fail or force_stop_when_threshold_reached
         )
         if threshold_enabled and consecutive_failures >= stop_threshold:
             logging.critical("连续失败次数过多，强制停止，请检查配置是否正确")
@@ -176,7 +176,7 @@ class RunStopPolicy:
                     logging.info(
                         "提交成功，连续失败计数已清零（重置前=%s）", previous_consecutive_failures
                     )
-                should_handle_random_ip = self.config.random_proxy_ip_enabled
+                should_handle_random_ip = self.config.random_proxy_ip
                 if self.config.target_num > 0 and self.state.cur_num >= self.config.target_num:
                     trigger_target_stop = True
             else:

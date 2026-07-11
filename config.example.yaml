@@ -9,86 +9,67 @@
 # ---------------------------------------------------------------------------
 # Survey basics
 # ---------------------------------------------------------------------------
-url: "https://www.wjx.cn/s/your-survey-id.aspx"
-survey_title: ""                       # Optional; auto-detected if blank
-survey_provider: "wjx"                 # "wjx" (default) or auto-detected from URL
+survey:
+  url: "https://www.wjx.cn/s/your-survey-id.aspx"
+  survey_title: ""                       # Optional; auto-detected if blank
+  survey_provider: "wjx"                 # "wjx" (default) or auto-detected from URL
 
 # ---------------------------------------------------------------------------
-# Targets & concurrency
+# Execution settings
 # ---------------------------------------------------------------------------
-target: 100                            # Number of submissions to collect
-threads: 4                             # Concurrent worker threads (max 64)
+execution:
+  # -- Targets & concurrency --
+  target_num: 100                        # Number of submissions to collect
+  num_threads: 4                         # Concurrent worker threads (max 64)
+
+  # -- Timing --
+  submit_interval_range_seconds: [5, 15] # Seconds between submissions (min, max)
+  answer_duration_range_seconds: [60, 180] # Simulated answer duration in seconds (min, max)
+
+  # Optional: restrict submissions to a datetime window
+  # answer_datetime_window: ["2025-01-01 09:00:00", "2025-12-31 18:00:00"]
+  answer_datetime_window: ["", ""]
+
+  # -- Random IP / Proxy --
+  random_proxy_ip: false
+  proxy_source: "default"               # "default", "benefit", or "custom"
+  custom_proxy_api: ""
+  proxy_area_code: null                  # e.g. "110000" for Beijing, or null
+
+  # -- Random User-Agent --
+  random_user_agent: false
+  user_agent_ratios:                     # Must sum to 100
+    wechat: 33
+    mobile: 33
+    pc: 34
+
+  # -- Failure handling --
+  stop_on_fail: true                     # Stop on consecutive failures
+  pause_on_aliyun_captcha: true          # Pause when Aliyun CAPTCHA is detected
+
+  # -- Reliability --
+  reliability_mode: true
+  persona: true
+
+  # -- AI configuration (optional) --
+  ai:
+    answering: true
+    api_key: ""
+    base_url: ""
+    api_protocol: "auto"
+    model: ""
+    system_prompt: ""
+
+  # -- Reverse fill (optional) --
+  reverse_fill:
+    enabled: false
+    source_path: ""
+    format: "auto"                       # "auto", "wjx_sequence", "wjx_score", "wjx_text"
+    start_row: 1
+    threads: 1
 
 # ---------------------------------------------------------------------------
-# Timing
-# ---------------------------------------------------------------------------
-submit_interval: [5, 15]              # Seconds between submissions (min, max)
-answer_duration: [60, 180]            # Simulated answer duration in seconds (min, max)
-
-# Optional: restrict submissions to a datetime window
-# answer_datetime_window: ["2025-01-01 09:00:00", "2025-12-31 18:00:00"]
-answer_datetime_window: ["", ""]
-
-# ---------------------------------------------------------------------------
-# Random IP / Proxy
-# ---------------------------------------------------------------------------
-random_ip_enabled: false
-proxy_source: "default"               # "default", "benefit", or "custom"
-custom_proxy_api: ""
-proxy_area_code: null                  # e.g. "110000" for Beijing, or null
-
-# ---------------------------------------------------------------------------
-# Random User-Agent
-# ---------------------------------------------------------------------------
-random_ua_enabled: false
-random_ua_ratios:                      # Must sum to 100
-  wechat: 33
-  mobile: 33
-  pc: 34
-
-# ---------------------------------------------------------------------------
-# Failure handling
-# ---------------------------------------------------------------------------
-fail_stop_enabled: true                # Stop on consecutive failures
-pause_on_aliyun_captcha: true          # Pause when Aliyun CAPTCHA is detected
-
-# ---------------------------------------------------------------------------
-# AI configuration (optional)
-# ---------------------------------------------------------------------------
-# ai_api_key: ""
-# ai_base_url: ""
-# ai_api_protocol: "auto"
-# ai_model: ""
-# ai_system_prompt: ""
-
-# ---------------------------------------------------------------------------
-# Reliability
-# ---------------------------------------------------------------------------
-reliability_mode_enabled: true
-persona_enabled: true
-ai_answering_enabled: true
-
-# ---------------------------------------------------------------------------
-# Reverse fill (optional)
-# ---------------------------------------------------------------------------
-reverse_fill_enabled: false
-reverse_fill_source_path: ""
-reverse_fill_format: "auto"            # "auto", "wjx_sequence", "wjx_score", "wjx_text"
-reverse_fill_start_row: 1
-reverse_fill_threads: 1
-
-# ---------------------------------------------------------------------------
-# Answer rules (optional)
-# ---------------------------------------------------------------------------
-answer_rules: []
-
-# ---------------------------------------------------------------------------
-# Dimension groups (optional)
-# ---------------------------------------------------------------------------
-dimension_groups: []
-
-# ---------------------------------------------------------------------------
-# Question configuration
+# Answer configuration
 # ---------------------------------------------------------------------------
 # question_entries and questions_info are populated automatically when you
 # export a config from the GUI. Below is a minimal example structure.
@@ -108,5 +89,7 @@ dimension_groups: []
 #     options: ["Male", "Female", "Other", "Prefer not to say"]
 #     ...
 
-question_entries: []
-questions_info: []
+answer_config:
+  question_entries: []
+  questions_info: []
+  answer_rules: []
