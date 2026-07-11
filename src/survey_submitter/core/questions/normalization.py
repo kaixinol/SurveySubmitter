@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT, DIMENSION_UNGROUPED
 from survey_submitter.core.psychometrics.ordinal_options import infer_ordinal_option_mapping
@@ -49,14 +49,14 @@ __all__ = ["configure_probabilities"]
 # ---------------------------------------------------------------------------
 
 
-def _raise_if_all_zero_single_like(raw_weights: Any, question_num: int, question_type: str) -> None:
+def _raise_if_all_zero_single_like(raw_weights: object, question_num: int, question_type: str) -> None:
     if isinstance(raw_weights, list) and raw_weights and count_positive_weights(raw_weights) <= 0:
         raise ValueError(
             f"第 {question_num} 题（{question_type}）配置无效：所有选项配比均为 0，请至少保留一个大于 0 的选项。"
         )
 
 
-def _raise_if_all_zero_matrix(raw_weights: Any, question_num: int) -> None:
+def _raise_if_all_zero_matrix(raw_weights: object, question_num: int) -> None:
     invalid_rows = find_all_zero_matrix_rows(raw_weights)
     if not invalid_rows:
         return
@@ -164,7 +164,7 @@ def _resolve_runtime_dimension(
 def _handle_single(
     entry: QuestionEntry,
     question_num: int,
-    probs: Any,
+    probs: object,
     strict_ratio: bool,
     target: "ExecutionConfig",
     idx: int,
@@ -199,7 +199,7 @@ def _handle_single(
 def _handle_dropdown(
     entry: QuestionEntry,
     question_num: int,
-    probs: Any,
+    probs: object,
     strict_ratio: bool,
     target: "ExecutionConfig",
     idx: int,
@@ -226,7 +226,7 @@ def _handle_dropdown(
 def _handle_multiple(
     entry: QuestionEntry,
     question_num: int,
-    probs: Any,
+    probs: object,
     target: "ExecutionConfig",
     idx: int,
 ) -> int:
@@ -241,7 +241,7 @@ def _handle_multiple(
     return idx
 
 
-def _normalize_matrix_row(raw_row: Any, option_count: int) -> list[float] | None:
+def _normalize_matrix_row(raw_row: object, option_count: int) -> list[float] | None:
     if not isinstance(raw_row, (list, tuple)):
         return None
     cleaned: list[float] = []
@@ -265,7 +265,7 @@ def _normalize_matrix_row(raw_row: Any, option_count: int) -> list[float] | None
 def _handle_matrix(
     entry: QuestionEntry,
     question_num: int,
-    probs: Any,
+    probs: object,
     strict_ratio: bool,
     target: "ExecutionConfig",
     idx: int,
@@ -288,14 +288,14 @@ def _handle_matrix(
     idx += rows
     option_count = max(1, _infer_option_count(entry))
 
-    row_weights_source: list[Any] | None = None
+    row_weights_source: list[object] | None = None
     if isinstance(probs, list) and any(isinstance(item, (list, tuple)) for item in probs):
         row_weights_source = probs
     elif isinstance(entry.custom_weights, list) and any(isinstance(item, (list, tuple)) for item in entry.custom_weights):
         row_weights_source = entry.custom_weights
 
     if row_weights_source is not None:
-        last_row: Any | None = None
+        last_row: object | None = None
         for row_idx in range(rows):
             raw_row = row_weights_source[row_idx] if row_idx < len(row_weights_source) else last_row
             normalized_row = _normalize_matrix_row(raw_row, option_count)
@@ -318,7 +318,7 @@ def _handle_matrix(
 def _handle_scale(
     entry: QuestionEntry,
     question_num: int,
-    probs: Any,
+    probs: object,
     strict_ratio: bool,
     target: "ExecutionConfig",
     idx: int,
@@ -344,7 +344,7 @@ def _handle_scale(
 def _handle_slider(
     entry: QuestionEntry,
     question_num: int,
-    probs: Any,
+    probs: object,
     target: "ExecutionConfig",
     idx: int,
 ) -> tuple[int, bool]:
@@ -400,7 +400,7 @@ def _handle_location(
 def _handle_text(
     entry: QuestionEntry,
     question_num: int,
-    probs: Any,
+    probs: object,
     target: "ExecutionConfig",
     idx_text: int,
 ) -> tuple[int, bool]:

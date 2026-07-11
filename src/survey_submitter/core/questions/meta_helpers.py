@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import Mapping
 
 from survey_submitter.core.questions.types import QuestionType, TypeCode
 from survey_submitter.providers.contracts import (
@@ -14,7 +14,7 @@ from survey_submitter.providers.contracts import (
     ensure_survey_question_meta,
 )
 
-QuestionMetaLike = SurveyQuestionMeta | Mapping[str, Any]
+QuestionMetaLike = SurveyQuestionMeta | Mapping[str, object]
 
 __all__ = [
     "QuestionMetaLike",
@@ -27,7 +27,7 @@ __all__ = [
 ]
 
 
-def count_positive_weights(raw_weights: Any) -> int:
+def count_positive_weights(raw_weights: object) -> int:
     if not isinstance(raw_weights, (list, tuple)):
         return 0
     count = 0
@@ -40,7 +40,7 @@ def count_positive_weights(raw_weights: Any) -> int:
     return count
 
 
-def find_all_zero_matrix_rows(raw_weights: Any) -> list[int]:
+def find_all_zero_matrix_rows(raw_weights: object) -> list[int]:
     if not isinstance(raw_weights, list) or not raw_weights:
         return []
     if any(isinstance(item, (list, tuple)) for item in raw_weights):
@@ -52,7 +52,7 @@ def find_all_zero_matrix_rows(raw_weights: Any) -> list[int]:
     return [0] if count_positive_weights(raw_weights) <= 0 else []
 
 
-def find_all_zero_attached_selects(attached_configs: Any) -> list[tuple[int, str]]:
+def find_all_zero_attached_selects(attached_configs: object) -> list[tuple[int, str]]:
     issues: list[tuple[int, str]] = []
     for cfg_idx, cfg in enumerate(list(attached_configs or []), start=1):
         if not isinstance(cfg, dict):
@@ -113,11 +113,11 @@ def infer_question_entry_type(question: QuestionMetaLike) -> str:
 
 
 def normalize_attached_option_selects(
-    parsed_configs: Any,
-    existing_configs: Any = None,
-) -> list[dict[str, Any]]:
+    parsed_configs: object,
+    existing_configs: object | None = None,
+) -> list[dict[str, object]]:
     parsed_list = parsed_configs if isinstance(parsed_configs, list) else []
-    existing_map: dict[int, dict[str, Any]] = {}
+    existing_map: dict[int, dict[str, object]] = {}
     if isinstance(existing_configs, list):
         for item in existing_configs:
             if not isinstance(item, dict):
@@ -130,7 +130,7 @@ def normalize_attached_option_selects(
             except (ValueError, TypeError):
                 continue
             existing_map[option_index] = item
-    normalized: list[dict[str, Any]] = []
+    normalized: list[dict[str, object]] = []
     for item in parsed_list:
         if not isinstance(item, dict):
             continue
@@ -174,9 +174,9 @@ def normalize_attached_option_selects(
 
 
 def normalize_fillable_option_indices(
-    parsed_indices: Any,
+    parsed_indices: object,
     option_count: int,
-    existing_indices: Any = None,
+    existing_indices: object | None = None,
 ) -> list[int]:
     source = parsed_indices if isinstance(parsed_indices, list) else existing_indices
     if not isinstance(source, list):

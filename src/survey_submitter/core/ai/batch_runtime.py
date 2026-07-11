@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field, replace
-from typing import Any, Iterable, Sequence
+from typing import Iterable, Sequence
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.ai.runtime import (
@@ -183,7 +183,7 @@ def _raise_prefill_incomplete_error(
     detail = "；".join(parts) if parts else "存在未完成题目"
     raise RuntimeError(f"{label} 批量预取未完成，已停止本轮提交：{detail}")
 
-def _normalize_item_answers(item: AIBatchItem, raw_answer: Any) -> list[str]:
+def _normalize_item_answers(item: AIBatchItem, raw_answer: str | list[str]) -> list[str]:
     if item.question_type == QuestionType.MULTI_FILL_BLANK:
         if isinstance(raw_answer, list):
             answers = [str(value or "").strip() for value in raw_answer]

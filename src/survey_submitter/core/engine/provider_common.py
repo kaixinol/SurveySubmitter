@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import contextmanager
-from typing import Any, Iterator
+from typing import Iterator
 
 from survey_submitter.core.persona.context import reset_context as _reset_answer_context
 from survey_submitter.core.persona.generator import generate_persona, reset_persona, set_current_persona
@@ -18,8 +18,8 @@ def provider_run_context(
     *,
     state: ExecutionState | None = None,
     thread_name: str = "",
-    psycho_plan: Any | None = None,
-) -> Iterator[Any | None]:
+    psycho_plan: object | None = None,
+) -> Iterator[object | None]:
     
     persona = generate_persona()
     set_current_persona(persona)

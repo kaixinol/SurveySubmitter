@@ -6,7 +6,7 @@ import os
 import random
 from datetime import date, timedelta
 from functools import lru_cache
-from typing import Any, Sequence
+from typing import Any, Sequence, Union, Union
 import logging
 from survey_submitter.logging.log_utils import log_suppressed_exception
 
@@ -32,10 +32,14 @@ _ID_CARD_CHECKSUM_WEIGHTS = (7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2
 _ID_CARD_CHECKSUM_CHARS = "10X98765432"
 
 
-def _normalize_question_type_code(value: Any) -> str:
+def _normalize_question_type_code(value: str | int | None) -> str:
     if value is None:
         return ""
-    return str(value).strip()
+    
+    try:
+        return str(value).strip()
+    except (ValueError, TypeError):
+        return ""
 
 
 def _should_treat_question_as_text_like(
@@ -246,13 +250,13 @@ def generate_random_generic_text() -> str:
 def try_parse_random_int_range(raw: Any) -> tuple[int, int] | None:
     
 
-    def _coerce_int(value: Any) -> int | None:
-        text = str(value).strip() if value is not None else ""
-        if not text:
+    def _coerce_int(value: str | int | float | None) -> int | None:
+        if value is None:
             return None
+        
         try:
-            return int(text)
-        except (ValueError, TypeError):
+            return int(float(value))
+        except (ValueError, TypeError, OverflowError):
             return None
 
     if isinstance(raw, dict):

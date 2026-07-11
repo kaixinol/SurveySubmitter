@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import Any
 
 from survey_submitter.core.engine.async_wait import sleep_or_stop
+from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.logging.log_utils import log_suppressed_exception
 
 _COMPLETION_MARKERS = (
@@ -70,7 +70,7 @@ def sample_answer_duration_seconds(
     return max(min_delay, min(max_delay, wait_seconds))
 
 async def wait_answer_duration_seconds(
-    stop_signal: Any | None = None,
+    stop_signal: StopSignalLike | None = None,
     seconds: float = 0.0,
 ) -> bool:
     
@@ -85,7 +85,7 @@ async def wait_answer_duration_seconds(
     return bool(await sleep_or_stop(stop_signal, wait_seconds))
 
 async def simulate_answer_duration_delay(
-    stop_signal: Any | None = None,
+    stop_signal: StopSignalLike | None = None,
     answer_duration_range_seconds: tuple[int, int] = (0, 0),
     *,
     survey_provider: str | None = None,
