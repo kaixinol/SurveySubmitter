@@ -87,12 +87,12 @@ _WJX_SPECIAL_CHAR_REPLACEMENTS = (
 
 
 def _proxy_arg(proxy_address: str | None) -> dict[str, str] | str:
-    proxy = str(proxy_address or "").strip()
+    proxy = (proxy_address or "").strip()
     return proxy if proxy else {}
 
 
 def _shortid_from_url(url: str) -> str:
-    parsed = urlparse(str(url or "").strip())
+    parsed = urlparse(url.strip())
     path = parsed.path or ""
     last = path.rstrip("/").rsplit("/", 1)[-1]
     shortid = last.replace(".aspx", "").strip()
@@ -102,7 +102,7 @@ def _shortid_from_url(url: str) -> str:
 
 
 def _submit_domain(url: str) -> str:
-    host = urlparse(str(url or "").strip()).netloc.lower()
+    host = urlparse(url.strip()).netloc.lower()
     if "ks.wjx.com" in host:
         return "ks.wjx.com"
     return "v.wjx.cn"
@@ -128,28 +128,28 @@ def _resolve_wjx_submit_timing(*, page_html: str, current_ms: int, sampled_ktime
 
 
 def _extract_wjx_scene_id(page_html: str) -> str:
-    text = html_lib.unescape(str(page_html or ""))
+    text = html_lib.unescape(page_html)
     if not text:
         return _WJX_DEFAULT_SCENE_ID
     for pattern in WJX_SCENE_ID_PATTERNS:
         match = pattern.search(text)
         if not match:
             continue
-        value = str(match.group("value") or "").strip()
+        value = (match.group("value") or "").strip()
         if value:
             return value
     return _WJX_DEFAULT_SCENE_ID
 
 
 def _resolve_user_agent(user_agent: str | None) -> str:
-    text = str(user_agent or "").strip()
+    text = (user_agent or "").strip()
     if text:
         return text
     return str(DEFAULT_USER_AGENT or USER_AGENT_PRESETS.get("pc_web", {}).get("ua") or "").strip()
 
 
 def _is_wechat_user_agent(user_agent: str | None) -> bool:
-    return "micromessenger" in str(user_agent or "").strip().lower()
+    return "micromessenger" in (user_agent or "").strip().lower()
 
 
 def _resolve_wjx_channel_profile(
@@ -186,7 +186,7 @@ def _resolve_wjx_channel_profile(
 
 
 def _build_jqsign(jqnonce: str, ktimes: int) -> str:
-    t_value = 1 if int(ktimes or 0) % 10 == 0 else int(ktimes or 0) % 10
+    t_value = 1 if ktimes % 10 == 0 else ktimes % 10
     return "".join(chr(ord(ch) ^ t_value) for ch in jqnonce)
 
 
@@ -317,14 +317,14 @@ def _question_error_label(config: ExecutionConfig, question_num: int) -> str:
 
 
 def is_wjx_submission_verification_response(response_text: str) -> bool:
-    text = str(response_text or "").strip()
+    text = response_text.strip()
     if not text:
         return False
     return any(marker in text for marker in _WJX_SUBMISSION_VERIFICATION_MARKERS)
 
 
 def classify_wjx_submit_response(response_text: str) -> str:
-    text = str(response_text or "").strip()
+    text = response_text.strip()
     if is_wjx_submission_verification_response(text):
         return WjxSubmitResult.VERIFICATION
     lowered = text.lower()
@@ -346,11 +346,11 @@ def _raise_submit_rejected(
     *,
     proxy_address: str | None = None,
 ) -> None:
-    text = str(response_text or "").strip()
+    text = response_text.strip()
     if is_wjx_submission_verification_response(text):
         message = (
             WJX_PROXY_SUBMISSION_VERIFICATION_MESSAGE
-            if str(proxy_address or "").strip()
+            if proxy_address and proxy_address.strip()
             else WJX_SUBMISSION_VERIFICATION_MESSAGE
         )
         raise SubmissionVerificationRequiredError(message)
@@ -548,15 +548,15 @@ async def _post_wjx_submit_request(
 ) -> tuple[str, str | None]:
     """Acquire proxy if needed, POST the submit request, return (response_text, resolved_proxy_address)."""
     await update_http_submit_step(ctx, thread_name, "提交问卷")
-    submit_proxy_address = str(proxy_address or "").strip() or None
+    submit_proxy_address = proxy_address.strip() if proxy_address else None
     submit_proxy_lease = None
     if submit_proxy_lease_factory is not None:
         submit_proxy_lease = await submit_proxy_lease_factory()
-        submit_proxy_address = str(submit_proxy_lease.address or "").strip() or None
+        submit_proxy_address = submit_proxy_lease.address.strip() if submit_proxy_lease.address else None
     if bool(config.random_proxy_ip_enabled) and not submit_proxy_address:
         raise SubmitProxyUnavailableError("提交前未获取到随机 IP")
     submit_proxies = _proxy_arg(submit_proxy_address)
-    if str(submit_proxy_address or "").strip():
+    if submit_proxy_address:
         logging.debug("问卷星 HTTP 提交使用随机IP：%s", mask_proxy_for_log(submit_proxy_address))
     try:
         response = await http_client.apost(

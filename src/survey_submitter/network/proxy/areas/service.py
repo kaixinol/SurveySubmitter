@@ -56,8 +56,8 @@ _BENEFIT_SUPPORTED_AREAS_CACHE: list[dict[str, object]] | None = None
 _BENEFIT_CITY_CODE_INDEX_CACHE: dict[str, str] | None = None
 
 
-def _normalize_province_name(name: object) -> str:
-    text = re.sub(r"\s+", "", str(name or "").strip())
+def _normalize_province_name(name: str | None) -> str:
+    text = re.sub(r"\s+", "", (name or "").strip())
     for suffix in _PROVINCE_SUFFIXES:
         if text.endswith(suffix):
             text = text[: -len(suffix)]
@@ -65,8 +65,8 @@ def _normalize_province_name(name: object) -> str:
     return text
 
 
-def _normalize_city_name(name: object) -> str:
-    text = re.sub(r"\s+", "", str(name or "").strip())
+def _normalize_city_name(name: str | None) -> str:
+    text = re.sub(r"\s+", "", (name or "").strip())
     if text == "市辖区":
         return text
     for suffix in _CITY_SUFFIXES:
@@ -76,8 +76,8 @@ def _normalize_city_name(name: object) -> str:
     return text
 
 
-def _normalize_area_code(area_code: object) -> str:
-    text = str(area_code or "").strip()
+def _normalize_area_code(area_code: str | None) -> str:
+    text = (area_code or "").strip()
     return text if _AREA_CODE_PATTERN.fullmatch(text) else ""
 
 
