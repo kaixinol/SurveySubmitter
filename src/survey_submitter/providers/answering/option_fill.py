@@ -24,7 +24,9 @@ def option_requires_fill(question: Any, option_index: int) -> bool:
     return False
 
 
-def default_missing_option_fill(question: Any, option_index: int, fill_value: str | None) -> str | None:
+def default_missing_option_fill(
+    question: Any, option_index: int, fill_value: str | None
+) -> str | None:
     if str(fill_value or "").strip():
         return str(fill_value or "").strip()
     if option_requires_fill(question, option_index):
@@ -68,4 +70,3 @@ def mapping_contains_fillblank(value: Mapping[str, Any], *keys: str) -> bool:
         if raw is not None and str(raw).strip():
             return True
     return False
-

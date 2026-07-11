@@ -30,7 +30,9 @@ def record_answer_action(
         )
     if record_type == QuestionType.MATRIX:
         for row_index, selected_index in enumerate(action.matrix_indices):
-            record_answer_fn(current, "matrix", selected_indices=[int(selected_index)], row_index=row_index)
+            record_answer_fn(
+                current, "matrix", selected_indices=[int(selected_index)], row_index=row_index
+            )
         return
     if record_type == QuestionType.TEXT:
         text_values = [str(item or "").strip() or default_fill_text for item in action.text_values]

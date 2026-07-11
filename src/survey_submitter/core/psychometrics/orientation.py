@@ -33,7 +33,7 @@ def normalize_probability_list(values: list[float]) -> list[float]:
 
 
 def build_bias_target_probabilities(option_count: int, bias: str) -> list[float]:
-    
+
     count = max(2, int(option_count or 2))
     if count == 2:
         if bias == "left":
@@ -165,7 +165,8 @@ def infer_dimension_orientation(items: list[PsychometricItem]) -> PsychometricDi
         reversed_keys = {
             orientation.choice_key
             for orientation in item_orientations.values()
-            if orientation.direction in {"left", "right"} and orientation.direction != anchor_direction
+            if orientation.direction in {"left", "right"}
+            and orientation.direction != anchor_direction
         }
 
     return PsychometricDimensionOrientation(

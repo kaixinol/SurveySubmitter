@@ -11,7 +11,9 @@ _APP_NAME = "SurveyController"
 
 def is_windows_absolute_path(path: str) -> bool:
     normalized = path.strip()
-    return bool(_WINDOWS_DRIVE_ABSOLUTE_RE.match(normalized)) or normalized.startswith(("\\\\", "//"))
+    return bool(_WINDOWS_DRIVE_ABSOLUTE_RE.match(normalized)) or normalized.startswith(
+        ("\\\\", "//")
+    )
 
 
 def normalize_filesystem_path(path: str) -> str:
@@ -28,7 +30,9 @@ def _normalize_path(path: str) -> str:
 
 def _get_platform_config_root() -> str:
     if sys.platform == "win32":
-        return os.environ.get("APPDATA", os.path.expanduser(os.path.join("~", "AppData", "Roaming")))
+        return os.environ.get(
+            "APPDATA", os.path.expanduser(os.path.join("~", "AppData", "Roaming"))
+        )
     elif sys.platform == "darwin":
         return os.path.join(os.path.expanduser("~"), "Library", "Application Support")
     else:
@@ -37,7 +41,9 @@ def _get_platform_config_root() -> str:
 
 def _get_platform_local_data_root() -> str:
     if sys.platform == "win32":
-        return os.environ.get("LOCALAPPDATA", os.path.expanduser(os.path.join("~", "AppData", "Local")))
+        return os.environ.get(
+            "LOCALAPPDATA", os.path.expanduser(os.path.join("~", "AppData", "Local"))
+        )
     return _get_platform_config_root()
 
 

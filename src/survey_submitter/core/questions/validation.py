@@ -24,7 +24,7 @@ _TEXT_MIN_LENGTH_PATTERNS = (
 
 
 def _extract_text_min_length(*fragments: Any) -> int | None:
-    
+
     limits: list[int] = []
     for fragment in fragments:
         text = str(fragment or "").strip()
@@ -42,7 +42,9 @@ def _is_text_ai_enabled(entry: QuestionEntry) -> bool:
         return bool(entry.ai_enabled)
     if question_type == QuestionType.MULTI_TEXT:
         blank_flags = entry.multi_text_blank_ai_flags or []
-        return bool(entry.ai_enabled) or (bool(blank_flags) and all(bool(flag) for flag in blank_flags))
+        return bool(entry.ai_enabled) or (
+            bool(blank_flags) and all(bool(flag) for flag in blank_flags)
+        )
     return False
 
 
@@ -77,7 +79,11 @@ def _pick_config_weights(entry: QuestionEntry) -> Any:
     distribution_mode = str(entry.distribution_mode or "").strip().lower()
     custom_weights = entry.custom_weights
     probabilities = entry.probabilities
-    return custom_weights if distribution_mode == "custom" and custom_weights not in (None, []) else probabilities
+    return (
+        custom_weights
+        if distribution_mode == "custom" and custom_weights not in (None, [])
+        else probabilities
+    )
 
 
 def _build_question_info_map(
@@ -105,7 +111,9 @@ def _format_unsupported_error(unsupported_questions: list[SurveyQuestionMeta]) -
         suffix = f"（{provider_type}，{reason}）" if reason else f"（{provider_type}）"
         lines.append(f"  - 第 {item.num} 题：{title}{suffix}")
     if len(unsupported_questions) > MAX_DISPLAYED_UNSUPPORTED_ITEMS:
-        lines.append(f"  - 其余 {len(unsupported_questions) - MAX_DISPLAYED_UNSUPPORTED_ITEMS} 道暂不支持题目已省略")
+        lines.append(
+            f"  - 其余 {len(unsupported_questions) - MAX_DISPLAYED_UNSUPPORTED_ITEMS} 道暂不支持题目已省略"
+        )
     return "\n".join(lines)
 
 
@@ -118,7 +126,7 @@ def _validate_multiple_choice(
     """Validate a multiple-choice entry. Returns True if the caller should skip remaining checks."""
     multi_min_limit: int | None = None
     if question_info:
-        multi_min_limit = getattr(question_info, 'multi_min_limit', None)
+        multi_min_limit = getattr(question_info, "multi_min_limit", None)
 
     probs = entry.custom_weights or entry.probabilities
     if isinstance(probs, list):
@@ -183,7 +191,11 @@ def _validate_choice_weights(
     configured_weights: Any,
     errors: list[str],
 ) -> None:
-    if isinstance(configured_weights, list) and configured_weights and count_positive_weights(configured_weights) <= 0:
+    if (
+        isinstance(configured_weights, list)
+        and configured_weights
+        and count_positive_weights(configured_weights) <= 0
+    ):
         errors.append(
             f"第 {display_question_num} 题（{question_type}）配置无效：\n"
             "  - 当前所有选项配比都小于等于 0\n"
@@ -259,7 +271,9 @@ def validate_question_config(
 
         configured_weights = _pick_config_weights(entry)
         if question_type in CHOICE_TYPES:
-            _validate_choice_weights(display_question_num, question_type, configured_weights, errors)
+            _validate_choice_weights(
+                display_question_num, question_type, configured_weights, errors
+            )
 
         if question_type == QuestionType.MATRIX:
             _validate_matrix_entry(display_question_num, configured_weights, errors)

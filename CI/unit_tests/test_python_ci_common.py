@@ -7,7 +7,9 @@ import pytest
 from CI.python_checks import common
 
 
-def test_run_unicode_escape_check_reports_ci_unicode_escape(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_run_unicode_escape_check_reports_ci_unicode_escape(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     ci_dir = tmp_path / "CI"
     ci_dir.mkdir()
     source_path = ci_dir / "demo.py"

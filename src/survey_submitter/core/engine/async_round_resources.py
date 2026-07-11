@@ -9,8 +9,6 @@ from survey_submitter.core.task import ExecutionConfig, ExecutionState
 
 
 class AsyncRoundResources:
-    
-
     def __init__(
         self,
         *,

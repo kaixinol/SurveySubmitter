@@ -33,7 +33,12 @@ from survey_submitter.core.questions.utils import (
     serialize_random_int_range,
     try_parse_random_int_range,
 )
-from survey_submitter.core.questions.types import QuestionType, CHOICE_TYPES, TEXT_TYPES, RATING_TYPES
+from survey_submitter.core.questions.types import (
+    QuestionType,
+    CHOICE_TYPES,
+    TEXT_TYPES,
+    RATING_TYPES,
+)
 from survey_submitter.providers.common import make_provider_question_key
 
 DEFAULT_SLIDER_TARGET = 50.0
@@ -49,7 +54,9 @@ __all__ = ["configure_probabilities"]
 # ---------------------------------------------------------------------------
 
 
-def _raise_if_all_zero_single_like(raw_weights: object, question_num: int, question_type: str) -> None:
+def _raise_if_all_zero_single_like(
+    raw_weights: object, question_num: int, question_type: str
+) -> None:
     if isinstance(raw_weights, list) and raw_weights and count_positive_weights(raw_weights) <= 0:
         raise ValueError(
             f"第 {question_num} 题（{question_type}）配置无效：所有选项配比均为 0，请至少保留一个大于 0 的选项。"
@@ -143,11 +150,7 @@ def _resolve_runtime_dimension(
     strict_ratio: bool,
     allows_reliability: bool | None = None,
 ) -> str | None:
-    allows_joint_ratio = (
-        bool(allows_reliability)
-        if allows_reliability is not None
-        else True
-    )
+    allows_joint_ratio = bool(allows_reliability) if allows_reliability is not None else True
     if not reliability_mode_enabled or (strict_ratio and not allows_joint_ratio):
         return None
     raw_dimension = str(entry.dimension or "").strip()
@@ -175,12 +178,20 @@ def _handle_single(
     mapped_value = ("single", idx)
     target.question_config_index_map[question_num] = mapped_value
     _remember_provider_mapping(target, entry, mapped_value)
-    raw_meta = getattr(target, "questions_metadata", {}).get(question_num) if hasattr(target, "questions_metadata") else None
+    raw_meta = (
+        getattr(target, "questions_metadata", {}).get(question_num)
+        if hasattr(target, "questions_metadata")
+        else None
+    )
     option_texts = list(getattr(raw_meta, "option_texts", []) or [])
     ordinal_mapping = infer_ordinal_option_mapping(option_texts)
-    is_ordinal_single = ordinal_mapping is not None and ordinal_mapping.option_count == max(1, entry.option_count)
+    is_ordinal_single = ordinal_mapping is not None and ordinal_mapping.option_count == max(
+        1, entry.option_count
+    )
     if is_ordinal_single and ordinal_mapping is not None:
-        target.question_ordinal_score_map[question_num] = list(ordinal_mapping.score_by_choice_index)
+        target.question_ordinal_score_map[question_num] = list(
+            ordinal_mapping.score_by_choice_index
+        )
         target.question_dimension_map[question_num] = _resolve_runtime_dimension(
             entry,
             reliability_mode_enabled=reliability_mode_enabled,
@@ -191,7 +202,9 @@ def _handle_single(
         reliability_candidates.append((question_num, strict_ratio, entry.question_type))
     idx += 1
     target.single_prob.append(_normalize_single_like_prob_config(probs, entry.option_count))
-    target.single_option_fill_texts.append(_normalize_option_fill_texts(entry.option_fill_texts, entry.option_count))
+    target.single_option_fill_texts.append(
+        _normalize_option_fill_texts(entry.option_fill_texts, entry.option_count)
+    )
     target.single_attached_option_selects.append(copy.deepcopy(entry.attached_option_selects or []))
     return idx
 
@@ -219,7 +232,9 @@ def _handle_dropdown(
     reliability_candidates.append((question_num, strict_ratio, entry.question_type))
     idx += 1
     target.droplist_prob.append(_normalize_single_like_prob_config(probs, entry.option_count))
-    target.droplist_option_fill_texts.append(_normalize_option_fill_texts(entry.option_fill_texts, entry.option_count))
+    target.droplist_option_fill_texts.append(
+        _normalize_option_fill_texts(entry.option_fill_texts, entry.option_count)
+    )
     return idx
 
 
@@ -237,7 +252,9 @@ def _handle_multiple(
     if not isinstance(probs, list):
         raise ValueError("多选题必须提供概率列表，数值范围0-100")
     target.multiple_prob.append([float(value) for value in probs])
-    target.multiple_option_fill_texts.append(_normalize_option_fill_texts(entry.option_fill_texts, entry.option_count))
+    target.multiple_option_fill_texts.append(
+        _normalize_option_fill_texts(entry.option_fill_texts, entry.option_count)
+    )
     return idx
 
 
@@ -283,7 +300,9 @@ def _handle_matrix(
         strict_ratio=strict_ratio,
     )
     bias_value = entry.psycho_bias
-    target.question_psycho_bias_map[question_num] = list(bias_value) if isinstance(bias_value, list) else str(bias_value or "custom")
+    target.question_psycho_bias_map[question_num] = (
+        list(bias_value) if isinstance(bias_value, list) else str(bias_value or "custom")
+    )
     reliability_candidates.append((question_num, strict_ratio, entry.question_type))
     idx += rows
     option_count = max(1, _infer_option_count(entry))
@@ -291,7 +310,9 @@ def _handle_matrix(
     row_weights_source: list[object] | None = None
     if isinstance(probs, list) and any(isinstance(item, (list, tuple)) for item in probs):
         row_weights_source = probs
-    elif isinstance(entry.custom_weights, list) and any(isinstance(item, (list, tuple)) for item in entry.custom_weights):
+    elif isinstance(entry.custom_weights, list) and any(
+        isinstance(item, (list, tuple)) for item in entry.custom_weights
+    ):
         row_weights_source = entry.custom_weights
 
     if row_weights_source is not None:
@@ -392,8 +413,7 @@ def _handle_location(
     target.question_config_index_map[question_num] = mapped_value
     _remember_provider_mapping(target, entry, mapped_value)
     target.location_parts[question_num] = [
-        str(item or "").strip()
-        for item in list(entry.location_parts or [])[:3]
+        str(item or "").strip() for item in list(entry.location_parts or [])[:3]
     ]
 
 
@@ -416,8 +436,7 @@ def _handle_text(
         target.question_config_index_map[question_num] = mapped_value
         _remember_provider_mapping(target, entry, mapped_value)
         target.location_parts[question_num] = [
-            str(item or "").strip()
-            for item in list(entry.location_parts or [])[:3]
+            str(item or "").strip() for item in list(entry.location_parts or [])[:3]
         ]
         is_location = True
 
@@ -431,11 +450,15 @@ def _handle_text(
             normalized_blank_ai_flags = [bool(flag) for flag in raw_blank_ai_flags]
         raw_blank_int_ranges = entry.multi_text_blank_int_ranges or []
         if isinstance(raw_blank_int_ranges, list):
-            normalized_blank_int_ranges = [serialize_random_int_range(item) for item in raw_blank_int_ranges]
+            normalized_blank_int_ranges = [
+                serialize_random_int_range(item) for item in raw_blank_int_ranges
+            ]
         for blank_idx, mode in enumerate(entry.multi_text_blank_modes or []):
             if str(mode or _TEXT_RANDOM_NONE).strip().lower() != _TEXT_RANDOM_INTEGER:
                 continue
-            target_range = raw_blank_int_ranges[blank_idx] if blank_idx < len(raw_blank_int_ranges) else []
+            target_range = (
+                raw_blank_int_ranges[blank_idx] if blank_idx < len(raw_blank_int_ranges) else []
+            )
             if try_parse_random_int_range(target_range) is None:
                 raise ValueError(f"多项填空题第{blank_idx + 1}个空位的随机整数范围未设置完整")
     if entry.question_type == QuestionType.TEXT:
@@ -446,7 +469,12 @@ def _handle_text(
         )
     else:
         ai_enabled = False
-    if entry.question_type == QuestionType.TEXT and text_random_mode in (_TEXT_RANDOM_NAME, _TEXT_RANDOM_MOBILE, _TEXT_RANDOM_ID_CARD, _TEXT_RANDOM_INTEGER):
+    if entry.question_type == QuestionType.TEXT and text_random_mode in (
+        _TEXT_RANDOM_NAME,
+        _TEXT_RANDOM_MOBILE,
+        _TEXT_RANDOM_ID_CARD,
+        _TEXT_RANDOM_INTEGER,
+    ):
         ai_enabled = False
         if text_random_mode == _TEXT_RANDOM_NAME:
             normalized_values = [_TEXT_RANDOM_NAME_TOKEN]
@@ -536,28 +564,54 @@ def configure_probabilities(
 
         if entry.question_type == QuestionType.SINGLE:
             idx_single = _handle_single(
-                entry, question_num, probs, strict_ratio, target, idx_single,
-                reliability_mode_enabled, reliability_candidates,
+                entry,
+                question_num,
+                probs,
+                strict_ratio,
+                target,
+                idx_single,
+                reliability_mode_enabled,
+                reliability_candidates,
             )
         elif entry.question_type == QuestionType.DROPDOWN:
             idx_dropdown = _handle_dropdown(
-                entry, question_num, probs, strict_ratio, target, idx_dropdown,
-                reliability_mode_enabled, reliability_candidates,
+                entry,
+                question_num,
+                probs,
+                strict_ratio,
+                target,
+                idx_dropdown,
+                reliability_mode_enabled,
+                reliability_candidates,
             )
         elif entry.question_type == QuestionType.MULTIPLE:
             idx_multiple = _handle_multiple(entry, question_num, probs, target, idx_multiple)
         elif entry.question_type == QuestionType.MATRIX:
             idx_matrix = _handle_matrix(
-                entry, question_num, probs, strict_ratio, target, idx_matrix,
-                reliability_mode_enabled, reliability_candidates,
+                entry,
+                question_num,
+                probs,
+                strict_ratio,
+                target,
+                idx_matrix,
+                reliability_mode_enabled,
+                reliability_candidates,
             )
         elif entry.question_type in RATING_TYPES:
             idx_scale = _handle_scale(
-                entry, question_num, probs, strict_ratio, target, idx_scale,
-                reliability_mode_enabled, reliability_candidates,
+                entry,
+                question_num,
+                probs,
+                strict_ratio,
+                target,
+                idx_scale,
+                reliability_mode_enabled,
+                reliability_candidates,
             )
         elif entry.question_type == QuestionType.SLIDER:
-            idx_slider, should_continue = _handle_slider(entry, question_num, probs, target, idx_slider)
+            idx_slider, should_continue = _handle_slider(
+                entry, question_num, probs, target, idx_slider
+            )
             if should_continue:
                 continue
         elif entry.question_type == QuestionType.ORDER:

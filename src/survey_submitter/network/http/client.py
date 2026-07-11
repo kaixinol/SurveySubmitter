@@ -87,7 +87,6 @@ class _ClientEntry:
 
 
 class _StreamResponse:
-
     def __init__(
         self,
         response: httpx.Response,
@@ -147,7 +146,6 @@ class _StreamResponse:
 
 
 class _SyncClientManager:
-
     def __init__(self) -> None:
         self._lock = threading.RLock()
         self._clients: dict[_ClientKey, _ClientEntry] = {}
@@ -185,9 +183,7 @@ class _SyncClientManager:
 
     def _evict_oldest_idle_client_locked(self) -> httpx.Client | None:
         idle_items = [
-            (key, entry)
-            for key, entry in self._clients.items()
-            if entry.active_requests <= 0
+            (key, entry) for key, entry in self._clients.items() if entry.active_requests <= 0
         ]
         if not idle_items:
             return None
@@ -348,7 +344,9 @@ def _resolve_proxy(proxies: dict[str, str] | str | None, url: str) -> tuple[str 
     return None, False
 
 
-def _normalize_timeout(timeout: float | tuple[float | None, ...] | httpx.Timeout | None) -> float | tuple[float | None, ...] | httpx.Timeout | None:
+def _normalize_timeout(
+    timeout: float | tuple[float | None, ...] | httpx.Timeout | None,
+) -> float | tuple[float | None, ...] | httpx.Timeout | None:
 
     if timeout is None:
         return None
@@ -359,7 +357,9 @@ def _normalize_timeout(timeout: float | tuple[float | None, ...] | httpx.Timeout
             connect, read = timeout
             connect_val = float(connect) if connect is not None else None
             read_val = float(read) if read is not None else None
-            return httpx.Timeout(connect=connect_val, read=read_val, write=read_val, pool=connect_val)
+            return httpx.Timeout(
+                connect=connect_val, read=read_val, write=read_val, pool=connect_val
+            )
         if len(timeout) == 4:
             connect, read, write, pool = timeout
             return httpx.Timeout(
@@ -386,7 +386,6 @@ def prewarm() -> None:
             return
         temp_client: httpx.Client | None = None
         try:
-
             temp_client = httpx.Client(
                 timeout=None,
                 limits=_CLIENT_LIMITS,
@@ -395,7 +394,9 @@ def prewarm() -> None:
             )
             _PREWARMED = True
         except (httpx.HTTPError, OSError) as exc:
-            log_suppressed_exception("http_client.prewarm httpx.Client()", exc, level=logging.WARNING)
+            log_suppressed_exception(
+                "http_client.prewarm httpx.Client()", exc, level=logging.WARNING
+            )
         finally:
             if temp_client is not None:
                 _safe_suppress_and_log(
@@ -416,13 +417,15 @@ atexit.register(close)
 
 
 @overload
-def request(method: str, url: str, *, stream: Literal[True], **kwargs: object) -> _StreamResponse:
-    ...
+def request(
+    method: str, url: str, *, stream: Literal[True], **kwargs: object
+) -> _StreamResponse: ...
 
 
 @overload
-def request(method: str, url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response:
-    ...
+def request(
+    method: str, url: str, *, stream: Literal[False] = False, **kwargs: object
+) -> httpx.Response: ...
 
 
 def request(method: str, url: str, **kwargs: object) -> httpx.Response | _StreamResponse:
@@ -430,13 +433,11 @@ def request(method: str, url: str, **kwargs: object) -> httpx.Response | _Stream
 
 
 @overload
-def get(url: str, *, stream: Literal[True], **kwargs: object) -> _StreamResponse:
-    ...
+def get(url: str, *, stream: Literal[True], **kwargs: object) -> _StreamResponse: ...
 
 
 @overload
-def get(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response:
-    ...
+def get(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response: ...
 
 
 def get(url: str, **kwargs: object) -> httpx.Response | _StreamResponse:
@@ -444,13 +445,11 @@ def get(url: str, **kwargs: object) -> httpx.Response | _StreamResponse:
 
 
 @overload
-def post(url: str, *, stream: Literal[True], **kwargs: object) -> _StreamResponse:
-    ...
+def post(url: str, *, stream: Literal[True], **kwargs: object) -> _StreamResponse: ...
 
 
 @overload
-def post(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response:
-    ...
+def post(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response: ...
 
 
 def post(url: str, **kwargs: object) -> httpx.Response | _StreamResponse:
@@ -458,13 +457,11 @@ def post(url: str, **kwargs: object) -> httpx.Response | _StreamResponse:
 
 
 @overload
-def put(url: str, *, stream: Literal[True], **kwargs: object) -> _StreamResponse:
-    ...
+def put(url: str, *, stream: Literal[True], **kwargs: object) -> _StreamResponse: ...
 
 
 @overload
-def put(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response:
-    ...
+def put(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response: ...
 
 
 def put(url: str, **kwargs: object) -> httpx.Response | _StreamResponse:
@@ -472,15 +469,12 @@ def put(url: str, **kwargs: object) -> httpx.Response | _StreamResponse:
 
 
 @overload
-def delete(url: str, *, stream: Literal[True], **kwargs: object) -> _StreamResponse:
-    ...
+def delete(url: str, *, stream: Literal[True], **kwargs: object) -> _StreamResponse: ...
 
 
 @overload
-def delete(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response:
-    ...
+def delete(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response: ...
 
 
 def delete(url: str, **kwargs: object) -> httpx.Response | _StreamResponse:
     return request("DELETE", url, **kwargs)  # type: ignore[arg-type]
-

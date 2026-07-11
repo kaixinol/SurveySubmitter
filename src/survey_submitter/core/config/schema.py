@@ -52,4 +52,3 @@ class RuntimeConfig(BaseConfigModel):
         if v[0] < 0 or v[1] < 0:
             raise ValueError(f"元组元素不能为负数: {v}")
         return v
-

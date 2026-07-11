@@ -18,17 +18,18 @@ from survey_submitter.core.task._proxy_cooldown import (
     purge_expired_proxy_cooldowns as _purge_expired_proxy_cooldowns,
 )
 
+
 @dataclass
 class ProxyLease:
-    
-
     address: str = ""
     expire_at: str = ""
     expire_ts: float = 0.0
     poolable: bool = True
     source: str = ""
 
+
 if TYPE_CHECKING:
+
     class _ProxyRuntimeHost(Protocol):
         lock: threading.Lock
         proxy_waiting_threads: int
@@ -41,12 +42,15 @@ if TYPE_CHECKING:
         _runtime_change_seq: int
 
         def _purge_expired_proxy_cooldowns_locked(self, *, now_ts: float | None = None) -> None: ...
-        def _is_proxy_in_cooldown_locked(self, proxy_address: str, *, now_ts: float | None = None) -> bool: ...
+        def _is_proxy_in_cooldown_locked(
+            self, proxy_address: str, *, now_ts: float | None = None
+        ) -> bool: ...
         def active_proxy_addresses_locked(self, *, exclude_thread_name: str = "") -> set[str]: ...
         def successful_proxy_addresses_locked(self) -> set[str]: ...
         def notify_runtime_change(self) -> None: ...
         def _runtime_change_sequence(self) -> int: ...
         def _ensure_runtime_async_event(self) -> asyncio.Event: ...
+
 
 class _ProxyRuntimeNotifyMixin:
     def notify_runtime_change(self: "_ProxyRuntimeHost") -> None:
@@ -114,6 +118,7 @@ class _ProxyRuntimeNotifyMixin:
             except asyncio.TimeoutError:
                 return bool(stop_signal is not None and stop_signal.is_set())
 
+
 class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
     def register_proxy_waiter(self: "_ProxyRuntimeHost") -> None:
         with self.lock:
@@ -147,7 +152,9 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
     ) -> None:
         _purge_expired_proxy_cooldowns(self.proxy_cooldown_until_by_address, now_ts=now_ts)
 
-    def purge_expired_proxy_cooldowns(self: "_ProxyRuntimeHost", *, now_ts: float | None = None) -> None:
+    def purge_expired_proxy_cooldowns(
+        self: "_ProxyRuntimeHost", *, now_ts: float | None = None
+    ) -> None:
         with self.lock:
             self._purge_expired_proxy_cooldowns_locked(now_ts=now_ts)
 
@@ -158,7 +165,9 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
         now_ts: float | None = None,
     ) -> bool:
         return _is_proxy_in_cooldown(
-            self.proxy_cooldown_until_by_address, proxy_address, now_ts=now_ts,
+            self.proxy_cooldown_until_by_address,
+            proxy_address,
+            now_ts=now_ts,
         )
 
     def is_proxy_in_cooldown(
@@ -180,7 +189,9 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
     ) -> None:
         with self.lock:
             changed = _mark_proxy_in_cooldown(
-                self.proxy_cooldown_until_by_address, proxy_address, cooldown_seconds,
+                self.proxy_cooldown_until_by_address,
+                proxy_address,
+                cooldown_seconds,
             )
         if changed:
             self.notify_runtime_change()
@@ -191,7 +202,8 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
         exclude_thread_name: str = "",
     ) -> set[str]:
         return get_active_proxy_addresses(
-            self.proxy_in_use_by_thread, exclude_thread_name=exclude_thread_name,
+            self.proxy_in_use_by_thread,
+            exclude_thread_name=exclude_thread_name,
         )
 
     def successful_proxy_addresses_locked(self: "_ProxyRuntimeHost") -> set[str]:
@@ -229,7 +241,9 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
         if not normalized:
             return False
         with self.lock:
-            return normalized in self.active_proxy_addresses_locked(exclude_thread_name=exclude_thread_name)
+            return normalized in self.active_proxy_addresses_locked(
+                exclude_thread_name=exclude_thread_name
+            )
 
     def mark_successful_proxy_address(self: "_ProxyRuntimeHost", proxy_address: str) -> bool:
         with self.lock:

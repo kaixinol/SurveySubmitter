@@ -10,10 +10,17 @@ from survey_submitter.network.session_policy import (
     _mark_proxy_temporarily_bad,
     _record_bad_proxy_and_maybe_pause,
 )
-from survey_submitter.providers.errors import SubmissionVerificationRequiredError, SurveyProviderUnavailableAtRuntimeError
-from survey_submitter.core.engine.runtime_error_handlers import handle_ai_runtime_error as _handle_ai_runtime_error_impl
+from survey_submitter.providers.errors import (
+    SubmissionVerificationRequiredError,
+    SurveyProviderUnavailableAtRuntimeError,
+)
+from survey_submitter.core.engine.runtime_error_handlers import (
+    handle_ai_runtime_error as _handle_ai_runtime_error_impl,
+)
 from survey_submitter.core.engine.runtime_error_handlers import handle_submission_verification_error
-from survey_submitter.core.engine.runtime_error_handlers import handle_survey_provider_unavailable_error
+from survey_submitter.core.engine.runtime_error_handlers import (
+    handle_survey_provider_unavailable_error,
+)
 
 
 class _SlotErrorHandlerMixin:
@@ -40,7 +47,9 @@ class _SlotErrorHandlerMixin:
         if stopped:
             self.run_context.stop_event.set()
             return True
-        if self.config.random_proxy_ip_enabled and _record_bad_proxy_and_maybe_pause(self.state, self.runtime_bridge):
+        if self.config.random_proxy_ip_enabled and _record_bad_proxy_and_maybe_pause(
+            self.state, self.runtime_bridge
+        ):
             return True
         return False
 
@@ -53,7 +62,9 @@ class _SlotErrorHandlerMixin:
             state=self.state,
         )
 
-    async def _handle_submission_verification_error(self, exc: SubmissionVerificationRequiredError) -> bool:
+    async def _handle_submission_verification_error(
+        self, exc: SubmissionVerificationRequiredError
+    ) -> bool:
         if self.config.random_proxy_ip_enabled and self.proxy_session.proxy_address:
             try:
                 _mark_proxy_temporarily_bad(self.state, self.proxy_session.proxy_address)
@@ -79,7 +90,9 @@ class _SlotErrorHandlerMixin:
             state=self.state,
         )
 
-    async def _handle_survey_provider_unavailable_error(self, exc: SurveyProviderUnavailableAtRuntimeError) -> bool:
+    async def _handle_survey_provider_unavailable_error(
+        self, exc: SurveyProviderUnavailableAtRuntimeError
+    ) -> bool:
         return handle_survey_provider_unavailable_error(
             exc,
             self.stop_proxy,

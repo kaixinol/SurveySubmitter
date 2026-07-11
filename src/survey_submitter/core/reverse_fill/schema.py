@@ -26,15 +26,17 @@ REVERSE_FILL_KIND_TEXT = "text"
 REVERSE_FILL_KIND_MULTI_TEXT = "multi_text"
 REVERSE_FILL_KIND_MATRIX = "matrix"
 
-REVERSE_FILL_RUNTIME_SUPPORTED_TYPES = frozenset({
-    QuestionType.SINGLE,
-    QuestionType.DROPDOWN,
-    QuestionType.SCALE,
-    QuestionType.SCORE,
-    QuestionType.TEXT,
-    QuestionType.MULTI_TEXT,
-    QuestionType.MATRIX,
-})
+REVERSE_FILL_RUNTIME_SUPPORTED_TYPES = frozenset(
+    {
+        QuestionType.SINGLE,
+        QuestionType.DROPDOWN,
+        QuestionType.SCALE,
+        QuestionType.SCORE,
+        QuestionType.TEXT,
+        QuestionType.MULTI_TEXT,
+        QuestionType.MATRIX,
+    }
+)
 
 
 def reverse_fill_format_label(format_key: str) -> str:
@@ -128,7 +130,9 @@ class ReverseFillSpec:
 
     @property
     def blocking_issues(self) -> list[ReverseFillIssue]:
-        return [issue for issue in self.issues if str(issue.severity or "").strip().lower() == "block"]
+        return [
+            issue for issue in self.issues if str(issue.severity or "").strip().lower() == "block"
+        ]
 
     @property
     def blocking_issue_count(self) -> int:

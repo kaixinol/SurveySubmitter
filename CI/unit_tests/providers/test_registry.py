@@ -31,7 +31,9 @@ async def test_fill_survey_http_routes_wjx_adapter() -> None:
         yield "resolved-plan"
 
     with (
-        patch.object(adapter, "fill_survey_http_async", new=AsyncMock(return_value=True)) as fill_mock,
+        patch.object(
+            adapter, "fill_survey_http_async", new=AsyncMock(return_value=True)
+        ) as fill_mock,
         patch.object(registry, "provider_run_context", fake_provider_run_context),
     ):
         result = await registry.fill_survey_http(
@@ -52,7 +54,9 @@ async def test_fill_survey_http_routes_wjx_adapter() -> None:
 
 
 async def test_provider_hook_rejects_non_async_return_value() -> None:
-    with patch("survey_submitter.providers.hooks._load_hook", return_value=lambda *_args, **_kwargs: True):
+    with patch(
+        "survey_submitter.providers.hooks._load_hook", return_value=lambda *_args, **_kwargs: True
+    ):
         hook = build_fill_http_hook(("fake.module", "sync_http_fill"))
         try:
             await hook(ExecutionConfig(), ExecutionState())
@@ -76,7 +80,9 @@ async def test_parse_hook_normalizes_tuple_result_to_survey_definition() -> None
 
 
 async def test_parse_hook_rejects_sync_parser_result() -> None:
-    with patch("survey_submitter.providers.hooks._load_hook", return_value=lambda _url: ([], "标题")):
+    with patch(
+        "survey_submitter.providers.hooks._load_hook", return_value=lambda _url: ([], "标题")
+    ):
         hook = build_parse_hook(SURVEY_PROVIDER_WJX, ("fake.module", "parse"))
         try:
             await hook("https://www.wjx.cn/vm/demo.aspx")

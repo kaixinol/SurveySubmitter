@@ -11,15 +11,15 @@ from typing import cast
 
 if sys.platform == "win32":
     import winreg
-else:  
+else:
     winreg = None
 
-try:  
+try:
     keyring = importlib.import_module("keyring")
     _keyring_errors = importlib.import_module("keyring.errors")
     KeyringError = cast(type[Exception], getattr(_keyring_errors, "KeyringError"))
     PasswordDeleteError = cast(type[Exception], getattr(_keyring_errors, "PasswordDeleteError"))
-except Exception:  
+except Exception:
     keyring = None
     KeyringError = Exception
     PasswordDeleteError = Exception
@@ -51,7 +51,7 @@ class _DATA_BLOB(ctypes.Structure):
 
 
 def _normalize_key(key: str) -> str:
-    return str(key or "").strip()
+    return key.strip()
 
 
 def _crypt_protect_data(data: bytes) -> bytes:

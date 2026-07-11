@@ -21,4 +21,3 @@ __all__ = [
     "reset_ai_settings",
     "save_ai_settings",
 ]
-

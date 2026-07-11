@@ -55,17 +55,23 @@ async def agenerate_answer(
     system_prompt = str(config["system_prompt"] or "").strip() or get_default_system_prompt()
 
     api_protocol = _normalize_custom_api_protocol(config["api_protocol"])
-    resolved_protocol, request_url, has_explicit_endpoint = _resolve_custom_endpoint(base_url, api_protocol)
+    resolved_protocol, request_url, has_explicit_endpoint = _resolve_custom_endpoint(
+        base_url, api_protocol
+    )
 
     if resolved_protocol == "responses":
         return await acall_responses_api(request_url, api_key, model, question_title, system_prompt)
     try:
-        return await acall_chat_completions(request_url, api_key, model, question_title, system_prompt)
+        return await acall_chat_completions(
+            request_url, api_key, model, question_title, system_prompt
+        )
     except Exception as exc:
         if has_explicit_endpoint or api_protocol != "auto" or not _is_endpoint_mismatch_error(exc):
             raise
         fallback_url = f"{_normalize_endpoint_url(base_url)}{_RESPONSES_SUFFIX}"
-        return await acall_responses_api(fallback_url, api_key, model, question_title, system_prompt)
+        return await acall_responses_api(
+            fallback_url, api_key, model, question_title, system_prompt
+        )
 
 
 async def atest_connection() -> str:

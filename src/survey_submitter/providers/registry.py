@@ -16,6 +16,8 @@ from survey_submitter.providers.hooks import (
     build_fill_http_hook,
     build_parse_hook,
 )
+
+
 def _resolve_provider(*, provider: str | None = None, ctx: Any = None) -> str:
     if provider is not None:
         return normalize_survey_provider(provider, default=SURVEY_PROVIDER_WJX)

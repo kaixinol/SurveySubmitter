@@ -35,7 +35,7 @@ _DEDUPED_LOG_LOCK = threading.Lock()
 
 
 def _should_filter_noise(message: str) -> bool:
-    
+
     if message is None:
         return True
     text = str(message)
@@ -47,11 +47,13 @@ def _should_filter_noise(message: str) -> bool:
 
 
 def _safe_internal_log(message: str, exc: BaseException | None = None) -> None:
-    
+
     try:
         ORIGINAL_STDERR.write(f"[LogInternal] {message}\n")
         if exc is not None:
-            ORIGINAL_STDERR.write("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)))
+            ORIGINAL_STDERR.write(
+                "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+            )
         ORIGINAL_STDERR.flush()
     except OSError:
         try:
@@ -67,7 +69,7 @@ def log_suppressed_exception(
     *,
     level: int = logging.INFO,
 ) -> None:
-    
+
     if exc is None:
         logging.log(level, "[Suppressed] %s", context)
     else:
@@ -80,7 +82,7 @@ def log_deduped_message(
     *,
     level: int = logging.INFO,
 ) -> bool:
-    
+
     normalized_key = str(key or "").strip()
     normalized_message = str(message or "").strip()
     if not normalized_key or not normalized_message:
@@ -94,7 +96,7 @@ def log_deduped_message(
 
 
 def reset_deduped_log_message(key: str) -> None:
-    
+
     normalized_key = str(key or "").strip()
     if not normalized_key:
         return
@@ -103,8 +105,6 @@ def reset_deduped_log_message(key: str) -> None:
 
 
 class AsyncFileHandler(logging.Handler):
-    
-
     _STOP = object()
 
     def __init__(self, filename: str, *, encoding: str = "utf-8", batch_size: int = 200):
@@ -215,7 +215,6 @@ def setup_logging():
         root_logger.addHandler(LOG_BUFFER_HANDLER)
     _ensure_session_log_handler(root_logger)
 
-    
     for noisy_logger in ("urllib3", "httpx", "httpcore"):
         logging.getLogger(noisy_logger).setLevel(logging.WARNING)
 
@@ -230,7 +229,10 @@ def setup_logging():
                 if ORIGINAL_EXCEPTHOOK:
                     ORIGINAL_EXCEPTHOOK(exc_type, exc_value, exc_traceback)
                 return
-            root_logger.error("\u672a\u5904\u7406\u7684\u5f02\u5e38", exc_info=(exc_type, exc_value, exc_traceback))
+            root_logger.error(
+                "\u672a\u5904\u7406\u7684\u5f02\u5e38",
+                exc_info=(exc_type, exc_value, exc_traceback),
+            )
             if ORIGINAL_EXCEPTHOOK:
                 ORIGINAL_EXCEPTHOOK(exc_type, exc_value, exc_traceback)
 
@@ -239,64 +241,69 @@ def setup_logging():
 
 
 def register_popup_handler(handler: Callable[[str, str, str], Any] | None) -> None:
-    
+
     global _popup_handler
     _popup_handler = handler
 
 
 def _dispatch_popup(kind: str, title: str, message: str, default: object = None) -> object:
-    
+
     logging.log(
-        logging.INFO if kind in {"info", "confirm"} else logging.ERROR if kind == "error" else logging.WARNING,
+        logging.INFO
+        if kind in {"info", "confirm"}
+        else logging.ERROR
+        if kind == "error"
+        else logging.WARNING,
         f"[Popup {kind.upper()}] {title} | {message}",
     )
     if _popup_handler:
         try:
             return _popup_handler(kind, title, message)
-        except Exception:  
+        except Exception:
             logging.info("popup handler failed", exc_info=True)
     return default
 
 
 def log_popup_error(title: str, message: str, **kwargs: object):
-    
+
     _ = kwargs
     return _dispatch_popup("error", title, message, default=False)
 
 
 def log_popup_warning(title: str, message: str, **kwargs: object):
-    
+
     _ = kwargs
     return _dispatch_popup("warning", title, message, default=True)
 
 
 def log_popup_confirm(title: str, message: str, **kwargs: object) -> bool:
-    
+
     _ = kwargs
     return bool(_dispatch_popup("confirm", title, message, default=False))
 
 
 def shutdown_logging():
-    
+
     try:
         session_log_path = str(_session_log._SESSION_LOG_PATH or "")
-        
+
         LOG_BUFFER_HANDLER.flush_remaining()
         flush_session_log_file()
 
-        
         LOG_BUFFER_HANDLER.stop()
 
-        
         sys.stdout = ORIGINAL_STDOUT
         sys.stderr = ORIGINAL_STDERR
 
-        
         root_logger = logging.getLogger()
         for handler in root_logger.handlers[:]:
             handler.close()
             root_logger.removeHandler(handler)
-        if _session_log._DELETE_SESSION_LOG_ON_SHUTDOWN and session_log_path and os.path.isfile(session_log_path):
+        if (
+            _session_log._DELETE_SESSION_LOG_ON_SHUTDOWN
+            and session_log_path
+            and os.path.isfile(session_log_path)
+        ):
             try:
                 os.remove(session_log_path)
             except OSError as exc:

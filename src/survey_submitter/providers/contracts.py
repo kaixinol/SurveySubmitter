@@ -254,7 +254,9 @@ def _resolve_type_code(normalized: Mapping[str, object]) -> TypeCode:
     return convert_wire_type_code(raw)
 
 
-def _build_common_kwargs(normalized: dict[str, object], type_code: TypeCode, question_number: int) -> dict[str, object]:
+def _build_common_kwargs(
+    normalized: dict[str, object], type_code: TypeCode, question_number: int
+) -> dict[str, object]:
     unsupported_reason = str(normalized.get("unsupported_reason") or "").strip()
     if bool(normalized.get("unsupported")) and not unsupported_reason:
         unsupported_reason = "当前平台暂不支持该题型"
@@ -268,7 +270,9 @@ def _build_common_kwargs(normalized: dict[str, object], type_code: TypeCode, que
         "description": str(normalized.get("description") or "").strip() or None,
         "unsupported": bool(normalized.get("unsupported")) and type_code != TypeCode.DESCRIPTION,
         "unsupported_reason": unsupported_reason or None,
-        "provider_question_id": str(normalized.get("provider_question_id") or question_number).strip(),
+        "provider_question_id": str(
+            normalized.get("provider_question_id") or question_number
+        ).strip(),
         "provider_page_id": str(normalized.get("provider_page_id") or page_number).strip(),
     }
 
@@ -288,7 +292,8 @@ def _build_logic_kwargs(normalized: dict[str, object]) -> dict[str, object]:
         "has_display_condition": bool(normalized.get("has_display_condition")),
         "display_conditions": _normalize_dict_list(normalized.get("display_conditions")) or None,
         "has_dependent_display_logic": bool(normalized.get("has_dependent_display_logic")),
-        "controls_display_targets": _normalize_dict_list(normalized.get("controls_display_targets")) or None,
+        "controls_display_targets": _normalize_dict_list(normalized.get("controls_display_targets"))
+        or None,
         "logic_parse_status": _infer_logic_parse_status(normalized),
         "question_media": _normalize_question_media_list(normalized.get("question_media")) or None,
     }
@@ -318,7 +323,9 @@ def _build_choice_kwargs(normalized: dict[str, object]) -> dict[str, object]:
         "forced_option_text": str(normalized.get("forced_option_text") or "").strip() or None,
         "fillable_options": fillable_options or None,
         "attached_option_selects": attached_list or None,
-        "has_attached_option_select": bool(normalized.get("has_attached_option_select") or attached_list),
+        "has_attached_option_select": bool(
+            normalized.get("has_attached_option_select") or attached_list
+        ),
     }
 
 
@@ -332,13 +339,19 @@ def _build_matrix_kwargs(normalized: dict[str, object]) -> dict[str, object]:
 
 
 def _build_rating_kwargs(normalized: dict[str, object]) -> dict[str, object]:
-    option_count = _as_int(normalized.get("options"), len(_normalize_text_list(normalized.get("option_texts"))), minimum=0)
+    option_count = _as_int(
+        normalized.get("options"),
+        len(_normalize_text_list(normalized.get("option_texts"))),
+        minimum=0,
+    )
     return {
         "rating_max": _as_int(normalized.get("rating_max"), option_count, minimum=0),
     }
 
 
-def _build_text_kwargs(normalized: dict[str, object], type_code: TypeCode = TypeCode.UNKNOWN) -> dict[str, object]:
+def _build_text_kwargs(
+    normalized: dict[str, object], type_code: TypeCode = TypeCode.UNKNOWN
+) -> dict[str, object]:
     text_input_labels = _normalize_text_list(normalized.get("text_input_labels")) or None
     text_inputs = _as_int(normalized.get("text_inputs"), 0, minimum=0)
     if text_inputs == 0 and text_input_labels:
@@ -361,7 +374,9 @@ def _build_slider_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     }
 
 
-def _normalize_question(question: SurveyQuestionInput, provider: str, index: int) -> SurveyQuestionMeta:
+def _normalize_question(
+    question: SurveyQuestionInput, provider: str, index: int
+) -> SurveyQuestionMeta:
     normalized = dict(_survey_question_input_to_dict(question) or {})
     question_number = _as_int(normalized.get("num"), index, minimum=1)
     type_code = _resolve_type_code(normalized)
@@ -371,40 +386,61 @@ def _normalize_question(question: SurveyQuestionInput, provider: str, index: int
 
     match type_code:
         case TypeCode.SINGLE:
-            return SingleChoiceQuestionMeta(**_filter_kwargs(
-                SingleChoiceQuestionMeta, {**common, **logic, **_build_choice_kwargs(normalized)},
-            ))
+            return SingleChoiceQuestionMeta(
+                **_filter_kwargs(
+                    SingleChoiceQuestionMeta,
+                    {**common, **logic, **_build_choice_kwargs(normalized)},
+                )
+            )
         case TypeCode.MULTIPLE:
             kwargs = {**common, **logic, **_build_choice_kwargs(normalized)}
             kwargs["multi_min_limit"] = normalized.get("multi_min_limit")
             kwargs["multi_max_limit"] = normalized.get("multi_max_limit")
             return MultipleChoiceQuestionMeta(**_filter_kwargs(MultipleChoiceQuestionMeta, kwargs))
         case TypeCode.DROPDOWN | TypeCode.ORDER:
-            return SingleChoiceQuestionMeta(**_filter_kwargs(
-                SingleChoiceQuestionMeta, {**common, **logic, **_build_choice_kwargs(normalized)},
-            ))
+            return SingleChoiceQuestionMeta(
+                **_filter_kwargs(
+                    SingleChoiceQuestionMeta,
+                    {**common, **logic, **_build_choice_kwargs(normalized)},
+                )
+            )
         case TypeCode.MATRIX:
-            return MatrixQuestionMeta(**_filter_kwargs(
-                MatrixQuestionMeta, {**common, **logic, **_build_matrix_kwargs(normalized)},
-            ))
+            return MatrixQuestionMeta(
+                **_filter_kwargs(
+                    MatrixQuestionMeta,
+                    {**common, **logic, **_build_matrix_kwargs(normalized)},
+                )
+            )
         case TypeCode.SCORE | TypeCode.SCALE:
-            return RatingQuestionMeta(**_filter_kwargs(
-                RatingQuestionMeta, {**common, **logic, **_build_rating_kwargs(normalized)},
-            ))
+            return RatingQuestionMeta(
+                **_filter_kwargs(
+                    RatingQuestionMeta,
+                    {**common, **logic, **_build_rating_kwargs(normalized)},
+                )
+            )
         case TypeCode.SLIDER:
-            return SliderQuestionMeta(**_filter_kwargs(
-                SliderQuestionMeta, {**common, **logic, **_build_slider_kwargs(normalized)},
-            ))
+            return SliderQuestionMeta(
+                **_filter_kwargs(
+                    SliderQuestionMeta,
+                    {**common, **logic, **_build_slider_kwargs(normalized)},
+                )
+            )
         case TypeCode.TEXT | TypeCode.MULTI_TEXT | TypeCode.LOCATION:
-            return TextQuestionMeta(**_filter_kwargs(
-                TextQuestionMeta, {**common, **logic, **_build_text_kwargs(normalized, type_code)},
-            ))
+            return TextQuestionMeta(
+                **_filter_kwargs(
+                    TextQuestionMeta,
+                    {**common, **logic, **_build_text_kwargs(normalized, type_code)},
+                )
+            )
         case TypeCode.DESCRIPTION:
             return _QuestionMetaBase(**_filter_kwargs(_QuestionMetaBase, {**common, **logic}))
         case _:
-            return ChoiceQuestionMeta(**_filter_kwargs(
-                ChoiceQuestionMeta, {**common, **logic, **_build_choice_kwargs(normalized)},
-            ))
+            return ChoiceQuestionMeta(
+                **_filter_kwargs(
+                    ChoiceQuestionMeta,
+                    {**common, **logic, **_build_choice_kwargs(normalized)},
+                )
+            )
 
 
 def ensure_survey_question_meta(
@@ -413,7 +449,9 @@ def ensure_survey_question_meta(
     default_provider: str = SURVEY_PROVIDER_WJX,
     index: int = 1,
 ) -> SurveyQuestionMeta:
-    return _normalize_question(question, normalize_survey_provider(default_provider, default=SURVEY_PROVIDER_WJX), index)
+    return _normalize_question(
+        question, normalize_survey_provider(default_provider, default=SURVEY_PROVIDER_WJX), index
+    )
 
 
 def ensure_survey_question_metas(
@@ -430,7 +468,9 @@ def ensure_survey_question_metas(
     return normalized
 
 
-def serialize_survey_question_metas(questions: Iterable[SurveyQuestionInput]) -> list[dict[str, object]]:
+def serialize_survey_question_metas(
+    questions: Iterable[SurveyQuestionInput],
+) -> list[dict[str, object]]:
     serialized: list[dict[str, object]] = []
     for question in questions or []:
         normalized = _survey_question_input_to_dict(question)
@@ -448,12 +488,16 @@ def clone_survey_question_metas(
     return ensure_survey_question_metas(serialized, default_provider=default_provider)
 
 
-def normalize_survey_questions(provider: str, questions: Iterable[SurveyQuestionInput]) -> list[SurveyQuestionMeta]:
+def normalize_survey_questions(
+    provider: str, questions: Iterable[SurveyQuestionInput]
+) -> list[SurveyQuestionMeta]:
     normalized_provider = normalize_survey_provider(provider, default=SURVEY_PROVIDER_WJX)
     return ensure_survey_question_metas(questions, default_provider=normalized_provider)
 
 
-def build_survey_definition(provider: str, title: str, questions: Iterable[SurveyQuestionInput]) -> SurveyDefinition:
+def build_survey_definition(
+    provider: str, title: str, questions: Iterable[SurveyQuestionInput]
+) -> SurveyDefinition:
     normalized_provider = normalize_survey_provider(provider, default=SURVEY_PROVIDER_WJX)
     return SurveyDefinition(
         provider=normalized_provider,

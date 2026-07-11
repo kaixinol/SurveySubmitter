@@ -10,7 +10,10 @@ from survey_submitter.network.session_policy import (
     release_submit_proxy,
     SubmitProxyUnavailableError,
 )
-from survey_submitter.providers.errors import SubmissionVerificationRequiredError, SurveyProviderUnavailableAtRuntimeError
+from survey_submitter.providers.errors import (
+    SubmissionVerificationRequiredError,
+    SurveyProviderUnavailableAtRuntimeError,
+)
 import survey_submitter.network.http as http_client
 
 
@@ -74,7 +77,9 @@ class _HttpRuntimeMixin:
                     break
             finally:
                 if self.proxy_session.proxy_address:
-                    release_submit_proxy(self.state, self.slot_label, self.proxy_session.proxy_address)
+                    release_submit_proxy(
+                        self.state, self.slot_label, self.proxy_session.proxy_address
+                    )
                 self._release_session_proxy()
                 await self.scheduler.release(
                     int(token_id),
@@ -95,7 +100,9 @@ class _HttpRuntimeMixin:
         self._block_http_runtime(block_reason)
         try:
             self.state.release_reverse_fill_sample(self.slot_label, requeue=True)
-            self.state.mark_thread_finished(self.slot_label, status_text=self._resolve_finished_status_text())
+            self.state.mark_thread_finished(
+                self.slot_label, status_text=self._resolve_finished_status_text()
+            )
         except Exception:
             logging.debug("阻止纯 HTTP 提交后的收尾状态更新失败", exc_info=True)
         return True
@@ -104,7 +111,9 @@ class _HttpRuntimeMixin:
         """Post-loop cleanup: release reverse-fill sample and mark thread finished."""
         try:
             self.state.release_reverse_fill_sample(self.slot_label, requeue=True)
-            self.state.mark_thread_finished(self.slot_label, status_text=self._resolve_finished_status_text())
+            self.state.mark_thread_finished(
+                self.slot_label, status_text=self._resolve_finished_status_text()
+            )
         except Exception:
             logging.debug("HTTP slot 收尾状态更新失败", exc_info=True)
 
@@ -137,9 +146,7 @@ class _HttpRuntimeMixin:
             if await self._handle_survey_provider_unavailable_error(exc):
                 return _RoundOutcome(requeue=False, stop=True)
             self._release_round_resources(requeue_reverse_fill=True)
-        except (
-            http_client.TransportError,
-        ) as exc:
+        except (http_client.TransportError,) as exc:
             if self._handle_http_transport_error(exc):
                 return _RoundOutcome(requeue=False, stop=True)
             self._release_round_resources(requeue_reverse_fill=True)
@@ -178,7 +185,9 @@ class _HttpRuntimeMixin:
                 stop_signal=self.stop_proxy,
                 wait=bool(self.config.random_proxy_ip_enabled),
             )
-            self.proxy_session.set_current_submit_proxy(submit_proxy.address, provider=submit_proxy.provider)
+            self.proxy_session.set_current_submit_proxy(
+                submit_proxy.address, provider=submit_proxy.provider
+            )
             return submit_proxy
 
         finished = await self.http_submitter.submit(

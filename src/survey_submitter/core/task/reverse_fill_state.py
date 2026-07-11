@@ -11,6 +11,7 @@ from survey_submitter.core.reverse_fill import (
 )
 
 if TYPE_CHECKING:
+
     class _ReverseFillRuntimeHost(Protocol):
         lock: threading.Lock
         config: Any
@@ -19,7 +20,9 @@ if TYPE_CHECKING:
 
         def _reverse_fill_thread_key(self, thread_name: str | None = None) -> str: ...
         def _reverse_fill_possible_total_locked(self) -> int: ...
-        def acquire_reverse_fill_sample(self, thread_name: str | None = None) -> ReverseFillAcquireResult: ...
+        def acquire_reverse_fill_sample(
+            self, thread_name: str | None = None
+        ) -> ReverseFillAcquireResult: ...
 
         def notify_runtime_change(self) -> None: ...
         def wait_for_runtime_change(
@@ -29,10 +32,13 @@ if TYPE_CHECKING:
             timeout: float | None = None,
         ) -> bool: ...
 
+
 class ReverseFillRuntimeMixin:
     def initialize_reverse_fill_runtime(self: "_ReverseFillRuntimeHost") -> None:
         with self.lock:
-            self.reverse_fill_runtime = create_reverse_fill_runtime_state(self.config.reverse_fill_spec)
+            self.reverse_fill_runtime = create_reverse_fill_runtime_state(
+                self.config.reverse_fill_spec
+            )
         self.notify_runtime_change()
 
     def _reverse_fill_thread_key(self, thread_name: str | None = None) -> str:
@@ -62,7 +68,9 @@ class ReverseFillRuntimeMixin:
             if existing_row is not None:
                 sample = runtime.samples_by_row_number.get(int(existing_row))
                 if sample is not None:
-                    return ReverseFillAcquireResult(status="acquired", sample=sample, message="already_reserved")
+                    return ReverseFillAcquireResult(
+                        status="acquired", sample=sample, message="already_reserved"
+                    )
                 runtime.reserved_row_by_thread.pop(key, None)
             while runtime.queued_row_numbers:
                 row_number = int(runtime.queued_row_numbers.popleft())
@@ -70,10 +78,14 @@ class ReverseFillRuntimeMixin:
                 if sample is None:
                     continue
                 runtime.reserved_row_by_thread[key] = row_number
-                return ReverseFillAcquireResult(status="acquired", sample=sample, message="reserved")
+                return ReverseFillAcquireResult(
+                    status="acquired", sample=sample, message="reserved"
+                )
             target_num = max(0, int(self.config.target_num or 0))
             if target_num > 0 and self._reverse_fill_possible_total_locked() < target_num:
-                return ReverseFillAcquireResult(status="exhausted", message="reverse_fill_target_unreachable")
+                return ReverseFillAcquireResult(
+                    status="exhausted", message="reverse_fill_target_unreachable"
+                )
             return ReverseFillAcquireResult(status="waiting", message="reverse_fill_waiting")
 
     def release_reverse_fill_sample(
@@ -91,7 +103,11 @@ class ReverseFillRuntimeMixin:
             if row_number is None:
                 return None
             normalized_row = int(row_number)
-            if requeue and normalized_row not in runtime.committed_row_numbers and normalized_row not in runtime.discarded_row_numbers:
+            if (
+                requeue
+                and normalized_row not in runtime.committed_row_numbers
+                and normalized_row not in runtime.discarded_row_numbers
+            ):
                 runtime.queued_row_numbers.appendleft(normalized_row)
         self.notify_runtime_change()
         return normalized_row

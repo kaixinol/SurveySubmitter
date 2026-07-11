@@ -6,6 +6,7 @@ validates the RuntimeConfig, resolves provider details, clones question
 metadata, validates question configuration, optionally builds a reverse-fill
 spec, and constructs the ExecutionConfig template with probabilities.
 """
+
 from __future__ import annotations
 
 import copy
@@ -62,6 +63,7 @@ HTTP_MAX_THREADS: int = 64
 # Data classes & exceptions
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class PreparedExecutionArtifacts:
     """Immutable bundle produced by :func:`prepare_execution_artifacts`."""
@@ -92,6 +94,7 @@ class RuntimePreparationError(Exception):
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _resolve_thread_limit(config: RuntimeConfig) -> int:
     del config
@@ -212,11 +215,7 @@ def _build_execution_config_template(
         requested_target_num = max(1, int(reverse_fill_spec.target_num or 1))
         requested_num_threads = max(
             1,
-            int(
-                config.reverse_fill_threads
-                or config.threads
-                or 1
-            ),
+            int(config.reverse_fill_threads or config.threads or 1),
         )
         requested_num_threads = min(requested_num_threads, requested_target_num)
 
@@ -235,19 +234,12 @@ def _build_execution_config_template(
             int(config.answer_duration[0]),
             int(config.answer_duration[1]),
         ),
-        answer_datetime_window_ms=answer_datetime_window_to_epoch_ms(
-            config.answer_datetime_window
-        ),
+        answer_datetime_window_ms=answer_datetime_window_to_epoch_ms(config.answer_datetime_window),
         random_proxy_ip_enabled=bool(config.random_ip_enabled),
         proxy_source=str(config.proxy_source or "custom").strip().lower(),
         proxy_ip_pool=[],
         random_user_agent_enabled=bool(config.random_ua_enabled),
-        user_agent_ratios=copy.deepcopy(
-            dict(
-                config.random_ua_ratios
-                or {}
-            )
-        ),
+        user_agent_ratios=copy.deepcopy(dict(config.random_ua_ratios or {})),
         pause_on_aliyun_captcha=bool(config.pause_on_aliyun_captcha),
         stop_on_fail_enabled=bool(config.fail_stop_enabled),
         answer_rules=copy.deepcopy(list(config.answer_rules or [])),
@@ -266,6 +258,7 @@ def _build_execution_config_template(
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
+
 
 def prepare_execution_artifacts(
     config: RuntimeConfig,

@@ -4,6 +4,7 @@ import threading
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
+
     class _DistributionRuntimeHost(Protocol):
         lock: threading.Lock
         distribution_runtime_stats: dict[str, dict[str, Any]]
@@ -11,7 +12,9 @@ if TYPE_CHECKING:
 
         @staticmethod
         def _normalize_distribution_counts(raw_counts: Any, option_count: int) -> list[int]: ...
-        def release_reverse_fill_sample(self, thread_name: str | None = None, *, requeue: bool = True) -> int | None: ...
+        def release_reverse_fill_sample(
+            self, thread_name: str | None = None, *, requeue: bool = True
+        ) -> int | None: ...
 
         def notify_runtime_change(self) -> None: ...
         def wait_for_runtime_change(
@@ -20,6 +23,7 @@ if TYPE_CHECKING:
             stop_signal: threading.Event | None = None,
             timeout: float | None = None,
         ) -> bool: ...
+
 
 class DistributionRuntimeMixin:
     @staticmethod
@@ -49,8 +53,12 @@ class DistributionRuntimeMixin:
             )
         return total, counts
 
-    def reset_pending_distribution(self: "_DistributionRuntimeHost", thread_name: str | None = None) -> None:
-        key = str(thread_name or threading.current_thread().name or "Worker-?").strip() or "Worker-?"
+    def reset_pending_distribution(
+        self: "_DistributionRuntimeHost", thread_name: str | None = None
+    ) -> None:
+        key = (
+            str(thread_name or threading.current_thread().name or "Worker-?").strip() or "Worker-?"
+        )
         with self.lock:
             self.distribution_pending_by_thread[key] = []
 
@@ -61,7 +69,9 @@ class DistributionRuntimeMixin:
         option_count: int,
         thread_name: str | None = None,
     ) -> None:
-        key = str(thread_name or threading.current_thread().name or "Worker-?").strip() or "Worker-?"
+        key = (
+            str(thread_name or threading.current_thread().name or "Worker-?").strip() or "Worker-?"
+        )
         normalized_option_count = max(0, int(option_count or 0))
         normalized_option_index = int(option_index or 0)
         if normalized_option_count <= 0:
@@ -73,8 +83,12 @@ class DistributionRuntimeMixin:
             pending = self.distribution_pending_by_thread.setdefault(key, [])
             pending.append(item)
 
-    def commit_pending_distribution(self: "_DistributionRuntimeHost", thread_name: str | None = None) -> int:
-        key = str(thread_name or threading.current_thread().name or "Worker-?").strip() or "Worker-?"
+    def commit_pending_distribution(
+        self: "_DistributionRuntimeHost", thread_name: str | None = None
+    ) -> int:
+        key = (
+            str(thread_name or threading.current_thread().name or "Worker-?").strip() or "Worker-?"
+        )
         committed = 0
         with self.lock:
             pending = list(self.distribution_pending_by_thread.get(key) or [])

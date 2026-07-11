@@ -16,11 +16,28 @@ from .regexes import WJX_MODLEN_CLASS_RE, WJX_QUESTION_PREFIX_RE, WJX_TITLE_SUFF
 
 _TEXT_INPUT_ALLOWED_TYPES = {"text", "tel", "email", "number", "search", "url", "password"}
 _KNOWN_NON_TEXT_QUESTION_TYPES = {
-    TypeCode.SINGLE, TypeCode.MULTIPLE, TypeCode.SCORE, TypeCode.SCALE, TypeCode.MATRIX,
-    TypeCode.DROPDOWN, TypeCode.SLIDER, TypeCode.ORDER,
+    TypeCode.SINGLE,
+    TypeCode.MULTIPLE,
+    TypeCode.SCORE,
+    TypeCode.SCALE,
+    TypeCode.MATRIX,
+    TypeCode.DROPDOWN,
+    TypeCode.SLIDER,
+    TypeCode.ORDER,
 }
 _SELECT_PLACEHOLDER_PREFIXES = ("请选择", "请先选择")
-_LOCATION_VERIFY_MARKERS = ("地图", "省市", "省份", "城市", "地区", "高校", "map", "city", "province", "area")
+_LOCATION_VERIFY_MARKERS = (
+    "地图",
+    "省市",
+    "省份",
+    "城市",
+    "地区",
+    "高校",
+    "map",
+    "city",
+    "province",
+    "area",
+)
 _DISPLAY_SPACE_RE = re.compile(r"\s+")
 
 
@@ -42,12 +59,7 @@ def _extract_prefixed_question_number(raw_title: str | None) -> int | None:
     match = WJX_QUESTION_PREFIX_RE.match(text)
     if not match:
         return None
-    number_text = (
-        match.group("cn_num")
-        or match.group("q_num")
-        or match.group("plain_num")
-        or ""
-    )
+    number_text = match.group("cn_num") or match.group("q_num") or match.group("plain_num") or ""
     try:
         number = int(number_text)
     except (ValueError, TypeError):
@@ -82,7 +94,11 @@ def _input_looks_like_location(input_element) -> bool:
     onclick_value = str(input_element.get("onclick") or "").strip().lower()
     if not verify_value and "opencitybox" not in onclick_value:
         return False
-    if any(marker in verify_value for marker in _LOCATION_VERIFY_MARKERS if marker in {"地图", "省市", "省份", "城市", "地区", "高校"}):
+    if any(
+        marker in verify_value
+        for marker in _LOCATION_VERIFY_MARKERS
+        if marker in {"地图", "省市", "省份", "城市", "地区", "高校"}
+    ):
         return True
     return "opencitybox" in onclick_value
 
@@ -126,9 +142,8 @@ def _soup_question_is_required(question_div) -> bool:
         return True
     return False
 
-def extract_survey_title_from_html(html: str) -> str | None:
-    
 
+def extract_survey_title_from_html(html: str) -> str | None:
 
     if not BeautifulSoup:
         return None
@@ -178,6 +193,7 @@ def extract_survey_title_from_html(html: str) -> str | None:
             return cleaned
     return None
 
+
 def _extract_question_number_from_div(question_div) -> int | None:
     topic_attr = question_div.get("topic")
     if topic_attr and topic_attr.isdigit():
@@ -188,6 +204,7 @@ def _extract_question_number_from_div(question_div) -> int | None:
         return int(match.group(1))
     return None
 
+
 def _cleanup_question_title(raw_title: str) -> str:
     title = _normalize_html_text(raw_title)
     if not title:
@@ -196,8 +213,10 @@ def _cleanup_question_title(raw_title: str) -> str:
     title = title.replace("【单选题】", "").replace("【多选题】", "")
     return title.strip()
 
+
 def _extract_display_question_number(raw_title: str | None) -> int | None:
     return _extract_prefixed_question_number(raw_title)
+
 
 def _extract_display_heading_text(question_div) -> str:
     if question_div is None:
@@ -232,6 +251,7 @@ def _extract_display_heading_text(question_div) -> str:
     text = question_div.get_text(" ", strip=True)
     return _normalize_html_text(text)
 
+
 def _count_text_inputs_in_soup(question_div) -> int:
     candidates = question_div.find_all(["input", "textarea", "span", "div"])
     count = 0
@@ -246,7 +266,11 @@ def _count_text_inputs_in_soup(question_div) -> int:
             class_text = " ".join(class_attr).lower()
         is_textcont = "textcont" in class_text or "textedit" in class_text
 
-        if input_type == "hidden" or "display:none" in style_text or "visibility:hidden" in style_text:
+        if (
+            input_type == "hidden"
+            or "display:none" in style_text
+            or "visibility:hidden" in style_text
+        ):
             continue
         if tag_name == "input" and _input_looks_like_location(cand):
             continue
@@ -256,7 +280,9 @@ def _count_text_inputs_in_soup(question_div) -> int:
             sibling_classes = sibling.get("class") if sibling else None
             if sibling_classes and any("textedit" in cls.lower() for cls in sibling_classes):
                 continue
-        if tag_name == "textarea" or (tag_name == "input" and input_type in _TEXT_INPUT_ALLOWED_TYPES):
+        if tag_name == "textarea" or (
+            tag_name == "input" and input_type in _TEXT_INPUT_ALLOWED_TYPES
+        ):
             count += 1
             continue
         contenteditable = (cand.get("contenteditable") or "").lower() == "true"
@@ -264,8 +290,9 @@ def _count_text_inputs_in_soup(question_div) -> int:
             count += 1
     return count
 
+
 def _extract_text_input_labels(question_div) -> list[str]:
-    
+
     labels = []
 
     def _label_before_node(node) -> str:
@@ -280,7 +307,9 @@ def _extract_text_input_labels(question_div) -> list[str]:
                 break
             if name in {"br"}:
                 break
-            text = _normalize_html_text(current.get_text(" ", strip=True) if hasattr(current, "get_text") else str(current))
+            text = _normalize_html_text(
+                current.get_text(" ", strip=True) if hasattr(current, "get_text") else str(current)
+            )
             if text:
                 parts.append(text)
             current = getattr(current, "previous_sibling", None)
@@ -293,27 +322,43 @@ def _extract_text_input_labels(question_div) -> list[str]:
         input_type = (cand.get("type") or "").lower()
         style_text = (cand.get("style") or "").lower()
         class_attr = cand.get("class") or []
-        class_text = " ".join(class_attr).lower() if isinstance(class_attr, list) else str(class_attr).lower()
+        class_text = (
+            " ".join(class_attr).lower()
+            if isinstance(class_attr, list)
+            else str(class_attr).lower()
+        )
         is_textcont = "textcont" in class_text or "textedit" in class_text
 
-        if input_type == "hidden" or "display:none" in style_text or "visibility:hidden" in style_text:
+        if (
+            input_type == "hidden"
+            or "display:none" in style_text
+            or "visibility:hidden" in style_text
+        ):
             continue
         if tag_name == "input" and _input_looks_like_location(cand):
             continue
 
         if tag_name == "input":
             sibling = cand.find_next_sibling()
-            if sibling and sibling.get("class") and any("textedit" in cls.lower() for cls in sibling.get("class")):
+            if (
+                sibling
+                and sibling.get("class")
+                and any("textedit" in cls.lower() for cls in sibling.get("class"))
+            ):
                 continue
 
         is_text_input = False
-        if tag_name == "textarea" or (tag_name == "input" and input_type in _TEXT_INPUT_ALLOWED_TYPES):
+        if tag_name == "textarea" or (
+            tag_name == "input" and input_type in _TEXT_INPUT_ALLOWED_TYPES
+        ):
             is_text_input = True
         elif (cand.get("contenteditable") == "true" or is_textcont) and tag_name in {"span", "div"}:
             is_text_input = True
 
         if is_text_input:
-            label = cand.get("placeholder") or cand.get("aria-label") or cand.get("data-label") or ""
+            label = (
+                cand.get("placeholder") or cand.get("aria-label") or cand.get("data-label") or ""
+            )
             if not label:
                 prev = cand.find_previous_sibling(string=True)
                 if prev:
@@ -328,8 +373,9 @@ def _extract_text_input_labels(question_div) -> list[str]:
 
     return labels
 
+
 def _soup_question_looks_like_description(question_div, type_code: str) -> bool:
-    
+
     if question_div is None:
         return False
     relation = str(question_div.get("relation") or "").strip()
@@ -341,28 +387,29 @@ def _soup_question_looks_like_description(question_div, type_code: str) -> bool:
     )
     if is_unreachable_placeholder:
         return True
-    
+
     if type_code not in {TypeCode.SINGLE, TypeCode.MULTIPLE}:
         return False
-    
+
     choice_inputs = question_div.find_all(
         "input", attrs={"type": lambda v: v and v.lower() in ("radio", "checkbox")}
     )
     if choice_inputs:
         return False
-    
+
     has_control_group = bool(question_div.select_one(".ui-controlgroup"))
     if has_control_group:
         return False
-    
+
     has_jq_controls = bool(question_div.select_one(".jqradio, .jqcheck"))
     if has_jq_controls:
         return False
-    
+
     return True
 
+
 def _soup_question_looks_like_reorder(question_div) -> bool:
-    
+
     if question_div is None:
         return False
     if question_div.select_one(".sortnum, .sortnum-sel, .order-number, .order-index"):
@@ -375,8 +422,9 @@ def _soup_question_looks_like_reorder(question_div) -> bool:
     )
     return has_sort_signature
 
+
 def _soup_question_looks_like_numeric_scale(question_div) -> bool:
-    
+
     if question_div is None:
         return False
     anchors = question_div.select("ul[tp='d'] li a, .scale-rating ul li a, .scale-rating a[val]")
@@ -399,30 +447,37 @@ def _soup_question_looks_like_numeric_scale(question_div) -> bool:
     if not texts:
         return False
     numeric_count = sum(1 for t in texts if re.fullmatch(r"\d{1,2}", t))
-    has_scale_title = bool(question_div.select_one(".scaleTitle, .scaleTitle_frist, .scaleTitle_last, .scaleTitleFirst, .scaleTitleLast"))
+    has_scale_title = bool(
+        question_div.select_one(
+            ".scaleTitle, .scaleTitle_frist, .scaleTitle_last, .scaleTitleFirst, .scaleTitleLast"
+        )
+    )
     total = len(texts)
-    return total >= 5 and numeric_count >= max(3, int(total * 0.7)) and (total >= 9 or has_scale_title)
+    return (
+        total >= 5 and numeric_count >= max(3, int(total * 0.7)) and (total >= 9 or has_scale_title)
+    )
+
 
 def _soup_question_looks_like_rating(question_div) -> bool:
-    
+
     if question_div is None:
         return False
-    
+
     if _soup_question_looks_like_numeric_scale(question_div):
         return False
     has_rate_icon = bool(question_div.select_one("a.rate-off, a.rate-on, .rate-off, .rate-on"))
     has_tag_wrap = bool(question_div.find(class_="evaluateTagWrap"))
     has_iconfont = bool(question_div.select_one(".scale-rating .iconfontNew, .iconfontNew"))
 
-    
     if has_tag_wrap:
         return True
     if has_rate_icon or has_iconfont:
         return True
     return False
 
+
 def _extract_rating_option_count(question_div) -> int:
-    
+
     if question_div is None:
         return 0
     rating_list = question_div.find("ul", class_=WJX_MODLEN_CLASS_RE)
@@ -442,6 +497,7 @@ def _extract_rating_option_count(question_div) -> int:
     if options:
         return len(options)
     return 0
+
 
 def _should_mark_as_multi_text(
     type_code: str | None,

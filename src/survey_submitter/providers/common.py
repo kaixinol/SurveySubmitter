@@ -16,7 +16,9 @@ def normalize_survey_provider(value: Any, default: str = SURVEY_PROVIDER_WJX) ->
         provider = str(value or "").strip().lower()
     except (ValueError, TypeError):
         provider = ""
-    return provider if provider in SUPPORTED_SURVEY_PROVIDERS else str(default or SURVEY_PROVIDER_WJX)
+    return (
+        provider if provider in SUPPORTED_SURVEY_PROVIDERS else str(default or SURVEY_PROVIDER_WJX)
+    )
 
 
 def _parse_url_host(url_value: str) -> tuple[str, str]:

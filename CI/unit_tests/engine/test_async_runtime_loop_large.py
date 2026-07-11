@@ -13,7 +13,10 @@ from survey_submitter.core.engine.async_runtime_loop import AsyncSlotRunner
 from survey_submitter.core.engine.failure_reason import FailureReason
 from survey_submitter.core.task import ExecutionConfig, ExecutionState, ProxyLease
 from survey_submitter.providers.contracts import SurveyQuestionMeta, _QuestionMetaBase
-from survey_submitter.providers.errors import SubmissionVerificationRequiredError, SurveyProviderUnavailableAtRuntimeError
+from survey_submitter.providers.errors import (
+    SubmissionVerificationRequiredError,
+    SurveyProviderUnavailableAtRuntimeError,
+)
 
 
 class _FakeScheduler:
@@ -116,7 +119,9 @@ class AsyncRuntimeLoopLargeTests:
         assert await runner._sleep_or_stop(0.001) is False
 
     @pytest.mark.asyncio
-    async def test_resolve_dispatch_delay_seconds_covers_zero_fixed_and_random(self, monkeypatch) -> None:
+    async def test_resolve_dispatch_delay_seconds_covers_zero_fixed_and_random(
+        self, monkeypatch
+    ) -> None:
         config = ExecutionConfig(submit_interval_range_seconds=[0, 0], survey_provider="wjx")
         runner, _state, _ctx, _scheduler = _build_runner(config=config)
         assert runner._resolve_dispatch_delay_seconds() == 0.0
@@ -129,7 +134,9 @@ class AsyncRuntimeLoopLargeTests:
         assert runner._resolve_dispatch_delay_seconds() == 2.5
 
     @pytest.mark.asyncio
-    async def test_select_session_proxy_and_ua_does_not_pre_acquire_proxy(self, monkeypatch) -> None:
+    async def test_select_session_proxy_and_ua_does_not_pre_acquire_proxy(
+        self, monkeypatch
+    ) -> None:
         config = ExecutionConfig(random_proxy_ip_enabled=True, survey_provider="wjx")
         state = ExecutionState(config=config)
         calls: list[str] = []
@@ -138,7 +145,12 @@ class AsyncRuntimeLoopLargeTests:
             calls.append("select")
             return "http://1.1.1.1:80"
 
-        monkeypatch.setattr(proxy_session, "_select_proxy_for_session_async", fake_select_proxy_for_session_async, raising=False)
+        monkeypatch.setattr(
+            proxy_session,
+            "_select_proxy_for_session_async",
+            fake_select_proxy_for_session_async,
+            raising=False,
+        )
         monkeypatch.setattr(
             proxy_session,
             "_select_user_agent_for_session",
@@ -153,13 +165,19 @@ class AsyncRuntimeLoopLargeTests:
         assert state.snapshot_active_proxy_addresses() == set()
 
     @pytest.mark.asyncio
-    async def test_prepare_round_context_marks_terminal_stop_when_reverse_fill_exhausted(self, monkeypatch) -> None:
+    async def test_prepare_round_context_marks_terminal_stop_when_reverse_fill_exhausted(
+        self, monkeypatch
+    ) -> None:
         config = ExecutionConfig(target_num=2, survey_provider="wjx")
         state = ExecutionState(config=config)
         state.reset_pending_distribution = lambda *_args, **_kwargs: None
-        state.acquire_reverse_fill_sample = lambda *_args, **_kwargs: SimpleNamespace(status="exhausted", sample=None)
+        state.acquire_reverse_fill_sample = lambda *_args, **_kwargs: SimpleNamespace(
+            status="exhausted", sample=None
+        )
         terminal: list[tuple[str, str, str]] = []
-        state.mark_terminal_stop = lambda category, *, failure_reason, message: terminal.append((category, failure_reason, message))
+        state.mark_terminal_stop = lambda category, *, failure_reason, message: terminal.append(
+            (category, failure_reason, message)
+        )
         runner, _state, ctx, _scheduler = _build_runner(config=config, state=state)
 
         assert await runner._prepare_round_context() is False
@@ -220,12 +238,18 @@ class AsyncRuntimeLoopLargeTests:
 
     @pytest.mark.asyncio
     async def test_run_uses_http_runtime_for_credamo(self, monkeypatch) -> None:
-        config = ExecutionConfig(url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo")
+        config = ExecutionConfig(
+            url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo"
+        )
         runner, _state, _ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [6, None]
-        monkeypatch.setattr(runner.http_submitter, "submit", lambda **_kwargs: asyncio.sleep(0, result=True))
+        monkeypatch.setattr(
+            runner.http_submitter, "submit", lambda **_kwargs: asyncio.sleep(0, result=True)
+        )
         monkeypatch.setattr(runner, "_prepare_round_context", lambda: asyncio.sleep(0, result=True))
-        monkeypatch.setattr(runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA")))
+        monkeypatch.setattr(
+            runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA"))
+        )
 
         await runner.run()
 
@@ -233,7 +257,9 @@ class AsyncRuntimeLoopLargeTests:
         assert runner.stop_policy.failure_calls == []
 
     @pytest.mark.asyncio
-    async def test_run_random_proxy_enabled_acquires_proxy_only_at_submit(self, monkeypatch) -> None:
+    async def test_run_random_proxy_enabled_acquires_proxy_only_at_submit(
+        self, monkeypatch
+    ) -> None:
         config = ExecutionConfig(
             url="https://www.wjx.cn/vm/demo.aspx",
             survey_provider="wjx",
@@ -257,7 +283,9 @@ class AsyncRuntimeLoopLargeTests:
 
         monkeypatch.setattr(runner.http_submitter, "submit", fake_submit)
         monkeypatch.setattr(runner, "_prepare_round_context", fake_prepare)
-        monkeypatch.setattr(runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA")))
+        monkeypatch.setattr(
+            runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA"))
+        )
 
         await runner.run()
 
@@ -289,8 +317,13 @@ class AsyncRuntimeLoopLargeTests:
 
         monkeypatch.setattr(runner.http_submitter, "submit", fake_submit)
         monkeypatch.setattr(runner, "_prepare_round_context", lambda: asyncio.sleep(0, result=True))
-        monkeypatch.setattr(runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA")))
-        monkeypatch.setattr(runtime_loop, "_record_bad_proxy_and_maybe_pause", lambda *_args, **_kwargs: False)
+        monkeypatch.setattr(
+            runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA"))
+        )
+        monkeypatch.setattr(
+            runtime_loop, "_record_bad_proxy_and_maybe_pause", lambda *_args, **_kwargs: False
+        )
+
         async def fake_acquire_submit_proxy(*_args, **_kwargs):
             return SimpleNamespace(address=None, provider="unknown")
 
@@ -309,13 +342,25 @@ class AsyncRuntimeLoopLargeTests:
 
     @pytest.mark.asyncio
     async def test_run_http_runtime_reports_fixed_submit_steps(self, monkeypatch) -> None:
-        config = ExecutionConfig(url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo")
+        config = ExecutionConfig(
+            url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo"
+        )
         runner, state, _ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [6, None]
-        monkeypatch.setattr(runner.http_submitter, "submit", lambda **_kwargs: asyncio.sleep(0, result=True))
+        monkeypatch.setattr(
+            runner.http_submitter, "submit", lambda **_kwargs: asyncio.sleep(0, result=True)
+        )
         monkeypatch.setattr(runner, "_prepare_round_context", lambda: asyncio.sleep(0, result=True))
-        monkeypatch.setattr(runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA")))
-        monkeypatch.setattr(runtime_loop, "update_http_submit_step", lambda state, thread, label: asyncio.sleep(0, result=state.update_thread_step(thread, 1, 4, status_text=label, running=True)))
+        monkeypatch.setattr(
+            runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA"))
+        )
+        monkeypatch.setattr(
+            runtime_loop,
+            "update_http_submit_step",
+            lambda state, thread, label: asyncio.sleep(
+                0, result=state.update_thread_step(thread, 1, 4, status_text=label, running=True)
+            ),
+        )
 
         await runner.run()
 
@@ -324,15 +369,29 @@ class AsyncRuntimeLoopLargeTests:
 
     @pytest.mark.asyncio
     async def test_run_airuntime_error_releases_resources_and_requeues(self, monkeypatch) -> None:
-        config = ExecutionConfig(url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo")
+        config = ExecutionConfig(
+            url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo"
+        )
         runner, _state, _ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [5, None]
-        monkeypatch.setattr(runner.http_submitter, "submit", lambda **_kwargs: (_ for _ in ()).throw(AIRuntimeError("ai bad")))
+        monkeypatch.setattr(
+            runner.http_submitter,
+            "submit",
+            lambda **_kwargs: (_ for _ in ()).throw(AIRuntimeError("ai bad")),
+        )
         monkeypatch.setattr(runner, "_prepare_round_context", lambda: asyncio.sleep(0, result=True))
-        monkeypatch.setattr(runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA")))
-        monkeypatch.setattr(runner, "_handle_ai_runtime_error", lambda exc: asyncio.sleep(0, result=False))
+        monkeypatch.setattr(
+            runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA"))
+        )
+        monkeypatch.setattr(
+            runner, "_handle_ai_runtime_error", lambda exc: asyncio.sleep(0, result=False)
+        )
         release_flags: list[bool] = []
-        monkeypatch.setattr(runner, "_release_round_resources", lambda *, requeue_reverse_fill: release_flags.append(requeue_reverse_fill))
+        monkeypatch.setattr(
+            runner,
+            "_release_round_resources",
+            lambda *, requeue_reverse_fill: release_flags.append(requeue_reverse_fill),
+        )
 
         await runner.run()
 
@@ -340,17 +399,23 @@ class AsyncRuntimeLoopLargeTests:
         assert scheduler.release_calls[0]["requeue"] is True
 
     @pytest.mark.asyncio
-    async def test_run_submission_verification_error_stops_without_requeue(self, monkeypatch) -> None:
+    async def test_run_submission_verification_error_stops_without_requeue(
+        self, monkeypatch
+    ) -> None:
         config = ExecutionConfig(url="https://www.wjx.cn/vm/demo.aspx", survey_provider="wjx")
         runner, state, ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [8]
         monkeypatch.setattr(
             runner.http_submitter,
             "submit",
-            lambda **_kwargs: (_ for _ in ()).throw(SubmissionVerificationRequiredError("请启用随机 IP 后再提交")),
+            lambda **_kwargs: (_ for _ in ()).throw(
+                SubmissionVerificationRequiredError("请启用随机 IP 后再提交")
+            ),
         )
         monkeypatch.setattr(runner, "_prepare_round_context", lambda: asyncio.sleep(0, result=True))
-        monkeypatch.setattr(runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA")))
+        monkeypatch.setattr(
+            runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA"))
+        )
 
         await runner.run()
         await asyncio.sleep(0)
@@ -358,10 +423,15 @@ class AsyncRuntimeLoopLargeTests:
         assert ctx.stop_event.is_set()
         assert scheduler.release_calls[0]["requeue"] is False
         assert state.get_terminal_stop_snapshot()[0] == "submission_verification"
-        assert state.get_terminal_stop_snapshot()[1] == FailureReason.SUBMISSION_VERIFICATION_REQUIRED.value
+        assert (
+            state.get_terminal_stop_snapshot()[1]
+            == FailureReason.SUBMISSION_VERIFICATION_REQUIRED.value
+        )
 
     @pytest.mark.asyncio
-    async def test_run_submission_verification_with_random_proxy_retries_next_ip(self, monkeypatch) -> None:
+    async def test_run_submission_verification_with_random_proxy_retries_next_ip(
+        self, monkeypatch
+    ) -> None:
         config = ExecutionConfig(
             url="https://www.wjx.cn/vm/demo.aspx",
             survey_provider="wjx",
@@ -373,7 +443,9 @@ class AsyncRuntimeLoopLargeTests:
         scheduler.acquire_values = [8, None]
 
         def fail_submit(**_kwargs):
-            raise SubmissionVerificationRequiredError("当前随机 IP 已被风控，正在更换随机 IP 重试。")
+            raise SubmissionVerificationRequiredError(
+                "当前随机 IP 已被风控，正在更换随机 IP 重试。"
+            )
 
         async def select_proxy():
             runner.proxy_session.proxy_address = "http://1.1.1.1:80"
@@ -389,7 +461,10 @@ class AsyncRuntimeLoopLargeTests:
         assert not ctx.stop_event.is_set()
         assert scheduler.release_calls[0]["requeue"] is True
         assert state.is_proxy_in_cooldown("http://1.1.1.1:80")
-        assert runner.stop_policy.failure_calls[0]["failure_reason"] == FailureReason.SUBMISSION_VERIFICATION_REQUIRED
+        assert (
+            runner.stop_policy.failure_calls[0]["failure_reason"]
+            == FailureReason.SUBMISSION_VERIFICATION_REQUIRED
+        )
         assert runner.stop_policy.failure_calls[0]["status_text"] == "触发验证，换IP"
         assert state.get_terminal_stop_snapshot()[0] == ""
 
@@ -401,10 +476,14 @@ class AsyncRuntimeLoopLargeTests:
         monkeypatch.setattr(
             runner.http_submitter,
             "submit",
-            lambda **_kwargs: (_ for _ in ()).throw(SurveyProviderUnavailableAtRuntimeError("问卷已暂停")),
+            lambda **_kwargs: (_ for _ in ()).throw(
+                SurveyProviderUnavailableAtRuntimeError("问卷已暂停")
+            ),
         )
         monkeypatch.setattr(runner, "_prepare_round_context", lambda: asyncio.sleep(0, result=True))
-        monkeypatch.setattr(runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA")))
+        monkeypatch.setattr(
+            runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA"))
+        )
 
         await runner.run()
         await asyncio.sleep(0)
@@ -412,16 +491,32 @@ class AsyncRuntimeLoopLargeTests:
         assert ctx.stop_event.is_set()
         assert scheduler.release_calls[0]["requeue"] is False
         assert state.get_terminal_stop_snapshot()[0] == "survey_provider_unavailable"
-        assert state.get_terminal_stop_snapshot()[1] == FailureReason.SURVEY_PROVIDER_UNAVAILABLE.value
+        assert (
+            state.get_terminal_stop_snapshot()[1] == FailureReason.SURVEY_PROVIDER_UNAVAILABLE.value
+        )
 
     @pytest.mark.asyncio
-    async def test_run_http_transport_error_breaks_when_handler_requests_stop(self, monkeypatch) -> None:
-        config = ExecutionConfig(url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo")
+    async def test_run_http_transport_error_breaks_when_handler_requests_stop(
+        self, monkeypatch
+    ) -> None:
+        config = ExecutionConfig(
+            url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo"
+        )
         runner, _state, _ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [9]
-        monkeypatch.setattr(runner.http_submitter, "submit", lambda **_kwargs: (_ for _ in ()).throw(runtime_loop.http_client.ConnectTimeout("proxy bad")))
+        monkeypatch.setattr(
+            runner.http_submitter,
+            "submit",
+            lambda **_kwargs: (_ for _ in ()).throw(
+                runtime_loop.http_client.ConnectTimeout("proxy bad")
+            ),
+        )
         monkeypatch.setattr(runner, "_prepare_round_context", lambda: asyncio.sleep(0, result=True))
-        monkeypatch.setattr(runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=("http://1.1.1.1:80", "UA")))
+        monkeypatch.setattr(
+            runner,
+            "_select_session_proxy_and_ua",
+            lambda: asyncio.sleep(0, result=("http://1.1.1.1:80", "UA")),
+        )
         monkeypatch.setattr(runner, "_handle_http_transport_error", lambda _exc: True)
 
         await runner.run()
@@ -439,14 +534,21 @@ class AsyncRuntimeLoopLargeTests:
         proxy_address = "http://1.1.1.1:80"
         runner.proxy_session.proxy_address = proxy_address
 
-        assert runner._handle_http_transport_error(runtime_loop.http_client.ConnectTimeout("proxy bad")) is False
+        assert (
+            runner._handle_http_transport_error(
+                runtime_loop.http_client.ConnectTimeout("proxy bad")
+            )
+            is False
+        )
 
         assert not state.is_proxy_in_cooldown(proxy_address)
         assert runner.stop_policy.failure_calls[0]["status_text"] == "代理连接失败"
 
     @pytest.mark.asyncio
     async def test_run_remote_protocol_error_uses_transport_handler(self, monkeypatch) -> None:
-        config = ExecutionConfig(url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo")
+        config = ExecutionConfig(
+            url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo"
+        )
         runner, _state, _ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [10, None]
         seen_errors: list[BaseException] = []
@@ -459,8 +561,16 @@ class AsyncRuntimeLoopLargeTests:
             ),
         )
         monkeypatch.setattr(runner, "_prepare_round_context", lambda: asyncio.sleep(0, result=True))
-        monkeypatch.setattr(runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=("http://1.1.1.1:80", "UA")))
-        monkeypatch.setattr(runner, "_release_round_resources", lambda *, requeue_reverse_fill: release_flags.append(requeue_reverse_fill))
+        monkeypatch.setattr(
+            runner,
+            "_select_session_proxy_and_ua",
+            lambda: asyncio.sleep(0, result=("http://1.1.1.1:80", "UA")),
+        )
+        monkeypatch.setattr(
+            runner,
+            "_release_round_resources",
+            lambda *, requeue_reverse_fill: release_flags.append(requeue_reverse_fill),
+        )
 
         def handle_transport_error(exc: BaseException) -> bool:
             seen_errors.append(exc)
@@ -477,12 +587,20 @@ class AsyncRuntimeLoopLargeTests:
 
     @pytest.mark.asyncio
     async def test_run_generic_exception_records_failure_and_requeues(self, monkeypatch) -> None:
-        config = ExecutionConfig(url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo")
+        config = ExecutionConfig(
+            url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo"
+        )
         runner, _state, _ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [11, None]
-        monkeypatch.setattr(runner, "_prepare_round_context", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+        monkeypatch.setattr(
+            runner, "_prepare_round_context", lambda: (_ for _ in ()).throw(RuntimeError("boom"))
+        )
         release_flags: list[bool] = []
-        monkeypatch.setattr(runner, "_release_round_resources", lambda *, requeue_reverse_fill: release_flags.append(requeue_reverse_fill))
+        monkeypatch.setattr(
+            runner,
+            "_release_round_resources",
+            lambda *, requeue_reverse_fill: release_flags.append(requeue_reverse_fill),
+        )
 
         await runner.run()
 

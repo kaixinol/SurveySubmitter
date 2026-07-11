@@ -3,10 +3,16 @@ from __future__ import annotations
 from collections import deque
 from typing import Any
 
-from survey_submitter.core.reverse_fill.schema import ReverseFillAnswer, ReverseFillRuntimeState, ReverseFillSpec
+from survey_submitter.core.reverse_fill.schema import (
+    ReverseFillAnswer,
+    ReverseFillRuntimeState,
+    ReverseFillSpec,
+)
 
 
-def create_reverse_fill_runtime_state(spec: ReverseFillSpec | None) -> ReverseFillRuntimeState | None:
+def create_reverse_fill_runtime_state(
+    spec: ReverseFillSpec | None,
+) -> ReverseFillRuntimeState | None:
     if spec is None:
         return None
     runtime = ReverseFillRuntimeState(spec=spec)

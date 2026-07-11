@@ -5,10 +5,9 @@ from dataclasses import dataclass
 import threading
 from typing import TYPE_CHECKING, Any, Protocol
 
+
 @dataclass
 class ThreadProgressState:
-    
-
     thread_name: str
     thread_index: int = 0
     owner_id: int = 0
@@ -20,7 +19,9 @@ class ThreadProgressState:
     running: bool = False
     last_update_ts: float = 0.0
 
+
 if TYPE_CHECKING:
+
     class _ThreadProgressHost(Protocol):
         lock: threading.Lock
         thread_progress: dict[str, ThreadProgressState]
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
 
         def _get_or_create_thread_state_locked(self, thread_name: str) -> ThreadProgressState: ...
         def notify_runtime_change(self) -> None: ...
+
 
 class ThreadProgressMixin:
     @staticmethod
@@ -92,7 +94,9 @@ class ThreadProgressMixin:
         self.thread_progress[key] = state
         return state
 
-    def ensure_worker_threads(self: "_ThreadProgressHost", expected_count: int, *, prefix: str = "Worker") -> None:
+    def ensure_worker_threads(
+        self: "_ThreadProgressHost", expected_count: int, *, prefix: str = "Worker"
+    ) -> None:
         count = max(1, int(expected_count or 1))
         now = time.time()
         normalized_prefix = str(prefix or "Worker").strip() or "Worker"

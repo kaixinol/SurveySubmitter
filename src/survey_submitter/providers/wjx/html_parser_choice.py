@@ -26,6 +26,7 @@ def _normalize_force_select_text(value: str | None) -> str:
         return ""
     return WJX_FORCE_SELECT_CLEAN_RE.sub("", text).lower()
 
+
 def _extract_force_select_option_label(option_text: str | None) -> str | None:
     text = normalize_match_text(option_text)
     if not text:
@@ -35,6 +36,7 @@ def _extract_force_select_option_label(option_text: str | None) -> str | None:
         return None
     label = str(match.group("label") or "").strip().upper()
     return label or None
+
 
 def _collect_force_select_fragments(question_div, title_text: str) -> list[str]:
     fragments: list[str] = []
@@ -61,12 +63,13 @@ def _collect_force_select_fragments(question_div, title_text: str) -> list[str]:
         unique_fragments.append(key)
     return unique_fragments
 
+
 def _extract_force_select_option(
     question_div,
     title_text: str,
     option_texts: list[str],
 ) -> tuple[int | None, str | None]:
-    
+
     if not option_texts:
         return None, None
 
@@ -82,7 +85,7 @@ def _extract_force_select_option(
     fragments = _collect_force_select_fragments(question_div, title_text)
     for fragment in fragments:
         for command_match in WJX_FORCE_SELECT_COMMAND_RE.finditer(fragment):
-            tail_text = fragment[command_match.end():]
+            tail_text = fragment[command_match.end() :]
             if not tail_text:
                 continue
             sentence = WJX_FORCE_SELECT_SENTENCE_SPLIT_RE.split(tail_text, maxsplit=1)[0]
@@ -127,30 +130,33 @@ def _extract_force_select_option(
                 return option_idx, raw_text
     return None, None
 
+
 def _is_text_input_element(element) -> bool:
     if element is None:
         return False
-    tag_name = (element.name or '').lower()
-    input_type = (element.get('type') or '').lower()
-    if tag_name == 'textarea':
+    tag_name = (element.name or "").lower()
+    input_type = (element.get("type") or "").lower()
+    if tag_name == "textarea":
         return True
-    return tag_name == 'input' and input_type in ('', 'text', 'search', 'tel', 'number')
+    return tag_name == "input" and input_type in ("", "text", "search", "tel", "number")
+
 
 def _element_contains_text_input(element) -> bool:
     if element is None:
         return False
     if _is_text_input_element(element):
         return True
-    candidates = element.find_all(['input', 'textarea'])
+    candidates = element.find_all(["input", "textarea"])
     for candidate in candidates:
         if _is_text_input_element(candidate):
             return True
     return False
 
+
 def _question_div_has_shared_text_input(question_div) -> bool:
     if question_div is None:
         return False
-    shared_inputs = question_div.select('.ui-other input, .ui-other textarea')
+    shared_inputs = question_div.select(".ui-other input, .ui-other textarea")
     if any(_element_contains_text_input(element) for element in shared_inputs):
         return True
     keyword_inputs = question_div.select(
@@ -159,6 +165,7 @@ def _question_div_has_shared_text_input(question_div) -> bool:
     if any(_element_contains_text_input(element) for element in keyword_inputs):
         return True
     return False
+
 
 def _extract_option_text_from_attrs(target) -> str:
     if target is None:
@@ -195,13 +202,15 @@ def _extract_option_text_from_attrs(target) -> str:
             return text_value
     return ""
 
+
 def _text_looks_meaningful(text: str) -> bool:
     if not text:
         return False
     return bool(re.search(r"[A-Za-z0-9\u4e00-\u9fff]", text))
 
+
 def _extract_rating_option_texts(question_div) -> list[str]:
-    
+
     if question_div is None:
         return []
     selectors = (
@@ -235,21 +244,22 @@ def _extract_rating_option_texts(question_div) -> list[str]:
         texts.append(text)
     return texts
 
+
 def _collect_choice_option_texts(question_div) -> tuple[list[str], list[int]]:
     texts: list[str] = []
     fillable_indices: list[int] = []
     option_elements: list[Any] = []
-    selectors = ['.ui-controlgroup > div', 'ul > li']
+    selectors = [".ui-controlgroup > div", "ul > li"]
     for selector in selectors:
         option_elements = question_div.select(selector)
         if option_elements:
             break
     if option_elements:
         for element in option_elements:
-            label_element = element.select_one('.label')
+            label_element = element.select_one(".label")
             if not label_element:
                 label_element = element
-            text = _normalize_html_text(label_element.get_text(' ', strip=True))
+            text = _normalize_html_text(label_element.get_text(" ", strip=True))
             if not text:
                 text = _extract_option_text_from_attrs(element)
             if not text:
@@ -260,11 +270,11 @@ def _collect_choice_option_texts(question_div) -> tuple[list[str], list[int]]:
                 fillable_indices.append(option_index)
     if not texts:
         seen = set()
-        fallback_selectors = ['.label', 'li span', 'li']
+        fallback_selectors = [".label", "li span", "li"]
         for selector in fallback_selectors:
             elements = question_div.select(selector)
             for element in elements:
-                text = _normalize_html_text(element.get_text(' ', strip=True))
+                text = _normalize_html_text(element.get_text(" ", strip=True))
                 if not text:
                     text = _extract_option_text_from_attrs(element)
                 if not text or text in seen:
@@ -277,6 +287,7 @@ def _collect_choice_option_texts(question_div) -> tuple[list[str], list[int]]:
         fillable_indices.append(len(texts) - 1)
     fillable_indices = sorted(set(fillable_indices))
     return texts, fillable_indices
+
 
 def _extract_select_option_texts_from_element(select_element) -> list[str]:
     if select_element is None:
@@ -292,6 +303,7 @@ def _extract_select_option_texts_from_element(select_element) -> list[str]:
             continue
         options.append(text)
     return options
+
 
 def _extract_custom_select_option_texts(element) -> list[str]:
     if element is None:
@@ -318,11 +330,12 @@ def _extract_custom_select_option_texts(element) -> list[str]:
         deduped.append(option)
     return deduped
 
+
 def _extract_choice_attached_selects(question_div) -> list[dict[str, Any]]:
     if question_div is None:
         return []
     option_elements: list[Any] = []
-    for selector in ('.ui-controlgroup > div', 'ul > li'):
+    for selector in (".ui-controlgroup > div", "ul > li"):
         option_elements = question_div.select(selector)
         if option_elements:
             break
@@ -344,13 +357,16 @@ def _extract_choice_attached_selects(question_div) -> list[dict[str, Any]]:
                     break
         if not select_options:
             continue
-        attached_selects.append({
-            "option_index": option_index,
-            "option_text": option_text,
-            "select_options": select_options,
-            "select_option_count": len(select_options),
-        })
+        attached_selects.append(
+            {
+                "option_index": option_index,
+                "option_text": option_text,
+                "select_options": select_options,
+                "select_option_count": len(select_options),
+            }
+        )
     return attached_selects
+
 
 def _verify_text_indicates_location(value: str | None) -> bool:
     if not value:
@@ -366,6 +382,7 @@ def _verify_text_indicates_location(value: str | None) -> bool:
         or ("地区" in text)
         or ("高校" in text)
     )
+
 
 def _soup_question_is_location(question_div) -> bool:
     if question_div is None:
@@ -393,6 +410,7 @@ def _extract_location_verify_type(question_div) -> str:
         if verify_value:
             return verify_value
     return ""
+
 
 def _collect_select_option_texts(question_div, soup, question_number: int) -> list[str]:
     select = question_div.find("select")

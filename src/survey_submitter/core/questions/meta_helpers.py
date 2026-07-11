@@ -46,7 +46,11 @@ def find_all_zero_matrix_rows(raw_weights: object) -> list[int]:
     if any(isinstance(item, (list, tuple)) for item in raw_weights):
         invalid_rows: list[int] = []
         for row_index, row_weights in enumerate(raw_weights, start=1):
-            if isinstance(row_weights, (list, tuple)) and row_weights and count_positive_weights(row_weights) <= 0:
+            if (
+                isinstance(row_weights, (list, tuple))
+                and row_weights
+                and count_positive_weights(row_weights) <= 0
+            ):
                 invalid_rows.append(row_index)
         return invalid_rows
     return [0] if count_positive_weights(raw_weights) <= 0 else []
@@ -145,7 +149,9 @@ def normalize_attached_option_selects(
         select_options_raw = item.get("select_options")
         if not isinstance(select_options_raw, list):
             continue
-        select_options = [str(opt or "").strip() for opt in select_options_raw if str(opt or "").strip()]
+        select_options = [
+            str(opt or "").strip() for opt in select_options_raw if str(opt or "").strip()
+        ]
         if not select_options:
             continue
         weights = None

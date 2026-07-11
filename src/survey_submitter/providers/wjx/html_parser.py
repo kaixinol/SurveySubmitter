@@ -44,7 +44,11 @@ from .html_parser_rules import (
     _extract_question_title,
 )
 
-__all__ = ["_normalize_html_text", "extract_survey_title_from_html", "parse_survey_questions_from_html"]
+__all__ = [
+    "_normalize_html_text",
+    "extract_survey_title_from_html",
+    "parse_survey_questions_from_html",
+]
 
 
 def _normalize_media_source_url(raw: str | None) -> str:
@@ -78,7 +82,9 @@ def _append_media_item(
         media.append(item)
 
 
-def _collect_question_media(question_div, row_texts: list[str], option_texts: list[str]) -> list[dict[str, object]]:
+def _collect_question_media(
+    question_div, row_texts: list[str], option_texts: list[str]
+) -> list[dict[str, object]]:
     if question_div is None:
         return []
     media: list[dict[str, object]] = []
@@ -146,7 +152,9 @@ def _question_div_is_initially_hidden(question_div) -> bool:
         return False
     style_text = str(question_div.get("style") or "").lower()
     hidden_attr = str(question_div.get("hidden") or "").strip().lower()
-    class_text = " ".join(question_div.get("class") or []).lower() if question_div.get("class") else ""
+    class_text = (
+        " ".join(question_div.get("class") or []).lower() if question_div.get("class") else ""
+    )
     return (
         "display:none" in style_text
         or "display: none" in style_text
@@ -189,7 +197,9 @@ def _resolve_question_type(question_div, raw_type_code: str) -> dict[str, object
         if is_rating:
             rating_max = _extract_rating_option_count(question_div)
             type_code = TypeCode.SCALE
-    is_location = type_code in {TypeCode.TEXT, TypeCode.LOCATION} and _soup_question_is_location(question_div)
+    is_location = type_code in {TypeCode.TEXT, TypeCode.LOCATION} and _soup_question_is_location(
+        question_div
+    )
     if is_location:
         type_code = TypeCode.LOCATION
     elif type_code == TypeCode.LOCATION and not is_location:
@@ -267,8 +277,12 @@ def _extract_question_features(
     attached_option_selects: list[dict[str, object]] = []
     if type_code in {TypeCode.SINGLE, TypeCode.MULTIPLE}:
         attached_option_selects = _extract_choice_attached_selects(question_div)
-    has_jump, jump_rules = _extract_jump_rules_from_html(question_div, question_number, option_texts)
-    has_display_condition, display_conditions = _extract_display_conditions_from_html(question_div, question_number)
+    has_jump, jump_rules = _extract_jump_rules_from_html(
+        question_div, question_number, option_texts
+    )
+    has_display_condition, display_conditions = _extract_display_conditions_from_html(
+        question_div, question_number
+    )
     is_slider_matrix = _question_div_looks_like_slider_matrix(question_div)
     slider_min, slider_max, slider_step = (None, None, None)
     if type_code == TypeCode.SLIDER or is_slider_matrix:
@@ -453,7 +467,14 @@ def _process_question_div(
         type_code = TypeCode.DESCRIPTION
 
     features = _extract_question_features(
-        soup, question_div, question_number, type_code, option_texts, option_count, title_text, is_location
+        soup,
+        question_div,
+        question_number,
+        type_code,
+        option_texts,
+        option_count,
+        title_text,
+        is_location,
     )
     type_code = features["type_code"]
 

@@ -44,7 +44,7 @@ _NORMAL_INV_COEFFS = {
 
 
 def randn() -> float:
-    
+
     u = 0.0
     v = 0.0
     while u == 0:
@@ -55,111 +55,110 @@ def randn() -> float:
 
 
 def normal_inv(p: float) -> float:
-    
+
     if p <= 0:
         return float("-inf")
     if p >= 1:
         return float("inf")
-    
+
     plow = 0.02425
     phigh = 1 - plow
-    
+
     a = _NORMAL_INV_COEFFS["a"]
     b = _NORMAL_INV_COEFFS["b"]
     c = _NORMAL_INV_COEFFS["c"]
     d = _NORMAL_INV_COEFFS["d"]
-    
+
     if p < plow:
         q = math.sqrt(-2 * math.log(p))
-        return (
-            ((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]
-        ) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1)
-    
+        return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / (
+            (((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1
+        )
+
     if p > phigh:
         q = math.sqrt(-2 * math.log(1 - p))
-        return -(
-            ((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]
-        ) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1)
-    
+        return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / (
+            (((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1
+        )
+
     q = p - 0.5
     r = q * q
     return (
-        (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q
+        (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5])
+        * q
         / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1)
     )
 
 
 def z_to_category(z: float, option_count: int) -> int:
-    
+
     m = max(2, min(50, option_count))
-    
+
     for j in range(1, m):
         threshold = normal_inv(j / m)
         if z <= threshold:
             return j - 1
-    
+
     return m - 1
 
 
 def variance(values: list[float]) -> float:
-    
+
     if not values or len(values) < 2:
         return 0.0
-    
+
     n = len(values)
     mean = sum(values) / n
     return sum((x - mean) ** 2 for x in values) / (n - 1)
 
 
 def correlation(xs: list[float], ys: list[float]) -> float:
-    
+
     if not xs or not ys or len(xs) != len(ys) or len(xs) < 2:
         return 0.0
-    
+
     n = len(xs)
     mx = sum(xs) / n
     my = sum(ys) / n
-    
+
     num = 0.0
     dx = 0.0
     dy = 0.0
-    
+
     for i in range(n):
         a = xs[i] - mx
         b = ys[i] - my
         num += a * b
         dx += a * a
         dy += b * b
-    
+
     den = math.sqrt(dx * dy)
     return num / den if den != 0 else 0.0
 
 
 def infer_reversed_keys(items: list[PsychometricItem]) -> set[str]:
-    
+
     return set(infer_dimension_orientation(items).reversed_keys)
 
 
 def cronbach_alpha(matrix: list[list[float]]) -> float:
-    
+
     if not matrix or len(matrix) == 0:
         return 0.0
-    
-    k = len(matrix[0])  
+
+    k = len(matrix[0])
     if k < 2:
         return 0.0
-    
-    
+
     totals = [sum(row) for row in matrix]
     var_total = variance(totals)
-    
+
     if var_total == 0:
         return 0.0
-    
-    
+
     sum_item_var = 0.0
     for j in range(k):
         item_values = [row[j] for row in matrix]
         sum_item_var += variance(item_values)
-    
+
     return (k / (k - 1)) * (1 - (sum_item_var / var_total))

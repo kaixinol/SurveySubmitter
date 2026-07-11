@@ -36,11 +36,14 @@ class TypeCode(StrEnum):
     DESCRIPTION = "description"
 
 
-CHOICE_TYPES = frozenset({QuestionType.SINGLE, QuestionType.DROPDOWN, QuestionType.SCALE, QuestionType.SCORE})
+CHOICE_TYPES = frozenset(
+    {QuestionType.SINGLE, QuestionType.DROPDOWN, QuestionType.SCALE, QuestionType.SCORE}
+)
 TEXT_TYPES = frozenset({QuestionType.TEXT, QuestionType.MULTI_TEXT})
 RATING_TYPES = frozenset({QuestionType.SCALE, QuestionType.SCORE})
 MATRIX_TYPES = frozenset({QuestionType.MATRIX})
 CHOICE_LIKE_TYPES = frozenset({QuestionType.SINGLE, QuestionType.MULTIPLE, QuestionType.DROPDOWN})
+
 
 def convert_wire_type_code(raw: str) -> TypeCode:
     """Convert numeric wire-format type code to semantic TypeCode."""

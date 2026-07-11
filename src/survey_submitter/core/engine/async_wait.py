@@ -7,6 +7,7 @@ from typing import Protocol
 
 class StopSignalProtocol(Protocol):
     """Protocol for objects that can signal stop requests."""
+
     def is_set(self) -> bool:
         """Check if stop is requested."""
         ...
@@ -42,7 +43,9 @@ def is_stop_requested(stop_signal: StopSignalProtocol | asyncio.Event | None) ->
     return False
 
 
-def _resolve_async_event(stop_signal: StopSignalProtocol | asyncio.Event | None) -> asyncio.Event | None:
+def _resolve_async_event(
+    stop_signal: StopSignalProtocol | asyncio.Event | None,
+) -> asyncio.Event | None:
     if isinstance(stop_signal, asyncio.Event):
         return stop_signal
 
@@ -53,7 +56,9 @@ def _resolve_async_event(stop_signal: StopSignalProtocol | asyncio.Event | None)
     return None
 
 
-async def sleep_or_stop(stop_signal: StopSignalProtocol | asyncio.Event | None, seconds: float) -> bool:
+async def sleep_or_stop(
+    stop_signal: StopSignalProtocol | asyncio.Event | None, seconds: float
+) -> bool:
     delay = max(0.0, float(seconds or 0.0))
     if delay <= 0:
         return is_stop_requested(stop_signal)

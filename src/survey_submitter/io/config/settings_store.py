@@ -1,4 +1,5 @@
 """Minimal JSON-based application settings."""
+
 from __future__ import annotations
 
 import json

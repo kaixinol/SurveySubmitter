@@ -5,8 +5,6 @@ DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT = 10
 AUTO_SAVE_LOG_RETENTION_OPTIONS = (3, 5, 10, 20, 30, 50)
 
 
-
-
 USER_AGENT_PRESETS = {
     "pc_web": {
         "label": "电脑网页端",

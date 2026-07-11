@@ -27,7 +27,6 @@ from survey_submitter.providers.http_progress import update_http_submit_step
 
 
 class AsyncSlotRunner(_SlotErrorHandlerMixin, _HttpRuntimeMixin):
-
     def __init__(
         self,
         *,
@@ -78,7 +77,9 @@ class AsyncSlotRunner(_SlotErrorHandlerMixin, _HttpRuntimeMixin):
 
     def _update_step(self, status_text: str) -> None:
         try:
-            self.state.update_thread_step(self.slot_label, 0, 0, status_text=status_text, running=True)
+            self.state.update_thread_step(
+                self.slot_label, 0, 0, status_text=status_text, running=True
+            )
         except Exception:
             logging.debug("更新 slot 步骤失败：%s", status_text, exc_info=True)
 
@@ -90,7 +91,9 @@ class AsyncSlotRunner(_SlotErrorHandlerMixin, _HttpRuntimeMixin):
         if self.run_context.stop_requested():
             return True
         with self.state.lock:
-            target_reached = bool(self.config.target_num > 0 and self.state.cur_num >= self.config.target_num)
+            target_reached = bool(
+                self.config.target_num > 0 and self.state.cur_num >= self.config.target_num
+            )
         if target_reached:
             self.stop_policy.trigger_target_reached_stop(self.stop_proxy)
             return True

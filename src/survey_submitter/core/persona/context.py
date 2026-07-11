@@ -7,23 +7,26 @@ from dataclasses import dataclass, field
 from survey_submitter.core.persona.generator import get_current_persona
 from survey_submitter.core.questions.types import QuestionType
 
+
 @dataclass
 class AnsweredQuestion:
-    
     question_num: int
-    question_type: str          
-    selected_indices: list[int] = field(default_factory=list)   
-    selected_texts: list[str] = field(default_factory=list)     
-    text_answer: str = ""       
-    row_answers: dict[int, list[int]] = field(default_factory=dict)  
+    question_type: str
+    selected_indices: list[int] = field(default_factory=list)
+    selected_texts: list[str] = field(default_factory=list)
+    text_answer: str = ""
+    row_answers: dict[int, list[int]] = field(default_factory=dict)
+
 
 _thread_local = threading.local()
 
 PERSONA_BOOST_FACTOR = 3.0
 
+
 def reset_context() -> None:
-    
+
     _thread_local.answered = {}
+
 
 def record_answer(
     question_num: int,
@@ -33,13 +36,12 @@ def record_answer(
     text_answer: str = "",
     row_index: int | None = None,
 ) -> None:
-    
+
     ctx = getattr(_thread_local, "answered", None)
     if ctx is None:
         _thread_local.answered = {}
         ctx = _thread_local.answered
     if row_index is not None:
-        
         if question_num not in ctx:
             ctx[question_num] = AnsweredQuestion(
                 question_num=question_num,
@@ -55,15 +57,17 @@ def record_answer(
             text_answer=text_answer,
         )
 
+
 def get_answered() -> dict[int, AnsweredQuestion]:
-    
+
     return getattr(_thread_local, "answered", {})
+
 
 def apply_persona_boost(
     option_texts: list[str],
     base_weights: list[float],
 ) -> list[float]:
-    
+
     persona = get_current_persona()
     if persona is None:
         return list(base_weights)
@@ -72,7 +76,6 @@ def apply_persona_boost(
     if not keyword_map:
         return list(base_weights)
 
-    
     all_keywords: list[str] = []
     for keywords in keyword_map.values():
         all_keywords.extend(keywords)
@@ -90,26 +93,28 @@ def apply_persona_boost(
                 boosted[i] *= PERSONA_BOOST_FACTOR
                 logging.info(
                     "画像约束：选项[%d]「%s」匹配关键词「%s」，权重 x%.1f",
-                    i, text[:20], keyword, PERSONA_BOOST_FACTOR,
+                    i,
+                    text[:20],
+                    keyword,
+                    PERSONA_BOOST_FACTOR,
                 )
-                break  
+                break
     return boosted
 
+
 def build_ai_context_prompt() -> str:
-    
+
     parts: list[str] = []
 
-    
     persona = get_current_persona()
     if persona:
         desc = persona.to_description()
         parts.append(f"你扮演的角色是：{desc}。")
 
-    
     answered = get_answered()
     if answered:
         sorted_questions = sorted(answered.items(), key=lambda x: x[0])
-        
+
         recent = sorted_questions[-10:]
         if recent:
             summary_lines = []
@@ -125,4 +130,3 @@ def build_ai_context_prompt() -> str:
                 parts.append("请保持与前面回答的一致性。")
 
     return "\n".join(parts)
-

@@ -35,7 +35,9 @@ def _normalize_cell_value(value: Any) -> Any:
     return value
 
 
-def _iter_question_values(raw_rows: Iterable[ReverseFillRawRow], question_columns: dict[int, list[ReverseFillColumn]]) -> Iterable[Any]:
+def _iter_question_values(
+    raw_rows: Iterable[ReverseFillRawRow], question_columns: dict[int, list[ReverseFillColumn]]
+) -> Iterable[Any]:
     column_indexes: list[int] = []
     for columns in question_columns.values():
         for column in columns:
@@ -51,7 +53,9 @@ def _iter_question_values(raw_rows: Iterable[ReverseFillRawRow], question_column
     return collected
 
 
-def _detect_wjx_export_format(question_columns: dict[int, list[ReverseFillColumn]], raw_rows: list[ReverseFillRawRow]) -> str:
+def _detect_wjx_export_format(
+    question_columns: dict[int, list[ReverseFillColumn]], raw_rows: list[ReverseFillRawRow]
+) -> str:
     for columns in question_columns.values():
         if len(columns) <= 1:
             continue
@@ -85,7 +89,9 @@ def _detect_wjx_export_format(question_columns: dict[int, list[ReverseFillColumn
     return REVERSE_FILL_FORMAT_WJX_TEXT
 
 
-def load_wjx_excel_export(source_path: str, *, preferred_format: str = REVERSE_FILL_FORMAT_AUTO) -> WjxExcelExport:
+def load_wjx_excel_export(
+    source_path: str, *, preferred_format: str = REVERSE_FILL_FORMAT_AUTO
+) -> WjxExcelExport:
     raw_path = str(source_path or "").strip()
     if not raw_path:
         raise ValueError("未提供 Excel 文件路径")
@@ -128,7 +134,9 @@ def load_wjx_excel_export(source_path: str, *, preferred_format: str = REVERSE_F
         for column_list in question_columns.values():
             for column in column_list:
                 position = int(column.column_index) - 1
-                raw_value = _normalize_cell_value(data_row[position]) if position < len(data_row) else None
+                raw_value = (
+                    _normalize_cell_value(data_row[position]) if position < len(data_row) else None
+                )
                 values_by_column[int(column.column_index)] = raw_value
         raw_rows.append(
             ReverseFillRawRow(

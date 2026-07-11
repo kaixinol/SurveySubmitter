@@ -12,7 +12,7 @@ def prefetch_proxy_pool(
     proxy_api_url: str | None = None,
     stop_signal: threading.Event | None = None,
 ) -> list[ProxyLease]:
-    
+
     from survey_submitter.network.proxy.api import fetch_proxy_batch_async
 
     effective_url = proxy_api_url or get_effective_proxy_api_url()
@@ -25,4 +25,3 @@ def prefetch_proxy_pool(
         )
     )
     return proxy_pool
-

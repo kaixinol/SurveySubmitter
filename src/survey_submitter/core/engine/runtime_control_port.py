@@ -14,7 +14,9 @@ class RuntimeControlPort(Protocol):
     def on_random_ip_loading_changed(self, loading: bool, message: str = "") -> None: ...
 
 
-def _get_method_by_priority(obj: RuntimeControlPort, names: list[str]) -> Callable[..., object] | None:
+def _get_method_by_priority(
+    obj: RuntimeControlPort, names: list[str]
+) -> Callable[..., object] | None:
     """Get the first callable method from a list of method names."""
     for name in names:
         method = getattr(obj, name, None)
@@ -23,7 +25,9 @@ def _get_method_by_priority(obj: RuntimeControlPort, names: list[str]) -> Callab
     return None
 
 
-def wait_if_paused(runtime_port: RuntimeControlPort | None, stop_signal: StopSignalLike | None) -> None:
+def wait_if_paused(
+    runtime_port: RuntimeControlPort | None, stop_signal: StopSignalLike | None
+) -> None:
     if runtime_port is None:
         return
     runtime_port.wait_if_paused(stop_signal)
@@ -37,8 +41,7 @@ def on_random_ip_submission(
         return
 
     handler = _get_method_by_priority(
-        runtime_port,
-        ["on_random_ip_submission", "handle_random_ip_submission"]
+        runtime_port, ["on_random_ip_submission", "handle_random_ip_submission"]
     )
     if handler is None:
         return
@@ -47,7 +50,7 @@ def on_random_ip_submission(
         handler(stop_signal)
     except TypeError:
         # Fallback for legacy handlers that require keyword argument
-        if hasattr(handler, '__name__') and 'legacy' in handler.__name__.lower():
+        if hasattr(handler, "__name__") and "legacy" in handler.__name__.lower():
             handler(stop_signal=stop_signal)
         else:
             raise
@@ -62,8 +65,7 @@ def on_random_ip_loading_changed(
         return
 
     setter = _get_method_by_priority(
-        runtime_port,
-        ["on_random_ip_loading_changed", "set_random_ip_loading"]
+        runtime_port, ["on_random_ip_loading_changed", "set_random_ip_loading"]
     )
     if setter is not None:
         setter(bool(loading), str(message or ""))

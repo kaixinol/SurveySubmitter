@@ -22,7 +22,6 @@ async def update_http_submit_step(
     *,
     min_visible_seconds: float = HTTP_SUBMIT_STEP_MIN_VISIBLE_SECONDS,
 ) -> None:
-    
 
     label = str(step_label or "").strip()
     try:

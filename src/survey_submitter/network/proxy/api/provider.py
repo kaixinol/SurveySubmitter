@@ -32,10 +32,10 @@ from survey_submitter.network.proxy.pool.pool import (
 )
 
 _IP_PORT_RE = re.compile(
-    r'(?:https?://)?'
-    r'(?:([^\s:@/,]+):([^\s:@/,]+)@)?'
-    r'((?:\d{1,3}\.){3}\d{1,3})'
-    r':(\d{2,5})'
+    r"(?:https?://)?"
+    r"(?:([^\s:@/,]+):([^\s:@/,]+)@)?"
+    r"((?:\d{1,3}\.){3}\d{1,3})"
+    r":(\d{2,5})"
 )
 
 _FATAL_PATTERNS = [
@@ -51,8 +51,6 @@ _FATAL_PATTERNS = [
 
 class ProxyApiFatalError(RuntimeError):
     pass
-
-
 
 
 def _normalize_expected_proxy_count(expected_count: Any) -> int:
@@ -133,10 +131,8 @@ def _parse_proxy_payload(text: str) -> list[str]:
     return unique
 
 
-
-
 def _extract_custom_api_error(data: Any) -> str | None:
-    
+
     if not isinstance(data, dict):
         return None
     code = data.get("code")
@@ -149,8 +145,6 @@ def _extract_custom_api_error(data: Any) -> str | None:
         if re.search(pattern, message, re.IGNORECASE):
             return user_msg
     return None
-
-
 
 
 def _proxy_api_candidates(proxy_url: str | None) -> list[str]:
@@ -173,7 +167,7 @@ def _warn_custom_api_returned_large_batch(returned_count: int, requested_count: 
 
 
 def _extract_minute_from_url(url: str) -> int | None:
-    
+
     try:
         split = urlsplit(url)
         for key, value in parse_qsl(split.query):
@@ -185,7 +179,7 @@ def _extract_minute_from_url(url: str) -> int | None:
 
 
 def _check_minute_conflict(url: str) -> str | None:
-    
+
     minute = _extract_minute_from_url(url)
     if minute is None:
         return None
@@ -231,8 +225,6 @@ def test_custom_proxy_api(url: str) -> tuple[bool, str, list[str]]:
         return False, str(e), []
     except (KeyError, TypeError) as e:
         return False, f"解析失败: {e}", []
-
-
 
 
 async def fetch_proxy_batch_async(
@@ -309,5 +301,3 @@ __all__ = [
     "fetch_proxy_batch_async",
     "test_custom_proxy_api",
 ]
-
-

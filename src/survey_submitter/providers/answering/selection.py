@@ -39,7 +39,9 @@ def resolve_selected_weight_text(
     resolved_probabilities: Any,
     raw_probabilities: Any,
 ) -> str:
-    if isinstance(resolved_probabilities, list) and 0 <= selected_index < len(resolved_probabilities):
+    if isinstance(resolved_probabilities, list) and 0 <= selected_index < len(
+        resolved_probabilities
+    ):
         return format_weight_value(resolved_probabilities[selected_index])
     if isinstance(raw_probabilities, list) and 0 <= selected_index < len(raw_probabilities):
         return format_weight_value(raw_probabilities[selected_index])
@@ -59,7 +61,11 @@ def positive_multiple_indexes(weights: Any, option_count: int) -> list[int]:
             normalized.append(max(0.0, float(raw)))
         except (ValueError, TypeError):
             normalized.append(0.0)
-    selected = [idx for idx, weight in enumerate(normalized) if weight > 0 and random.uniform(0, 100) <= weight]
+    selected = [
+        idx
+        for idx, weight in enumerate(normalized)
+        if weight > 0 and random.uniform(0, 100) <= weight
+    ]
     if not selected:
         positive = [idx for idx, weight in enumerate(normalized) if weight > 0]
         selected = [random.choice(positive)] if positive else [random.randrange(count)]
@@ -98,7 +104,9 @@ def positive_multiple_indexes_with_limits(
                 weight = 0.0
             if idx not in selected and weight > 0:
                 remaining_positive.append(idx)
-    remaining_any = [idx for idx in range(count) if idx not in selected and idx not in remaining_positive]
+    remaining_any = [
+        idx for idx in range(count) if idx not in selected and idx not in remaining_positive
+    ]
     random.shuffle(remaining_positive)
     random.shuffle(remaining_any)
 

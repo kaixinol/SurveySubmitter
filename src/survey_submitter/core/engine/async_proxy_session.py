@@ -12,8 +12,6 @@ from survey_submitter.network.session_policy import (
 
 
 class AsyncProxySession:
-    
-
     def __init__(
         self,
         *,
@@ -44,7 +42,9 @@ class AsyncProxySession:
         self.user_agent_profile = profile
         return profile
 
-    def set_current_submit_proxy(self, proxy_address: str | None, *, provider: str = "unknown") -> None:
+    def set_current_submit_proxy(
+        self, proxy_address: str | None, *, provider: str = "unknown"
+    ) -> None:
         self.proxy_address = str(proxy_address or "").strip() or None
         self.proxy_provider = str(provider or "unknown").strip() or "unknown"
 

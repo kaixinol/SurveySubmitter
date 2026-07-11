@@ -51,8 +51,6 @@ def is_ai_timeout_runtime_error(error: object) -> bool:
     return False
 
 
-
-
 def _normalize_text(value: str | None) -> str:
     if not value:
         return ""
@@ -85,6 +83,7 @@ def build_ai_question_prompt(
 
     try:
         from survey_submitter.core.persona.context import build_ai_context_prompt
+
         context_prompt = build_ai_context_prompt()
         if context_prompt:
             return f"{context_prompt}\n\n请回答以下问卷问题：{title}"

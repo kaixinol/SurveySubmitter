@@ -23,7 +23,9 @@ def _build_choice_key(question_index: int, row_index: int | None = None) -> str:
     return f"q:{question_index}"
 
 
-def normalize_target_alpha(value: str | int | float | None, default: float = DEFAULT_TARGET_ALPHA) -> float:
+def normalize_target_alpha(
+    value: str | int | float | None, default: float = DEFAULT_TARGET_ALPHA
+) -> float:
 
     fallback = float(default)
 
@@ -55,6 +57,7 @@ def compute_rho_from_alpha(alpha: float, k: int) -> float:
 def compute_sigma_e_from_alpha(alpha: float, k: int) -> float:
 
     import math
+
     rho = compute_rho_from_alpha(alpha, k)
     return math.sqrt((1 / rho) - 1)
 
@@ -75,7 +78,6 @@ def generate_psycho_answer(
 
 @dataclass
 class PsychometricItem:
-
     kind: str
     question_index: int
     row_index: int | None = None
@@ -128,7 +130,8 @@ def _extract_item_attributes(raw_item: object) -> dict[str, object]:
         "option_count": max(2, int(getattr(raw_item, "option_count", 5) or 5)),
         "bias": str(getattr(raw_item, "bias", "center") or "center"),
         "target_probabilities": getattr(raw_item, "target_probabilities", None),
-        "score_by_choice_index": list(getattr(raw_item, "score_by_choice_index", None) or []) or None,
+        "score_by_choice_index": list(getattr(raw_item, "score_by_choice_index", None) or [])
+        or None,
     }
 
 
@@ -151,7 +154,9 @@ def _coerce_psychometric_item(raw_item: object) -> PsychometricItem | None:
         q_idx, q_type, opt_count, bias, row_idx = raw_item[:5]
         probabilities = raw_item[5] if len(raw_item) >= 6 else None
         if not isinstance(probabilities, list) or not probabilities:
-            probabilities = build_bias_target_probabilities(int(opt_count or 5), str(bias or "center"))
+            probabilities = build_bias_target_probabilities(
+                int(opt_count or 5), str(bias or "center")
+            )
         kind = "matrix_row" if q_type == QuestionType.MATRIX and row_idx is not None else q_type
         return PsychometricItem(
             kind=str(kind or "scale"),
@@ -200,7 +205,6 @@ def _coerce_psychometric_item(raw_item: object) -> PsychometricItem | None:
 
 @dataclass
 class PsychometricPlan:
-
     items: list[PsychometricItem]
     theta: float
     sigma_e: float
@@ -218,7 +222,6 @@ class PsychometricPlan:
 
 @dataclass
 class DimensionPsychometricPlan:
-
     plans: dict[str, PsychometricPlan]
     item_dimension_map: dict[str, str]
     skipped_dimensions: dict[str, int]
@@ -280,7 +283,9 @@ def build_psychometric_plan(
             is_reversed=item.choice_key in reversed_keys,
         )
 
-        choices[_build_choice_key(item.question_index, item.row_index)] = item.choice_index_for_score(score_index)
+        choices[_build_choice_key(item.question_index, item.row_index)] = (
+            item.choice_index_for_score(score_index)
+        )
 
     logger.debug(
         "心理测量计划已启用 | 目标α=%.2f 题数=%d θ=%.2f σ_e=%.2f 主方向=%s 反向题=%d",
@@ -322,7 +327,9 @@ def build_dimension_psychometric_plan(
         item_count = len(items or [])
         if item_count < 2:
             skipped_dimensions[normalized_dimension] = item_count
-            logger.info("维度[%s]题目数不足 2，道数=%d，已回退常规逻辑", normalized_dimension, item_count)
+            logger.info(
+                "维度[%s]题目数不足 2，道数=%d，已回退常规逻辑", normalized_dimension, item_count
+            )
             continue
 
         plan = build_psychometric_plan(items, target_alpha=target_alpha)
@@ -333,7 +340,9 @@ def build_dimension_psychometric_plan(
         plans[normalized_dimension] = plan
         merged_items.extend(plan.items)
         for item in plan.items:
-            item_dimension_map[_build_choice_key(item.question_index, item.row_index)] = normalized_dimension
+            item_dimension_map[_build_choice_key(item.question_index, item.row_index)] = (
+                normalized_dimension
+            )
         logger.info("维度[%s]已启用心理测量计划，道数=%d", normalized_dimension, len(plan.items))
 
     if not plans:
@@ -345,4 +354,3 @@ def build_dimension_psychometric_plan(
         skipped_dimensions=skipped_dimensions,
         items=merged_items,
     )
-

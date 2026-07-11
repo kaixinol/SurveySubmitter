@@ -40,9 +40,7 @@ def _ordered_questions(questions: Sequence[SurveyQuestionMeta]) -> list[SurveyQu
 
 def question_has_survey_logic(question: SurveyQuestionMeta) -> bool:
     return bool(
-        question.has_jump
-        or question.has_display_condition
-        or question.has_dependent_display_logic
+        question.has_jump or question.has_display_condition or question.has_dependent_display_logic
     )
 
 
@@ -55,9 +53,7 @@ def _logic_status_is_complete_enough(question: SurveyQuestionMeta) -> bool:
 
     if bool(question.has_jump) and not list(question.jump_rules or []):
         return False
-    if bool(question.has_display_condition) and not list(
-        question.display_conditions or []
-    ):
+    if bool(question.has_display_condition) and not list(question.display_conditions or []):
         return False
     if bool(question.has_dependent_display_logic) and not list(
         question.controls_display_targets or []
@@ -84,7 +80,9 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
                 source_question_num = int(condition.get("condition_question_num") or 0)
             except (ValueError, TypeError):
                 source_question_num = 0
-            condition_mode = str(condition.get("condition_mode") or "selected").strip() or "selected"
+            condition_mode = (
+                str(condition.get("condition_mode") or "selected").strip() or "selected"
+            )
             if source_question_num <= 0:
                 return f"第{question_num}题显隐条件缺少来源题号"
             if source_question_num >= question_num:
@@ -144,11 +142,11 @@ def _condition_is_met(
 
     condition_mode = str(condition.get("condition_mode") or "selected").strip() or "selected"
     option_indices = condition.get("condition_option_indices")
-    normalized_indices = {
-        int(item)
-        for item in list(option_indices or [])
-        if str(item).strip() and int(item) >= 0
-    } if isinstance(option_indices, list) else set()
+    normalized_indices = (
+        {int(item) for item in list(option_indices or []) if str(item).strip() and int(item) >= 0}
+        if isinstance(option_indices, list)
+        else set()
+    )
     selected_indices = _action_selected_indices(source_action)
 
     if not normalized_indices:
@@ -255,6 +253,7 @@ async def build_http_logic_plan(
         action = await build_action(question)
         if action is None:
             import logging
+
             logging.getLogger(__name__).warning("第%d题暂不支持纯 HTTP 提交，已跳过", question_num)
             skipped_question_nums.append(question_num)
             continue
