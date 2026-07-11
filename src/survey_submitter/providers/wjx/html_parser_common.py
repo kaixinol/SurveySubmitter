@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import html as html_lib
 import re
-from typing import Any
 
 try:
     from bs4 import BeautifulSoup
@@ -36,7 +35,7 @@ def _normalize_html_text(value: str | None) -> str:
     return text.strip()
 
 
-def _extract_prefixed_question_number(raw_title: Any) -> int | None:
+def _extract_prefixed_question_number(raw_title: str | None) -> int | None:
     text = normalize_match_text(raw_title)
     if not text:
         return None
@@ -56,7 +55,7 @@ def _extract_prefixed_question_number(raw_title: Any) -> int | None:
     return number if number > 0 else None
 
 
-def _text_looks_like_select_placeholder(value: Any) -> bool:
+def _text_looks_like_select_placeholder(value: str | None) -> bool:
     text = _normalize_html_text(str(value or ""))
     if not text:
         return False
@@ -64,7 +63,7 @@ def _text_looks_like_select_placeholder(value: Any) -> bool:
     return any(compact_text.startswith(prefix) for prefix in _SELECT_PLACEHOLDER_PREFIXES)
 
 
-def _is_select_placeholder_option(index: int, value: Any, text: Any) -> bool:
+def _is_select_placeholder_option(index: int, value: str | None, text: str | None) -> bool:
     if index != 0:
         return False
     normalized_value = _normalize_html_text(str(value or ""))
@@ -197,7 +196,7 @@ def _cleanup_question_title(raw_title: str) -> str:
     title = title.replace("【单选题】", "").replace("【多选题】", "")
     return title.strip()
 
-def _extract_display_question_number(raw_title: Any) -> int | None:
+def _extract_display_question_number(raw_title: str | None) -> int | None:
     return _extract_prefixed_question_number(raw_title)
 
 def _extract_display_heading_text(question_div) -> str:
@@ -445,7 +444,7 @@ def _extract_rating_option_count(question_div) -> int:
     return 0
 
 def _should_mark_as_multi_text(
-    type_code: Any,
+    type_code: str | None,
     option_count: int,
     text_input_count: int,
     is_location: bool,

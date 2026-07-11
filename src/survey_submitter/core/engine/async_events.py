@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
 
 from survey_submitter.core.task import ExecutionState
 
@@ -16,7 +16,7 @@ class AsyncRunContext:
         state: ExecutionState,
         stop_event: asyncio.Event,
         pause_event: asyncio.Event,
-        status_sink: Callable[[dict[str, Any]], None] | None = None,
+        status_sink: Callable[[dict[str, object]], None] | None = None,
     ) -> None:
         self.state = state
         self.stop_event = stop_event
@@ -30,7 +30,7 @@ class AsyncRunContext:
         while self.pause_event.is_set() and not self.stop_event.is_set():
             await asyncio.sleep(0.1)
 
-    def emit(self, event: dict[str, Any]) -> None:
+    def emit(self, event: dict[str, object]) -> None:
         sink = self.status_sink
         if callable(sink):
             sink(dict(event or {}))

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 
 try:
     from bs4 import BeautifulSoup
@@ -167,14 +166,14 @@ def _extract_question_metadata_from_html(soup, question_div, question_number: in
         option_count = 1
     return option_texts, option_count, matrix_rows, row_texts, fillable_indices, multi_min_limit, multi_max_limit
 
-def _extract_jump_rules_from_html(question_div, question_number: int, option_texts: list[str]) -> tuple[bool, list[dict[str, Any]]]:
+def _extract_jump_rules_from_html(question_div, question_number: int, option_texts: list[str]) -> tuple[bool, list[dict[str, object]]]:
     
     _ = question_number
     has_jump_attr = str(question_div.get("hasjump") or "").strip() == "1"
-    jump_rules: list[dict[str, Any]] = []
+    jump_rules: list[dict[str, object]] = []
     terminate_keywords = ("结束作答", "结束答题", "结束填写", "终止作答", "停止作答")
 
-    def _parse_jump_target(raw_value: Any) -> int | None:
+    def _parse_jump_target(raw_value: str | int | None) -> int | None:
         text_value = normalize_match_text(raw_value)
         if not text_value:
             return None
@@ -242,14 +241,14 @@ def _extract_jump_rules_from_html(question_div, question_number: int, option_tex
             })
     return has_jump_attr or bool(jump_rules), jump_rules
 
-def _extract_display_conditions_from_html(question_div, question_number: int) -> tuple[bool, list[dict[str, Any]]]:
+def _extract_display_conditions_from_html(question_div, question_number: int) -> tuple[bool, list[dict[str, object]]]:
     
     _ = question_number
     relation_raw = str(question_div.get("relation") or "").strip()
     if not relation_raw:
         return False, []
 
-    conditions: list[dict[str, Any]] = []
+    conditions: list[dict[str, object]] = []
     seen: set[tuple[int, tuple[int, ...]]] = set()
     for chunk in re.split(r"\s*[|]\s*", relation_raw):
         text = normalize_match_text(chunk)
@@ -291,9 +290,9 @@ def _extract_display_conditions_from_html(question_div, question_number: int) ->
         })
     return bool(conditions), conditions
 
-def _attach_display_condition_metadata(questions_info: list[dict[str, Any]]) -> None:
+def _attach_display_condition_metadata(questions_info: list[dict[str, object]]) -> None:
     
-    by_num: dict[int, dict[str, Any]] = {}
+    by_num: dict[int, dict[str, object]] = {}
     for info in questions_info:
         try:
             question_num = int(info.get("num") or 0)

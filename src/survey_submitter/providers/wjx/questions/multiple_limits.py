@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any
 
 from survey_submitter.providers.match_utils import get_element_attribute, normalize_match_text
 
@@ -118,7 +117,7 @@ _MULTI_MIN_VALUE_PATTERNS = _compile_key_value_patterns(_MULTI_MIN_LIMIT_VALUE_K
 _MULTI_MAX_VALUE_PATTERNS = _compile_key_value_patterns(_MULTI_LIMIT_VALUE_KEYSET)
 
 
-def _safe_positive_int(value: Any) -> int | None:
+def _safe_positive_int(value: str | int | float | None) -> int | None:
 
     if value is None:
         return None
@@ -140,7 +139,7 @@ def _safe_positive_int(value: Any) -> int | None:
     return None
 
 
-def _extract_range_from_json_obj(obj: Any) -> tuple[int | None, int | None]:
+def _extract_range_from_json_obj(obj: dict[str, object] | list[object]) -> tuple[int | None, int | None]:
 
     min_limit: int | None = None
     max_limit: int | None = None
@@ -155,7 +154,7 @@ def _extract_range_from_json_obj(obj: Any) -> tuple[int | None, int | None]:
                 candidate = _safe_positive_int(value)
                 if candidate:
                     max_limit = max_limit or candidate
-            nested_min, nested_max = _extract_range_from_json_obj(value)
+            nested_min, nested_max = _extract_range_from_json_obj(value)  # type: ignore[arg-type]
             if min_limit is None and nested_min is not None:
                 min_limit = nested_min
             if max_limit is None and nested_max is not None:
@@ -164,7 +163,7 @@ def _extract_range_from_json_obj(obj: Any) -> tuple[int | None, int | None]:
                 break
     elif isinstance(obj, list):
         for item in obj:
-            nested_min, nested_max = _extract_range_from_json_obj(item)
+            nested_min, nested_max = _extract_range_from_json_obj(item)  # type: ignore[arg-type]
             if min_limit is None and nested_min is not None:
                 min_limit = nested_min
             if max_limit is None and nested_max is not None:
@@ -189,7 +188,7 @@ def _extract_range_from_possible_json(text: str | None) -> tuple[int | None, int
     for candidate in candidates:
         try:
             parsed = json.loads(candidate)
-        except Exception:
+        except json.JSONDecodeError:
             continue
         cand_min, cand_max = _extract_range_from_json_obj(parsed)
         if min_limit is None and cand_min is not None:

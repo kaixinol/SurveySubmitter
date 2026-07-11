@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, TypeVar
+from collections.abc import Callable
+from typing import TypeVar
 
 from survey_submitter.core.ai.runtime import AIRuntimeError, is_ai_timeout_runtime_error
 from survey_submitter.core.engine.failure_reason import FailureReason
+from survey_submitter.core.engine.run_stop_policy import RunStopPolicy
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.providers.errors import (
@@ -32,12 +34,12 @@ def _safe_state_operation(
         logging.debug("%s 失败", operation_name, exc_info=True)
 
 
-def _get_session_proxy_address(session: Any) -> str | None:
+def _get_session_proxy_address(session: object) -> str | None:
     """Safely get proxy address from session object."""
     if session is None:
         return None
     try:
-        return getattr(session, "proxy_address", None)
+        return getattr(session, "proxy_address", None)  # type: ignore[return-value]
     except AttributeError:
         return None
 
@@ -47,7 +49,7 @@ def handle_ai_runtime_error(
     stop_signal: StopSignalLike,
     *,
     thread_name: str,
-    stop_policy: Any,
+    stop_policy: RunStopPolicy,
     state: ExecutionState,
 ) -> bool:
     _ = state
@@ -77,13 +79,13 @@ def handle_ai_runtime_error(
 
 
 def handle_proxy_connection_error(
-    session: Any,
+    session: object,
     stop_signal: StopSignalLike,
     *,
     thread_name: str,
     state: ExecutionState,
     config: ExecutionConfig,
-    stop_policy: Any,
+    stop_policy: RunStopPolicy,
     update_thread_status: Callable[[str, str], None],
     handle_proxy_unavailable: Callable[..., bool],
     mark_proxy_temporarily_bad: Callable[[ExecutionState, str], None],

@@ -45,7 +45,7 @@ def _read_asset_text(filename: str) -> str:
     try:
         asset_file = resources.files("survey_submitter.assets").joinpath(filename)
         return asset_file.read_text(encoding="utf-8")
-    except Exception:
+    except OSError:
         return ""
 
 
@@ -123,7 +123,7 @@ def load_area_codes(supported_only: bool = False) -> list[dict[str, Any]]:
     if _AREA_CODES_CACHE is None:
         try:
             _AREA_CODES_CACHE = json.loads(_read_asset_text("area_codes_2022.json") or "{}")
-        except Exception:
+        except json.JSONDecodeError:
             _AREA_CODES_CACHE = {}
 
     area_codes_cache: dict[str, Any] = _AREA_CODES_CACHE if isinstance(_AREA_CODES_CACHE, dict) else {}

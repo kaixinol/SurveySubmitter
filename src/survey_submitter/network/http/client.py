@@ -5,7 +5,7 @@ import logging
 import threading
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Iterator, Literal, TypeVar, overload
+from typing import Callable, Iterator, Literal, TypeVar, overload
 from urllib.parse import urlsplit
 
 import httpx
@@ -91,8 +91,8 @@ class _StreamResponse:
     def __init__(
         self,
         response: httpx.Response,
-        stream_ctx: Any,
-        release: Any,
+        stream_ctx: httpx._client.StreamContextManager,
+        release: Callable[[], None],
     ):
         self._response = response
         self._stream_ctx = stream_ctx
@@ -115,7 +115,7 @@ class _StreamResponse:
     def content(self) -> bytes:
         return self._response.content
 
-    def json(self) -> Any:
+    def json(self) -> dict[str, object] | list[object] | str | int | float | bool | None:
         return self._response.json()
 
     def raise_for_status(self) -> None:
@@ -258,19 +258,19 @@ class _SyncClientManager:
         method: str,
         url: str,
         *,
-        params: Any = None,
-        content: Any = None,
-        data: Any = None,
-        headers: Any = None,
-        cookies: Any = None,
-        files: Any = None,
-        auth: Any = None,
-        timeout: Any = None,
+        params: dict[str, str | int | float] | list[tuple[str, str | int | float]] | None = None,
+        content: bytes | None = None,
+        data: dict[str, str] | list[tuple[str, str]] | None = None,
+        headers: dict[str, str] | None = None,
+        cookies: dict[str, str] | None = None,
+        files: dict[str, tuple[str, bytes, str]] | None = None,
+        auth: tuple[str, str] | None = None,
+        timeout: float | tuple[float | None, float | None] | httpx.Timeout | None = None,
         allow_redirects: bool = True,
-        proxies: Any = None,
+        proxies: dict[str, str] | str | None = None,
         stream: bool = False,
         verify: bool | str = True,
-        json: Any = None,
+        json: dict[str, object] | list[object] | None = None,
     ) -> httpx.Response | _StreamResponse:
         proxy, trust_env = _resolve_proxy(proxies, url)
         key, entry = self.acquire(
@@ -328,7 +328,7 @@ class _SyncClientManager:
         self._close_clients(clients)
 
 
-def _resolve_proxy(proxies: Any, url: str) -> tuple[str | None, bool]:
+def _resolve_proxy(proxies: dict[str, str] | str | None, url: str) -> tuple[str | None, bool]:
 
     if proxies is None:
         return None, True
@@ -348,7 +348,7 @@ def _resolve_proxy(proxies: Any, url: str) -> tuple[str | None, bool]:
     return None, False
 
 
-def _normalize_timeout(timeout: Any) -> Any:
+def _normalize_timeout(timeout: float | tuple[float | None, ...] | httpx.Timeout | None) -> float | tuple[float | None, ...] | httpx.Timeout | None:
 
     if timeout is None:
         return None
@@ -416,71 +416,71 @@ atexit.register(close)
 
 
 @overload
-def request(method: str, url: str, *, stream: Literal[True], **kwargs: Any) -> _StreamResponse:
+def request(method: str, url: str, *, stream: Literal[True], **kwargs: object) -> _StreamResponse:
     ...
 
 
 @overload
-def request(method: str, url: str, *, stream: Literal[False] = False, **kwargs: Any) -> httpx.Response:
+def request(method: str, url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response:
     ...
 
 
-def request(method: str, url: str, **kwargs: Any) -> httpx.Response | _StreamResponse:
-    return _client_manager.request(method, url, **kwargs)
+def request(method: str, url: str, **kwargs: object) -> httpx.Response | _StreamResponse:
+    return _client_manager.request(method, url, **kwargs)  # type: ignore[arg-type]
 
 
 @overload
-def get(url: str, *, stream: Literal[True], **kwargs: Any) -> _StreamResponse:
-    ...
-
-
-@overload
-def get(url: str, *, stream: Literal[False] = False, **kwargs: Any) -> httpx.Response:
-    ...
-
-
-def get(url: str, **kwargs: Any) -> httpx.Response | _StreamResponse:
-    return request("GET", url, **kwargs)
-
-
-@overload
-def post(url: str, *, stream: Literal[True], **kwargs: Any) -> _StreamResponse:
+def get(url: str, *, stream: Literal[True], **kwargs: object) -> _StreamResponse:
     ...
 
 
 @overload
-def post(url: str, *, stream: Literal[False] = False, **kwargs: Any) -> httpx.Response:
+def get(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response:
     ...
 
 
-def post(url: str, **kwargs: Any) -> httpx.Response | _StreamResponse:
-    return request("POST", url, **kwargs)
+def get(url: str, **kwargs: object) -> httpx.Response | _StreamResponse:
+    return request("GET", url, **kwargs)  # type: ignore[arg-type]
 
 
 @overload
-def put(url: str, *, stream: Literal[True], **kwargs: Any) -> _StreamResponse:
-    ...
-
-
-@overload
-def put(url: str, *, stream: Literal[False] = False, **kwargs: Any) -> httpx.Response:
-    ...
-
-
-def put(url: str, **kwargs: Any) -> httpx.Response | _StreamResponse:
-    return request("PUT", url, **kwargs)
-
-
-@overload
-def delete(url: str, *, stream: Literal[True], **kwargs: Any) -> _StreamResponse:
+def post(url: str, *, stream: Literal[True], **kwargs: object) -> _StreamResponse:
     ...
 
 
 @overload
-def delete(url: str, *, stream: Literal[False] = False, **kwargs: Any) -> httpx.Response:
+def post(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response:
     ...
 
 
-def delete(url: str, **kwargs: Any) -> httpx.Response | _StreamResponse:
-    return request("DELETE", url, **kwargs)
+def post(url: str, **kwargs: object) -> httpx.Response | _StreamResponse:
+    return request("POST", url, **kwargs)  # type: ignore[arg-type]
+
+
+@overload
+def put(url: str, *, stream: Literal[True], **kwargs: object) -> _StreamResponse:
+    ...
+
+
+@overload
+def put(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response:
+    ...
+
+
+def put(url: str, **kwargs: object) -> httpx.Response | _StreamResponse:
+    return request("PUT", url, **kwargs)  # type: ignore[arg-type]
+
+
+@overload
+def delete(url: str, *, stream: Literal[True], **kwargs: object) -> _StreamResponse:
+    ...
+
+
+@overload
+def delete(url: str, *, stream: Literal[False] = False, **kwargs: object) -> httpx.Response:
+    ...
+
+
+def delete(url: str, **kwargs: object) -> httpx.Response | _StreamResponse:
+    return request("DELETE", url, **kwargs)  # type: ignore[arg-type]
 

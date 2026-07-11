@@ -19,7 +19,7 @@ def option_requires_fill(question: Any, option_index: int) -> bool:
         try:
             if int(raw_index) == int(option_index):
                 return True
-        except Exception:
+        except (ValueError, TypeError):
             continue
     return False
 
@@ -37,7 +37,7 @@ def option_fill_text_map(option_fill_texts: Sequence[tuple[int, str]] | None) ->
     for raw_index, raw_value in tuple(option_fill_texts or ()):
         try:
             option_index = int(raw_index)
-        except Exception:
+        except (ValueError, TypeError):
             continue
         value = str(raw_value or "").strip()
         if value:

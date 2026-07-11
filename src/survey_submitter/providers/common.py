@@ -14,7 +14,7 @@ _WJX_SURVEY_HOSTS = ("v.wjx.cn", "www.wjx.cn", "www.wjx.top")
 def normalize_survey_provider(value: Any, default: str = SURVEY_PROVIDER_WJX) -> str:
     try:
         provider = str(value or "").strip().lower()
-    except Exception:
+    except (ValueError, TypeError):
         provider = ""
     return provider if provider in SUPPORTED_SURVEY_PROVIDERS else str(default or SURVEY_PROVIDER_WJX)
 
@@ -26,7 +26,7 @@ def _parse_url_host(url_value: str) -> tuple[str, str]:
     candidate = text if "://" in text else f"https://{text}"
     try:
         parsed = urlparse(candidate)
-    except Exception:
+    except (ValueError, TypeError):
         return "", ""
     host = (parsed.netloc or "").split(":", 1)[0].lower()
     path = str(parsed.path or "").strip()
@@ -68,7 +68,7 @@ def normalize_survey_parse_url(url_value: str) -> str:
     candidate = text if "://" in text else f"https://{text}"
     try:
         parsed = urlsplit(candidate)
-    except Exception:
+    except (ValueError, TypeError):
         return text
     scheme = (parsed.scheme or "https").lower()
     netloc = (parsed.netloc or "").lower()

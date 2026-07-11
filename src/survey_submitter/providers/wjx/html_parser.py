@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from survey_submitter.core.questions.types import TypeCode, convert_wire_type_code
 from survey_submitter.core.questions.utils import _should_treat_question_as_text_like
 from survey_submitter.providers.contracts import (
@@ -49,7 +47,7 @@ from .html_parser_rules import (
 __all__ = ["_normalize_html_text", "extract_survey_title_from_html", "parse_survey_questions_from_html"]
 
 
-def _normalize_media_source_url(raw: Any) -> str:
+def _normalize_media_source_url(raw: str | None) -> str:
     text = str(raw or "").strip()
     if not text:
         return ""
@@ -59,11 +57,11 @@ def _normalize_media_source_url(raw: Any) -> str:
 
 
 def _append_media_item(
-    media: list[dict[str, Any]],
+    media: list[dict[str, object]],
     *,
     scope: str,
     index: int | None,
-    source_url: Any,
+    source_url: str | None,
     label: str,
 ) -> None:
     normalized_url = _normalize_media_source_url(source_url)
@@ -80,12 +78,12 @@ def _append_media_item(
         media.append(item)
 
 
-def _collect_question_media(question_div, row_texts: list[str], option_texts: list[str]) -> list[dict[str, Any]]:
+def _collect_question_media(question_div, row_texts: list[str], option_texts: list[str]) -> list[dict[str, object]]:
     if question_div is None:
         return []
-    media: list[dict[str, Any]] = []
+    media: list[dict[str, object]] = []
 
-    title_nodes: list[Any] = []
+    title_nodes: list[object] = []
     for selector in (".topichtml", ".field-label"):
         title_nodes.extend(list(question_div.select(selector) or []))
     for node in title_nodes:
@@ -99,7 +97,7 @@ def _collect_question_media(question_div, row_texts: list[str], option_texts: li
                 label="题干图",
             )
 
-    option_nodes: list[Any] = []
+    option_nodes: list[object] = []
     for selector in (".ui-controlgroup > div", "ul > li"):
         option_nodes = list(question_div.select(selector) or [])
         if option_nodes:
@@ -120,7 +118,7 @@ def _collect_question_media(question_div, row_texts: list[str], option_texts: li
                 label=option_label or f"选项 {option_index + 1}",
             )
 
-    row_nodes: list[Any] = []
+    row_nodes: list[object] = []
     for selector in ("tr[rowindex]", "tr.rowtitletr", "tr[id^='drv']"):
         row_nodes = list(question_div.select(selector) or [])
         if row_nodes:
@@ -177,7 +175,7 @@ def _question_div_has_question_ancestor(question_div, fieldset) -> bool:
     return False
 
 
-def _resolve_question_type(question_div, raw_type_code: str) -> dict[str, Any]:
+def _resolve_question_type(question_div, raw_type_code: str) -> dict[str, object]:
     """Determine the effective question type and related flags from the HTML div."""
     type_code = convert_wire_type_code(raw_type_code)
     if type_code != TypeCode.ORDER and _soup_question_looks_like_reorder(question_div):
@@ -264,9 +262,9 @@ def _extract_question_features(
     option_count: int,
     title_text: str,
     is_location: bool,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     """Extract jump rules, display conditions, slider range, text inputs, and other features."""
-    attached_option_selects: list[dict[str, Any]] = []
+    attached_option_selects: list[dict[str, object]] = []
     if type_code in {TypeCode.SINGLE, TypeCode.MULTIPLE}:
         attached_option_selects = _extract_choice_attached_selects(question_div)
     has_jump, jump_rules = _extract_jump_rules_from_html(question_div, question_number, option_texts)
@@ -323,7 +321,7 @@ def _extract_question_features(
     }
 
 
-def _finalize_logic_parse_status(questions_info: list[dict[str, Any]]) -> None:
+def _finalize_logic_parse_status(questions_info: list[dict[str, object]]) -> None:
     """Set logic_parse_status based on whether each question has any logic."""
     _attach_display_condition_metadata(questions_info)
     for question in questions_info:
@@ -345,7 +343,7 @@ def _build_question_info_dict(
     type_code: str,
     option_count: int,
     matrix_rows: int,
-    row_texts: list[Any],
+    row_texts: list[str],
     page_index: int,
     option_texts: list[str],
     is_location: bool,
@@ -353,12 +351,12 @@ def _build_question_info_dict(
     is_rating: bool,
     is_description: bool,
     rating_max: int | None,
-    features: dict[str, Any],
-    question_div: Any,
+    features: dict[str, object],
+    question_div: object,
     multi_min_limit: int,
     multi_max_limit: int,
     is_required: bool,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     """Build a question info dictionary from parsed metadata."""
     return {
         "num": question_number,
@@ -402,12 +400,12 @@ def _build_question_info_dict(
 
 def _process_question_div(
     *,
-    question_div: Any,
-    soup: Any,
+    question_div: object,
+    soup: object,
     page_index: int,
     current_display_num: int | None,
     visible_question_counter: int,
-) -> tuple[dict[str, Any] | None, int | None, int]:
+) -> tuple[dict[str, object] | None, int | None, int]:
     """Process a single question div and return question info or None.
 
     Returns (question_info_dict, updated_current_display_num, updated_visible_counter)
@@ -486,7 +484,7 @@ def _process_question_div(
     return question_info, current_display_num, visible_question_counter
 
 
-def parse_survey_questions_from_html(html: str) -> list[dict[str, Any]]:
+def parse_survey_questions_from_html(html: str) -> list[dict[str, object]]:
 
     if not BeautifulSoup:
         raise RuntimeError("BeautifulSoup is required for HTML parsing")
@@ -498,7 +496,7 @@ def parse_survey_questions_from_html(html: str) -> list[dict[str, Any]]:
     if not fieldsets:
         fieldsets = [container]
 
-    questions_info: list[dict[str, Any]] = []
+    questions_info: list[dict[str, object]] = []
     for page_index, fieldset in enumerate(fieldsets, 1):
         question_divs = [
             item

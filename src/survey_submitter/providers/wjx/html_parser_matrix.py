@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 
 from .html_parser_common import _normalize_html_text
 
@@ -263,7 +262,7 @@ def _extract_slider_range(question_div, question_number: int) -> tuple[float | N
     if not slider_input:
         slider_input = question_div.find("input", class_=lambda value: value and "ui-slider-input" in str(value))
 
-    def _parse(raw: Any) -> float | None:
+    def _parse(raw: str | float | int | None) -> float | None:
         try:
             return float(raw)
         except (ValueError, TypeError):
@@ -293,7 +292,7 @@ def _format_slider_matrix_value(value: float) -> str:
     return f"{value:.6f}".rstrip("0").rstrip(".")
 
 def _build_slider_matrix_option_texts_from_input(slider_input) -> list[str]:
-    def _parse(raw: Any) -> float | None:
+    def _parse(raw: str | float | int | None) -> float | None:
         try:
             return float(raw)
         except (ValueError, TypeError):

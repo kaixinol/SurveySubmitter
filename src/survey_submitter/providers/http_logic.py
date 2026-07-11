@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Sequence
+from typing import Awaitable, Callable, Sequence
 
 from survey_submitter.providers.answering import AnswerAction
 from survey_submitter.providers.contracts import (
@@ -22,7 +22,7 @@ class HttpLogicPlan:
     terminated_early: bool = False
 
 
-def _jump_rule_terminates_survey(rule: Any) -> bool:
+def _jump_rule_terminates_survey(rule: dict[str, object]) -> bool:
     if not isinstance(rule, dict):
         return False
     if "terminates_survey" in rule:
