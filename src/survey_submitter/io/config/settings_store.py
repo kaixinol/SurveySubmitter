@@ -1,4 +1,4 @@
-"""Minimal JSON-based application settings (replaces QSettings)."""
+"""Minimal JSON-based application settings."""
 from __future__ import annotations
 
 import json
@@ -34,7 +34,7 @@ def _load_settings() -> dict:
 
 
 class _JsonSettings:
-    """QSettings-compatible interface backed by a JSON file."""
+    """Key-value settings interface backed by a JSON file."""
 
     def value(self, key: str, default: Any = None) -> Any:
         with _settings_lock:
