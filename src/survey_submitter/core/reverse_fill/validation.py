@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import os
 from collections.abc import Sequence
-from typing import Any
 
 from survey_submitter.core.config.schema import RuntimeConfig
 from survey_submitter.core.questions.default_builder import build_default_question_entries
@@ -39,12 +38,12 @@ from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_surv
 MAX_DISPLAYED_BLOCKING_ISSUES = 12
 
 
-def _detail_from_columns(columns: list[Any]) -> str:
+def _detail_from_columns(columns: list[object]) -> str:
     headers = [str(column.header or "").strip() for column in list(columns or []) if str(column.header or "").strip()]
     return " / ".join(headers)
 
 
-def _regular_config_ready(entry: QuestionEntry | None, info: SurveyQuestionMeta | dict[str, Any], expected_type: str) -> bool:
+def _regular_config_ready(entry: QuestionEntry | None, info: SurveyQuestionMeta | dict[str, object], expected_type: str) -> bool:
     if entry is None:
         return False
     entry_type = str(entry.question_type or "").strip()
@@ -91,7 +90,7 @@ def _build_question_plan(
     title: str,
     question_type: str,
     status: str,
-    columns: list[Any],
+    columns: list[object],
     detail: str,
     fallback_ready: bool,
     fallback_resolved: bool = False,
@@ -176,7 +175,7 @@ def _append_question_issue_and_plan(
     question_num: int,
     title: str,
     question_type: str,
-    columns: list[Any],
+    columns: list[object],
     detail: str,
     category: str,
     reason: str,
@@ -232,11 +231,11 @@ def _parse_answer_for_row(
     *,
     question_num: int,
     question_type: str,
-    ordered_columns: list[Any],
-    raw_row: Any,
-    export: Any,
+    ordered_columns: list[object],
+    raw_row: object,
+    export: object,
     option_texts: list[str],
-) -> Any:
+) -> object:
     """Parse answer from a single row.
 
     Raises ValueError on parse failure.
@@ -277,9 +276,9 @@ def _check_question_type_constraints(
     *,
     question_type: str,
     info: SurveyQuestionMeta,
-    columns: list[Any],
-    export: Any,
-) -> dict[str, Any] | None:
+    columns: list[object],
+    export: object,
+) -> dict[str, object] | None:
     """Check type-specific and runtime constraints.
 
     Returns error_dict if validation fails, None if OK to continue.
@@ -303,10 +302,10 @@ def _check_question_type_constraints(
     return None
 
 
-def _resolve_question_columns(
+def _check_column_mapping(
     *,
     question_type: str,
-    columns: list[Any],
+    columns: list[object],
     info: SurveyQuestionMeta,
     issues: list[ReverseFillIssue],
     question_plans: list[ReverseFillQuestionPlan],
@@ -314,13 +313,11 @@ def _resolve_question_columns(
     title: str,
     fallback_ready: bool,
     fallback_resolved: bool,
-) -> list[Any] | None:
-    """Resolve and validate column ordering for multi-column types.
-
-    Returns ordered columns, or None if validation fails (and appends issue+plan).
+) -> list[object] | None:
+    """Validate column mapping for a question.
+    
+    Returns ordered columns if valid, None if validation fails (and appends issue+plan).
     """
-    ordered_columns = columns
-
     # Check single-column types have exactly one column
     if question_type in CHOICE_TYPES | TEXT_TYPES and question_type != QuestionType.MULTI_TEXT and len(columns) != 1:
         _append_question_issue_and_plan(
@@ -345,7 +342,7 @@ def _resolve_question_columns(
                 fallback_ready=fallback_ready, fallback_resolved=fallback_resolved,
             )
             return None
-        ordered_columns = resolve_ordered_columns(columns, row_texts)
+        return resolve_ordered_columns(columns, row_texts)
 
     # Resolve multi-text columns
     if question_type == QuestionType.MULTI_TEXT:
@@ -360,45 +357,9 @@ def _resolve_question_columns(
                 fallback_ready=fallback_ready, fallback_resolved=fallback_resolved,
             )
             return None
-        ordered_columns = resolve_ordered_columns(columns, blank_labels)
+        return resolve_ordered_columns(columns, blank_labels)
 
-    return ordered_columns
-
-
-def _parse_question_answers(
-    *,
-    question_num: int,
-    question_type: str,
-    ordered_columns: list[Any],
-    selected_rows: list[Any],
-    answers_by_row: dict[int, dict[int, Any]],
-    export: Any,
-    option_texts: list[str],
-) -> list[int]:
-    """Parse answers for a question across all rows.
-
-    Returns list of row numbers with parse errors (empty = success).
-    """
-    parse_errors: list[int] = []
-
-    for raw_row in selected_rows:
-        row_num = int(raw_row.data_row_number)
-        try:
-            answer = _parse_answer_for_row(
-                question_num=question_num,
-                question_type=question_type,
-                ordered_columns=ordered_columns,
-                raw_row=raw_row,
-                export=export,
-                option_texts=option_texts,
-            )
-            if answer is not None:
-                answers_by_row[row_num][question_num] = answer
-        except ValueError:
-            parse_errors.append(row_num)
-            break
-
-    return parse_errors
+    return columns
 
 
 def _validate_and_collect_question(
@@ -406,9 +367,9 @@ def _validate_and_collect_question(
     info: SurveyQuestionMeta,
     question_entries: list[QuestionEntry],
     default_entry_by_num: dict[int, QuestionEntry],
-    export: Any,
-    selected_rows: list[Any],
-    answers_by_row: dict[int, dict[int, Any]],
+    export: object,
+    selected_rows: list[object],
+    answers_by_row: dict[int, dict[int, object]],
     issues: list[ReverseFillIssue],
     question_plans: list[ReverseFillQuestionPlan],
 ) -> bool:
@@ -473,7 +434,7 @@ def _validate_and_collect_question(
         return False
 
     # Validation step 4: Column ordering
-    ordered_columns = _resolve_question_columns(
+    ordered_columns = _check_column_mapping(
         question_type=question_type,
         columns=columns,
         info=info,
@@ -533,15 +494,15 @@ def _handle_parse_errors(
     *,
     question_num: int,
     question_type: str,
-    export: Any,
+    export: object,
     parse_errors: list[int],
     issues: list[ReverseFillIssue],
     question_plans: list[ReverseFillQuestionPlan],
     title: str,
-    columns: list[Any],
+    columns: list[object],
     fallback_ready: bool,
     fallback_resolved: bool,
-    answers_by_row: dict[int, dict[int, Any]],
+    answers_by_row: dict[int, dict[int, object]],
 ) -> None:
     """Handle parsing errors by adding issue and cleaning answers."""
     if question_type in CHOICE_TYPES | {QuestionType.MATRIX}:
@@ -570,7 +531,7 @@ def build_reverse_fill_spec(
     *,
     source_path: str,
     survey_provider: str,
-    questions_info: Sequence[SurveyQuestionMeta | dict[str, Any]],
+    questions_info: Sequence[SurveyQuestionMeta | dict[str, object]],
     question_entries: list[QuestionEntry],
     selected_format: str = REVERSE_FILL_FORMAT_AUTO,
     start_row: int = 1,
@@ -605,7 +566,7 @@ def build_reverse_fill_spec(
 
     issues: list[ReverseFillIssue] = []
     question_plans: list[ReverseFillQuestionPlan] = []
-    answers_by_row: dict[int, dict[int, Any]] = {
+    answers_by_row: dict[int, dict[int, object]] = {
         int(row.data_row_number): {} for row in selected_rows
     }
 
@@ -673,7 +634,7 @@ def format_reverse_fill_blocking_message(spec: ReverseFillSpec) -> str:
 
 def build_enabled_reverse_fill_spec(
     config: RuntimeConfig,
-    questions_info: list[SurveyQuestionMeta | dict[str, Any]],
+    questions_info: list[SurveyQuestionMeta | dict[str, object]],
     question_entries: list[QuestionEntry],
 ) -> ReverseFillSpec | None:
     if not bool(config.reverse_fill_enabled):

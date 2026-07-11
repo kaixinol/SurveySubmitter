@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterable, Mapping
+from typing import Iterable, Mapping
 
 from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.questions.types import TypeCode, convert_wire_type_code
@@ -48,7 +48,7 @@ _VALID_LOGIC_PARSE_STATUSES = {
 }
 
 
-def _as_int(value: Any, default: int, *, minimum: int | None = None) -> int:
+def _as_int(value: object, default: int, *, minimum: int | None = None) -> int:
     try:
         number = int(value)
     except (ValueError, TypeError):
@@ -58,16 +58,16 @@ def _as_int(value: Any, default: int, *, minimum: int | None = None) -> int:
     return number
 
 
-def _normalize_text_list(raw: Any) -> list[str]:
+def _normalize_text_list(raw: object) -> list[str]:
     if not isinstance(raw, list):
         return []
     return [str(item or "").strip() for item in raw]
 
 
-def _normalize_dict_list(raw: Any) -> list[dict[str, Any]]:
+def _normalize_dict_list(raw: object) -> list[dict[str, object]]:
     if not isinstance(raw, list):
         return []
-    items: list[dict[str, Any]] = []
+    items: list[dict[str, object]] = []
     for item in raw:
         normalized = _survey_question_input_to_dict(item)
         if normalized is not None:
@@ -75,7 +75,7 @@ def _normalize_dict_list(raw: Any) -> list[dict[str, Any]]:
     return items
 
 
-def _normalize_jump_rules(raw: Any) -> list[JumpRule]:
+def _normalize_jump_rules(raw: object) -> list[JumpRule]:
     rules = _normalize_dict_list(raw)
     normalized_rules: list[JumpRule] = []
     terminate_keywords = ("结束作答", "结束答题", "结束填写", "终止作答", "停止作答")
@@ -92,7 +92,7 @@ def _normalize_jump_rules(raw: Any) -> list[JumpRule]:
     return normalized_rules
 
 
-def _infer_logic_parse_status(normalized: Mapping[str, Any]) -> str:
+def _infer_logic_parse_status(normalized: Mapping[str, object]) -> str:
     if "logic_parse_status" in normalized:
         explicit = str(normalized.get("logic_parse_status") or "").strip().lower()
         if explicit in _VALID_LOGIC_PARSE_STATUSES:
@@ -115,7 +115,7 @@ def _infer_logic_parse_status(normalized: Mapping[str, Any]) -> str:
     return LOGIC_PARSE_STATUS_COMPLETE if has_parsed_logic else LOGIC_PARSE_STATUS_UNKNOWN
 
 
-def _normalize_question_media_list(raw: Any) -> list[QuestionMedia]:
+def _normalize_question_media_list(raw: object) -> list[QuestionMedia]:
     if not isinstance(raw, list):
         return []
     items: list[QuestionMedia] = []
@@ -229,15 +229,15 @@ class SurveyDefinition:
     questions: list[SurveyQuestionMeta]
 
 
-SurveyQuestionInput = SurveyQuestionMeta | Mapping[str, Any]
+SurveyQuestionInput = SurveyQuestionMeta | Mapping[str, object]
 
 
-def _filter_kwargs(cls: type[BaseConfigModel], kwargs: dict[str, Any]) -> dict[str, Any]:
+def _filter_kwargs(cls: type[BaseConfigModel], kwargs: dict[str, object]) -> dict[str, object]:
     valid_fields = set(cls.model_fields)
     return {k: v for k, v in kwargs.items() if k in valid_fields}
 
 
-def _survey_question_input_to_dict(question: Any) -> dict[str, Any] | None:
+def _survey_question_input_to_dict(question: object) -> dict[str, object] | None:
     if isinstance(question, SurveyQuestionMeta):
         return survey_question_meta_to_dict(question)
     if isinstance(question, Mapping):
@@ -245,16 +245,16 @@ def _survey_question_input_to_dict(question: Any) -> dict[str, Any] | None:
     return None
 
 
-def survey_question_meta_to_dict(question: SurveyQuestionMeta) -> dict[str, Any]:
+def survey_question_meta_to_dict(question: SurveyQuestionMeta) -> dict[str, object]:
     return question.model_dump()
 
 
-def _resolve_type_code(normalized: Mapping[str, Any]) -> TypeCode:
+def _resolve_type_code(normalized: Mapping[str, object]) -> TypeCode:
     raw = str(normalized.get("type_code") or "unknown").strip()
     return convert_wire_type_code(raw)
 
 
-def _build_common_kwargs(normalized: dict[str, Any], type_code: TypeCode, question_number: int) -> dict[str, Any]:
+def _build_common_kwargs(normalized: dict[str, object], type_code: TypeCode, question_number: int) -> dict[str, object]:
     unsupported_reason = str(normalized.get("unsupported_reason") or "").strip()
     if bool(normalized.get("unsupported")) and not unsupported_reason:
         unsupported_reason = "当前平台暂不支持该题型"
@@ -273,7 +273,7 @@ def _build_common_kwargs(normalized: dict[str, Any], type_code: TypeCode, questi
     }
 
 
-def _build_logic_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
+def _build_logic_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     raw_display_num = normalized.get("display_num")
     display_number: int | None = None
     if raw_display_num not in (None, ""):
@@ -294,7 +294,7 @@ def _build_logic_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _build_choice_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
+def _build_choice_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     option_texts = _normalize_text_list(normalized.get("option_texts"))
     forced_option_index = normalized.get("forced_option_index")
     try:
@@ -322,7 +322,7 @@ def _build_choice_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _build_matrix_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
+def _build_matrix_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     row_texts = _normalize_text_list(normalized.get("row_texts"))
     return {
         "rows": _as_int(normalized.get("rows"), len(row_texts) or 1, minimum=1),
@@ -331,14 +331,14 @@ def _build_matrix_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _build_rating_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
+def _build_rating_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     option_count = _as_int(normalized.get("options"), len(_normalize_text_list(normalized.get("option_texts"))), minimum=0)
     return {
         "rating_max": _as_int(normalized.get("rating_max"), option_count, minimum=0),
     }
 
 
-def _build_text_kwargs(normalized: dict[str, Any], type_code: TypeCode = TypeCode.UNKNOWN) -> dict[str, Any]:
+def _build_text_kwargs(normalized: dict[str, object], type_code: TypeCode = TypeCode.UNKNOWN) -> dict[str, object]:
     text_input_labels = _normalize_text_list(normalized.get("text_input_labels")) or None
     text_inputs = _as_int(normalized.get("text_inputs"), 0, minimum=0)
     if text_inputs == 0 and text_input_labels:
@@ -353,7 +353,7 @@ def _build_text_kwargs(normalized: dict[str, Any], type_code: TypeCode = TypeCod
     }
 
 
-def _build_slider_kwargs(normalized: dict[str, Any]) -> dict[str, Any]:
+def _build_slider_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     return {
         "slider_min": normalized.get("slider_min"),
         "slider_max": normalized.get("slider_max"),
@@ -430,8 +430,8 @@ def ensure_survey_question_metas(
     return normalized
 
 
-def serialize_survey_question_metas(questions: Iterable[SurveyQuestionInput]) -> list[dict[str, Any]]:
-    serialized: list[dict[str, Any]] = []
+def serialize_survey_question_metas(questions: Iterable[SurveyQuestionInput]) -> list[dict[str, object]]:
+    serialized: list[dict[str, object]] = []
     for question in questions or []:
         normalized = _survey_question_input_to_dict(question)
         if normalized is not None:
