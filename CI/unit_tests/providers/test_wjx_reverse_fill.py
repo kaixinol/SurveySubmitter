@@ -16,7 +16,12 @@ from survey_submitter.core.reverse_fill.validation import (
     build_enabled_reverse_fill_spec,
     build_reverse_fill_spec,
 )
-from survey_submitter.core.config.schema import RuntimeConfig
+from survey_submitter.core.config.schema import (
+    RuntimeConfig,
+    SurveySection,
+    ExecutionSection,
+    ReverseFillSection,
+)
 
 
 def _write_workbook(rows: list[list[object]]) -> str:
@@ -220,11 +225,15 @@ class WjxReverseFillTests:
     def test_build_enabled_reverse_fill_spec_raises_human_readable_blocking_message(self) -> None:
         workbook_path = self._track(_write_workbook([["序号", "1、单选题"], [1, "其他〖无〗"]]))
         config = RuntimeConfig(
-            survey_provider="wjx",
-            reverse_fill_enabled=True,
-            reverse_fill_source_path=workbook_path,
-            reverse_fill_format=REVERSE_FILL_FORMAT_WJX_TEXT,
-            reverse_fill_start_row=1,
+            survey=SurveySection(survey_provider="wjx"),
+            execution=ExecutionSection(
+                reverse_fill=ReverseFillSection(
+                    enabled=True,
+                    source_path=workbook_path,
+                    format=REVERSE_FILL_FORMAT_WJX_TEXT,
+                    start_row=1,
+                )
+            ),
         )
         with pytest.raises(ValueError, match="反填配置校验失败") as context:
             build_enabled_reverse_fill_spec(
@@ -246,11 +255,15 @@ class WjxReverseFillTests:
         workbook_path = self._track(_write_workbook([["序号", "1、所在地区"], [1, "上海"]]))
         spec = build_enabled_reverse_fill_spec(
             RuntimeConfig(
-                survey_provider="wjx",
-                reverse_fill_enabled=True,
-                reverse_fill_source_path=workbook_path,
-                reverse_fill_format=REVERSE_FILL_FORMAT_WJX_TEXT,
-                reverse_fill_start_row=1,
+                survey=SurveySection(survey_provider="wjx"),
+                execution=ExecutionSection(
+                    reverse_fill=ReverseFillSection(
+                        enabled=True,
+                        source_path=workbook_path,
+                        format=REVERSE_FILL_FORMAT_WJX_TEXT,
+                        start_row=1,
+                    )
+                ),
             ),
             questions_info=[{"num": 1, "title": "所在地区", "type_code": "1", "is_location": True}],
             question_entries=[
@@ -277,12 +290,16 @@ class WjxReverseFillTests:
         )
         spec = build_enabled_reverse_fill_spec(
             RuntimeConfig(
-                survey_provider="wjx",
-                reverse_fill_enabled=False,
-                reverse_fill_source_path=workbook_path,
-                reverse_fill_format=REVERSE_FILL_FORMAT_WJX_SEQUENCE,
-                reverse_fill_start_row=1,
-                target=2,
+                survey=SurveySection(survey_provider="wjx"),
+                execution=ExecutionSection(
+                    target_num=2,
+                    reverse_fill=ReverseFillSection(
+                        enabled=False,
+                        source_path=workbook_path,
+                        format=REVERSE_FILL_FORMAT_WJX_SEQUENCE,
+                        start_row=1,
+                    ),
+                ),
             ),
             questions_info=[
                 {"num": 1, "title": "单选题", "type_code": "3", "option_texts": ["选项1", "选项2"]}
@@ -297,12 +314,16 @@ class WjxReverseFillTests:
         )
         spec = build_enabled_reverse_fill_spec(
             RuntimeConfig(
-                survey_provider="wjx",
-                reverse_fill_enabled=True,
-                reverse_fill_source_path=workbook_path,
-                reverse_fill_format=REVERSE_FILL_FORMAT_WJX_SEQUENCE,
-                reverse_fill_start_row=1,
-                target=2,
+                survey=SurveySection(survey_provider="wjx"),
+                execution=ExecutionSection(
+                    target_num=2,
+                    reverse_fill=ReverseFillSection(
+                        enabled=True,
+                        source_path=workbook_path,
+                        format=REVERSE_FILL_FORMAT_WJX_SEQUENCE,
+                        start_row=1,
+                    ),
+                ),
             ),
             questions_info=[
                 {"num": 1, "title": "单选题", "type_code": "3", "option_texts": ["选项1", "选项2"]}

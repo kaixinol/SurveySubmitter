@@ -102,23 +102,23 @@ def _resolve_thread_limit(config: RuntimeConfig) -> int:
 
 def _resolve_survey_provider(config: RuntimeConfig) -> str:
     return normalize_survey_provider(
-        config.survey_provider,
-        default=detect_survey_provider(config.url) or SURVEY_PROVIDER_WJX,
+        config.survey.survey_provider,
+        default=detect_survey_provider(config.survey.url) or SURVEY_PROVIDER_WJX,
     )
 
 
 def _resolve_survey_title(config: RuntimeConfig, fallback_title: str) -> str:
-    config_title = str(config.survey_title or "")
+    config_title = str(config.survey.survey_title or "")
     return config_title or str(fallback_title or "")
 
 
 def _resolve_proxy_answer_duration(config: RuntimeConfig) -> tuple[int, int]:
-    raw = config.answer_duration or (0, 0)
+    raw = config.execution.answer_duration_range_seconds or (0, 0)
     return (int(raw[0]), int(raw[1]))
 
 
 def _resolve_answer_datetime_window(config: RuntimeConfig) -> tuple[str, str]:
-    return normalize_answer_datetime_window(config.answer_datetime_window)
+    return normalize_answer_datetime_window(config.execution.answer_datetime_window)
 
 
 def _validate_answer_datetime_window(config: RuntimeConfig, survey_provider: str) -> None:
@@ -135,7 +135,7 @@ def _validate_answer_datetime_window(config: RuntimeConfig, survey_provider: str
         raise RuntimePreparationError("见数作答时间窗格式无效，请重新选择日期时间")
     if end_dt <= start_dt:
         raise RuntimePreparationError("见数结束日期时间必须晚于开始日期时间")
-    max_duration_seconds = max(0, int((config.answer_duration[1])))
+    max_duration_seconds = max(0, int((config.execution.answer_duration_range_seconds[1])))
     window_seconds = int((end_dt - start_dt).total_seconds())
     if window_seconds < max_duration_seconds:
         raise RuntimePreparationError("见数作答时间窗太窄，容不下当前最长作答时长")
@@ -144,7 +144,7 @@ def _validate_answer_datetime_window(config: RuntimeConfig, survey_provider: str
 def _verify_wjx_survey_is_answerable(config: RuntimeConfig, survey_provider: str) -> None:
     if survey_provider != SURVEY_PROVIDER_WJX:
         return
-    url = str(config.url or "").strip()
+    url = str(config.survey.url or "").strip()
     if not url:
         return
     try:
@@ -203,49 +203,51 @@ def _build_execution_config_template(
     questions_info: list[SurveyQuestionMeta],
 ) -> ExecutionConfig:
     thread_limit = _resolve_thread_limit(config)
-    requested_target_num = max(1, int(config.target or 1))
-    requested_num_threads = max(1, int(config.threads or 1))
+    requested_target_num = max(1, int(config.execution.target_num or 1))
+    requested_num_threads = max(1, int(config.execution.num_threads or 1))
     if reverse_fill_spec is not None:
         requested_target_num = max(1, int(reverse_fill_spec.target_num or 1))
         requested_num_threads = max(
             1,
-            int(config.reverse_fill_threads or config.threads or 1),
+            int(config.execution.reverse_fill.threads or config.execution.num_threads or 1),
         )
         requested_num_threads = min(requested_num_threads, requested_target_num)
 
     execution_config = ExecutionConfig(
-        url=str(config.url or ""),
+        url=str(config.survey.url or ""),
         survey_title=survey_title,
         survey_provider=survey_provider,
         target_num=requested_target_num,
         num_threads=max(1, min(thread_limit, requested_num_threads)),
         fail_threshold=5,
         submit_interval_range_seconds=(
-            int(config.submit_interval[0]),
-            int(config.submit_interval[1]),
+            int(config.execution.submit_interval_range_seconds[0]),
+            int(config.execution.submit_interval_range_seconds[1]),
         ),
         answer_duration_range_seconds=(
-            int(config.answer_duration[0]),
-            int(config.answer_duration[1]),
+            int(config.execution.answer_duration_range_seconds[0]),
+            int(config.execution.answer_duration_range_seconds[1]),
         ),
-        answer_datetime_window_ms=answer_datetime_window_to_epoch_ms(config.answer_datetime_window),
-        random_proxy_ip_enabled=bool(config.random_ip_enabled),
-        proxy_source=str(config.proxy_source or "custom").strip().lower(),
+        answer_datetime_window_ms=answer_datetime_window_to_epoch_ms(
+            config.execution.answer_datetime_window
+        ),
+        random_proxy_ip=bool(config.execution.random_proxy_ip),
+        proxy_source=str(config.execution.proxy_source or "custom").strip().lower(),
         proxy_ip_pool=[],
-        random_user_agent_enabled=bool(config.random_ua_enabled),
-        user_agent_ratios=copy.deepcopy(dict(config.random_ua_ratios or {})),
-        pause_on_aliyun_captcha=bool(config.pause_on_aliyun_captcha),
-        stop_on_fail_enabled=bool(config.fail_stop_enabled),
-        answer_rules=copy.deepcopy(list(config.answer_rules or [])),
+        random_user_agent=bool(config.execution.random_user_agent),
+        user_agent_ratios=copy.deepcopy(dict(config.execution.user_agent_ratios or {})),
+        pause_on_aliyun_captcha=bool(config.execution.pause_on_aliyun_captcha),
+        stop_on_fail=bool(config.execution.stop_on_fail),
+        answer_rules=copy.deepcopy(list(config.answer_config.answer_rules or [])),
         reverse_fill_spec=copy.deepcopy(reverse_fill_spec),
-        ai_system_prompt=str(config.ai_system_prompt or "").strip(),
-        persona_enabled=bool(config.persona_enabled),
-        ai_answering_enabled=bool(config.ai_answering_enabled),
+        ai_system_prompt=str(config.execution.ai.system_prompt or "").strip(),
+        persona=bool(config.execution.persona),
+        ai_answering=bool(config.execution.ai.answering),
     )
     execution_config.questions_metadata = _build_questions_metadata(questions_info)
     execution_config.provider_question_metadata_map = _build_provider_question_metadata(
         questions_info,
-        survey_provider=str(config.survey_provider or ""),
+        survey_provider=str(config.survey.survey_provider or ""),
     )
     return execution_config
 
@@ -265,7 +267,7 @@ def prepare_execution_artifacts(
     This is the GUI-agnostic equivalent of the former
     ``runtime_preparation.prepare_execution_artifacts``.
     """
-    question_entries = list(config.question_entries or [])
+    question_entries = list(config.answer_config.question_entries or [])
     if not question_entries:
         raise RuntimePreparationError(
             '未配置任何题目，无法开始执行（请先在"题目配置"页添加/配置题目）',
@@ -283,7 +285,7 @@ def prepare_execution_artifacts(
         ) from exc
 
     questions_info = clone_questions_info(
-        config.questions_info or [],
+        config.answer_config.questions_info or [],
         default_provider=survey_provider,
     )
     questions_info_inputs = cast(list[SurveyQuestionMeta | dict[str, Any]], list(questions_info))
@@ -326,7 +328,7 @@ def prepare_execution_artifacts(
         configure_probabilities(
             question_entries,
             ctx=execution_config,
-            reliability_mode_enabled=bool(config.reliability_mode_enabled),
+            reliability_mode_enabled=bool(config.execution.reliability_mode),
         )
     except Exception as exc:
         raise RuntimePreparationError(str(exc), log_message=f"配置题目失败：{exc}") from exc

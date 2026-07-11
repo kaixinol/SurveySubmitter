@@ -185,7 +185,7 @@ class AsyncRuntimeEngine:
             config.target_num,
             worker_count,
             _format_seconds_range(config.answer_duration_range_seconds),
-            "开启" if config.random_proxy_ip_enabled else "关闭",
+            "开启" if config.random_proxy_ip else "关闭",
             _format_proxy_source(config.proxy_source),
         )
         stop_event = self._stop_event

@@ -257,7 +257,7 @@ class AsyncRuntimeEngineLargeTests:
         config = ExecutionConfig(
             num_threads=2,
             target_num=5,
-            random_proxy_ip_enabled=True,
+            random_proxy_ip=True,
             survey_provider="wjx",
         )
         state = ExecutionState(config=config)
@@ -310,7 +310,7 @@ class AsyncRuntimeEngineLargeTests:
         config = ExecutionConfig(
             num_threads=2,
             target_num=5,
-            random_proxy_ip_enabled=True,
+            random_proxy_ip=True,
             survey_provider="wjx",
         )
         state = ExecutionState(config=config)
@@ -375,7 +375,7 @@ class AsyncRuntimeEngineLargeTests:
         config = ExecutionConfig(
             num_threads=1,
             target_num=3,
-            random_proxy_ip_enabled=True,
+            random_proxy_ip=True,
             survey_provider="wjx",
         )
         state = ExecutionState(config=config)
@@ -412,7 +412,7 @@ class AsyncRuntimeEngineLargeTests:
         config = ExecutionConfig(
             num_threads=1,
             target_num=1,
-            random_proxy_ip_enabled=True,
+            random_proxy_ip=True,
             survey_provider="wjx",
         )
         state = ExecutionState(config=config)

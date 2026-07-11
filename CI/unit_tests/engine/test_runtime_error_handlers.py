@@ -12,7 +12,7 @@ from survey_submitter.providers.errors import SubmissionVerificationRequiredErro
 
 class RuntimeErrorHandlerTests:
     def test_ai_runtime_error_keeps_running_until_five_failures(self) -> None:
-        config = ExecutionConfig(fail_threshold=5, stop_on_fail_enabled=True)
+        config = ExecutionConfig(fail_threshold=5, stop_on_fail=True)
         state = ExecutionState(config=config)
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
@@ -33,7 +33,7 @@ class RuntimeErrorHandlerTests:
         assert state.get_terminal_stop_snapshot()[0] == ""
 
     def test_ai_runtime_error_stops_on_fifth_failure(self) -> None:
-        config = ExecutionConfig(fail_threshold=5, stop_on_fail_enabled=True)
+        config = ExecutionConfig(fail_threshold=5, stop_on_fail=True)
         state = ExecutionState(
             config=config, cur_fail=async_runtime_loop.AI_FILL_FAIL_THRESHOLD - 1
         )
@@ -54,7 +54,7 @@ class RuntimeErrorHandlerTests:
         assert state.get_terminal_stop_snapshot()[1] == FailureReason.FILL_FAILED.value
 
     def test_submission_verification_error_stops_immediately(self) -> None:
-        config = ExecutionConfig(fail_threshold=5, stop_on_fail_enabled=True)
+        config = ExecutionConfig(fail_threshold=5, stop_on_fail=True)
         state = ExecutionState(config=config)
         stop_signal = threading.Event()
 

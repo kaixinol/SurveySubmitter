@@ -2,7 +2,13 @@ from __future__ import annotations
 import pytest
 from unittest.mock import patch
 from survey_submitter.core.questions.config import QuestionEntry
-from survey_submitter.core.config.schema import RuntimeConfig
+from survey_submitter.core.config.schema import (
+    RuntimeConfig,
+    SurveySection,
+    ExecutionSection,
+    AnswerConfigSection,
+    ReverseFillSection,
+)
 from survey_submitter.core.reverse_fill.schema import ReverseFillSpec
 from survey_submitter.core.engine.execution_builder import (
     PreparedExecutionArtifacts,
@@ -21,33 +27,40 @@ class _FakeHttpResponse:
 
 class RuntimePreparationTests:
     def _build_config(self) -> RuntimeConfig:
-        config = RuntimeConfig()
-        config.url = "https://wj.qq.com/s2/demo"
-        config.survey_title = "测试问卷"
-        config.survey_provider = "qq"
-        config.target = 5
-        config.threads = 3
-        config.answer_duration = (12, 20)
-        config.answer_datetime_window = ("", "")
-        config.submit_interval = (1, 2)
-        config.random_ip_enabled = True
-        config.random_ua_enabled = True
-        config.random_ua_ratios = {"wechat": 20, "mobile": 30, "pc": 50}
-        config.answer_rules = [{"num": 1, "equals": [1]}]
-        config.question_entries = [
-            QuestionEntry(
-                question_type="single",
-                probabilities=[100.0, 0.0],
-                option_count=2,
-                question_num=1,
-                survey_provider="wjx",
-                provider_question_id="q1",
-                provider_page_id="p1",
-            )
-        ]
-        config.questions_info = [  # ty:ignore[invalid-assignment]
-            {"num": 1, "title": "Q1", "provider_question_id": "q1", "provider_page_id": "p1"}
-        ]
+        config = RuntimeConfig(
+            survey=SurveySection(
+                url="https://wj.qq.com/s2/demo",
+                survey_title="测试问卷",
+                survey_provider="qq",
+            ),
+            execution=ExecutionSection(
+                target_num=5,
+                num_threads=3,
+                answer_duration_range_seconds=(12, 20),
+                answer_datetime_window=("", ""),
+                submit_interval_range_seconds=(1, 2),
+                random_proxy_ip=True,
+                random_user_agent=True,
+                user_agent_ratios={"wechat": 20, "mobile": 30, "pc": 50},
+            ),
+            answer_config=AnswerConfigSection(
+                answer_rules=[{"num": 1, "equals": [1]}],
+                question_entries=[
+                    QuestionEntry(
+                        question_type="single",
+                        probabilities=[100.0, 0.0],
+                        option_count=2,
+                        question_num=1,
+                        survey_provider="wjx",
+                        provider_question_id="q1",
+                        provider_page_id="p1",
+                    )
+                ],
+                questions_info=[
+                    {"num": 1, "title": "Q1", "provider_question_id": "q1", "provider_page_id": "p1"}
+                ],
+            ),
+        )
         return config
 
     def test_prepare_execution_artifacts_rejects_empty_question_entries(self) -> None:
@@ -69,9 +82,9 @@ class RuntimePreparationTests:
 
     def test_prepare_execution_artifacts_blocks_stopped_wjx_before_runtime(self) -> None:
         config = self._build_config()
-        config.url = "https://v.wjx.cn/vm/demo.aspx"
-        config.survey_provider = "wjx"
-        config.question_entries[0].survey_provider = "wjx"
+        config.survey.url = "https://v.wjx.cn/vm/demo.aspx"
+        config.survey.survey_provider = "wjx"
+        config.answer_config.question_entries[0].survey_provider = "wjx"
         html = (
             "<html><body><div id='divWorkError'>此问卷处于停止状态，无法作答！</div></body></html>"
         )
@@ -93,9 +106,9 @@ class RuntimePreparationTests:
         self,
     ) -> None:
         config = self._build_config()
-        config.url = "https://v.wjx.cn/vm/demo.aspx"
-        config.survey_provider = "wjx"
-        config.question_entries[0].survey_provider = "wjx"
+        config.survey.url = "https://v.wjx.cn/vm/demo.aspx"
+        config.survey.survey_provider = "wjx"
+        config.answer_config.question_entries[0].survey_provider = "wjx"
         html = """
         <html><body>
           <div>问卷发布者还未购买企业标准版或企业标准版已到期，此问卷暂时不能被填写！</div>
@@ -164,7 +177,7 @@ class RuntimePreparationTests:
 
     def test_prepare_execution_artifacts_uses_fallback_title_when_config_title_blank(self) -> None:
         config = self._build_config()
-        config.survey_title = ""
+        config.survey.survey_title = ""
         with (
             patch(
                 "survey_submitter.core.engine.execution_builder.build_enabled_reverse_fill_spec",
@@ -178,11 +191,11 @@ class RuntimePreparationTests:
             artifacts = prepare_execution_artifacts(config, fallback_survey_title="解析得到的标题")
         assert artifacts.execution_config_template.survey_title == "解析得到的标题"
         assert artifacts.survey_provider == "wjx"
-        assert artifacts.questions_info[0] is not config.questions_info[0]  # ty:ignore[not-subscriptable]
+        assert artifacts.questions_info[0] is not config.answer_config.questions_info[0]  # ty:ignore[not-subscriptable]
 
     def test_prepare_execution_artifacts_clamps_threads_by_http_limit(self) -> None:
         config = self._build_config()
-        config.threads = 99
+        config.execution.num_threads = 99
         with (
             patch(
                 "survey_submitter.core.engine.execution_builder.build_enabled_reverse_fill_spec",
@@ -198,9 +211,9 @@ class RuntimePreparationTests:
 
     def test_prepare_execution_artifacts_uses_reverse_fill_sample_count_and_threads(self) -> None:
         config = self._build_config()
-        config.target = 2
-        config.threads = 8
-        config.reverse_fill_threads = 3
+        config.execution.target_num = 2
+        config.execution.num_threads = 8
+        config.execution.reverse_fill.threads = 3
         reverse_fill_spec = ReverseFillSpec(
             source_path="D:/demo.xlsx",
             selected_format="wjx_sequence",

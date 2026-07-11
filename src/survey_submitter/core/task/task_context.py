@@ -53,21 +53,21 @@ class ExecutionConfig(BaseConfigModel):
     num_threads: int = 1
     target_num: int = 1
     fail_threshold: int = 5
-    stop_on_fail_enabled: bool = True
+    stop_on_fail: bool = True
 
     submit_interval_range_seconds: tuple[int, int] = (0, 0)
     answer_duration_range_seconds: tuple[int, int] = (0, 0)
     answer_datetime_window_ms: tuple[int, int] = (0, 0)
 
-    random_proxy_ip_enabled: bool = False
+    random_proxy_ip: bool = False
     proxy_source: str = "default"
     proxy_ip_pool: Any = Field(default_factory=deque)
-    random_user_agent_enabled: bool = False
+    random_user_agent: bool = False
     user_agent_ratios: dict[str, int] = {"wechat": 33, "mobile": 33, "pc": 34}
     pause_on_aliyun_captcha: bool = True
     ai_system_prompt: str = ""
-    persona_enabled: bool = True
-    ai_answering_enabled: bool = True
+    persona: bool = True
+    ai_answering: bool = True
 
 
 @dataclass

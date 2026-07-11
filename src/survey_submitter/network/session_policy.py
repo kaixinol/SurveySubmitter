@@ -90,7 +90,7 @@ def merge_prefetched_proxy_leases(ctx: ExecutionState, fetched: Iterable[object]
 
 def resolve_proxy_prefetch_request_count(ctx: ExecutionState) -> int:
 
-    if not bool(ctx.config.random_proxy_ip_enabled):
+    if not bool(ctx.config.random_proxy_ip):
         return 0
     with ctx.lock:
         active_count = len(ctx.proxy_in_use_by_thread)
@@ -111,7 +111,7 @@ def resolve_proxy_prefetch_request_count(ctx: ExecutionState) -> int:
 
 def should_continue_proxy_prefetch(ctx: ExecutionState) -> bool:
 
-    if not bool(ctx.config.random_proxy_ip_enabled):
+    if not bool(ctx.config.random_proxy_ip):
         return False
     if _should_stop_proxy_wait(ctx, ctx.stop_event):
         return False
@@ -186,7 +186,7 @@ async def _select_proxy_for_session_async(
     stop_signal: StopSignalLike | None = None,
     wait: bool = False,
 ) -> str | None:
-    if not ctx.config.random_proxy_ip_enabled:
+    if not ctx.config.random_proxy_ip:
         return None
     selected: ProxyLease | None = None
     with ctx.lock:

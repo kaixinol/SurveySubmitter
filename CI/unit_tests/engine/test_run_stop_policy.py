@@ -23,7 +23,7 @@ class RunStopPolicyTests:
         return state
 
     def test_record_failure_stops_after_reaching_threshold(self, make_callable_mock) -> None:
-        config = ExecutionConfig(fail_threshold=2, stop_on_fail_enabled=True)
+        config = ExecutionConfig(fail_threshold=2, stop_on_fail=True)
         state = ExecutionState(config=config, cur_fail=1)
         increment_thread_fail = state.increment_thread_fail
         state.increment_thread_fail = make_callable_mock(side_effect=increment_thread_fail)
@@ -76,7 +76,7 @@ class RunStopPolicyTests:
         assert state.reverse_fill_runtime.discarded_row_numbers == set()
 
     def test_proxy_unavailable_threshold_scales_with_random_proxy_concurrency(self) -> None:
-        config = ExecutionConfig(fail_threshold=5, num_threads=32, random_proxy_ip_enabled=True)
+        config = ExecutionConfig(fail_threshold=5, num_threads=32, random_proxy_ip=True)
         state = ExecutionState(config=config, cur_fail=4)
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
@@ -95,7 +95,7 @@ class RunStopPolicyTests:
         assert state.get_terminal_stop_snapshot()[0] == ""
 
     def test_failure_threshold_uses_half_concurrency_when_threads_above_ten(self) -> None:
-        config = ExecutionConfig(fail_threshold=5, num_threads=32, stop_on_fail_enabled=True)
+        config = ExecutionConfig(fail_threshold=5, num_threads=32, stop_on_fail=True)
         state = ExecutionState(config=config, cur_fail=15)
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
@@ -108,7 +108,7 @@ class RunStopPolicyTests:
         assert state.get_terminal_stop_snapshot()[0] == "fail_threshold"
 
     def test_failure_threshold_keeps_config_value_when_threads_not_above_ten(self) -> None:
-        config = ExecutionConfig(fail_threshold=5, num_threads=10, stop_on_fail_enabled=True)
+        config = ExecutionConfig(fail_threshold=5, num_threads=10, stop_on_fail=True)
         state = ExecutionState(config=config, cur_fail=4)
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
@@ -121,7 +121,7 @@ class RunStopPolicyTests:
         assert state.get_terminal_stop_snapshot()[0] == "fail_threshold"
 
     def test_proxy_unavailable_uses_independent_counter(self) -> None:
-        config = ExecutionConfig(fail_threshold=5, num_threads=8, random_proxy_ip_enabled=True)
+        config = ExecutionConfig(fail_threshold=5, num_threads=8, random_proxy_ip=True)
         state = ExecutionState(config=config, cur_fail=3, proxy_unavailable_fail_count=7)
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
@@ -140,7 +140,7 @@ class RunStopPolicyTests:
         assert state.get_terminal_stop_snapshot()[0] == "proxy_unavailable_threshold"
 
     def test_record_success_commits_progress_and_triggers_target_stop(self, make_gui_mock) -> None:
-        config = ExecutionConfig(target_num=1, random_proxy_ip_enabled=True)
+        config = ExecutionConfig(target_num=1, random_proxy_ip=True)
         state = ExecutionState(config=config, cur_fail=2)
         state.distribution_pending_by_thread["Worker-1"] = [("q:1", 1, 3)]
         gui = make_gui_mock("handle_random_ip_submission")

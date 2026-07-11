@@ -22,7 +22,7 @@ def provider_run_context(
     thread_name: str = "",
 ) -> Iterator[object | None]:
 
-    if config.persona_enabled:
+    if config.persona:
         persona = generate_persona()
         set_current_persona(persona)
     _reset_answer_context()

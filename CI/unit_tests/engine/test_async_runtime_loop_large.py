@@ -137,7 +137,7 @@ class AsyncRuntimeLoopLargeTests:
     async def test_select_session_proxy_and_ua_does_not_pre_acquire_proxy(
         self, monkeypatch
     ) -> None:
-        config = ExecutionConfig(random_proxy_ip_enabled=True, survey_provider="wjx")
+        config = ExecutionConfig(random_proxy_ip=True, survey_provider="wjx")
         state = ExecutionState(config=config)
         calls: list[str] = []
 
@@ -263,7 +263,7 @@ class AsyncRuntimeLoopLargeTests:
         config = ExecutionConfig(
             url="https://www.wjx.cn/vm/demo.aspx",
             survey_provider="wjx",
-            random_proxy_ip_enabled=True,
+            random_proxy_ip=True,
         )
         config.proxy_ip_pool.append(ProxyLease(address="http://1.1.1.1:80", source="unit"))
         runner, state, _ctx, scheduler = _build_runner(config=config)
@@ -300,7 +300,7 @@ class AsyncRuntimeLoopLargeTests:
         config = ExecutionConfig(
             url="https://www.wjx.cn/vm/demo.aspx",
             survey_provider="wjx",
-            random_proxy_ip_enabled=True,
+            random_proxy_ip=True,
         )
         runner, _state, _ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [6, None]
@@ -435,8 +435,8 @@ class AsyncRuntimeLoopLargeTests:
         config = ExecutionConfig(
             url="https://www.wjx.cn/vm/demo.aspx",
             survey_provider="wjx",
-            random_proxy_ip_enabled=True,
-            stop_on_fail_enabled=True,
+            random_proxy_ip=True,
+            stop_on_fail=True,
             fail_threshold=3,
         )
         runner, state, ctx, scheduler = _build_runner(config=config)
@@ -528,7 +528,7 @@ class AsyncRuntimeLoopLargeTests:
         config = ExecutionConfig(
             url="https://www.wjx.cn/vm/demo.aspx",
             survey_provider="wjx",
-            random_proxy_ip_enabled=True,
+            random_proxy_ip=True,
         )
         runner, state, _ctx, _scheduler = _build_runner(config=config)
         proxy_address = "http://1.1.1.1:80"

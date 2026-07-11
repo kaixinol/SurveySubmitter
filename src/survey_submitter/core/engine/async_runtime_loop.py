@@ -378,7 +378,7 @@ class AsyncSlotRunner:
         if stopped:
             self.run_context.stop_event.set()
             return True
-        if self.config.random_proxy_ip_enabled and _record_bad_proxy_and_maybe_pause(
+        if self.config.random_proxy_ip and _record_bad_proxy_and_maybe_pause(
             self.state, self.runtime_bridge
         ):
             return True
@@ -396,7 +396,7 @@ class AsyncSlotRunner:
     async def _handle_submission_verification_error(
         self, exc: SubmissionVerificationRequiredError
     ) -> bool:
-        if self.config.random_proxy_ip_enabled and self.proxy_session.proxy_address:
+        if self.config.random_proxy_ip and self.proxy_session.proxy_address:
             try:
                 _mark_proxy_temporarily_bad(self.state, self.proxy_session.proxy_address)
             except Exception:
@@ -582,13 +582,13 @@ class AsyncSlotRunner:
             return _RoundOutcome(requeue=False)
 
         async def submit_proxy_lease_factory():
-            if self.config.random_proxy_ip_enabled:
+            if self.config.random_proxy_ip:
                 await self._update_http_step("获取提交代理")
             submit_proxy = await acquire_submit_proxy(
                 self.state,
                 self.slot_label,
                 stop_signal=self.stop_proxy,
-                wait=bool(self.config.random_proxy_ip_enabled),
+                wait=bool(self.config.random_proxy_ip),
             )
             self.proxy_session.set_current_submit_proxy(
                 submit_proxy.address, provider=submit_proxy.provider
