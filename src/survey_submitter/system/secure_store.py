@@ -7,7 +7,7 @@ import logging
 import sys
 from ctypes import wintypes
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import cast
 
 if sys.platform == "win32":
     import winreg
@@ -26,11 +26,13 @@ except Exception:
 
 _REGISTRY_PATH = r"Software\SurveyController\SecureStore"
 _KEYRING_SERVICE = "SurveyController"
-_win_error = cast(Any, getattr(ctypes, "WinError", OSError))
 
 
-def _windows_dlls() -> Any:
-    return cast(Any, ctypes).windll
+def _windows_dlls() -> ctypes.LibraryLoader:
+    return cast(ctypes.LibraryLoader, ctypes.windll)
+
+
+_win_error = getattr(ctypes, "WinError", OSError)
 
 
 @dataclass(frozen=True)
@@ -105,7 +107,7 @@ def _crypt_unprotect_data(data: bytes) -> bytes:
 def _read_secret_windows(name: str) -> SecretReadResult:
     if winreg is None:
         return SecretReadResult(status="unsupported")
-    reg = cast(Any, winreg)
+    reg = winreg
     hkey = reg.HKEY_CURRENT_USER
     try:
         with reg.OpenKey(hkey, _REGISTRY_PATH) as reg_key:
@@ -128,7 +130,7 @@ def _read_secret_windows(name: str) -> SecretReadResult:
 def _set_secret_windows(name: str, value: str) -> None:
     if winreg is None:
         raise RuntimeError("unsupported")
-    reg = cast(Any, winreg)
+    reg = winreg
     encrypted = _crypt_protect_data(str(value).encode("utf-8"))
     encoded = base64.b64encode(encrypted).decode("ascii")
     hkey = reg.HKEY_CURRENT_USER
@@ -142,7 +144,7 @@ def _set_secret_windows(name: str, value: str) -> None:
 def _delete_secret_windows(name: str) -> None:
     if winreg is None:
         raise RuntimeError("unsupported")
-    reg = cast(Any, winreg)
+    reg = winreg
     hkey = reg.HKEY_CURRENT_USER
     with reg.OpenKey(hkey, _REGISTRY_PATH, 0, reg.KEY_SET_VALUE) as reg_key:
         reg.DeleteValue(reg_key, name)

@@ -5,17 +5,20 @@ import random
 import html as html_lib
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Protocol
 from urllib.parse import urlparse
 
 import survey_submitter.network.http as http_client
 from survey_submitter.constants import DEFAULT_HTTP_HEADERS, DEFAULT_USER_AGENT, USER_AGENT_PRESETS
 from survey_submitter.core.ai.batch_runtime import assert_no_ai_placeholders_in_actions, prefill_ai_answers_for_questions
 from survey_submitter.core.config.codec import UserAgentProfile
+from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.modes.duration_control import sample_answer_duration_seconds
 from survey_submitter.core.persona.context import record_answer
+from survey_submitter.core.psychometrics.psychometric import DimensionPsychometricPlan, PsychometricPlan
 from survey_submitter.core.questions.distribution import record_pending_distribution_choice
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.network.proxy.pool import mask_proxy_for_log
@@ -50,6 +53,15 @@ _WJX_PAGE_LOAD_TIMEOUT_SECONDS = 20
 _WJX_SUBMIT_TIMEOUT_SECONDS = 30
 
 
+class SubmitProxyLease(Protocol):
+    """Protocol for submit proxy lease objects."""
+    @property
+    def address(self) -> str | None: ...
+
+
+SubmitProxyLeaseFactory = Callable[[], SubmitProxyLease]
+
+
 class WjxSubmitResult:
     SUCCESS = "success"
     VERIFICATION = "verification"
@@ -74,7 +86,7 @@ _WJX_SPECIAL_CHAR_REPLACEMENTS = (
 )
 
 
-def _proxy_arg(proxy_address: str | None) -> Any:
+def _proxy_arg(proxy_address: str | None) -> dict[str, str] | str:
     proxy = str(proxy_address or "").strip()
     return proxy if proxy else {}
 
@@ -178,7 +190,7 @@ def _build_jqsign(jqnonce: str, ktimes: int) -> str:
     return "".join(chr(ord(ch) ^ t_value) for ch in jqnonce)
 
 
-def _escape_wjx_submit_text(value: Any) -> str:
+def _escape_wjx_submit_text(value: str | int | float | None) -> str:
     text = str(value or "").strip()
     if not text:
         return ""
@@ -356,7 +368,7 @@ def _raise_submit_rejected(
     raise RuntimeError(f"问卷星提交被拒绝：{reason}")
 
 
-async def _load_wjx_page(url: str, *, headers: dict[str, str], proxies: Any) -> str:
+async def _load_wjx_page(url: str, *, headers: dict[str, str], proxies: dict[str, str] | str) -> str:
     response = await http_client.aget(url, timeout=_WJX_PAGE_LOAD_TIMEOUT_SECONDS, headers=headers, proxies=proxies)
     response.raise_for_status()
     try:
@@ -376,8 +388,8 @@ async def _build_actions(
     config: ExecutionConfig,
     ctx: ExecutionState,
     *,
-    psycho_plan: Any,
-    stop_signal: Any,
+    psycho_plan: PsychometricPlan | DimensionPsychometricPlan | None,
+    stop_signal: StopSignalLike | None,
     thread_name: str = "",
 ) -> list[AnswerAction]:
     plan = await _build_action_plan(
@@ -394,8 +406,8 @@ async def _build_action_plan(
     config: ExecutionConfig,
     ctx: ExecutionState,
     *,
-    psycho_plan: Any,
-    stop_signal: Any,
+    psycho_plan: PsychometricPlan | DimensionPsychometricPlan | None,
+    stop_signal: StopSignalLike | None,
     thread_name: str = "",
 ) -> HttpLogicPlan:
     questions = _question_items(config)
@@ -453,8 +465,8 @@ async def _build_and_record_actions(
     config: ExecutionConfig,
     ctx: ExecutionState,
     *,
-    psycho_plan: Any,
-    stop_signal: Any,
+    psycho_plan: PsychometricPlan | DimensionPsychometricPlan | None,
+    stop_signal: StopSignalLike | None,
     thread_name: str,
 ) -> tuple[list[AnswerAction], HttpLogicPlan, str]:
     """Build the action plan, validate, record actions, and produce submitdata."""
@@ -532,7 +544,7 @@ async def _post_wjx_submit_request(
     scene_id: str,
     domain: str,
     proxy_address: str | None,
-    submit_proxy_lease_factory: Any,
+    submit_proxy_lease_factory: SubmitProxyLeaseFactory | None,
 ) -> tuple[str, str | None]:
     """Acquire proxy if needed, POST the submit request, return (response_text, resolved_proxy_address)."""
     await update_http_submit_step(ctx, thread_name, "提交问卷")
@@ -588,13 +600,13 @@ async def brush_wjx_http(
     config: ExecutionConfig,
     ctx: ExecutionState,
     *,
-    stop_signal: Any = None,
+    stop_signal: StopSignalLike | None = None,
     thread_name: str = "",
-    psycho_plan: Any = None,
+    psycho_plan: PsychometricPlan | DimensionPsychometricPlan | None = None,
     proxy_address: str | None = None,
     user_agent: str | None = None,
     user_agent_profile: UserAgentProfile | None = None,
-    submit_proxy_lease_factory: Any = None,
+    submit_proxy_lease_factory: SubmitProxyLeaseFactory | None = None,
 ) -> bool:
     if stop_signal is not None and stop_signal.is_set():
         return False

@@ -4,7 +4,7 @@ import asyncio
 import concurrent.futures
 import logging
 import threading
-from typing import Any
+from typing import Any, Coroutine
 
 from survey_submitter.version import __VERSION__
 from survey_submitter.core.engine.async_events import AsyncRunContext
@@ -26,15 +26,17 @@ from survey_submitter.network.session_policy import (
 from survey_submitter.providers.registry import parse_survey
 
 
-def _format_seconds_range(value: Any) -> str:
+def _format_seconds_range(value: tuple[int, int] | list[int] | None) -> str:
     try:
+        if value is None:
+            return "未知"
         start, end = value
         return f"{int(start)}-{int(end)}秒"
     except (ValueError, TypeError):
         return "未知"
 
 
-def _format_proxy_source(source: Any) -> str:
+def _format_proxy_source(source: str | None) -> str:
     normalized = str(source or "custom").strip().lower()
     labels = {
         "custom": "自定义",
@@ -132,7 +134,7 @@ class AsyncRuntimeEngine:
             self._thread.start()
         self._loop_ready.wait()
 
-    def _submit(self, coro: Any) -> concurrent.futures.Future[Any]:
+    def _submit(self, coro: Coroutine[Any, Any, Any]) -> concurrent.futures.Future[Any]:
         self.start()
         if self._loop is None:
             raise RuntimeError("AsyncRuntimeEngine loop 未启动")
@@ -257,7 +259,7 @@ class AsyncRuntimeEngine:
             self._loop.call_soon_threadsafe(pause_event.clear)
 
     def parse_survey(self, url: str) -> concurrent.futures.Future[Any]:
-        return self._submit(parse_survey(url))
+        return self._submit(parse_survey(url))  # type: ignore[arg-type]
 
     def shutdown(self, *, timeout: float = 5.0) -> None:
         if self._closed:

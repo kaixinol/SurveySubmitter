@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Protocol
+from collections.abc import Callable
+from typing import Protocol
 
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 
@@ -13,12 +14,12 @@ class RuntimeControlPort(Protocol):
     def on_random_ip_loading_changed(self, loading: bool, message: str = "") -> None: ...
 
 
-def _get_method_by_priority(obj: Any, names: list[str]) -> Callable | None:
+def _get_method_by_priority(obj: RuntimeControlPort, names: list[str]) -> Callable[..., object] | None:
     """Get the first callable method from a list of method names."""
     for name in names:
         method = getattr(obj, name, None)
         if method is not None and callable(method):
-            return method
+            return method  # type: ignore[return-value]
     return None
 
 

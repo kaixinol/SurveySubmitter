@@ -47,7 +47,7 @@ def _safe_to_int(value: Any, default: int = 0) -> int:
     try:
         parsed = int(value)
         return max(0, parsed)
-    except Exception:
+    except (ValueError, TypeError):
         return max(0, int(default))
 
 

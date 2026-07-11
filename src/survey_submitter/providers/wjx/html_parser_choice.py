@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 
 from survey_submitter.providers.match_utils import normalize_match_text
 from .html_parser_common import (
@@ -21,13 +20,13 @@ from .regexes import (
 _TEXT_INPUT_ALLOWED_TYPES = {"", "text", "search", "tel", "number"}
 
 
-def _normalize_force_select_text(value: Any) -> str:
+def _normalize_force_select_text(value: str | None) -> str:
     text = normalize_match_text(value)
     if not text:
         return ""
     return WJX_FORCE_SELECT_CLEAN_RE.sub("", text).lower()
 
-def _extract_force_select_option_label(option_text: Any) -> str | None:
+def _extract_force_select_option_label(option_text: str | None) -> str | None:
     text = normalize_match_text(option_text)
     if not text:
         return None
