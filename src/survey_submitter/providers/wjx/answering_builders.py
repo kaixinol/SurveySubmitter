@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Any, Sequence
+from typing import Sequence
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.ai.runtime import (
@@ -12,6 +12,7 @@ from survey_submitter.core.ai.runtime import (
     build_ai_text_placeholder,
 )
 from survey_submitter.core.persona.context import apply_persona_boost
+from survey_submitter.core.psychometrics.psychometric import PsychometricPlan
 from survey_submitter.core.questions.consistency import (
     apply_matrix_row_consistency,
     apply_single_like_consistency,
@@ -43,7 +44,7 @@ from survey_submitter.core.reverse_fill.schema import (
     REVERSE_FILL_KIND_MULTI_TEXT,
     REVERSE_FILL_KIND_TEXT,
 )
-from survey_submitter.core.task import ExecutionState
+from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.providers.answering import AnswerAction
 from survey_submitter.providers.answering.option_fill import default_missing_option_fill
 from survey_submitter.providers.answering.selection import (
@@ -89,7 +90,7 @@ def _resolve_choice_forced_index(
 
 async def _select_choice_index(
     *,
-    config: Any,
+    config: ExecutionConfig,
     config_index: int,
     ctx: ExecutionState,
     current: int,
@@ -97,7 +98,7 @@ async def _select_choice_index(
     option_texts: list[str],
     entry_type: QuestionType,
     prob_config_key: str,
-    psycho_plan: Any | None,
+    psycho_plan: PsychometricPlan | None,
     forced_index: int | None,
 ) -> tuple[int, bool, bool]:
     """Compute probabilities and select an option index.
@@ -163,7 +164,7 @@ async def _build_choice_action_result(
     selected_index: int,
     option_texts: list[str],
     option_count: int,
-    config: Any,
+    config: ExecutionConfig,
     config_index: int,
     fill_config_key: str,
     kind: str,
@@ -208,7 +209,7 @@ async def _build_wjx_choice_action(
     question: SurveyQuestionMeta,
     config_index: int,
     ctx: ExecutionState,
-    psycho_plan: Any | None,
+    psycho_plan: PsychometricPlan | None,
     thread_name: str,
     entry_type: QuestionType,
     prob_config_key: str,
@@ -262,7 +263,7 @@ async def _build_wjx_single_action(
     config_index: int,
     ctx: ExecutionState,
     *,
-    psycho_plan: Any | None = None,
+    psycho_plan: PsychometricPlan | None = None,
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
 ) -> AnswerAction | None:
@@ -298,7 +299,7 @@ async def _build_wjx_dropdown_action(
     config_index: int,
     ctx: ExecutionState,
     *,
-    psycho_plan: Any | None,
+    psycho_plan: PsychometricPlan | None,
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
 ) -> AnswerAction | None:
@@ -394,7 +395,7 @@ async def _build_wjx_score_like_action(
     config_index: int,
     ctx: ExecutionState,
     *,
-    psycho_plan: Any | None,
+    psycho_plan: PsychometricPlan | None,
     answer_type: str,
     thread_name: str = "",
 ) -> AnswerAction | None:
@@ -475,7 +476,7 @@ async def _build_multiple_answer_action(
     *,
     option_texts: list[str],
     option_count: int,
-    config: Any,
+    config: ExecutionConfig,
     config_index: int,
     question: SurveyQuestionMeta,
     current: int,
@@ -518,7 +519,7 @@ async def _build_multiple_answer_action(
 
 
 def _sanitize_multiple_probabilities(
-    selection_probabilities: Any,
+    selection_probabilities: list[float] | int | float | None,
     option_count: int,
     blocked_indices: list[int],
     required_indices: list[int],
@@ -712,7 +713,7 @@ async def _build_wjx_matrix_action(
     config_index: int,
     ctx: ExecutionState,
     *,
-    psycho_plan: Any | None,
+    psycho_plan: PsychometricPlan | None,
     thread_name: str = "",
 ) -> AnswerAction | None:
     config = ctx.config
@@ -739,7 +740,7 @@ async def _build_wjx_matrix_action(
         else:
             raw_probabilities = config.matrix_prob[next_index] if next_index < len(config.matrix_prob) else -1
             strict_reference: list[float] | None = None
-            row_probabilities: Any = -1
+            row_probabilities: list[float] | int | float | None = -1
             if isinstance(raw_probabilities, list):
                 try:
                     probs = [float(value) for value in raw_probabilities]
@@ -864,7 +865,7 @@ async def build_answer_action(
     question: SurveyQuestionMeta,
     ctx: ExecutionState,
     *,
-    psycho_plan: Any | None,
+    psycho_plan: PsychometricPlan | None,
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
 ) -> AnswerAction | None:
