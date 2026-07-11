@@ -1,31 +1,25 @@
 from __future__ import annotations
 
 import logging
-import asyncio
-from typing import Any, Awaitable, Callable, Iterable, TypeVar
+from typing import Any, Iterable
 from urllib.parse import urlsplit, urlunsplit
 
-import survey_submitter.network.http as http_client
+from openai import APIError, APIStatusError, AsyncOpenAI
 
 _CHAT_COMPLETIONS_SUFFIX = "/chat/completions"
 _RESPONSES_SUFFIX = "/responses"
 _LEGACY_COMPLETIONS_SUFFIX = "/completions"
 _AI_REQUEST_TIMEOUT_SECONDS = 30
 _AI_MAX_RETRY_ATTEMPTS = 2
-_AI_RETRYABLE_STATUS_CODES = frozenset({429, 502, 503, 504})
-_AI_RETRY_BACKOFF_SECONDS = 1.0
 
 logger = logging.getLogger(__name__)
-_ResponseT = TypeVar("_ResponseT")
 
 __all__ = [
     "_AI_REQUEST_TIMEOUT_SECONDS",
     "_CHAT_COMPLETIONS_SUFFIX",
     "_RESPONSES_SUFFIX",
     "_extract_chat_completion_text",
-    "_extract_json_dict",
     "_extract_responses_text",
-    "_is_ai_timeout_exception",
     "_is_endpoint_mismatch_error",
     "_normalize_endpoint_url",
     "_resolve_custom_endpoint",
@@ -50,6 +44,16 @@ def _replace_path_suffix(parts, suffix: str) -> str:
     )
 
 
+def _strip_endpoint_suffix(url: str) -> str:
+    parts = urlsplit(url)
+    path = (parts.path or "").rstrip("/")
+    for suffix in (_CHAT_COMPLETIONS_SUFFIX, _RESPONSES_SUFFIX):
+        if _path_endswith(path, suffix):
+            path = path[: -len(suffix)]
+            return urlunsplit((parts.scheme, parts.netloc, path, parts.query, parts.fragment))
+    return url
+
+
 def _resolve_custom_endpoint(base_url: str, api_protocol: str) -> tuple[str, str, bool]:
     normalized_base_url = _normalize_endpoint_url(base_url)
     if not normalized_base_url:
@@ -71,6 +75,9 @@ def _resolve_custom_endpoint(base_url: str, api_protocol: str) -> tuple[str, str
 
 
 def _is_endpoint_mismatch_error(exc: Exception) -> bool:
+    if isinstance(exc, APIStatusError):
+        if exc.status_code in {404, 405, 410}:
+            return True
     message = str(exc or "").lower()
     mismatch_markers = (
         "404",
@@ -140,68 +147,6 @@ def _extract_responses_text(data: dict[str, Any]) -> str:
     raise RuntimeError("Responses API 返回内容为空")
 
 
-def _extract_json_dict(response: Any) -> dict[str, Any]:
-    try:
-        payload = response.json()
-    except ValueError:
-        return {}
-    if isinstance(payload, dict):
-        return payload
-    return {}
-
-
-def _should_retry_ai_request(exc: Exception) -> bool:
-    if isinstance(
-        exc,
-        (
-            http_client.Timeout,
-            http_client.ConnectTimeout,
-            http_client.ReadTimeout,
-            http_client.ConnectionError,
-        ),
-    ):
-        return True
-    if isinstance(exc, http_client.RequestException) and not isinstance(exc, http_client.HTTPError):
-        return True
-    if isinstance(exc, http_client.HTTPError):
-        response = getattr(exc, "response", None)
-        status_code = int(getattr(response, "status_code", 0) or 0)
-        return status_code in _AI_RETRYABLE_STATUS_CODES
-    return False
-
-
-def _is_ai_timeout_exception(exc: Exception) -> bool:
-    return isinstance(
-        exc, (http_client.Timeout, http_client.ConnectTimeout, http_client.ReadTimeout)
-    )
-
-
-async def _aexecute_ai_request_with_retry(
-    request_name: str,
-    request_func: Callable[[], Awaitable[_ResponseT]],
-) -> _ResponseT:
-    last_error: Exception | None = None
-    for attempt in range(1, _AI_MAX_RETRY_ATTEMPTS + 1):
-        try:
-            return await request_func()
-        except Exception as exc:
-            last_error = exc
-            should_retry = attempt < _AI_MAX_RETRY_ATTEMPTS and _should_retry_ai_request(exc)
-            if not should_retry:
-                raise
-            logger.warning(
-                "AI 请求临时失败，准备重试 | request=%s | attempt=%s/%s | error=%s",
-                request_name,
-                attempt,
-                _AI_MAX_RETRY_ATTEMPTS,
-                exc,
-            )
-            await asyncio.sleep(_AI_RETRY_BACKOFF_SECONDS)
-    if last_error is not None:
-        raise last_error
-    raise RuntimeError(f"AI 请求执行失败：{request_name}")
-
-
 async def acall_chat_completions(
     url: str,
     api_key: str,
@@ -210,29 +155,28 @@ async def acall_chat_completions(
     system_prompt: str,
     timeout: int = _AI_REQUEST_TIMEOUT_SECONDS,
 ) -> str:
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}",
-    }
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"请简短回答这个问卷问题：{question}"},
-        ],
-        "max_tokens": 200,
-        "temperature": 0.7,
-    }
+    base_url = _strip_endpoint_suffix(url)
+    client = AsyncOpenAI(
+        base_url=base_url,
+        api_key=api_key,
+        timeout=float(timeout),
+        max_retries=_AI_MAX_RETRY_ATTEMPTS,
+    )
     try:
-        response = await _aexecute_ai_request_with_retry(
-            "chat_completions",
-            lambda: http_client.apost(
-                url, headers=headers, json=payload, timeout=timeout, proxies={}
-            ),
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"请简短回答这个问卷问题：{question}"},
+            ],
+            max_tokens=200,
+            temperature=0.7,
         )
-        response.raise_for_status()
-        return _extract_chat_completion_text(response.json())
-    except Exception as exc:
+        content = response.choices[0].message.content
+        if content:
+            return content.strip()
+        raise RuntimeError("API 返回内容为空")
+    except APIError as exc:
         raise RuntimeError(f"API 调用失败: {exc}") from exc
 
 
@@ -244,25 +188,24 @@ async def acall_responses_api(
     system_prompt: str,
     timeout: int = _AI_REQUEST_TIMEOUT_SECONDS,
 ) -> str:
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}",
-    }
-    payload = {
-        "model": model,
-        "instructions": system_prompt,
-        "input": f"请简短回答这个问卷问题：{question}",
-        "max_output_tokens": 200,
-        "temperature": 0.7,
-    }
+    base_url = _strip_endpoint_suffix(url)
+    client = AsyncOpenAI(
+        base_url=base_url,
+        api_key=api_key,
+        timeout=float(timeout),
+        max_retries=_AI_MAX_RETRY_ATTEMPTS,
+    )
     try:
-        response = await _aexecute_ai_request_with_retry(
-            "responses",
-            lambda: http_client.apost(
-                url, headers=headers, json=payload, timeout=timeout, proxies={}
-            ),
+        response = await client.responses.create(
+            model=model,
+            instructions=system_prompt,
+            input=f"请简短回答这个问卷问题：{question}",
+            max_output_tokens=200,
+            temperature=0.7,
         )
-        response.raise_for_status()
-        return _extract_responses_text(response.json())
-    except Exception as exc:
+        text = str(response.output_text or "").strip()
+        if text:
+            return text
+        raise RuntimeError("Responses API 返回内容为空")
+    except APIError as exc:
         raise RuntimeError(f"API 调用失败: {exc}") from exc
