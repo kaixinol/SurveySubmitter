@@ -1,4 +1,4 @@
-"""Helpers for loading and sampling location/university data for WJX location questions."""
+"""Helpers for loading and sampling location data for WJX location questions."""
 
 from __future__ import annotations
 
@@ -10,7 +10,6 @@ from typing import Any
 _ASSETS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "assets")
 
 _LOCATION_TREE: list[dict[str, Any]] | None = None
-_UNIVERSITY_LIST: list[list[str]] | None = None
 
 # Suffixes to strip from province full names to get short names,
 # ordered longest-first to avoid partial matches.
@@ -52,16 +51,6 @@ def _load_location_tree() -> list[dict[str, Any]]:
     with open(path, encoding="utf-8") as fp:
         _LOCATION_TREE = json.load(fp)
     return _LOCATION_TREE
-
-
-def _load_university_list() -> list[list[str]]:
-    global _UNIVERSITY_LIST
-    if _UNIVERSITY_LIST is not None:
-        return _UNIVERSITY_LIST
-    path = os.path.join(_ASSETS_DIR, "university_list.json")
-    with open(path, encoding="utf-8") as fp:
-        _UNIVERSITY_LIST = json.load(fp)
-    return _UNIVERSITY_LIST
 
 
 def sample_location_text() -> str:
@@ -114,21 +103,3 @@ def sample_location_text() -> str:
         district = random.choice(city["children"])
         district_name = district["name"]
         return f"{province_short}-{city_name}-{district_name}"
-
-
-def sample_university_text() -> str:
-    """Randomly select a university name from the list.
-
-    Returns a string like ``北京大学``.
-    """
-    universities = _load_university_list()
-    if not universities:
-        return "北京大学"
-    entry = random.choice(universities)
-    # Each entry is [province, university_name]
-    return entry[1] if len(entry) >= 2 else str(entry[0])
-
-
-def is_university_verify(verify_type: str) -> bool:
-    """Check if the verify type indicates a university (高校) question."""
-    return "高校" in str(verify_type or "")
