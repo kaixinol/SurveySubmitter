@@ -941,18 +941,18 @@ async def _build_wjx_location_action(
     Falls back to 省市区 format when the verify type is ambiguous.
     """
     from survey_submitter.providers.contracts import TextQuestionMeta
-    from survey_submitter.providers.wjx.location_data import (
-        is_university_verify,
-        sample_location_text,
-        sample_university_text,
+    from survey_submitter.providers.wjx.location_data import sample_location_text
+    from survey_submitter.providers.wjx.university_list import (
+        UniversityList,
+        sample_university_name,
     )
 
     verify_type = ""
     if isinstance(question, TextQuestionMeta):
         verify_type = question.location_verify_type
 
-    if is_university_verify(verify_type):
-        text_value = sample_university_text()
+    if UniversityList.is_university_verify(verify_type):
+        text_value = sample_university_name()
     else:
         text_value = sample_location_text()
 
