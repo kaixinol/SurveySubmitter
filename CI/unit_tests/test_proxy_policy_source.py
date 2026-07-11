@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import survey_submitter.network.proxy.policy.source as proxy_source
+import survey_submitter.network.proxy.source as proxy_source
 from survey_submitter.providers.common import (
     SURVEY_PROVIDER_WJX,
 )

@@ -5,7 +5,7 @@ import time
 from unittest.mock import patch
 from survey_submitter.core.task import ExecutionConfig, ExecutionState, ProxyLease
 from survey_submitter.network import session_policy
-from survey_submitter.network.proxy import submit_pool
+from survey_submitter.network.proxy import submit as submit_pool
 from survey_submitter.network import user_agent
 
 

@@ -7,16 +7,93 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from survey_submitter.core.engine.stop_signal import StopSignalLike
-from survey_submitter.core.task._proxy_address_tracker import (
-    add_successful_proxy_address,
-    get_active_proxy_addresses,
-    get_successful_proxy_addresses,
-)
-from survey_submitter.core.task._proxy_cooldown import (
-    is_proxy_in_cooldown as _is_proxy_in_cooldown,
-    mark_proxy_in_cooldown as _mark_proxy_in_cooldown,
-    purge_expired_proxy_cooldowns as _purge_expired_proxy_cooldowns,
-)
+
+
+def _get_active_proxy_addresses(
+    proxy_in_use_by_thread: dict[str, ProxyLease],
+    *,
+    exclude_thread_name: str = "",
+) -> set[str]:
+    excluded = str(exclude_thread_name or "").strip()
+    active = set()
+    for thread_name, lease in proxy_in_use_by_thread.items():
+        if excluded and str(thread_name or "").strip() == excluded:
+            continue
+        address = str(lease.address or "").strip()
+        if address:
+            active.add(address)
+    return active
+
+
+def _get_successful_proxy_addresses(
+    successful_proxy_addresses: set[str],
+) -> set[str]:
+    return {
+        str(address or "").strip()
+        for address in set(successful_proxy_addresses or set())
+        if str(address or "").strip()
+    }
+
+
+def _add_successful_proxy_address(
+    successful_proxy_addresses: set[str],
+    proxy_address: str,
+) -> bool:
+    normalized = str(proxy_address or "").strip()
+    if not normalized:
+        return False
+    previous_size = len(successful_proxy_addresses)
+    successful_proxy_addresses.add(normalized)
+    return len(successful_proxy_addresses) != previous_size
+
+
+def _purge_expired_proxy_cooldowns(
+    cooldown_map: dict[str, float],
+    *,
+    now_ts: float | None = None,
+) -> None:
+    current = float(now_ts if now_ts is not None else time.time())
+    expired = [
+        address
+        for address, cooldown_until in cooldown_map.items()
+        if float(cooldown_until or 0.0) <= current
+    ]
+    for address in expired:
+        cooldown_map.pop(address, None)
+
+
+def _is_proxy_in_cooldown(
+    cooldown_map: dict[str, float],
+    proxy_address: str,
+    *,
+    now_ts: float | None = None,
+) -> bool:
+    normalized = str(proxy_address or "").strip()
+    if not normalized:
+        return False
+    _purge_expired_proxy_cooldowns(cooldown_map, now_ts=now_ts)
+    current = float(now_ts if now_ts is not None else time.time())
+    return float(cooldown_map.get(normalized, 0.0) or 0.0) > current
+
+
+def _mark_proxy_in_cooldown(
+    cooldown_map: dict[str, float],
+    proxy_address: str,
+    cooldown_seconds: float,
+) -> bool:
+    normalized = str(proxy_address or "").strip()
+    if not normalized:
+        return False
+    try:
+        seconds = max(0.0, float(cooldown_seconds))
+    except (ValueError, TypeError):
+        seconds = 0.0
+    if seconds <= 0:
+        return False
+    cooldown_until = time.time() + seconds
+    previous_until = float(cooldown_map.get(normalized, 0.0) or 0.0)
+    cooldown_map[normalized] = max(previous_until, cooldown_until)
+    return True
 
 
 @dataclass
@@ -201,13 +278,13 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
         *,
         exclude_thread_name: str = "",
     ) -> set[str]:
-        return get_active_proxy_addresses(
+        return _get_active_proxy_addresses(
             self.proxy_in_use_by_thread,
             exclude_thread_name=exclude_thread_name,
         )
 
     def successful_proxy_addresses_locked(self: "_ProxyRuntimeHost") -> set[str]:
-        return get_successful_proxy_addresses(self.successful_proxy_addresses)
+        return _get_successful_proxy_addresses(self.successful_proxy_addresses)
 
     def snapshot_active_proxy_addresses(
         self: "_ProxyRuntimeHost",
@@ -247,7 +324,7 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
 
     def mark_successful_proxy_address(self: "_ProxyRuntimeHost", proxy_address: str) -> bool:
         with self.lock:
-            changed = add_successful_proxy_address(self.successful_proxy_addresses, proxy_address)
+            changed = _add_successful_proxy_address(self.successful_proxy_addresses, proxy_address)
         if changed:
             self.notify_runtime_change()
         return changed

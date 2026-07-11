@@ -7,8 +7,8 @@ import threading
 import pytest
 
 from survey_submitter.core.task import ProxyLease
-from survey_submitter.network.proxy.api import provider
-from survey_submitter.network.proxy.policy import source as proxy_source
+from survey_submitter.network.proxy import api as provider
+from survey_submitter.network.proxy import source as proxy_source
 
 
 class _Response:

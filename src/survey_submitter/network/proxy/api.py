@@ -19,14 +19,14 @@ from survey_submitter.logging.log_utils import (
 )
 
 
-from survey_submitter.network.proxy.policy.source import (
+from survey_submitter.network.proxy.source import (
     get_effective_proxy_api_url,
     get_proxy_occupy_minute,
     has_custom_proxy_api_override,
 )
 
 
-from survey_submitter.network.proxy.pool.pool import (
+from survey_submitter.network.proxy.pool import (
     _build_proxy_lease,
     _mask_proxy_for_log,
 )

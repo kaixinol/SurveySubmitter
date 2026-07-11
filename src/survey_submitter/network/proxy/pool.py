@@ -14,7 +14,7 @@ from survey_submitter.constants import (
     PROXY_TTL_GRACE_SECONDS,
 )
 from survey_submitter.logging.log_utils import log_suppressed_exception
-from survey_submitter.network.proxy.policy.source import (
+from survey_submitter.network.proxy.source import (
     get_proxy_minute_by_answer_seconds,
 )
 from survey_submitter.providers.common import (

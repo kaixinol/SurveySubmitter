@@ -4,7 +4,7 @@ from survey_submitter.network.proxy.api import (
     ProxyApiFatalError,
     test_custom_proxy_api,
 )
-from survey_submitter.network.proxy.policy.source import (
+from survey_submitter.network.proxy.source import (
     ProxySettings,
     apply_custom_proxy_api,
     apply_proxy_area_code,
@@ -31,7 +31,6 @@ from survey_submitter.network.proxy.policy.source import (
 from survey_submitter.network.proxy.pool import (
     HTTP_PROXY_MIN_REMAINING_TTL_SECONDS,
     get_proxy_required_ttl_seconds,
-    prefetch_proxy_pool,
     proxy_lease_has_sufficient_ttl,
 )
 from survey_submitter.constants import PROXY_SOURCE_CUSTOM
@@ -58,7 +57,6 @@ __all__ = [
     "is_custom_proxy_api_active",
     "is_custom_proxy_source",
     "normalize_proxy_source",
-    "prefetch_proxy_pool",
     "proxy_lease_has_sufficient_ttl",
     "set_proxy_api_override",
     "set_proxy_area_code",
