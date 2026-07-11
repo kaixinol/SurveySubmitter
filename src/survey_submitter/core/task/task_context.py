@@ -46,13 +46,9 @@ class ExecutionConfig(BaseConfigModel):
     question_config_index_map: dict[int, tuple[str, int]] = {}
     provider_question_config_index_map: dict[str, tuple[str, int]] = {}
     question_dimension_map: dict[int, str | None] = {}
-    question_ordinal_score_map: dict[int, list[int]] = {}
     question_strict_ratio_map: dict[int, bool] = {}
-    question_psycho_bias_map: dict[int, Any] = {}
     questions_metadata: dict[int, SurveyQuestionMeta] = {}
     provider_question_metadata_map: dict[str, SurveyQuestionMeta] = {}
-
-    psycho_target_alpha: float = 0.85
 
     num_threads: int = 1
     target_num: int = 1

@@ -41,7 +41,6 @@ async def test_fill_survey_http_routes_wjx_adapter() -> None:
             state,
             stop_signal="stop",
             thread_name="Worker-1",
-            psycho_plan="ignored-plan",
             provider=SURVEY_PROVIDER_WJX,
             proxy_address="http://1.1.1.1:80",
             user_agent="UA",
@@ -49,7 +48,6 @@ async def test_fill_survey_http_routes_wjx_adapter() -> None:
 
     assert result is True
     assert fill_mock.await_args is not None
-    assert fill_mock.await_args.kwargs["psycho_plan"] == "resolved-plan"
     assert fill_mock.await_args.kwargs["proxy_address"] == "http://1.1.1.1:80"
     assert fill_mock.await_args.kwargs["user_agent"] == "UA"
 

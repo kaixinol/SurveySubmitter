@@ -12,7 +12,6 @@ from survey_submitter.core.ai.runtime import (
     build_ai_text_placeholder,
 )
 from survey_submitter.core.persona.context import apply_persona_boost
-from survey_submitter.core.psychometrics.psychometric import PsychometricPlan
 from survey_submitter.core.questions.consistency import (
     apply_matrix_row_consistency,
     apply_single_like_consistency,
@@ -104,7 +103,6 @@ async def _select_choice_index(
     option_texts: list[str],
     entry_type: QuestionType,
     prob_config_key: str,
-    psycho_plan: PsychometricPlan | None,
     forced_index: int | None,
 ) -> tuple[int, bool, bool]:
     """Compute probabilities and select an option index.
@@ -141,7 +139,6 @@ async def _select_choice_index(
             option_count,
             ctx,
             current,
-            psycho_plan=psycho_plan,
         )
         if entry_type == QuestionType.SINGLE:
             probabilities = enforce_reference_rank_order(probabilities, strict_reference)
@@ -153,14 +150,12 @@ async def _select_choice_index(
             option_count,
             ctx,
             current,
-            psycho_plan=psycho_plan,
         )
     selected_index = (
         get_tendency_index(
             option_count,
             probabilities,
             dimension=dimension,
-            psycho_plan=psycho_plan,
             question_index=current,
         )
         if has_reliability_dimension
@@ -227,7 +222,6 @@ async def _build_wjx_choice_action(
     question: SurveyQuestionMeta,
     config_index: int,
     ctx: ExecutionState,
-    psycho_plan: PsychometricPlan | None,
     thread_name: str,
     entry_type: QuestionType,
     prob_config_key: str,
@@ -253,7 +247,6 @@ async def _build_wjx_choice_action(
         option_texts=option_texts,
         entry_type=entry_type,
         prob_config_key=prob_config_key,
-        psycho_plan=psycho_plan,
         forced_index=forced_index,
     )
 
@@ -281,7 +274,6 @@ async def _build_wjx_single_action(
     config_index: int,
     ctx: ExecutionState,
     *,
-    psycho_plan: PsychometricPlan | None = None,
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
 ) -> AnswerAction | None:
@@ -289,7 +281,6 @@ async def _build_wjx_single_action(
         question=question,
         config_index=config_index,
         ctx=ctx,
-        psycho_plan=psycho_plan,
         thread_name=thread_name,
         entry_type=QuestionType.SINGLE,
         prob_config_key="single_prob",
@@ -317,7 +308,6 @@ async def _build_wjx_dropdown_action(
     config_index: int,
     ctx: ExecutionState,
     *,
-    psycho_plan: PsychometricPlan | None,
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
 ) -> AnswerAction | None:
@@ -325,7 +315,6 @@ async def _build_wjx_dropdown_action(
         question=question,
         config_index=config_index,
         ctx=ctx,
-        psycho_plan=psycho_plan,
         thread_name=thread_name,
         entry_type=QuestionType.DROPDOWN,
         prob_config_key="droplist_prob",
@@ -436,7 +425,6 @@ async def _build_wjx_score_like_action(
     config_index: int,
     ctx: ExecutionState,
     *,
-    psycho_plan: PsychometricPlan | None,
     answer_type: str,
     thread_name: str = "",
 ) -> AnswerAction | None:
@@ -468,13 +456,11 @@ async def _build_wjx_score_like_action(
             option_count,
             ctx,
             current,
-            psycho_plan=psycho_plan,
         )
         selected_index = get_tendency_index(
             option_count,
             probs,
             dimension=config.question_dimension_map.get(current),
-            psycho_plan=psycho_plan,
             question_index=current,
         )
     else:
@@ -820,7 +806,6 @@ async def _build_wjx_matrix_action(
     config_index: int,
     ctx: ExecutionState,
     *,
-    psycho_plan: PsychometricPlan | None,
     thread_name: str = "",
 ) -> AnswerAction | None:
     config = ctx.config
@@ -871,7 +856,6 @@ async def _build_wjx_matrix_action(
                         ctx,
                         current,
                         row_index=row_index,
-                        psycho_plan=psycho_plan,
                     )
             else:
                 uniform_probs = apply_matrix_row_consistency(
@@ -884,7 +868,6 @@ async def _build_wjx_matrix_action(
                         ctx,
                         current,
                         row_index=row_index,
-                        psycho_plan=psycho_plan,
                     )
             if strict_ratio_question and isinstance(row_probabilities, list):
                 row_probabilities = enforce_reference_rank_order(
@@ -894,7 +877,6 @@ async def _build_wjx_matrix_action(
                 option_count,
                 row_probabilities,
                 dimension=config.question_dimension_map.get(current),
-                psycho_plan=psycho_plan,
                 question_index=current,
                 row_index=row_index,
             )
@@ -985,7 +967,6 @@ async def build_answer_action(
     question: SurveyQuestionMeta,
     ctx: ExecutionState,
     *,
-    psycho_plan: PsychometricPlan | None,
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
 ) -> AnswerAction | None:
@@ -998,7 +979,6 @@ async def build_answer_action(
             question,
             config_index,
             ctx,
-            psycho_plan=psycho_plan,
             thread_name=thread_name,
             allow_ai_placeholder=allow_ai_placeholder,
         )
@@ -1015,7 +995,6 @@ async def build_answer_action(
             question,
             config_index,
             ctx,
-            psycho_plan=psycho_plan,
             thread_name=thread_name,
             allow_ai_placeholder=allow_ai_placeholder,
         )
@@ -1034,7 +1013,6 @@ async def build_answer_action(
             question,
             config_index,
             ctx,
-            psycho_plan=psycho_plan,
             thread_name=thread_name,
         )
     if entry_type == QuestionType.SCALE:
@@ -1042,7 +1020,6 @@ async def build_answer_action(
             question,
             config_index,
             ctx,
-            psycho_plan=psycho_plan,
             answer_type="scale",
             thread_name=thread_name,
         )
@@ -1051,7 +1028,6 @@ async def build_answer_action(
             question,
             config_index,
             ctx,
-            psycho_plan=psycho_plan,
             answer_type="score",
             thread_name=thread_name,
         )

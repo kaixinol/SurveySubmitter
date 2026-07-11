@@ -62,10 +62,9 @@ pause_on_aliyun_captcha: true          # Pause when Aliyun CAPTCHA is detected
 # ai_system_prompt: ""
 
 # ---------------------------------------------------------------------------
-# Psychometrics
+# Reliability
 # ---------------------------------------------------------------------------
 reliability_mode_enabled: true
-psycho_target_alpha: 0.85
 
 # ---------------------------------------------------------------------------
 # Reverse fill (optional)
@@ -82,7 +81,7 @@ reverse_fill_threads: 1
 answer_rules: []
 
 # ---------------------------------------------------------------------------
-# Dimension groups (optional, for psychometric analysis)
+# Dimension groups (optional)
 # ---------------------------------------------------------------------------
 dimension_groups: []
 

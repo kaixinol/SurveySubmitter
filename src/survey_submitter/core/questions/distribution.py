@@ -4,10 +4,6 @@ import math
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from survey_submitter.core.psychometrics.psychometric import (
-        DimensionPsychometricPlan,
-        PsychometricPlan,
-    )
     from survey_submitter.core.task.task_context import ExecutionState
 
 from survey_submitter.core.questions.reliability_mode import get_reliability_profile
@@ -66,19 +62,6 @@ def _has_active_runtime_dimension(ctx: ExecutionState | None, question_index: in
     return isinstance(dimension, str) and bool(str(dimension).strip())
 
 
-def _psycho_plan_covers_question(
-    psycho_plan: PsychometricPlan | DimensionPsychometricPlan | None,
-    question_index: int | None,
-    row_index: int | None,
-) -> bool:
-    if psycho_plan is None or question_index is None or not hasattr(psycho_plan, "get_choice"):
-        return False
-    try:
-        return psycho_plan.get_choice(question_index, row_index) is not None
-    except AttributeError:
-        return False
-
-
 def _resolve_correction_params(
     *,
     use_priority_profile: bool,
@@ -102,7 +85,6 @@ def resolve_distribution_probabilities(
     question_index: int | None,
     *,
     row_index: int | None = None,
-    psycho_plan: PsychometricPlan | DimensionPsychometricPlan | None = None,
 ) -> list[float]:
     target = _normalize_distribution_target(probabilities, option_count)
     if option_count <= 0 or not target or question_index is None or ctx is None:
@@ -115,7 +97,7 @@ def resolve_distribution_probabilities(
 
     use_priority_profile = _has_active_runtime_dimension(
         ctx, question_index
-    ) or _psycho_plan_covers_question(psycho_plan, question_index, row_index)
+    )
     warmup_samples, gain, min_factor, max_factor, gap_limit = _resolve_correction_params(
         use_priority_profile=use_priority_profile,
     )

@@ -149,7 +149,6 @@ def _entry_differs_from_default(
         "attached_option_selects",
         "is_location",
         "dimension",
-        "psycho_bias",
     )
     for field_name in compare_fields:
         left = copy.deepcopy(getattr(entry, field_name, None))

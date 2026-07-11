@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import copy
+import re
 from typing import TYPE_CHECKING, Any, cast
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT, DIMENSION_UNGROUPED
-from survey_submitter.core.psychometrics.ordinal_options import infer_ordinal_option_mapping
 from survey_submitter.core.questions.schema import (
     GLOBAL_RELIABILITY_DIMENSION,
     QuestionEntry,
@@ -114,9 +114,7 @@ def _init_target_collections(target: "ExecutionConfig") -> None:
     target.question_config_index_map = {}
     target.provider_question_config_index_map = {}
     target.question_dimension_map = {}
-    target.question_ordinal_score_map = {}
     target.question_strict_ratio_map = {}
-    target.question_psycho_bias_map = {}
 
 
 # ---------------------------------------------------------------------------
@@ -160,6 +158,136 @@ def _resolve_runtime_dimension(
 
 
 # ---------------------------------------------------------------------------
+# Ordinal option detection (for reliability analysis)
+# ---------------------------------------------------------------------------
+
+_NUMERIC_RE = re.compile(r"^\s*(\d+)(?:\s*(?:分|点|级|星))?\s*$")
+_CHINESE_NUMBERS = {
+    "一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
+    "六": 6, "七": 7, "八": 8, "九": 9, "十": 10,
+}
+_ORDINAL_GROUPS = [
+    ["非常不满意", "不满意", "一般", "满意", "非常满意"],
+    ["很不满意", "不满意", "一般", "满意", "很满意"],
+    ["非常不同意", "不同意", "一般", "同意", "非常同意"],
+    ["很不同意", "不同意", "一般", "同意", "很同意"],
+    ["很差", "较差", "一般", "较好", "很好"],
+    ["非常差", "差", "一般", "好", "非常好"],
+    ["从不", "偶尔", "有时", "经常", "总是"],
+    ["完全没有", "较少", "一般", "较多", "非常多"],
+]
+_ATTITUDE_NEUTRAL_TEXTS = frozenset(
+    {"一般", "中立", "没意见", "无意见", "普通", "不好说", "说不清", "不确定"}
+)
+_ATTITUDE_EXTREME_MARKERS = ("非常", "很", "极其", "十分", "完全", "特别", "强烈")
+_ATTITUDE_MILD_MARKERS = ("比较", "较", "不太", "有点", "稍微", "略", "有些")
+_ATTITUDE_NEGATIVE_CORES = (
+    "不同意", "不满意", "不认可", "不支持", "不愿意", "不赞成",
+    "不太同意", "不太满意", "不太认可", "不太支持", "不太愿意", "不太赞成",
+    "不太好", "反对", "不好", "不佳", "差", "没有", "少", "较少", "很少", "从不",
+)
+_ATTITUDE_POSITIVE_CORES = (
+    "同意", "满意", "认可", "支持", "愿意", "赞成", "好", "多", "经常", "总是",
+)
+
+
+def _normalize_ordinal_text(value: object) -> str:
+    text = str(value or "").strip()
+    return re.sub(r"\s+", "", text)
+
+
+def _parse_numeric_ordinal(texts: list[str]) -> list[int] | None:
+    values: list[int] = []
+    for text in texts:
+        match = _NUMERIC_RE.match(text)
+        if not match:
+            return None
+        values.append(int(match.group(1)))
+    if len(values) < 2:
+        return None
+    if values == list(range(values[0], values[0] + len(values))):
+        return [v - min(values) for v in values]
+    if values == list(range(values[0], values[0] - len(values), -1)):
+        max_value = max(values)
+        return [max_value - v for v in values]
+    return None
+
+
+def _parse_chinese_numeric_ordinal(texts: list[str]) -> list[int] | None:
+    values: list[int] = []
+    for text in texts:
+        value = text.removesuffix("分").removesuffix("点").removesuffix("级").removesuffix("星")
+        if value not in _CHINESE_NUMBERS:
+            return None
+        values.append(_CHINESE_NUMBERS[value])
+    if len(values) < 2:
+        return None
+    if values == list(range(values[0], values[0] + len(values))):
+        return [v - min(values) for v in values]
+    if values == list(range(values[0], values[0] - len(values), -1)):
+        max_value = max(values)
+        return [max_value - v for v in values]
+    return None
+
+
+def _match_text_group(texts: list[str]) -> list[int] | None:
+    if len(texts) < 2:
+        return None
+    for group in _ORDINAL_GROUPS:
+        normalized_group = [_normalize_ordinal_text(item) for item in group]
+        if texts == normalized_group[: len(texts)]:
+            return list(range(len(texts)))
+        if texts == list(reversed(normalized_group[-len(texts) :])):
+            return list(reversed(range(len(texts))))
+        if len(texts) == len(normalized_group) and texts == list(reversed(normalized_group)):
+            return list(reversed(range(len(texts))))
+    return None
+
+
+def _score_attitude_option(text: str) -> int | None:
+    if text in _ATTITUDE_NEUTRAL_TEXTS:
+        return 2
+    is_negative = any(core in text for core in _ATTITUDE_NEGATIVE_CORES)
+    is_positive = (not is_negative) and any(core in text for core in _ATTITUDE_POSITIVE_CORES)
+    if not is_negative and not is_positive:
+        return None
+    is_extreme = any(marker in text for marker in _ATTITUDE_EXTREME_MARKERS)
+    is_mild = any(marker in text for marker in _ATTITUDE_MILD_MARKERS)
+    if is_negative:
+        return 0 if is_extreme and not is_mild else 1
+    return 4 if is_extreme and not is_mild else 3
+
+
+def _match_attitude_scale(texts: list[str]) -> list[int] | None:
+    if len(texts) != 5:
+        return None
+    scores: list[int] = []
+    for text in texts:
+        score = _score_attitude_option(text)
+        if score is None:
+            return None
+        scores.append(score)
+    if sorted(scores) != list(range(5)):
+        return None
+    return scores
+
+
+def _is_ordinal_options(option_texts: list[str]) -> bool:
+    texts = [_normalize_ordinal_text(item) for item in option_texts if str(item or "").strip()]
+    if len(texts) < 2:
+        return False
+    scores = (
+        _parse_numeric_ordinal(texts)
+        or _parse_chinese_numeric_ordinal(texts)
+        or _match_text_group(texts)
+        or _match_attitude_scale(texts)
+    )
+    if scores is None:
+        return False
+    return len(scores) == len(texts) and sorted(scores) == list(range(len(texts)))
+
+
+# ---------------------------------------------------------------------------
 # Per-question-type handlers
 # ---------------------------------------------------------------------------
 
@@ -184,21 +312,16 @@ def _handle_single(
         else None
     )
     option_texts = list(getattr(raw_meta, "option_texts", []) or [])
-    ordinal_mapping = infer_ordinal_option_mapping(option_texts)
-    is_ordinal_single = ordinal_mapping is not None and ordinal_mapping.option_count == max(
+    is_ordinal_single = _is_ordinal_options(option_texts) and len(option_texts) == max(
         1, entry.option_count
     )
-    if is_ordinal_single and ordinal_mapping is not None:
-        target.question_ordinal_score_map[question_num] = list(
-            ordinal_mapping.score_by_choice_index
-        )
+    if is_ordinal_single:
         target.question_dimension_map[question_num] = _resolve_runtime_dimension(
             entry,
             reliability_mode_enabled=reliability_mode_enabled,
             strict_ratio=strict_ratio,
             allows_reliability=True,
         )
-        target.question_psycho_bias_map[question_num] = str(entry.psycho_bias or "custom")
         reliability_candidates.append((question_num, strict_ratio, entry.question_type))
     idx += 1
     target.single_prob.append(_normalize_single_like_prob_config(cast(Any, probs), entry.option_count))
@@ -228,7 +351,6 @@ def _handle_dropdown(
         reliability_mode_enabled=reliability_mode_enabled,
         strict_ratio=strict_ratio,
     )
-    target.question_psycho_bias_map[question_num] = str(entry.psycho_bias or "custom")
     reliability_candidates.append((question_num, strict_ratio, entry.question_type))
     idx += 1
     target.droplist_prob.append(_normalize_single_like_prob_config(cast(Any, probs), entry.option_count))
@@ -299,10 +421,6 @@ def _handle_matrix(
         reliability_mode_enabled=reliability_mode_enabled,
         strict_ratio=strict_ratio,
     )
-    bias_value = entry.psycho_bias
-    target.question_psycho_bias_map[question_num] = (
-        list(bias_value) if isinstance(bias_value, list) else str(bias_value or "custom")
-    )
     reliability_candidates.append((question_num, strict_ratio, entry.question_type))
     idx += rows
     option_count = max(1, _infer_option_count(entry))
@@ -355,7 +473,6 @@ def _handle_scale(
         reliability_mode_enabled=reliability_mode_enabled,
         strict_ratio=strict_ratio,
     )
-    target.question_psycho_bias_map[question_num] = str(entry.psycho_bias or "custom")
     reliability_candidates.append((question_num, strict_ratio, entry.question_type))
     idx += 1
     target.scale_prob.append(_normalize_single_like_prob_config(cast(Any, probs), entry.option_count))

@@ -21,15 +21,6 @@ class _FakeCtx:
         self.append_calls.append((stat_key, option_index, option_count))
 
 
-class _FakePsychoPlan:
-    def __init__(self, choice) -> None:
-        self._choice = choice
-
-    def get_choice(self, question_index, row_index):
-        del question_index, row_index
-        return self._choice
-
-
 class DistributionHelperTests:
     def test_build_distribution_stat_key_formats_question_and_matrix_keys(self) -> None:
         assert distribution.build_distribution_stat_key(3) == "q:3"
@@ -91,7 +82,6 @@ class DistributionHelperTests:
             2,
             ctx,  # ty:ignore[invalid-argument-type]
             9,
-            psycho_plan=_FakePsychoPlan(choice=1),  # ty:ignore[invalid-argument-type]
         )
 
         assert len(result) == 2

@@ -127,53 +127,10 @@ def _enforce_zero_weight_guard(
     return best
 
 
-def _blend_psychometric_choice(
-    anchor_index: int,
-    option_count: int,
-    probabilities: list[float] | int | None,
-) -> int:
-    anchor = max(0, min(option_count - 1, int(anchor_index)))
-    if (
-        option_count <= 0
-        or not isinstance(probabilities, list)
-        or len(probabilities) != option_count
-    ):
-        return anchor
-
-    fluctuation_window = _resolve_fluctuation_window(option_count)
-    if fluctuation_window <= 0:
-        return anchor
-    profile = get_reliability_profile()
-
-    low = max(0, anchor - fluctuation_window)
-    high = min(option_count - 1, anchor + fluctuation_window)
-    adjusted_probs: list[float] = []
-    for idx in range(option_count):
-        try:
-            weight = float(probabilities[idx])
-        except (ValueError, TypeError):
-            weight = 0.0
-        if math.isnan(weight) or math.isinf(weight) or weight <= 0.0:
-            adjusted_probs.append(0.0)
-            continue
-        if low <= idx <= high:
-            distance = abs(idx - anchor)
-            adjusted_probs.append(weight * _window_decay(distance, fluctuation_window))
-        else:
-            adjusted_probs.append(weight * (profile.consistency_outside_decay * 0.5))
-
-    total = sum(adjusted_probs)
-    if total <= 0.0:
-        return anchor
-    normalized = [value / total for value in adjusted_probs]
-    return weighted_index(normalized)
-
-
 def get_tendency_index(
     option_count: int,
     probabilities: list[float] | int | None,
     dimension: str | None = None,
-    psycho_plan: Any | None = None,
     question_index: int | None = None,
     row_index: int | None = None,
 ) -> int:
@@ -187,22 +144,6 @@ def get_tendency_index(
             option_count,
             probabilities,
             anchor_index=anchor,
-        )
-
-    if psycho_plan is not None and question_index is not None:
-        choice = _get_psychometric_answer(psycho_plan, question_index, row_index, option_count)
-        if choice is not None:
-            if _is_distribution_locked_plan(psycho_plan, question_index, row_index):
-                return _finalize_choice(choice, anchor=choice)
-            blended_choice = _blend_psychometric_choice(
-                choice,
-                option_count,
-                probabilities,
-            )
-            return _finalize_choice(blended_choice, anchor=choice)
-
-        logging.info(
-            "心理测量计划未命中答案（题%d 行%s），回退到常规倾向逻辑", question_index, row_index
         )
 
     if _is_ungrouped(dimension):
@@ -300,45 +241,3 @@ def _window_decay(distance: int, window: int) -> float:
     center = profile.consistency_center_weight
     edge = min(center, profile.consistency_edge_weight)
     return max(edge, center - (center - edge) * normalized)
-
-
-def _get_psychometric_answer(
-    plan: Any,
-    question_index: int,
-    row_index: int | None,
-    option_count: int,
-) -> int | None:
-
-    try:
-        choice = plan.get_choice(question_index, row_index)
-        if choice is None:
-            return None
-
-        choice = max(0, min(option_count - 1, choice))
-
-        return choice
-    except Exception as exc:
-        log_suppressed_exception(
-            f"_get_psychometric_answer: question_index={question_index}, row_index={row_index}",
-            exc,
-            level=logging.WARNING,
-        )
-        return None
-
-
-def _is_distribution_locked_plan(
-    plan: Any,
-    question_index: int,
-    row_index: int | None,
-) -> bool:
-    if plan is None or not hasattr(plan, "is_distribution_locked"):
-        return False
-    try:
-        return bool(plan.is_distribution_locked(question_index, row_index))
-    except Exception as exc:
-        log_suppressed_exception(
-            f"_is_distribution_locked_plan: question_index={question_index}, row_index={row_index}",
-            exc,
-            level=logging.WARNING,
-        )
-        return False

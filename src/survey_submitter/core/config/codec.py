@@ -19,7 +19,6 @@ from survey_submitter.core.reverse_fill import (
 from survey_submitter.core.config.answer_datetime_window import normalize_answer_datetime_window
 from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.config.schema import RuntimeConfig
-from survey_submitter.core.psychometrics.psychometric import normalize_target_alpha
 from survey_submitter.core.questions.consistency import normalize_rule_dict, sanitize_answer_rules
 from survey_submitter.core.questions.utils import serialize_random_int_range
 from survey_submitter.providers.common import (
@@ -105,7 +104,6 @@ _QUESTION_ENTRY_FIELDS = {
     "is_location",
     "location_parts",
     "dimension",
-    "psycho_bias",
 }
 
 _SURVEY_QUESTION_META_FIELDS = {
@@ -287,13 +285,6 @@ def _custom_weights_has_positive(weights: object) -> bool:
     return False
 
 
-def _normalize_psycho_bias(data: dict[str, object]) -> str:
-    bias = str(data.get("psycho_bias") or "custom")
-    if bias in ("left", "center", "right"):
-        return bias
-    return "custom"
-
-
 def _normalize_multi_text_blank_modes(raw: object) -> list[str]:
     if not isinstance(raw, list):
         return []
@@ -422,7 +413,6 @@ def serialize_question_entry(entry) -> dict[str, object]:
         "is_location": entry.is_location,
         "location_parts": list(entry.location_parts or []),
         "dimension": _normalize_dimension_value(entry.dimension),
-        "psycho_bias": str(entry.psycho_bias or "custom"),
     }
 
 
@@ -484,7 +474,6 @@ def deserialize_question_entry(data: dict[str, object]) -> QuestionEntry:
         "is_location": bool(normalized_data.get("is_location")),
         "location_parts": _as_list(normalized_data.get("location_parts")),
         "dimension": _normalize_dimension_value(normalized_data.get("dimension")),
-        "psycho_bias": _normalize_psycho_bias(normalized_data),
     })
 
     try:
@@ -595,10 +584,6 @@ def _apply_feature_flags(config: RuntimeConfig, raw: dict[str, object]) -> None:
     config.fail_stop_enabled = bool(raw.get("fail_stop_enabled", True))
     config.pause_on_aliyun_captcha = bool(raw.get("pause_on_aliyun_captcha", True))
     config.reliability_mode_enabled = bool(raw.get("reliability_mode_enabled", True))
-    raw_alpha = raw.get("psycho_target_alpha")
-    config.psycho_target_alpha = normalize_target_alpha(
-        raw_alpha if isinstance(raw_alpha, (int, float, str)) else None
-    )
 
 
 def _apply_reverse_fill_settings(config: RuntimeConfig, raw: dict[str, object]) -> None:

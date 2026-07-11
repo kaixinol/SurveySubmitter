@@ -56,13 +56,12 @@ class ProviderInfo:
 
 @dataclass
 class DistributionConfig:
-    """Probability distribution and psychometric dimension settings."""
+    """Probability distribution settings."""
 
     probabilities: list[float] | list[list[float]] | int | None = None
     distribution_mode: str = "random"
     custom_weights: list[float] | list[list[float]] | None = None
     dimension: str | None = None
-    psycho_bias: str | list[str] = "custom"
 
 
 @dataclass
@@ -170,7 +169,6 @@ class QuestionEntry(BaseConfigModel):
     distribution_mode: str = "random"
     custom_weights: list[float] | list[list[float]] | None = None
     dimension: str | None = None
-    psycho_bias: str | list[str] = "custom"
 
     # -- Core question structure --------------------------------------------
     texts: list[str] | None = None
@@ -213,7 +211,6 @@ class QuestionEntry(BaseConfigModel):
             distribution_mode=self.distribution_mode,
             custom_weights=self.custom_weights,
             dimension=self.dimension,
-            psycho_bias=self.psycho_bias,
         )
 
     @property

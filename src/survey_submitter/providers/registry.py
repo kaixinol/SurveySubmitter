@@ -67,7 +67,6 @@ async def fill_survey_http(
     *,
     stop_signal: Any = None,
     thread_name: str = "",
-    psycho_plan: Any = None,
     provider: str | None = None,
     proxy_address: str | None = None,
     user_agent: str | None = None,
@@ -83,15 +82,13 @@ async def fill_survey_http(
         config,
         state=state,
         thread_name=thread_name,
-        psycho_plan=psycho_plan,
-    ) as resolved_plan:
+    ):
         return bool(
             await adapter.fill_survey_http_async(
                 config,
                 state,
                 stop_signal=stop_signal,
                 thread_name=thread_name,
-                psycho_plan=resolved_plan,
                 proxy_address=proxy_address,
                 user_agent=user_agent,
                 user_agent_profile=user_agent_profile,
