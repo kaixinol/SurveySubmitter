@@ -37,7 +37,6 @@ from survey_submitter.providers.contracts import (
     ensure_survey_question_metas,
     serialize_survey_question_metas,
 )
-from survey_submitter.logging.log_utils import log_suppressed_exception
 from survey_submitter.constants import USER_AGENT_PRESETS
 
 _TEXT_RANDOM_MODES = {"none", "name", "mobile", "id_card", "integer"}

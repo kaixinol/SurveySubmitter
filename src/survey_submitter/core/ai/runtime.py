@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from typing import Any
 
 from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.task import ExecutionState

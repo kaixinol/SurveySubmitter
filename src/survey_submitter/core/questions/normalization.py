@@ -35,7 +35,6 @@ from survey_submitter.core.questions.utils import (
 )
 from survey_submitter.core.questions.types import (
     QuestionType,
-    CHOICE_TYPES,
     TEXT_TYPES,
     RATING_TYPES,
 )
