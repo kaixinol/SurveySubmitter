@@ -12,10 +12,18 @@ from survey_submitter.network.proxy.api import fetch_proxy_batch_async
 
 from survey_submitter.network.proxy.submit import (
     SubmitProxyLease,
+    SubmitProxyUnavailableError,  # noqa: F401  — re-exported for other modules
     _ensure_proxy_pool_deque_locked,
     _mark_proxy_in_use,
     _merge_fetched_proxy_leases_locked,
     _pop_available_proxy_lease_locked,
+)
+from survey_submitter.network.proxy.submit import (  # noqa: F401  — re-exported for other modules
+    _discard_unresponsive_proxy,
+    _mark_proxy_temporarily_bad,
+)
+from survey_submitter.network.user_agent import (  # noqa: F401  — re-exported for other modules
+    _select_user_agent_for_session,
 )
 
 _PROXY_WAIT_POLL_SECONDS = 0.3

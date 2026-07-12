@@ -180,13 +180,21 @@ class AsyncFileHandler(logging.Handler):
         super().close()
 
 
-from survey_submitter.logging.log_buffer_handler import LogBufferHandler  # noqa: E402
-from survey_submitter.logging.stream_redirect import StreamToLogger  # noqa: E402
-from survey_submitter.logging.session_log import (  # noqa: E402
+from survey_submitter.logging.log_buffer_handler import LogBufferHandler, LogBufferEntry  # noqa: E402, F401
+from survey_submitter.logging.stream_redirect import StreamToLogger  # noqa: E402, F401
+from survey_submitter.logging.session_log import (  # noqa: E402, F401
+    _backfill_session_log_from_buffer,
+    _ensure_logs_dir,
     _ensure_session_log_handler,
+    export_full_log_to_file,
+    finalize_session_log_persistence,
     flush_session_log_file,
+    get_auto_save_log_settings,
+    get_current_session_log_path,
+    prune_session_log_files,
+    save_log_records_to_file,
 )
-import survey_submitter.logging.session_log as _session_log  # noqa: E402
+import survey_submitter.logging.session_log as _session_log  # noqa: E402, F401
 
 
 LOG_BUFFER_HANDLER = LogBufferHandler()

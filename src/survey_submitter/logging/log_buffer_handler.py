@@ -15,7 +15,6 @@ from survey_submitter.logging.log_message_processing import (
     should_filter_sensitive,
     strip_ansi_codes,
 )
-from survey_submitter.logging.log_utils import _safe_internal_log, _should_filter_noise
 
 
 @dataclass
@@ -74,12 +73,16 @@ class LogBufferHandler(logging.Handler):
                     try:
                         self._process_record(record)
                     except Exception as exc:
+                        from survey_submitter.logging.log_utils import _safe_internal_log
+
                         _safe_internal_log("LogBufferHandler _process_record failed", exc)
 
                 current_version = self._listener_manager.increment_version()
                 self._listener_manager.notify_listeners(current_version)
 
             except OSError as exc:
+                from survey_submitter.logging.log_utils import _safe_internal_log
+
                 _safe_internal_log("LogBufferHandler worker loop failed", exc)
 
     def _process_record(self, record: logging.LogRecord):
@@ -88,6 +91,8 @@ class LogBufferHandler(logging.Handler):
 
         if should_filter_sensitive(message):
             return
+
+        from survey_submitter.logging.log_utils import _should_filter_noise
 
         if _should_filter_noise(message):
             return
@@ -106,6 +111,8 @@ class LogBufferHandler(logging.Handler):
         try:
             self._queue.put_nowait(record)
         except queue.Full:
+            from survey_submitter.logging.log_utils import _safe_internal_log
+
             _safe_internal_log("LogBufferHandler queue full, dropping log")
         except OSError:
             self.handleError(record)
@@ -142,4 +149,6 @@ class LogBufferHandler(logging.Handler):
                 current_version = self._listener_manager.increment_version()
                 self._listener_manager.notify_listeners(current_version)
         except OSError as exc:
+            from survey_submitter.logging.log_utils import _safe_internal_log
+
             _safe_internal_log("LogBufferHandler flush_remaining failed", exc)

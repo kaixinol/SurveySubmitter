@@ -3,8 +3,6 @@ from __future__ import annotations
 import threading
 from typing import Callable
 
-from survey_submitter.logging.log_utils import _safe_internal_log
-
 _listener_id_counter = 0
 _listener_id_lock = threading.Lock()
 
@@ -62,4 +60,6 @@ class ListenerManager:
             try:
                 listener(version)
             except Exception as exc:
+                from survey_submitter.logging.log_utils import _safe_internal_log
+
                 _safe_internal_log("LogBufferHandler listener failed", exc)

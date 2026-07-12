@@ -83,7 +83,7 @@ class LogBufferHandlerConcurrencyTests:
         logger = logging.getLogger("unit.logbuffer.failure")
         original_format = handler.format
         with patch(
-            "survey_submitter.logging.log_buffer_handler._safe_internal_log"
+            "survey_submitter.logging.log_utils._safe_internal_log"
         ) as mock_safe_log:
             with patch.object(
                 handler,
