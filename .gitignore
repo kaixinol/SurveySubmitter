@@ -11,3 +11,15 @@ coverage.xml
 
 # 工具缓存
 .ruff_cache/
+
+# 编辑器与 AI 工具
+.qoder/
+.claude/
+.agent/
+.codex/
+.trellis/
+.local-private/
+.playwright-mcp/
+*.code-workspace
+AGENTS.md
+CLAUDE.md
