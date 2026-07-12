@@ -23,3 +23,7 @@ coverage.xml
 *.code-workspace
 AGENTS.md
 CLAUDE.md
+
+# 临时文件
+TODO.md
+pytestdebug.log
