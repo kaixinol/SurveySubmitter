@@ -48,8 +48,8 @@ jobs:
       - name: Run Ruff check
         run: uv run python -m CI.python_checks.ruff_check
 
-      - name: Run Pyright check
-        run: uv run python -m CI.python_checks.pyright_check
+      - name: Run ty check
+        run: uv run python -m CI.python_checks.ty_check
 
   unit-tests:
     name: Unit Tests

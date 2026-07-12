@@ -19,7 +19,7 @@ from CI.python_checks.common import (
     print_scan_targets,
     run_compile_checks,
     run_module_import_checks,
-    run_pyright_check,
+    run_ty_check,
     run_ruff_check,
     run_type_ignore_check,
     run_unicode_escape_check,
@@ -36,20 +36,20 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Enable module import checks. The default is quick mode.",
     )
-    pyright_group = parser.add_mutually_exclusive_group()
-    pyright_group.add_argument(
-        "--pyright",
-        dest="pyright_enabled",
+    ty_group = parser.add_mutually_exclusive_group()
+    ty_group.add_argument(
+        "--ty",
+        dest="ty_enabled",
         action="store_true",
-        help="Enable Pyright diagnostics (enabled by default).",
+        help="Enable ty diagnostics (enabled by default).",
     )
-    pyright_group.add_argument(
-        "--no-pyright",
-        dest="pyright_enabled",
+    ty_group.add_argument(
+        "--no-ty",
+        dest="ty_enabled",
         action="store_false",
-        help="Disable Pyright diagnostics and keep compile and Ruff checks only.",
+        help="Disable ty diagnostics and keep compile and Ruff checks only.",
     )
-    parser.set_defaults(pyright_enabled=True)
+    parser.set_defaults(ty_enabled=True)
     return parser.parse_args()
 
 
@@ -63,16 +63,16 @@ def main() -> int:
     compile_targets = iter_compile_targets()
     modules = iter_module_names(python_files)
     quick_mode = not args.full
-    pyright_mode = args.pyright_enabled
+    ty_mode = args.ty_enabled
 
     print_scan_targets(target_dirs)
     print(f"[INFO] Check mode: {'quick' if quick_mode else 'full'}")
     print(f"[INFO] Python files: {len(python_files)}")
     print(f"[INFO] Compile targets: {len(compile_targets)}")
-    if pyright_mode:
-        print("[INFO] Pyright diagnostics: enabled")
+    if ty_mode:
+        print("[INFO] ty diagnostics: enabled")
     else:
-        print("[INFO] Pyright diagnostics: disabled (--no-pyright)")
+        print("[INFO] ty diagnostics: disabled (--no-ty)")
     print("[INFO] Unit tests: enabled")
     if quick_mode:
         print("[INFO] Module import checks: skipped (use --full to enable)")
@@ -83,15 +83,15 @@ def main() -> int:
     ruff_issues, ruff_error = run_ruff_check(target_dirs)
     type_ignore_issues = run_type_ignore_check(target_dirs)
     unicode_escape_issues = run_unicode_escape_check([ROOT_DIR / "CI"])
-    pyright_issues, pyright_error = run_pyright_check(target_dirs) if pyright_mode else ([], None)
+    ty_issues, ty_error = run_ty_check(target_dirs) if ty_mode else ([], None)
     unit_test_issue, coverage_summary = run_unit_tests()
     import_issues = run_module_import_checks(modules) if args.full else []
 
     if ruff_error:
         print(f"[ERROR] {ruff_error}")
         return 2
-    if pyright_error:
-        print(f"[ERROR] {pyright_error}")
+    if ty_error:
+        print(f"[ERROR] {ty_error}")
         return 2
 
     total_issues = (
@@ -99,7 +99,7 @@ def main() -> int:
         + len(ruff_issues)
         + len(type_ignore_issues)
         + len(unicode_escape_issues)
-        + len(pyright_issues)
+        + len(ty_issues)
         + (1 if unit_test_issue else 0)
         + len(import_issues)
     )
@@ -109,8 +109,8 @@ def main() -> int:
     print(f"[INFO] Ruff diagnostics: {len(ruff_issues)}")
     print(f"[INFO] Type ignore diagnostics: {len(type_ignore_issues)}")
     print(f"[INFO] Unicode escape diagnostics: {len(unicode_escape_issues)}")
-    if pyright_mode:
-        print(f"[INFO] Pyright diagnostics: {len(pyright_issues)}")
+    if ty_mode:
+        print(f"[INFO] ty diagnostics: {len(ty_issues)}")
     print(f"[INFO] Unit test failures: {1 if unit_test_issue else 0}")
     if coverage_summary:
         print("[INFO] Coverage summary:")
@@ -121,12 +121,12 @@ def main() -> int:
     if total_issues == 0:
         if quick_mode:
             print(
-                "[PASS] Quick checks passed: compile, Ruff, Pyright, and unit tests all succeeded."
+                "[PASS] Quick checks passed: compile, Ruff, ty, and unit tests all succeeded."
             )
             print("[INFO] For module import checks, run: python CI/python_ci.py --full")
         else:
             print(
-                "[PASS] Full checks passed: compile, Ruff, Pyright, unit tests, and module import all succeeded."
+                "[PASS] Full checks passed: compile, Ruff, ty, unit tests, and module import all succeeded."
             )
         return 0
 
@@ -135,8 +135,8 @@ def main() -> int:
     print_issues("[Ruff diagnostics]", ruff_issues)
     print_issues("[Type ignore diagnostics]", type_ignore_issues)
     print_issues("[Unicode escape diagnostics]", unicode_escape_issues)
-    if pyright_mode:
-        print_issues("[Pyright diagnostics]", pyright_issues)
+    if ty_mode:
+        print_issues("[ty diagnostics]", ty_issues)
     if unit_test_issue:
         print_issues("[Unit test failures]", [unit_test_issue])
     print_issues("[Module import failures]", import_issues)
