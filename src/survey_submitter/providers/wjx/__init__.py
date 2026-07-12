@@ -1,5 +1,6 @@
 from __future__ import annotations
 
-from survey_submitter.version import __VERSION__
+from importlib.metadata import version
 
+__VERSION__ = version("surveycontroller")
 __all__ = ["__VERSION__"]
