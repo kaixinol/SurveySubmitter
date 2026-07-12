@@ -2,10 +2,22 @@ from __future__ import annotations
 
 import logging
 import random
+from typing import Any, Protocol
 
 from survey_submitter.core.engine.async_wait import sleep_or_stop
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.logging.log_utils import log_suppressed_exception
+
+
+class _WebElementLike(Protocol):
+    async def is_displayed(self) -> bool: ...
+    async def text(self) -> str: ...
+
+
+class _DriverLike(Protocol):
+    async def current_url(self) -> str: ...
+    async def find_element(self, by: str, value: str) -> Any: ...
+    async def execute_script(self, script: str, *args: Any) -> Any: ...
 
 _COMPLETION_MARKERS = (
     "答卷已经提交",
@@ -101,7 +113,7 @@ async def simulate_answer_duration_delay(
     return await wait_answer_duration_seconds(stop_signal, wait_seconds)
 
 
-async def is_survey_completion_page(driver: object, provider: str | None = None) -> bool:
+async def is_survey_completion_page(driver: _DriverLike, provider: str | None = None) -> bool:
     try:
         current_url = str(await driver.current_url() or "")
         if "complete" in current_url.lower():

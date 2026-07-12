@@ -251,14 +251,14 @@ def _build_benefit_supported_data_from_online() -> tuple[list[dict[str, object]]
         local_province = province_lookup.get(normalized_province)
         if not local_province:
             continue
-        matched_cities: list[dict[str, object]] = []
-        for city_entry in cast("list[dict[str, object]]", local_province["cities"]):
+        matched_cities: list[dict[str, Any]] = []
+        for city_entry in cast("list[dict[str, Any]]", local_province["cities"]):
             city_normalized = str(city_entry.get("normalized_name") or "")
             if city_normalized in online_cities:
                 matched_cities.append(dict(city_entry["raw"]))
                 city_code_index[str(city_entry["code"])] = str(city_entry["request_name"])
         if matched_cities:
-            filtered_provinces.append({**cast("dict[str, object]", local_province["raw"]), "cities": matched_cities})
+            filtered_provinces.append({**cast("dict[str, Any]", local_province["raw"]), "cities": matched_cities})
 
     return filtered_provinces, city_code_index
 
@@ -272,15 +272,15 @@ def _build_benefit_supported_data_from_local_fallback() -> tuple[
     city_code_index: dict[str, str] = {}
 
     for province in province_lookup.values():
-        matched_cities: list[dict[str, object]] = []
-        for city_entry in cast("list[dict[str, object]]", province["cities"]):
+        matched_cities: list[dict[str, Any]] = []
+        for city_entry in cast("list[dict[str, Any]]", province["cities"]):
             city_code = str(city_entry.get("code") or "")
             if city_code not in supported_codes:
                 continue
             matched_cities.append(dict(city_entry["raw"]))
             city_code_index[city_code] = str(city_entry["request_name"])
         if matched_cities:
-            filtered_provinces.append({**cast("dict[str, object]", province["raw"]), "cities": matched_cities})
+            filtered_provinces.append({**cast("dict[str, Any]", province["raw"]), "cities": matched_cities})
 
     return filtered_provinces, city_code_index
 
