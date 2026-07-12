@@ -23,11 +23,11 @@ UNIT_TEST_TIMEOUT_SECONDS = int(
     os.environ.get("SURVEY_CONTROLLER_UNIT_TEST_TIMEOUT_SECONDS", "120")
 )
 DEFAULT_UNIT_TEST_COVERAGE_FAIL_UNDER = "72"
-PYRIGHT_TIMEOUT_SECONDS = int(os.environ.get("SURVEY_CONTROLLER_PYRIGHT_TIMEOUT_SECONDS", "90"))
+TY_TIMEOUT_SECONDS = int(os.environ.get("SURVEY_CONTROLLER_TY_TIMEOUT_SECONDS", "90"))
 PYTEST_FAILURE_LOG_TAIL_LINES = 40
 TYPE_IGNORE_PATTERNS = (
     "# " + "type" + ": ignore",
-    "# " + "pyright:",
+    "# " + "ty:",
 )
 TYPE_IGNORE_SCAN_ROOTS = (ROOT_DIR / "src" / "survey_submitter",)
 UNICODE_ESCAPE_PATTERNS = (
@@ -171,10 +171,6 @@ def make_child_env() -> dict[str, str]:
         env.setdefault("HOME", home_dir)
         env.setdefault("USERPROFILE", home_dir)
 
-    env.setdefault(
-        "PYRIGHT_PYTHON_CACHE_DIR",
-        str(Path(tempfile.gettempdir()) / "SurveyController-pyright-cache"),
-    )
     return env
 
 
@@ -317,24 +313,23 @@ def run_ruff_check(target_dirs: Iterable[Path]) -> tuple[list[dict], str | None]
     return issues, None
 
 
-def run_pyright_check(target_dirs: Iterable[Path]) -> tuple[list[dict], str | None]:
+def run_ty_check(target_dirs: Iterable[Path]) -> tuple[list[dict], str | None]:
 
     target_args = [str(path) for path in target_dirs]
     env = make_child_env()
-    for entry_file in ENTRY_FILES:
-        if entry_file.exists():
-            target_args.append(str(entry_file))
 
     if not target_args:
-        return [], "No target paths found for Pyright diagnostics."
+        return [], "No target paths found for ty diagnostics."
 
     try:
         result = subprocess.run(
             [
                 sys.executable,
                 "-m",
-                "pyright",
-                "--outputjson",
+                "ty",
+                "check",
+                "--output-format",
+                "gitlab",
                 *target_args,
             ],
             cwd=str(ROOT_DIR),
@@ -343,50 +338,51 @@ def run_pyright_check(target_dirs: Iterable[Path]) -> tuple[list[dict], str | No
             encoding="utf-8",
             errors="replace",
             env=env,
-            timeout=PYRIGHT_TIMEOUT_SECONDS,
+            timeout=TY_TIMEOUT_SECONDS,
         )
     except subprocess.TimeoutExpired:
-        return [], f"Pyright timed out (>{PYRIGHT_TIMEOUT_SECONDS}s)."
+        return [], f"ty timed out (>{TY_TIMEOUT_SECONDS}s)."
 
     stderr_text = (result.stderr or "").strip()
-    if "No module named pyright" in stderr_text:
-        return [], "Pyright is not installed, so Pyright diagnostics cannot run."
+    if "No module named ty" in stderr_text:
+        return [], "ty is not installed, so ty diagnostics cannot run."
 
     raw = (result.stdout or "").strip()
     if not raw:
         if result.returncode == 0:
             return [], None
-        message = stderr_text or "Pyright failed without producing parseable output."
+        message = stderr_text or "ty failed without producing parseable output."
         return [], message
 
     try:
-        payload = json.loads(raw)
+        diagnostics = json.loads(raw)
     except json.JSONDecodeError:
-        return [], f"Failed to parse Pyright output: {raw}"
+        return [], f"Failed to parse ty output: {raw}"
 
-    diagnostics = payload.get("generalDiagnostics", [])
+    if not isinstance(diagnostics, list):
+        return [], f"Unexpected ty output format: {raw}"
+
+    severity_map = {"major": "error", "minor": "warning", "info": "info", "blocker": "error"}
     issues: list[dict] = []
     for item in diagnostics:
-        range_start = item.get("range", {}).get("start", {})
-        file_name = item.get("file", "")
-        severity = item.get("severity", "error")
-        rule = item.get("rule") or "pyright"
+        location = item.get("location", {})
+        positions = location.get("positions", {}).get("begin", {})
+        file_name = location.get("path", "")
+        raw_severity = item.get("severity", "major")
+        severity = severity_map.get(raw_severity, raw_severity)
+        check_name = item.get("check_name", "ty")
+        description = item.get("description", "")
         issues.append(
             {
-                "phase": "pyright",
+                "phase": "ty",
                 "path": format_path(file_name) if file_name else Path("<unknown>"),
-                "row": int(range_start.get("line", 0)) + 1,
-                "column": int(range_start.get("character", 0)) + 1,
+                "row": int(positions.get("line", 0)),
+                "column": int(positions.get("column", 0)),
                 "severity": severity,
-                "code": rule,
-                "message": normalize_diagnostic_message(item.get("message", "")),
+                "code": check_name,
+                "message": normalize_diagnostic_message(description),
             }
         )
-
-    if result.returncode == 2 and not issues:
-        summary = payload.get("summary", {})
-        message = summary.get("errorMessage") or stderr_text or "Pyright execution error."
-        return [], str(message)
 
     return issues, None
 
@@ -423,7 +419,7 @@ def run_type_ignore_check(target_dirs: Iterable[Path]) -> list[dict]:
                         "path": format_path(path),
                         "row": row,
                         "column": column + 1,
-                        "message": "不要用 type ignore / pyright 指令掩盖类型问题，请改成明确类型或小范围 cast。",
+                        "message": "不要用 type ignore / ty 指令掩盖类型问题，请改成明确类型或小范围 cast。",
                     }
                 )
     return issues
@@ -626,10 +622,10 @@ def print_issues(title: str, issues: Iterable[dict]) -> None:
                     print(f"   {line}")
             continue
 
-        if phase == "pyright":
+        if phase == "ty":
             print(
                 f"{index}. {item['path']}:{item['row']}:{item['column']}  "
-                f"[{item.get('severity', 'error')}/{item.get('code', 'pyright')}]"
+                f"[{item.get('severity', 'error')}/{item.get('code', 'ty')}]"
             )
             message_lines = str(item.get("message", "")).splitlines() or [""]
             print(f"   {message_lines[0]}")

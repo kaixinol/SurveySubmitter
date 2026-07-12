@@ -5,7 +5,7 @@ from CI.python_checks.common import (
     ensure_target_dirs,
     print_issues,
     print_scan_targets,
-    run_pyright_check,
+    run_ty_check,
 )
 
 
@@ -14,18 +14,18 @@ def main() -> int:
     target_dirs = ensure_target_dirs()
 
     print_scan_targets(target_dirs)
-    issues, error = run_pyright_check(target_dirs)
+    issues, error = run_ty_check(target_dirs)
     if error:
         print(f"[ERROR] {error}")
         return 2
 
-    print(f"[INFO] Pyright diagnostics: {len(issues)}")
+    print(f"[INFO] ty diagnostics: {len(issues)}")
     if not issues:
-        print("[PASS] Pyright checks passed.")
+        print("[PASS] ty checks passed.")
         return 0
 
-    print(f"[FAIL] Found {len(issues)} Pyright diagnostic(s):")
-    print_issues("[Pyright diagnostics]", issues)
+    print(f"[FAIL] Found {len(issues)} ty diagnostic(s):")
+    print_issues("[ty diagnostics]", issues)
     return 1
 
 
