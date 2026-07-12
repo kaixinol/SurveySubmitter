@@ -39,6 +39,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked
 
+      - name: Install project
+        run: uv pip install -e .
+
       - name: Run compile check
         run: uv run python -m CI.python_checks.compile_check
 
@@ -69,6 +72,9 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --locked
+
+      - name: Install project
+        run: uv pip install -e .
 
       - name: Run unit tests
         run: uv run python -m CI.python_checks.unit_test_check
