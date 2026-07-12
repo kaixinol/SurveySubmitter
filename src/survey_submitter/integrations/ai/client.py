@@ -4,7 +4,6 @@ import logging
 
 from survey_submitter.core.task import ExecutionState
 from survey_submitter.integrations.ai.protocols import (
-    _CHAT_COMPLETIONS_SUFFIX,
     _RESPONSES_SUFFIX,
     acall_chat_completions,
     acall_responses_api,

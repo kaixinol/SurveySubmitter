@@ -43,7 +43,6 @@ def _backfill_session_log_from_buffer() -> None:
     if _SESSION_LOG_BACKFILLED or not _SESSION_LOG_PATH:
         return
 
-    from survey_submitter.logging.log_buffer_handler import LogBufferHandler
 
     records = _log_utils.LOG_BUFFER_HANDLER.get_records()
     if not records:
@@ -185,7 +184,6 @@ def save_log_records_to_file(
     runtime_directory: str,
     file_path: str | None = None,
 ) -> str:
-    from survey_submitter.logging.log_buffer_handler import LogBufferEntry
 
     if not runtime_directory:
         raise ValueError("runtime_directory \u4e0d\u80fd\u4e3a\u7a7a")

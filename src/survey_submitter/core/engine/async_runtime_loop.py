@@ -5,7 +5,7 @@ import logging
 import random
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Awaitable, TypeVar, cast
+from typing import Awaitable, TypeVar, cast
 
 from survey_submitter.core.ai.runtime import AIRuntimeError, is_ai_timeout_runtime_error
 from survey_submitter.core.engine.async_events import AsyncRunContext, ThreadEventProxy

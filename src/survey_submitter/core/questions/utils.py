@@ -6,7 +6,7 @@ import os
 import random
 from datetime import date, timedelta
 from functools import lru_cache
-from typing import Any, Sequence, Union, Union
+from typing import Any, Sequence
 import logging
 from survey_submitter.logging.log_utils import log_suppressed_exception
 

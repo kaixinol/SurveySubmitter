@@ -10,7 +10,7 @@ import traceback
 from datetime import datetime
 from typing import Any, Callable
 
-from survey_submitter.constants import LOG_BUFFER_CAPACITY, LOG_FORMAT
+from survey_submitter.constants import LOG_FORMAT
 
 ORIGINAL_STDOUT = sys.stdout
 ORIGINAL_STDERR = sys.stderr
@@ -180,19 +180,11 @@ class AsyncFileHandler(logging.Handler):
         super().close()
 
 
-from survey_submitter.logging.log_buffer_handler import LogBufferHandler, LogBufferEntry  # noqa: E402
+from survey_submitter.logging.log_buffer_handler import LogBufferHandler  # noqa: E402
 from survey_submitter.logging.stream_redirect import StreamToLogger  # noqa: E402
 from survey_submitter.logging.session_log import (  # noqa: E402
-    _backfill_session_log_from_buffer,
     _ensure_session_log_handler,
-    _ensure_logs_dir,
-    export_full_log_to_file,
-    finalize_session_log_persistence,
     flush_session_log_file,
-    get_auto_save_log_settings,
-    get_current_session_log_path,
-    prune_session_log_files,
-    save_log_records_to_file,
 )
 import survey_submitter.logging.session_log as _session_log  # noqa: E402
 

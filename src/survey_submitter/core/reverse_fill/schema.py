@@ -4,7 +4,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
-from survey_submitter.core.questions.types import CHOICE_TYPES, QuestionType, TEXT_TYPES
+from survey_submitter.core.questions.types import QuestionType
 
 REVERSE_FILL_FORMAT_AUTO = "auto"
 REVERSE_FILL_FORMAT_WJX_SEQUENCE = "wjx_sequence"

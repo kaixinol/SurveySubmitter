@@ -3,7 +3,6 @@ from __future__ import annotations
 import random
 import threading
 import math
-from typing import Any
 import logging
 from survey_submitter.logging.log_utils import log_suppressed_exception
 

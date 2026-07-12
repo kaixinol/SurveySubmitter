@@ -4,7 +4,6 @@ import pytest
 
 from survey_submitter.constants import DEFAULT_USER_AGENT, USER_AGENT_PRESETS
 from survey_submitter.core.config.codec import (
-    CURRENT_CONFIG_SCHEMA_VERSION,
     UserAgentProfile,
     _ensure_supported_config_payload,
     _select_user_agent_from_ratios,
@@ -20,7 +19,6 @@ from survey_submitter.core.config.schema import (
     SurveySection,
     ExecutionSection,
     AnswerConfigSection,
-    AISection,
     ReverseFillSection,
 )
 from survey_submitter.core.questions.schema import QuestionEntry

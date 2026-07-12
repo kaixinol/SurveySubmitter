@@ -7,7 +7,6 @@ from survey_submitter.core.config.schema import (
     SurveySection,
     ExecutionSection,
     AnswerConfigSection,
-    ReverseFillSection,
 )
 from survey_submitter.core.reverse_fill.schema import ReverseFillSpec
 from survey_submitter.core.engine.execution_builder import (
