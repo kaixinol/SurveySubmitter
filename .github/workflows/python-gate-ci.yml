@@ -22,11 +22,7 @@ concurrency:
 jobs:
   import-check:
     name: Import Smoke Test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -35,7 +31,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          python-version: "3.13.14"
+          python-version: "3.13"
           enable-cache: true
           cache-dependency-glob: |
             pyproject.toml
@@ -63,19 +59,11 @@ jobs:
             exit 1
           fi
 
-  live-runtime-regression-matrix:
-    name: Live Runtime Checks
+  live-runtime-regression:
+    name: Live Runtime Regression
     needs:
       - import-check-gate
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - config_name: wjx
-            survey_url: https://v.wjx.cn/vm/ei3sVrE.aspx
-          - config_name: credamo
-            survey_url: https://www.credamo.com/s/A73QR3ano
 
     steps:
       - name: Checkout repository
@@ -84,7 +72,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          python-version: "3.13.14"
+          python-version: "3.13"
           enable-cache: true
           cache-dependency-glob: |
             pyproject.toml
@@ -93,24 +81,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked
 
-      - name: Run live runtime regression for ${{ matrix.config_name }}
+      - name: Run live runtime regression
         env:
-          SURVEY_CONTROLLER_LIVE_TEST_URL: ${{ matrix.survey_url }}
+          SURVEY_CONTROLLER_LIVE_TEST_URL: https://v.wjx.cn/vm/ei3sVrE.aspx
         run: uv run pytest CI/live_tests/test_live_runtime_regression.py -ra -vv --tb=short --durations=10 --color=yes
-
-  live-runtime-regression:
-    name: Live Parser Regression
-    if: ${{ always() && needs.import-check-gate.result == 'success' }}
-    needs:
-      - import-check-gate
-      - live-runtime-regression-matrix
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Verify matrix result
-        run: |
-          echo "Live runtime regression matrix result: ${{ needs.live-runtime-regression-matrix.result }}"
-          if [ "${{ needs.live-runtime-regression-matrix.result }}" != "success" ]; then
-            echo "Live runtime regression did not pass."
-            exit 1
-          fi

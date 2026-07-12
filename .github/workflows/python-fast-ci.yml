@@ -21,11 +21,7 @@ concurrency:
 jobs:
   static-checks:
     name: Static Checks
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -34,7 +30,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          python-version: "3.13.14"
+          python-version: "3.13"
           enable-cache: true
           cache-dependency-glob: |
             pyproject.toml
@@ -54,11 +50,7 @@ jobs:
 
   unit-tests:
     name: Unit Tests
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
+    runs-on: ubuntu-latest
     env:
       SURVEY_CONTROLLER_UNIT_TEST_TIMEOUT_SECONDS: "300"
 
@@ -69,7 +61,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          python-version: "3.13.14"
+          python-version: "3.13"
           enable-cache: true
           cache-dependency-glob: |
             pyproject.toml
