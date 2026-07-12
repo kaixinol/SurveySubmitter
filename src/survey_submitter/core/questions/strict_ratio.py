@@ -52,6 +52,8 @@ def is_strict_ratio_question(task_ctx: object, question_number: object) -> bool:
     except (ValueError, TypeError):
         return False
     config = getattr(task_ctx, "config", task_ctx)
+    if not hasattr(config, "question_strict_ratio_map"):
+        return False
     strict_map = config.question_strict_ratio_map
     if not isinstance(strict_map, dict):
         return False

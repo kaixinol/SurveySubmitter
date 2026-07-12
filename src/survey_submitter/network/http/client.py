@@ -324,29 +324,31 @@ def _resolve_proxy(proxies: dict[str, str] | str | None, url: str) -> tuple[str 
 
 def _normalize_timeout(
     timeout: float | tuple[float | None, ...] | httpx.Timeout | None,
-) -> float | tuple[float | None, ...] | httpx.Timeout | None:
+) -> httpx.Timeout | None:
 
     if timeout is None:
         return None
+    if isinstance(timeout, httpx.Timeout):
+        return timeout
     if isinstance(timeout, (int, float)):
-        return float(timeout)
+        return httpx.Timeout(float(timeout))
     if isinstance(timeout, tuple):
         if len(timeout) == 2:
             connect, read = timeout
-            connect_val = float(connect) if connect is not None else None
-            read_val = float(read) if read is not None else None
+            connect_val = float(connect) if isinstance(connect, (int, float)) else None
+            read_val = float(read) if isinstance(read, (int, float)) else None
             return httpx.Timeout(
                 connect=connect_val, read=read_val, write=read_val, pool=connect_val
             )
         if len(timeout) == 4:
             connect, read, write, pool = timeout
             return httpx.Timeout(
-                connect=float(connect) if connect is not None else None,
-                read=float(read) if read is not None else None,
-                write=float(write) if write is not None else None,
-                pool=float(pool) if pool is not None else None,
+                connect=float(connect) if isinstance(connect, (int, float)) else None,
+                read=float(read) if isinstance(read, (int, float)) else None,
+                write=float(write) if isinstance(write, (int, float)) else None,
+                pool=float(pool) if isinstance(pool, (int, float)) else None,
             )
-    return timeout
+    return None
 
 
 _client_manager = _SyncClientManager()

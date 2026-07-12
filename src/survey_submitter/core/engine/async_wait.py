@@ -2,34 +2,21 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Protocol
+
+from survey_submitter.core.engine.stop_signal import StopSignalLike
 
 
-class StopSignalProtocol(Protocol):
-    """Protocol for objects that can signal stop requests."""
-
-    def is_set(self) -> bool:
-        """Check if stop is requested."""
-        ...
-
-    async def wait(self, timeout: float | None = None) -> bool:
-        """Wait for stop signal or timeout."""
-        ...
-
-    _event: asyncio.Event
-
-
-def _has_method(obj: StopSignalProtocol | asyncio.Event | None, name: str) -> bool:
+def _has_method(obj: StopSignalLike | asyncio.Event | None, name: str) -> bool:
     """Check if object has a callable method."""
     return obj is not None and hasattr(obj, name) and callable(getattr(obj, name))
 
 
-def _get_method(obj: StopSignalProtocol | asyncio.Event | None, name: str):
+def _get_method(obj: StopSignalLike | asyncio.Event | None, name: str):
     """Safely get a method from an object."""
     return getattr(obj, name, None) if _has_method(obj, name) else None
 
 
-def is_stop_requested(stop_signal: StopSignalProtocol | asyncio.Event | None) -> bool:
+def is_stop_requested(stop_signal: StopSignalLike | asyncio.Event | None) -> bool:
     if stop_signal is None:
         return False
 
@@ -44,7 +31,7 @@ def is_stop_requested(stop_signal: StopSignalProtocol | asyncio.Event | None) ->
 
 
 def _resolve_async_event(
-    stop_signal: StopSignalProtocol | asyncio.Event | None,
+    stop_signal: StopSignalLike | asyncio.Event | None,
 ) -> asyncio.Event | None:
     if isinstance(stop_signal, asyncio.Event):
         return stop_signal
@@ -57,7 +44,7 @@ def _resolve_async_event(
 
 
 async def sleep_or_stop(
-    stop_signal: StopSignalProtocol | asyncio.Event | None, seconds: float
+    stop_signal: StopSignalLike | asyncio.Event | None, seconds: float
 ) -> bool:
     delay = max(0.0, float(seconds or 0.0))
     if delay <= 0:

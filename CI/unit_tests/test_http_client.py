@@ -164,7 +164,9 @@ class HttpClientTests:
         )
 
         assert http_client._normalize_timeout(None) is None
-        assert http_client._normalize_timeout(3) == 3.0
+        scalar_timeout = http_client._normalize_timeout(3)
+        assert isinstance(scalar_timeout, http_client.httpx.Timeout)
+        assert scalar_timeout.connect == 3.0  # ty:ignore[unresolved-attribute]
         pair_timeout = http_client._normalize_timeout((1, 2))
         assert pair_timeout.connect == 1.0  # ty:ignore[unresolved-attribute]
         assert pair_timeout.read == 2.0  # ty:ignore[unresolved-attribute]
