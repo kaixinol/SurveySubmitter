@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [ubuntu-latest]
 
     steps:
       - name: Checkout repository
@@ -58,7 +58,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [ubuntu-latest]
     env:
       SURVEY_CONTROLLER_UNIT_TEST_TIMEOUT_SECONDS: "300"
 
