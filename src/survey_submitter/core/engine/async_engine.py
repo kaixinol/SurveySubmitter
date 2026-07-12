@@ -178,7 +178,7 @@ class AsyncRuntimeEngine:
         )
         logging.info(
             "任务启动：版本=%s 问卷链接=%s 平台=%s 目标份数=%s 当前进度=%s/%s 并发数=%s 作答时长=%s 随机IP=%s 代理源=%s 运行时=纯HTTP",
-            pkg_version("surveycontroller"),
+            pkg_version("surveysubmitter"),
             config.url or "",
             config.survey_provider or "",
             config.target_num,
