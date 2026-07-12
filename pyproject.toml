@@ -1,6 +1,6 @@
 [project]
 name = "surveycontroller"
-version = "3.2.0"
+version = "1.1.0a0"
 description = "SurveyController CLI tool"
 readme = "README.md"
 requires-python = ">=3.13.14"
