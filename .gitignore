@@ -1,0 +1,46 @@
+# 开发环境
+*.code-workspace
+.claude/
+.playwright-mcp/
+.local-private/
+.ruff_cache/
+.agent/
+.codex/environments/
+.trellis/workspace/
+.trellis/.runtime/
+.trellis/tasks/
+.venv/
+/output/
+.coverage
+coverage.xml
+desktop.ini
+AGENTS.md
+CLAUDE.md
+
+# 编译环境
+/build/
+/dist/
+/Setup/*.exe
+/Setup/*.pfx
+/Setup/*.docx
+/Setup/*.pdf
+/Releases/
+
+# 运行环境
+__pycache__/
+.pytest_cache/
+.pytest_tmp/
+.pytest_tmp_async_runtime_loop_large/
+.uv-cache/
+*.pyc
+%SystemDrive%/
+/assets/promo-video/
+/configs/
+/logs/
+/worker/.dev.vars
+/worker/.env
+/worker/.wrangler/
+/CI/worker/
+/CI/worker/node_modules/
+/CI/worker/.wrangler/
+/CI/worker/tsconfig.tsbuildinfo
