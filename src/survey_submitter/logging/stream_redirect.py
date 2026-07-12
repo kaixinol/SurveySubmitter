@@ -1,7 +1,5 @@
 import logging
 
-from survey_submitter.logging.log_utils import _safe_internal_log, _should_filter_noise
-
 
 class StreamToLogger:
     def __init__(self, logger: logging.Logger, level: int, stream=None):
@@ -14,6 +12,8 @@ class StreamToLogger:
         if message is None:
             return
         text = str(message)
+        from survey_submitter.logging.log_utils import _safe_internal_log, _should_filter_noise
+
         if _should_filter_noise(text):
             if self.stream:
                 try:
@@ -36,6 +36,8 @@ class StreamToLogger:
                 _safe_internal_log("StreamToLogger.write failed", exc)
 
     def flush(self):
+        from survey_submitter.logging.log_utils import _safe_internal_log, _should_filter_noise
+
         if self._buffer and not _should_filter_noise(self._buffer):
             self.logger.log(self.level, self._buffer)
         self._buffer = ""

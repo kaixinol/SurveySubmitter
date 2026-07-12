@@ -21,8 +21,6 @@ from survey_submitter.io.config.settings_store import (
 )
 from survey_submitter.system.paths import get_user_logs_directory
 
-import survey_submitter.logging.log_utils as _log_utils
-
 
 _SESSION_LOG_HANDLER: logging.Handler | None = None
 _SESSION_LOG_PATH = ""
@@ -39,6 +37,8 @@ def _create_session_log_file_path() -> str:
 
 
 def _backfill_session_log_from_buffer() -> None:
+    import survey_submitter.logging.log_utils as _log_utils
+
     global _SESSION_LOG_BACKFILLED
     if _SESSION_LOG_BACKFILLED or not _SESSION_LOG_PATH:
         return
@@ -61,6 +61,8 @@ def _backfill_session_log_from_buffer() -> None:
 
 
 def _ensure_session_log_handler(root_logger: logging.Logger | None = None) -> str:
+    import survey_submitter.logging.log_utils as _log_utils
+
     global _SESSION_LOG_HANDLER, _SESSION_LOG_PATH
 
     logger = root_logger or logging.getLogger()
@@ -79,6 +81,8 @@ def _ensure_session_log_handler(root_logger: logging.Logger | None = None) -> st
 
 
 def flush_session_log_file() -> None:
+    import survey_submitter.logging.log_utils as _log_utils
+
     handler = _SESSION_LOG_HANDLER
     if handler is None:
         return
@@ -125,6 +129,7 @@ def get_auto_save_log_settings() -> tuple[bool, int]:
 
 
 def prune_session_log_files(runtime_directory: str, keep_count: int) -> int:
+    import survey_submitter.logging.log_utils as _log_utils
 
     logs_dir = _ensure_logs_dir(runtime_directory)
     keep_count = max(1, int(keep_count))
@@ -152,6 +157,7 @@ def prune_session_log_files(runtime_directory: str, keep_count: int) -> int:
 
 
 def finalize_session_log_persistence(runtime_directory: str) -> None:
+    import survey_submitter.logging.log_utils as _log_utils
 
     global _DELETE_SESSION_LOG_ON_SHUTDOWN
 
@@ -207,6 +213,8 @@ def export_full_log_to_file(
     *,
     fallback_records=None,
 ) -> str:
+    import survey_submitter.logging.log_utils as _log_utils
+
     if not runtime_directory:
         raise ValueError("runtime_directory \u4e0d\u80fd\u4e3a\u7a7a")
     if file_path:
