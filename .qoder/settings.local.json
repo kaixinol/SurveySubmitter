@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(python -m pytest CI/unit_tests/ --tb=short -q 2>&1 | tail -40)"
-    ]
-  }
-}
