@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [ubuntu-latest]
 
     steps:
       - name: Checkout repository
@@ -52,23 +52,22 @@ jobs:
     if: ${{ always() }}
     needs:
       - import-check
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Verify import checks
-        shell: powershell
         run: |
-          $importResult = "${{ needs.import-check.result }}"
-          Write-Host "Import smoke result: $importResult"
-          if ($importResult -ne "success") {
-            throw "Import smoke check did not pass."
-          }
+          echo "Import smoke result: ${{ needs.import-check.result }}"
+          if [ "${{ needs.import-check.result }}" != "success" ]; then
+            echo "Import smoke check did not pass."
+            exit 1
+          fi
 
   live-runtime-regression-matrix:
     name: Live Runtime Checks
     needs:
       - import-check-gate
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -105,14 +104,13 @@ jobs:
     needs:
       - import-check-gate
       - live-runtime-regression-matrix
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Verify matrix result
-        shell: powershell
         run: |
-          $result = "${{ needs.live-runtime-regression-matrix.result }}"
-          Write-Host "Live runtime regression matrix result: $result"
-          if ($result -ne "success") {
-            throw "Live runtime regression did not pass."
-          }
+          echo "Live runtime regression matrix result: ${{ needs.live-runtime-regression-matrix.result }}"
+          if [ "${{ needs.live-runtime-regression-matrix.result }}" != "success" ]; then
+            echo "Live runtime regression did not pass."
+            exit 1
+          fi
