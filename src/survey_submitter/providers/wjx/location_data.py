@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import json
-import os
 import random
+from pathlib import Path
 from typing import Any
 
-_ASSETS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "assets")
+_ASSETS_DIR = str(Path(__file__).resolve().parent.parent.parent / "assets")
 
 _LOCATION_TREE: list[dict[str, Any]] | None = None
 
@@ -47,7 +47,7 @@ def _load_location_tree() -> list[dict[str, Any]]:
     global _LOCATION_TREE
     if _LOCATION_TREE is not None:
         return _LOCATION_TREE
-    path = os.path.join(_ASSETS_DIR, "location_tree_2022.json")
+    path = str(Path(_ASSETS_DIR) / "location_tree_2022.json")
     with open(path, encoding="utf-8") as fp:
         _LOCATION_TREE = json.load(fp)
     return _LOCATION_TREE

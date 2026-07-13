@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import atexit
 import logging
-import os
 import queue
 import sys
 import threading
 import traceback
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable
 
 from survey_submitter.constants import LOG_FORMAT
@@ -109,7 +109,7 @@ class AsyncFileHandler(logging.Handler):
 
     def __init__(self, filename: str, *, encoding: str = "utf-8", batch_size: int = 200):
         super().__init__()
-        self.baseFilename = os.path.abspath(filename)
+        self.baseFilename = str(Path(filename).resolve())
         self.encoding = encoding
         self._batch_size = max(1, int(batch_size or 1))
         self._queue: queue.Queue = queue.Queue(maxsize=10000)
@@ -302,10 +302,10 @@ def shutdown_logging():
         if (
             _session_log._DELETE_SESSION_LOG_ON_SHUTDOWN
             and session_log_path
-            and os.path.isfile(session_log_path)
+            and Path(session_log_path).is_file()
         ):
             try:
-                os.remove(session_log_path)
+                Path(session_log_path).unlink()
             except OSError as exc:
                 _safe_internal_log("shutdown_logging failed to remove session log", exc)
     except OSError as exc:

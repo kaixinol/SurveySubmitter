@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import ntpath
 import os
 import re
 import sys
+from pathlib import Path, PureWindowsPath
 
 _WINDOWS_DRIVE_ABSOLUTE_RE = re.compile(r"^[A-Za-z]:[\\/]")
 _APP_NAME = "SurveyController"
@@ -18,10 +18,10 @@ def is_windows_absolute_path(path: str) -> bool:
 
 def normalize_filesystem_path(path: str) -> str:
     raw_path = path.strip()
-    expanded = os.path.expanduser(raw_path) if raw_path.startswith("~") else raw_path
+    expanded = str(Path(raw_path).expanduser()) if raw_path.startswith("~") else raw_path
     if is_windows_absolute_path(expanded):
-        return ntpath.normpath(expanded)
-    return os.path.abspath(expanded)
+        return str(PureWindowsPath(expanded))
+    return str(Path(expanded).resolve())
 
 
 def _normalize_path(path: str) -> str:
@@ -31,18 +31,18 @@ def _normalize_path(path: str) -> str:
 def _get_platform_config_root() -> str:
     if sys.platform == "win32":
         return os.environ.get(
-            "APPDATA", os.path.expanduser(os.path.join("~", "AppData", "Roaming"))
+            "APPDATA", str(Path("~", "AppData", "Roaming").expanduser())
         )
     elif sys.platform == "darwin":
-        return os.path.join(os.path.expanduser("~"), "Library", "Application Support")
+        return str(Path.home() / "Library" / "Application Support")
     else:
-        return os.environ.get("XDG_CONFIG_HOME", os.path.join(os.path.expanduser("~"), ".config"))
+        return os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))
 
 
 def _get_platform_local_data_root() -> str:
     if sys.platform == "win32":
         return os.environ.get(
-            "LOCALAPPDATA", os.path.expanduser(os.path.join("~", "AppData", "Local"))
+            "LOCALAPPDATA", str(Path("~", "AppData", "Local").expanduser())
         )
     return _get_platform_config_root()
 
@@ -56,22 +56,22 @@ def get_local_app_data_root() -> str:
 
 
 def get_user_config_root() -> str:
-    return os.path.join(get_roaming_app_data_root(), _APP_NAME)
+    return str(Path(get_roaming_app_data_root()) / _APP_NAME)
 
 
 def get_default_user_config_directory() -> str:
-    return os.path.join(get_user_config_root(), "configs")
+    return str(Path(get_user_config_root()) / "configs")
 
 
 def resolve_user_config_directory(settings=None) -> str:
     if isinstance(settings, str):
         configured_path = settings.strip()
         if configured_path:
-            return _normalize_path(os.path.expanduser(configured_path))
+            return _normalize_path(str(Path(configured_path).expanduser()))
     if isinstance(settings, dict):
         configured_path = str(settings.get("config_directory", "") or "").strip()
         if configured_path:
-            return _normalize_path(os.path.expanduser(configured_path))
+            return _normalize_path(str(Path(configured_path).expanduser()))
     return get_default_user_config_directory()
 
 
@@ -80,31 +80,31 @@ def get_user_config_directory() -> str:
 
 
 def get_user_local_data_root() -> str:
-    return os.path.join(get_local_app_data_root(), _APP_NAME)
+    return str(Path(get_local_app_data_root()) / _APP_NAME)
 
 
 def get_user_logs_directory() -> str:
-    return os.path.join(get_user_local_data_root(), "logs")
+    return str(Path(get_user_local_data_root()) / "logs")
 
 
 def get_user_cache_directory() -> str:
-    return os.path.join(get_user_local_data_root(), "cache")
+    return str(Path(get_user_local_data_root()) / "cache")
 
 
 def get_user_updates_directory() -> str:
-    return os.path.join(get_user_local_data_root(), "updates")
+    return str(Path(get_user_local_data_root()) / "updates")
 
 
 def get_default_runtime_config_path() -> str:
-    return os.path.join(get_user_config_root(), "config.json")
+    return str(Path(get_user_config_root()) / "config.json")
 
 
 def get_fatal_crash_log_path() -> str:
-    return os.path.join(get_user_logs_directory(), "fatal_crash.log")
+    return str(Path(get_user_logs_directory()) / "fatal_crash.log")
 
 
 def get_last_session_log_path() -> str:
-    return os.path.join(get_user_logs_directory(), "last_session.log")
+    return str(Path(get_user_logs_directory()) / "last_session.log")
 
 
 def ensure_user_data_directories() -> tuple[str, ...]:
@@ -124,7 +124,6 @@ def ensure_user_data_directories() -> tuple[str, ...]:
 __all__ = [
     "ensure_user_data_directories",
     "get_default_runtime_config_path",
-    "get_default_user_config_directory",
     "get_fatal_crash_log_path",
     "get_last_session_log_path",
     "get_local_app_data_root",

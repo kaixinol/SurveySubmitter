@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
-import os
 import random
+from pathlib import Path
 
-_ASSETS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "assets")
+_ASSETS_DIR = str(Path(__file__).resolve().parent.parent.parent / "assets")
 
 
 class UniversityList:
@@ -21,7 +21,7 @@ class UniversityList:
 
     @staticmethod
     def _load() -> list[list[str]]:
-        path = os.path.join(_ASSETS_DIR, "university_list.json")
+        path = str(Path(_ASSETS_DIR) / "university_list.json")
         with open(path, encoding="utf-8") as fp:
             return json.load(fp)
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import threading
+from pathlib import Path
 from typing import Any, cast
 
 from survey_submitter.system.paths import get_user_config_root
@@ -15,7 +16,7 @@ _settings_cache: dict | None = None
 
 
 def _settings_file_path() -> str:
-    return os.path.join(get_user_config_root(), _SETTINGS_FILE_NAME)
+    return str(Path(get_user_config_root()) / _SETTINGS_FILE_NAME)
 
 
 def _load_settings() -> dict:
@@ -23,7 +24,7 @@ def _load_settings() -> dict:
     if _settings_cache is not None:
         return _settings_cache
     path = _settings_file_path()
-    if os.path.exists(path):
+    if Path(path).exists():
         try:
             with open(path, "r", encoding="utf-8") as f:
                 _settings_cache = json.load(f)
@@ -63,7 +64,7 @@ class _JsonSettings:
     @staticmethod
     def _flush(store: dict) -> None:
         path = _settings_file_path()
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        os.makedirs(Path(path).parent, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(store, f, ensure_ascii=False, indent=2)
 

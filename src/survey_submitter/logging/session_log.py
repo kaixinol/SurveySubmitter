@@ -5,6 +5,7 @@ import os
 import shutil
 import threading
 from datetime import datetime
+from pathlib import Path
 
 from survey_submitter.constants import LOG_FORMAT
 from survey_submitter.constants import (
@@ -33,7 +34,7 @@ def _create_session_log_file_path() -> str:
     logs_dir = get_user_logs_directory()
     os.makedirs(logs_dir, exist_ok=True)
     file_name = datetime.now().strftime("session_%Y%m%d_%H%M%S.log")
-    return os.path.join(logs_dir, file_name)
+    return str(Path(logs_dir) / file_name)
 
 
 def _backfill_session_log_from_buffer() -> None:
@@ -98,15 +99,15 @@ def get_current_session_log_path() -> str:
 
 
 def _ensure_logs_dir(runtime_directory: str) -> str:
-    normalized = os.path.abspath(str(runtime_directory or "").strip())
+    normalized = str(Path(str(runtime_directory or "").strip()).resolve())
     if not normalized:
-        raise ValueError("runtime_directory \u4e0d\u80fd\u4e3a\u7a7a")
+        raise ValueError("runtime_directory 不能为空")
 
-    candidate_name = os.path.basename(normalized).lower()
+    candidate_name = Path(normalized).name.lower()
     if candidate_name == "logs":
         logs_dir = normalized
     else:
-        logs_dir = os.path.join(normalized, "logs")
+        logs_dir = str(Path(normalized) / "logs")
     os.makedirs(logs_dir, exist_ok=True)
     return logs_dir
 
@@ -137,11 +138,11 @@ def prune_session_log_files(runtime_directory: str, keep_count: int) -> int:
     for name in os.listdir(logs_dir):
         if not (name.startswith("session_") and name.endswith(".log")):
             continue
-        path = os.path.join(logs_dir, name)
-        if not os.path.isfile(path):
+        path = str(Path(logs_dir) / name)
+        if not Path(path).is_file():
             continue
         try:
-            candidates.append((os.path.getmtime(path), path))
+            candidates.append((Path(path).stat().st_mtime, path))
         except OSError:
             continue
     candidates.sort(key=lambda item: (item[0], item[1]), reverse=True)
@@ -163,7 +164,7 @@ def finalize_session_log_persistence(runtime_directory: str) -> None:
 
     enabled, keep_count = get_auto_save_log_settings()
     logs_dir = _ensure_logs_dir(runtime_directory)
-    last_session_path = os.path.join(logs_dir, "last_session.log")
+    last_session_path = str(Path(logs_dir) / "last_session.log")
 
     if enabled:
         export_full_log_to_file(
@@ -177,7 +178,7 @@ def finalize_session_log_persistence(runtime_directory: str) -> None:
 
     _DELETE_SESSION_LOG_ON_SHUTDOWN = True
     try:
-        if os.path.isfile(last_session_path):
+        if Path(last_session_path).is_file():
             os.remove(last_session_path)
     except OSError as exc:
         _log_utils._safe_internal_log(
@@ -192,15 +193,15 @@ def save_log_records_to_file(
 ) -> str:
 
     if not runtime_directory:
-        raise ValueError("runtime_directory \u4e0d\u80fd\u4e3a\u7a7a")
+        raise ValueError("runtime_directory 不能为空")
     if file_path:
-        parent_dir = os.path.dirname(file_path)
+        parent_dir = str(Path(file_path).parent)
         if parent_dir:
             os.makedirs(parent_dir, exist_ok=True)
     else:
         logs_dir = _ensure_logs_dir(runtime_directory)
         file_name = datetime.now().strftime("log_%Y%m%d_%H%M%S.txt")
-        file_path = os.path.join(logs_dir, file_name)
+        file_path = str(Path(logs_dir) / file_name)
     text_records = [entry.text for entry in (records or [])]
     with open(file_path, "w", encoding="utf-8") as f:
         f.write("\n".join(text_records))
@@ -216,22 +217,22 @@ def export_full_log_to_file(
     import survey_submitter.logging.log_utils as _log_utils
 
     if not runtime_directory:
-        raise ValueError("runtime_directory \u4e0d\u80fd\u4e3a\u7a7a")
+        raise ValueError("runtime_directory 不能为空")
     if file_path:
-        parent_dir = os.path.dirname(file_path)
+        parent_dir = str(Path(file_path).parent)
         if parent_dir:
             os.makedirs(parent_dir, exist_ok=True)
     else:
         logs_dir = _ensure_logs_dir(runtime_directory)
         file_name = datetime.now().strftime("log_%Y%m%d_%H%M%S.txt")
-        file_path = os.path.join(logs_dir, file_name)
+        file_path = str(Path(logs_dir) / file_name)
 
     session_log_path = get_current_session_log_path()
-    if session_log_path and os.path.isfile(session_log_path):
+    if session_log_path and Path(session_log_path).is_file():
         flush_session_log_file()
-        src = os.path.abspath(session_log_path)
-        dst = os.path.abspath(file_path)
-        if os.path.normcase(src) == os.path.normcase(dst):
+        src = str(Path(session_log_path).resolve())
+        dst = str(Path(file_path).resolve())
+        if Path(src) == Path(dst):
             return file_path
         try:
             with (
