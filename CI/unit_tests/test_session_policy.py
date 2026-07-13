@@ -11,7 +11,7 @@ from survey_submitter.network import user_agent
 
 class SessionPolicyTests:
     def test_record_bad_proxy_never_pauses_task(self) -> None:
-        assert not session_policy._record_bad_proxy_and_maybe_pause(ExecutionState(), object())  # ty:ignore[invalid-argument-type]
+        assert not session_policy._record_bad_proxy_and_maybe_pause(ExecutionState())
 
     def test_resolve_proxy_request_num_caps_by_waiters_remaining_and_worker_count(self) -> None:
         ctx = ExecutionState(config=ExecutionConfig(target_num=200, num_threads=32))

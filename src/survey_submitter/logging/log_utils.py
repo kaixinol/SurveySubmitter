@@ -16,10 +16,6 @@ ORIGINAL_STDOUT = sys.stdout
 ORIGINAL_STDERR = sys.stderr
 ORIGINAL_EXCEPTHOOK = sys.excepthook
 _popup_handler: Callable[[str, str, str], Any] | None = None
-_NOISY_LOG_PATTERNS = (
-    "QFluentWidgets Pro is now released",
-    "https://qfluentwidgets.com/pages/pro",
-)
 _SUPPRESSED_RUNTIME_NOISE_PATTERNS = (
     "WJX \u9875\u9762\u9898\u76ee\u5feb\u7167\u5237\u65b0",
     "WJX \u9898\u76ee\u5904\u7406\u8017\u65f6",
@@ -41,7 +37,7 @@ def _should_filter_noise(message: str) -> bool:
     text = str(message)
     if not text.strip():
         return True
-    return any(pattern in text for pattern in _NOISY_LOG_PATTERNS) or any(
+    return any(
         pattern in text for pattern in _SUPPRESSED_RUNTIME_NOISE_PATTERNS
     )
 

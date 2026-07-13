@@ -119,16 +119,6 @@ def make_stop_policy_mock():
 
 
 @pytest.fixture
-def make_gui_mock():
-    def factory(*method_names: str) -> SimpleNamespace:
-        return SimpleNamespace(
-            **{name: MagicMock() for name in method_names},
-        )
-
-    return factory
-
-
-@pytest.fixture
 def make_http_response():
     def factory(*, json_payload: Any | None = None) -> MagicMock:
         response = MagicMock()

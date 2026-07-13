@@ -90,7 +90,6 @@ def _build_runner(
         state=state,
         run_context=run_context,
         scheduler=scheduler,  # ty:ignore[invalid-argument-type]
-        runtime_bridge=None,
     )
     runner.stop_policy = _FakeStopPolicy(state)  # ty:ignore[invalid-assignment]
     return runner, state, run_context, scheduler

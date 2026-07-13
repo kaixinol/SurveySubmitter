@@ -165,7 +165,7 @@ class AsyncRuntimeEngineLargeTests:
             async_engine, "parse_survey", lambda url: asyncio.sleep(0, result=f"parsed:{url}")
         )
 
-        future = engine.start_run(config=config, state=state, runtime_bridge=None)
+        future = engine.start_run(config=config, state=state)
         assert future is run_future
         assert engine._run_future is run_future
 
@@ -236,7 +236,7 @@ class AsyncRuntimeEngineLargeTests:
         monkeypatch.setattr(async_engine, "AsyncSlotRunner", _FakeRunner)
 
         with pytest.raises(RuntimeError, match="slot boom"):
-            await engine._run(config=config, state=state, runtime_bridge=None)
+            await engine._run(config=config, state=state)
 
         assert len(created_runners) == 2
         assert created_runners[0].slot_id == 1
@@ -261,7 +261,6 @@ class AsyncRuntimeEngineLargeTests:
         )
         state = ExecutionState(config=config)
         events: list[str] = []
-        loading_calls: list[tuple[bool, str]] = []
 
         class _FakeRunner:
             def __init__(self, **kwargs) -> None:
@@ -277,10 +276,6 @@ class AsyncRuntimeEngineLargeTests:
             async def close(self) -> None:
                 events.append("scheduler-close")
 
-        class _FakeBridge:
-            def set_random_ip_loading(self, loading: bool, message: str = "") -> None:
-                loading_calls.append((bool(loading), str(message or "")))
-
         async def fake_fetch_proxy_batch_async(**kwargs):
             events.append(f"fetch-{kwargs['expected_count']}")
             await asyncio.sleep(0)
@@ -293,13 +288,12 @@ class AsyncRuntimeEngineLargeTests:
         monkeypatch.setattr(async_engine, "AsyncSlotRunner", _FakeRunner)
         monkeypatch.setattr(async_engine, "fetch_proxy_batch_async", fake_fetch_proxy_batch_async)
 
-        await engine._run(config=config, state=state, runtime_bridge=_FakeBridge())  # ty:ignore[invalid-argument-type]
+        await engine._run(config=config, state=state)
 
         assert "slot-1" in events
         assert "slot-2" in events
         assert not any(event.startswith("fetch-") for event in events)
         assert list(state.config.proxy_ip_pool) == []
-        assert loading_calls == []
 
     @pytest.mark.asyncio
     async def test_run_keeps_prefetching_proxy_pool_after_first_batch_is_consumed(
@@ -363,7 +357,7 @@ class AsyncRuntimeEngineLargeTests:
             lambda *_args, **_kwargs: asyncio.sleep(0, result=False),
         )
 
-        await engine._run(config=config, state=state, runtime_bridge=None)
+        await engine._run(config=config, state=state)
 
         assert len(fetch_counts) >= 2
         assert state.cur_num == 4
@@ -401,7 +395,7 @@ class AsyncRuntimeEngineLargeTests:
         monkeypatch.setattr(async_engine, "AsyncSlotRunner", _FakeRunner)
         monkeypatch.setattr(async_engine, "fetch_proxy_batch_async", fake_fetch_proxy_batch_async)
 
-        await engine._run(config=config, state=state, runtime_bridge=None)
+        await engine._run(config=config, state=state)
 
         assert list(state.config.proxy_ip_pool) == []
 
@@ -475,7 +469,7 @@ class AsyncRuntimeEngineLargeTests:
             lambda *_args, **_kwargs: asyncio.sleep(0, result=False),
         )
 
-        await engine._run(config=config, state=state, runtime_bridge=None)
+        await engine._run(config=config, state=state)
 
         assert fetch_counts == []
 
