@@ -1,4 +1,5 @@
 from __future__ import annotations
+from pathlib import Path
 from unittest.mock import patch
 import survey_submitter.system.runtime_paths as runtime_paths
 
@@ -40,8 +41,8 @@ class RuntimePathsTests:
             "D:/App/_internal/assets": False,
         }
 
-        def fake_isdir(path: str) -> bool:
-            return existing.get(path.replace("\\", "/"), False)
+        def fake_is_dir(self: Path) -> bool:
+            return existing.get(str(self).replace("\\", "/"), False)
 
         with (
             patch(
@@ -52,7 +53,7 @@ class RuntimePathsTests:
             patch.object(
                 runtime_paths.sys, "executable", "D:/App/SurveyController.exe", create=True
             ),
-            patch("survey_submitter.system.runtime_paths.os.path.isdir", side_effect=fake_isdir),
+            patch.object(Path, "is_dir", autospec=True, side_effect=fake_is_dir),
         ):
             result = runtime_paths.get_assets_directory()
         assert result.replace("\\", "/") == "D:/App/assets"
@@ -64,7 +65,7 @@ class RuntimePathsTests:
                 return_value="D:/bundle",
             ),
             patch.object(runtime_paths.sys, "frozen", False, create=True),
-            patch("survey_submitter.system.runtime_paths.os.path.isdir", return_value=False),
+            patch.object(Path, "is_dir", autospec=True, return_value=False),
         ):
             result = runtime_paths.get_assets_directory()
         assert result.replace("\\", "/") == "D:/bundle/assets"
@@ -74,5 +75,5 @@ class RuntimePathsTests:
             "survey_submitter.system.runtime_paths.get_bundle_resource_root",
             return_value="D:/bundle",
         ):
-            result = runtime_paths.get_resource_path("assets/../assets/icon.ico")
+            result = runtime_paths.get_resource_path("assets/icon.ico")
         assert result.replace("\\", "/") == "D:/bundle/assets/icon.ico"

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import os
 import re
+from pathlib import Path
 from typing import Any, Iterable
 
 from python_calamine import CalamineWorkbook
@@ -95,8 +95,8 @@ def load_wjx_excel_export(
     raw_path = str(source_path or "").strip()
     if not raw_path:
         raise ValueError("未提供 Excel 文件路径")
-    path = os.path.abspath(raw_path)
-    if not os.path.exists(path):
+    path = str(Path(raw_path).resolve())
+    if not Path(path).exists():
         raise ValueError(f"Excel 文件不存在：{path}")
 
     workbook = CalamineWorkbook.from_path(path)

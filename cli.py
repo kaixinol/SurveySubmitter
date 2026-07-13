@@ -9,14 +9,15 @@ import logging
 import os
 import signal
 import sys
+from pathlib import Path
 from typing import Optional
 
 import io
 
-_PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-_SRC_DIR = os.path.join(_PROJECT_ROOT, "src")
-if _SRC_DIR not in sys.path:
-    sys.path.insert(0, _SRC_DIR)
+_PROJECT_ROOT = Path(__file__).resolve().parent
+_SRC_DIR = _PROJECT_ROOT / "src"
+if str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
 
 _FAULT_HANDLER_STREAM: Optional[io.IOBase] = None
 _ORIG_STDOUT: Optional[io.TextIOBase] = None
@@ -43,7 +44,7 @@ def _enable_fault_handler() -> None:
         from survey_submitter.system.paths import get_fatal_crash_log_path
 
         fault_log_path = get_fatal_crash_log_path()
-        logs_dir = os.path.dirname(fault_log_path)
+        logs_dir = Path(fault_log_path).parent
         os.makedirs(logs_dir, exist_ok=True)
         _FAULT_HANDLER_STREAM = open(fault_log_path, "a", encoding="utf-8", buffering=1)
         faulthandler.enable(_FAULT_HANDLER_STREAM, all_threads=True)

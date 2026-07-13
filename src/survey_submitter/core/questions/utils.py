@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import json
 import math
-import os
 import random
 from datetime import date, timedelta
 from functools import lru_cache
+from pathlib import Path
 from typing import Any, Sequence
 import logging
 from survey_submitter.logging.log_utils import log_suppressed_exception
@@ -224,7 +224,7 @@ def generate_random_mobile() -> str:
 @lru_cache(maxsize=1)
 def _load_id_card_area_codes() -> tuple[str, ...]:
 
-    asset_path = get_resource_path(os.path.join("software", "assets", "area_codes_2022.json"))
+    asset_path = get_resource_path(str(Path("software") / "assets" / "area_codes_2022.json"))
     fallback_codes = ("110100", "310100", "440100", "330100", "510100")
     try:
         with open(asset_path, "r", encoding="utf-8") as fp:

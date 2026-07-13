@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import copy
-import os
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any, cast
 
 from survey_submitter.core.config.schema import RuntimeConfig
@@ -703,7 +703,7 @@ def build_reverse_fill_spec(
         )
 
     return ReverseFillSpec(
-        source_path=os.path.abspath(str(source_path or "").strip()),
+        source_path=str(Path(str(source_path or "").strip()).resolve()),
         selected_format=str(export.selected_format or REVERSE_FILL_FORMAT_AUTO),
         detected_format=str(
             export.detected_format or export.selected_format or REVERSE_FILL_FORMAT_AUTO

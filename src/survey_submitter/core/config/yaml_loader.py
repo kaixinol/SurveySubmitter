@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import os
+from pathlib import Path
 
 from typing import cast
 
@@ -20,8 +20,8 @@ def load_yaml_config(path: str) -> RuntimeConfig:
     raw_path = str(path or "").strip()
     if not raw_path:
         raise ValueError("未提供配置文件路径")
-    abs_path = os.path.abspath(raw_path)
-    if not os.path.exists(abs_path):
+    abs_path = str(Path(raw_path).resolve())
+    if not Path(abs_path).exists():
         raise ValueError(f"配置文件不存在：{abs_path}")
 
     data = read_yaml(abs_path)
@@ -37,5 +37,5 @@ def save_yaml_config(config: RuntimeConfig, path: str) -> None:
     from yaml12 import write_yaml
 
     data = serialize_runtime_config(config)
-    abs_path = os.path.abspath(str(path))
+    abs_path = str(Path(str(path)).resolve())
     write_yaml(data, abs_path)
