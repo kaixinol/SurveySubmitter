@@ -139,12 +139,11 @@ class RunStopPolicyTests:
         assert state.proxy_unavailable_fail_count == 8
         assert state.get_terminal_stop_snapshot()[0] == "proxy_unavailable_threshold"
 
-    def test_record_success_commits_progress_and_triggers_target_stop(self, make_gui_mock) -> None:
+    def test_record_success_commits_progress_and_triggers_target_stop(self) -> None:
         config = ExecutionConfig(target_num=1, random_proxy_ip=True)
         state = ExecutionState(config=config, cur_fail=2)
         state.distribution_pending_by_thread["Worker-1"] = [("q:1", 1, 3)]
-        gui = make_gui_mock("handle_random_ip_submission")
-        policy = RunStopPolicy(config, state, gui)
+        policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
         should_stop = policy.record_success(stop_signal, thread_name="Worker-1")
         assert should_stop
@@ -154,14 +153,12 @@ class RunStopPolicyTests:
         assert state.distribution_runtime_stats["q:1"]["total"] == 1
         assert stop_signal.is_set()
         assert state.get_terminal_stop_snapshot()[0] == "target_reached"
-        gui.handle_random_ip_submission.assert_called_once_with(stop_signal)
 
-    def test_record_success_commits_reverse_fill_row(self, make_gui_mock) -> None:
+    def test_record_success_commits_reverse_fill_row(self) -> None:
         state = self._build_reverse_fill_state()
         config = state.config
         state.acquire_reverse_fill_sample("Worker-1")
-        gui = make_gui_mock("handle_random_ip_submission")
-        policy = RunStopPolicy(config, state, gui)
+        policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
         should_stop = policy.record_success(stop_signal, thread_name="Worker-1")
         assert should_stop

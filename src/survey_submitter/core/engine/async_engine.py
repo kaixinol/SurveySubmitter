@@ -12,10 +12,6 @@ from survey_submitter.core.engine.async_events import AsyncRunContext
 from survey_submitter.core.engine.async_runtime_loop import AsyncSlotRunner
 from survey_submitter.core.engine.async_scheduler import AsyncScheduler
 from survey_submitter.core.engine.async_status_bus import AsyncStatusBus
-from survey_submitter.core.engine.runtime_control_port import (
-    RuntimeControlPort,
-    on_random_ip_loading_changed,
-)
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.network.proxy.api import fetch_proxy_batch_async
 import survey_submitter.network.http as http_client
@@ -51,7 +47,6 @@ def _format_proxy_source(source: str | None) -> str:
 async def _run_proxy_prefetch(
     state: ExecutionState,
     stop_event: asyncio.Event,
-    runtime_bridge: RuntimeControlPort | None,
 ) -> None:
     while should_continue_proxy_prefetch(state) and not stop_event.is_set():
         request_count = resolve_proxy_prefetch_request_count(state)
@@ -59,7 +54,6 @@ async def _run_proxy_prefetch(
             if await wait_for_proxy_prefetch_cycle(state, state.stop_event):
                 return
             continue
-        on_random_ip_loading_changed(runtime_bridge, True, f"正在准备代理 0/{request_count}")
         fetch_lock_acquired = False
         try:
             fetch_lock_acquired = await _acquire_proxy_fetch_lock_async(state, state.stop_event)
@@ -75,12 +69,6 @@ async def _run_proxy_prefetch(
             if state.stop_event.is_set() or stop_event.is_set():
                 return
             merged_count = merge_prefetched_proxy_leases(state, fetched)
-            if merged_count:
-                on_random_ip_loading_changed(
-                    runtime_bridge,
-                    True,
-                    f"正在准备代理 {min(merged_count, request_count)}/{request_count}",
-                )
         except (http_client.TransportError, OSError, TimeoutError):
             logging.debug("随机IP异步预热失败", exc_info=True)
         finally:
@@ -89,7 +77,6 @@ async def _run_proxy_prefetch(
                     release_proxy_fetch_lock(state)
                 except Exception:
                     logging.debug("释放随机IP异步预热锁失败", exc_info=True)
-            on_random_ip_loading_changed(runtime_bridge, False, "")
         if await wait_for_proxy_prefetch_cycle(state, state.stop_event):
             return
 
@@ -148,11 +135,10 @@ class AsyncRuntimeEngine:
         *,
         config: ExecutionConfig,
         state: ExecutionState,
-        runtime_bridge: RuntimeControlPort | None = None,
     ) -> concurrent.futures.Future[Any]:
         if self._run_future is not None and not self._run_future.done():
             raise RuntimeError("任务已在运行中")
-        future = self._submit(self._run(config=config, state=state, runtime_bridge=runtime_bridge))
+        future = self._submit(self._run(config=config, state=state))
         self._run_future = future
         return future
 
@@ -161,7 +147,6 @@ class AsyncRuntimeEngine:
         *,
         config: ExecutionConfig,
         state: ExecutionState,
-        runtime_bridge: RuntimeControlPort | None = None,
     ) -> None:
         self._stop_event = asyncio.Event()
         self._pause_event = asyncio.Event()
@@ -193,12 +178,12 @@ class AsyncRuntimeEngine:
         if stop_event is None:
             raise RuntimeError("AsyncRuntimeEngine stop_event 未初始化")
         prefetch_task = asyncio.create_task(
-            _run_proxy_prefetch(state, stop_event, runtime_bridge),
+            _run_proxy_prefetch(state, stop_event),
             name="AsyncProxyPrefetch",
         )
         try:
             await self._run_slots(
-                worker_count, config, state, run_context, scheduler, runtime_bridge
+                worker_count, config, state, run_context, scheduler
             )
         except* Exception as exc_group:
             errors = [
@@ -227,7 +212,6 @@ class AsyncRuntimeEngine:
         state: ExecutionState,
         run_context: AsyncRunContext,
         scheduler: AsyncScheduler,
-        runtime_bridge: RuntimeControlPort | None,
     ) -> None:
         async with asyncio.TaskGroup() as task_group:
             for slot_index in range(worker_count):
@@ -238,7 +222,6 @@ class AsyncRuntimeEngine:
                         state=state,
                         run_context=run_context,
                         scheduler=scheduler,
-                        runtime_bridge=runtime_bridge,
                     ).run(),
                     name=f"AsyncSlotRunner-{slot_index + 1}",
                 )

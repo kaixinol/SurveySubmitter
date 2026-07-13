@@ -113,7 +113,7 @@ def main() -> int:
         engine = AsyncRuntimeEngine()
         try:
             engine.start()
-            future = engine.start_run(config=execution_config, state=state, runtime_bridge=None)
+            future = engine.start_run(config=execution_config, state=state)
             future.result(timeout=max(1.0, float(args.timeout or 1.0)))
         finally:
             engine.shutdown(timeout=15.0)

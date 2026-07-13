@@ -64,7 +64,7 @@ class LogBufferHandlerConcurrencyTests:
                 logging.INFO,
                 __file__,
                 10,
-                "QFluentWidgets Pro is now released",
+                "WJX 页面题目快照刷新",
                 (),
                 None,
             )

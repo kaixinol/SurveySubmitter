@@ -6,15 +6,6 @@ import time
 from typing import Callable, TypeVar
 
 from survey_submitter.core.engine.failure_reason import FailureReason
-from survey_submitter.core.engine.runtime_control_port import (
-    RuntimeControlPort,
-)
-from survey_submitter.core.engine.runtime_control_port import (
-    on_random_ip_submission as trigger_random_ip_submission,
-)
-from survey_submitter.core.engine.runtime_control_port import (
-    wait_if_paused as runtime_wait_if_paused,
-)
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 
@@ -45,16 +36,9 @@ class RunStopPolicy:
         self,
         config: ExecutionConfig,
         state: ExecutionState,
-        runtime_bridge: RuntimeControlPort | None = None,
     ):
         self.config = config
         self.state = state
-        self.runtime_bridge = runtime_bridge
-
-    def wait_if_paused(self, stop_signal: StopSignalLike | None) -> None:
-        _safe_cleanup_call(
-            lambda: runtime_wait_if_paused(self.runtime_bridge, stop_signal), "暂停等待"
-        )
 
     def failure_threshold(self) -> int:
         base_threshold = max(1, int(self.config.fail_threshold or 1))
@@ -153,7 +137,6 @@ class RunStopPolicy:
         status_text: str = "提交成功",
         terminal_message: str = "目标份数已达成",
     ) -> bool:
-        should_handle_random_ip = False
         trigger_target_stop = False
         should_break = False
         record_thread_success = False
@@ -176,7 +159,6 @@ class RunStopPolicy:
                     logging.info(
                         "提交成功，连续失败计数已清零（重置前=%s）", previous_consecutive_failures
                     )
-                should_handle_random_ip = self.config.random_proxy_ip
                 if self.config.target_num > 0 and self.state.cur_num >= self.config.target_num:
                     trigger_target_stop = True
             else:
@@ -197,10 +179,6 @@ class RunStopPolicy:
             stop_signal.set()
         if trigger_target_stop:
             self.trigger_target_reached_stop(stop_signal, message=terminal_message)
-        if should_handle_random_ip:
-            _safe_cleanup_call(
-                lambda: trigger_random_ip_submission(self.runtime_bridge, stop_signal), "刷新随机IP"
-            )
         return should_break or trigger_target_stop
 
     def trigger_target_reached_stop(

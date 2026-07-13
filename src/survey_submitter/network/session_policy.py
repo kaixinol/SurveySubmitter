@@ -5,7 +5,6 @@ from typing import Iterable
 import logging
 
 from survey_submitter.core.engine.stop_signal import StopSignalLike
-from survey_submitter.core.engine.runtime_ui_bridge import RuntimeUiBridge
 from survey_submitter.core.task import ExecutionState, ProxyLease
 from survey_submitter.constants import PROXY_MAX_PROXIES
 from survey_submitter.network.proxy.api import fetch_proxy_batch_async
@@ -59,10 +58,8 @@ def _resolve_proxy_fetch_max_batch_size(ctx: ExecutionState) -> int:
 
 def _record_bad_proxy_and_maybe_pause(
     ctx: ExecutionState,
-    runtime_bridge: RuntimeUiBridge | None,
 ) -> bool:
-
-    _ = ctx, runtime_bridge
+    _ = ctx
     return False
 
 

@@ -14,7 +14,6 @@ from survey_submitter.core.engine.async_proxy_session import AsyncProxySession
 from survey_submitter.core.engine.async_scheduler import AsyncScheduler
 from survey_submitter.core.engine.failure_reason import FailureReason
 from survey_submitter.core.engine.run_stop_policy import RunStopPolicy
-from survey_submitter.core.engine.runtime_control_port import RuntimeControlPort
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.network.session_policy import (
@@ -236,7 +235,6 @@ class AsyncSlotRunner:
         state: ExecutionState,
         run_context: AsyncRunContext,
         scheduler: AsyncScheduler,
-        runtime_bridge: RuntimeControlPort | None = None,
     ) -> None:
         self.slot_id = max(1, int(slot_id or 1))
         self.slot_label = f"Slot-{self.slot_id}"
@@ -244,15 +242,13 @@ class AsyncSlotRunner:
         self.state = state
         self.run_context = run_context
         self.scheduler = scheduler
-        self.runtime_bridge = runtime_bridge
         self.stop_proxy = ThreadEventProxy(run_context.stop_event, loop=asyncio.get_running_loop())
-        self.stop_policy = RunStopPolicy(config, state, runtime_bridge)
+        self.stop_policy = RunStopPolicy(config, state)
         self.proxy_session = AsyncProxySession(
             config=config,
             state=state,
             slot_label=self.slot_label,
             stop_signal=self.stop_proxy,
-            runtime_bridge=runtime_bridge,
             update_step=self._update_step,
         )
         self.round_resources = _AsyncRoundResources(
@@ -379,7 +375,7 @@ class AsyncSlotRunner:
             self.run_context.stop_event.set()
             return True
         if self.config.random_proxy_ip and _record_bad_proxy_and_maybe_pause(
-            self.state, self.runtime_bridge
+            self.state
         ):
             return True
         return False

@@ -13,26 +13,12 @@ import logging
 from survey_submitter.core.config.yaml_loader import load_yaml_config
 from survey_submitter.core.engine.async_engine import AsyncRuntimeEngine
 from survey_submitter.core.engine.execution_builder import prepare_execution_artifacts
-from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.questions.default_builder import build_default_question_entries
 from survey_submitter.core.task.task_context import ExecutionState
 from survey_submitter.providers.contracts import SurveyDefinition
 from survey_submitter.providers.registry import parse_survey
 
 logger = logging.getLogger(__name__)
-
-
-class _HeadlessControlPort:
-    """No-op RuntimeControlPort for headless operation."""
-
-    def wait_if_paused(self, stop_signal: StopSignalLike | None = None) -> None:
-        pass
-
-    def on_random_ip_submission(self, stop_signal: StopSignalLike | None = None) -> None:
-        pass
-
-    def on_random_ip_loading_changed(self, loading: bool, message: str = "") -> None:
-        pass
 
 
 class HeadlessRunner:
@@ -127,7 +113,6 @@ class HeadlessRunner:
             future = self._engine.start_run(
                 config=exec_config,
                 state=state,
-                runtime_bridge=_HeadlessControlPort(),
             )
 
             while not future.done():

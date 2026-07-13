@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Callable
 
 from survey_submitter.core.config.codec import UserAgentProfile
-from survey_submitter.core.engine.runtime_ui_bridge import RuntimeUiBridge
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.network.session_policy import (
@@ -19,14 +18,12 @@ class AsyncProxySession:
         state: ExecutionState,
         slot_label: str,
         stop_signal: StopSignalLike,
-        runtime_bridge: RuntimeUiBridge | None,
         update_step: Callable[[str], None],
     ) -> None:
         self.config = config
         self.state = state
         self.slot_label = slot_label
         self.stop_signal = stop_signal
-        self.runtime_bridge = runtime_bridge
         self.update_step = update_step
         self.proxy_address: str | None = None
         self.proxy_provider: str = "unknown"

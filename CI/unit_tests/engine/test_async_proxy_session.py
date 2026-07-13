@@ -25,7 +25,6 @@ class AsyncProxySessionTests:
             state=state,
             slot_label="Slot-1",
             stop_signal=state.stop_event,
-            runtime_bridge=None,
             update_step=lambda _text: None,
         )
 
