@@ -91,6 +91,57 @@ class WjxHtmlParserTests:
             }
         ]
 
+    def test_parse_survey_questions_extracts_relation_with_semicolon_separator(self) -> None:
+        html = """
+        <html>
+          <body>
+            <div id="divQuestion">
+              <fieldset>
+                <div topic="1" id="div1" type="3">
+                  <div class="topichtml">1. 触发题</div>
+                  <div class="ui-controlgroup">
+                    <div><span class="label">A</span></div>
+                    <div><span class="label">B</span></div>
+                    <div><span class="label">C</span></div>
+                    <div><span class="label">D</span></div>
+                  </div>
+                </div>
+                <div topic="2" id="div2" type="4" relation="1,2;3">
+                  <div class="topichtml">2. 关联题（选A或B时显示）</div>
+                </div>
+                <div topic="3" id="div3" type="4" relation="1,4">
+                  <div class="topichtml">3. 关联题（选D时显示）</div>
+                </div>
+              </fieldset>
+            </div>
+          </body>
+        </html>
+        """
+
+        questions = parse_survey_questions_from_html(html)
+
+        by_topic = {q["num"]: q for q in questions}
+        second = by_topic[2]
+        third = by_topic[3]
+        assert second["has_display_condition"]
+        assert second["display_conditions"] == [
+            {
+                "condition_question_num": 1,
+                "condition_mode": "selected",
+                "condition_option_indices": [1, 2],
+                "raw_relation": "1,2;3",
+            }
+        ]
+        assert third["has_display_condition"]
+        assert third["display_conditions"] == [
+            {
+                "condition_question_num": 1,
+                "condition_mode": "selected",
+                "condition_option_indices": [3],
+                "raw_relation": "1,4",
+            }
+        ]
+
     def test_parse_survey_questions_from_html_extracts_matrix_and_slider_metadata(self) -> None:
         html = """
         <html>
