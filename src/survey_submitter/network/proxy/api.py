@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import re
 import threading
 from urllib.parse import parse_qsl, urlsplit
@@ -14,9 +13,7 @@ from survey_submitter.constants import (
     PROXY_MAX_PROXIES,
     PROXY_SOURCE_CUSTOM,
 )
-from survey_submitter.logging.log_utils import (
-    log_popup_error,
-)
+from loguru import logger
 
 
 from survey_submitter.network.proxy.source import (
@@ -127,7 +124,7 @@ def _parse_proxy_payload(text: str) -> list[str]:
         if addr not in seen:
             seen.add(addr)
             unique.append(addr)
-            logging.info(f"获取到代理: {_mask_proxy_for_log(addr)}")
+            logger.info(f"获取到代理: {_mask_proxy_for_log(addr)}")
     return unique
 
 
@@ -159,10 +156,8 @@ def _warn_custom_api_returned_large_batch(returned_count: int, requested_count: 
     returned = max(0, int(returned_count or 0))
     if returned <= int(requested * 1.2):
         return
-    logging.warning(
-        "自定义代理API返回 %s 个有效代理，当前运行本轮请求 %s 个，将缓存到代理池并按任务并发逐个使用。可能会引发代理池余额浪费",
-        returned,
-        requested,
+    logger.warning(
+        f"自定义代理API返回 {returned} 个有效代理，当前运行本轮请求 {requested} 个，将缓存到代理池并按任务并发逐个使用。可能会引发代理池余额浪费"
     )
 
 
@@ -240,7 +235,7 @@ async def fetch_proxy_batch_async(
     url = proxy_url or get_effective_proxy_api_url()
     if not url:
         raise RuntimeError("自定义代理API地址未配置，请在设置中填写API地址")
-    logging.info(f"使用自定义代理API: {url}")
+    logger.info(f"使用自定义代理API: {url}")
 
     candidates: list[str] = []
     errors: list[str] = []
@@ -257,7 +252,7 @@ async def fetch_proxy_batch_async(
                 payload = json.loads(resp.text)
                 error = _extract_custom_api_error(payload)
                 if error:
-                    log_popup_error("代理API错误", error)
+                    logger.error(f"代理API错误: {error}")
                     if stop_signal and not stop_signal.is_set():
                         stop_signal.set()
                     raise ProxyApiFatalError(error)

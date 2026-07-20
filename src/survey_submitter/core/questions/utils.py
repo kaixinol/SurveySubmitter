@@ -7,7 +7,6 @@ from datetime import date, timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Sequence
-import logging
 from survey_submitter.logging.log_utils import log_suppressed_exception
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
@@ -156,7 +155,7 @@ def generate_random_chinese_name() -> str:
         log_suppressed_exception(
             "generate_random_chinese_name: from survey_submitter.core.persona.generator import get_current_persona",
             exc,
-            level=logging.ERROR,
+            level="ERROR",
         )
 
     surname = random.choice(surname_pool)
@@ -231,7 +230,7 @@ def _load_id_card_area_codes() -> tuple[str, ...]:
             area_data = json.load(fp)
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         log_suppressed_exception(
-            "questions.utils._load_id_card_area_codes open", exc, level=logging.ERROR
+            "questions.utils._load_id_card_area_codes open", exc, level="ERROR"
         )
         return fallback_codes
 
@@ -258,7 +257,7 @@ def _resolve_current_persona() -> Any:
         return get_current_persona()
     except ImportError as exc:
         log_suppressed_exception(
-            "questions.utils._resolve_current_persona import", exc, level=logging.ERROR
+            "questions.utils._resolve_current_persona import", exc, level="ERROR"
         )
         return None
 

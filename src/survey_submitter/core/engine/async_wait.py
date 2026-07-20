@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import logging
+from loguru import logger
 
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 
@@ -69,7 +69,7 @@ async def sleep_or_stop(
         try:
             return bool(await asyncio.to_thread(waiter, delay))
         except Exception:
-            logging.debug("stop_signal.wait() 调用失败", exc_info=True)
+            logger.opt(exception=True).debug("stop_signal.wait() 调用失败")
 
     await asyncio.sleep(delay)
     return is_stop_requested(stop_signal)

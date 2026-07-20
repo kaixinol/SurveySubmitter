@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import logging
+
+from loguru import logger
 from typing import Any
 
 import httpx
@@ -186,12 +187,8 @@ async def parse_wjx_survey(url: str) -> tuple[list[dict[str, Any]], str]:
             if attempt >= _PARSE_RETRY_ATTEMPTS:
                 break
             summary = _build_unparseable_page_summary(resp.text)
-            logging.warning(
-                "问卷星解析命中临时空页面，准备重试 | url=%r | attempt=%s/%s | summary=%s",
-                url,
-                attempt,
-                _PARSE_RETRY_ATTEMPTS,
-                summary,
+            logger.warning(
+                f"问卷星解析命中临时空页面，准备重试 | url={url!r} | attempt={attempt}/{_PARSE_RETRY_ATTEMPTS} | summary={summary}"
             )
             await asyncio.sleep(_PARSE_RETRY_DELAY_SECONDS)
     except (

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import Iterable
-import logging
+from loguru import logger
 
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.task import ExecutionState, ProxyLease
@@ -228,7 +228,7 @@ async def _select_proxy_for_session_async(
                             stop_signal=ctx.stop_event,
                         )
                     except (RuntimeError, OSError) as exc:
-                        logging.warning(
+                        logger.warning(
                             f"\u83b7\u53d6\u968f\u673a\u4ee3\u7406\u5931\u8d25\uff1a{exc}"
                         )
                         fetched = None
@@ -260,7 +260,7 @@ def _resolve_proxy_provider_for_thread(ctx: ExecutionState, thread_name: str) ->
                 return "unknown"
             return str(lease.source or "unknown").strip() or "unknown"
     except (AttributeError, KeyError):
-        logging.info("\u8bfb\u53d6\u4ee3\u7406\u6765\u6e90\u5931\u8d25", exc_info=True)
+        logger.opt(exception=True).debug("读取代理来源失败")
     return "unknown"
 
 
@@ -287,7 +287,7 @@ def release_submit_proxy(ctx: ExecutionState, thread_name: str, proxy_address: s
     try:
         ctx.release_proxy_in_use(thread_name)
     except (KeyError, AttributeError):
-        logging.info("\u91ca\u653e\u63d0\u4ea4\u4ee3\u7406\u5360\u7528\u5931\u8d25", exc_info=True)
+        logger.opt(exception=True).debug("释放提交代理占用失败")
 
 
 def mark_submit_proxy_success(ctx: ExecutionState, proxy_address: str | None) -> None:
@@ -296,6 +296,6 @@ def mark_submit_proxy_success(ctx: ExecutionState, proxy_address: str | None) ->
     try:
         ctx.mark_successful_proxy_address(proxy_address)
     except (AttributeError, KeyError):
-        logging.info(
-            "\u8bb0\u5f55\u6210\u529f\u4ee3\u7406\u5931\u8d25\uff1a%s", proxy_address, exc_info=True
+        logger.opt(exception=True).info(
+            f"记录成功代理失败：{proxy_address}"
         )

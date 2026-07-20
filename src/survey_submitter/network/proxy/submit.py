@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import logging
+from loguru import logger
 from collections import deque
 from dataclasses import dataclass
 from typing import Iterable
@@ -69,10 +69,8 @@ def _mark_proxy_temporarily_bad(
         return
     ctx.mark_proxy_in_cooldown(normalized, cooldown_seconds)
     _discard_unresponsive_proxy(ctx, normalized)
-    logging.info(
-        "\u4ee3\u7406\u5df2\u672c\u5730\u4e34\u65f6\u5c4f\u853d %.0fs\uff1a%s",
-        float(cooldown_seconds or 0.0),
-        mask_proxy_for_log(normalized),
+    logger.info(
+        f"代理已本地临时屏蔽 {float(cooldown_seconds or 0.0):.0f}s：{mask_proxy_for_log(normalized)}"
     )
 
 
@@ -113,24 +111,21 @@ def _purge_unusable_proxy_pool_locked(
             continue
         if ctx._is_proxy_in_cooldown_locked(lease.address):
             removed += 1
-            logging.info(
-                "\u5df2\u79fb\u9664\u672c\u5730\u4e34\u65f6\u5c4f\u853d\u4e2d\u7684\u4ee3\u7406\uff1a%s",
-                mask_proxy_for_log(lease.address),
+            logger.info(
+                f"已移除本地临时屏蔽中的代理：{mask_proxy_for_log(lease.address)}"
             )
             continue
         if not proxy_lease_has_sufficient_ttl(lease, required_ttl_seconds=required_ttl_seconds):
             removed += 1
-            logging.info(
-                "\u5df2\u4e22\u5f03\u5373\u5c06\u8fc7\u671f\u7684\u4ee3\u7406\uff1a%s",
-                mask_proxy_for_log(lease.address),
+            logger.info(
+                f"已丢弃即将过期的代理：{mask_proxy_for_log(lease.address)}"
             )
             continue
         seen.add(lease.address)
         kept.append(lease)
     if removed:
-        logging.info(
-            "\u4ee3\u7406\u6c60\u5df2\u6e05\u7406\u65e0\u6548/\u91cd\u590d\u4ee3\u7406 %s \u4e2a",
-            removed,
+        logger.info(
+            f"代理池已清理无效/重复代理 {removed} 个"
         )
     ctx.config.proxy_ip_pool = kept
     if removed:
@@ -152,21 +147,18 @@ def _pop_available_proxy_lease_locked(ctx: ExecutionState) -> ProxyLease | None:
         if lease is None:
             continue
         if not proxy_lease_has_sufficient_ttl(lease, required_ttl_seconds=required_ttl):
-            logging.info(
-                "\u5df2\u8df3\u8fc7\u5373\u5c06\u8fc7\u671f\u7684\u4ee3\u7406\uff1a%s",
-                mask_proxy_for_log(lease.address),
+            logger.info(
+                f"已跳过即将过期的代理：{mask_proxy_for_log(lease.address)}"
             )
             continue
         if ctx._is_proxy_in_cooldown_locked(lease.address):
-            logging.info(
-                "\u5df2\u8df3\u8fc7\u672c\u5730\u4e34\u65f6\u5c4f\u853d\u4e2d\u7684\u4ee3\u7406\uff1a%s",
-                mask_proxy_for_log(lease.address),
+            logger.info(
+                f"已跳过本地临时屏蔽中的代理：{mask_proxy_for_log(lease.address)}"
             )
             continue
         if lease.address in blocked_addresses:
-            logging.info(
-                "\u5df2\u8df3\u8fc7\u5df2\u5360\u7528\u6216\u5df2\u6210\u529f\u4f7f\u7528\u8fc7\u7684\u4ee3\u7406\uff1a%s",
-                mask_proxy_for_log(lease.address),
+            logger.info(
+                f"已跳过已占用或已成功使用过的代理：{mask_proxy_for_log(lease.address)}"
             )
             continue
         return lease
@@ -196,21 +188,18 @@ def _merge_fetched_proxy_leases_locked(
         if lease is None:
             continue
         if not proxy_lease_has_sufficient_ttl(lease, required_ttl_seconds=required_ttl):
-            logging.info(
-                "\u5df2\u4e22\u5f03\u5373\u5c06\u8fc7\u671f\u7684\u65b0\u4ee3\u7406\uff1a%s",
-                mask_proxy_for_log(lease.address),
+            logger.info(
+                f"已丢弃即将过期的新代理：{mask_proxy_for_log(lease.address)}"
             )
             continue
         if ctx._is_proxy_in_cooldown_locked(lease.address):
-            logging.info(
-                "\u5df2\u8df3\u8fc7\u672c\u5730\u4e34\u65f6\u5c4f\u853d\u4e2d\u7684\u65b0\u4ee3\u7406\uff1a%s",
-                mask_proxy_for_log(lease.address),
+            logger.info(
+                f"已跳过本地临时屏蔽中的新代理：{mask_proxy_for_log(lease.address)}"
             )
             continue
         if lease.address in existing:
-            logging.info(
-                "\u5df2\u8df3\u8fc7\u91cd\u590d\u6216\u6b63\u5728\u5360\u7528\u7684\u65b0\u4ee3\u7406\uff1a%s",
-                mask_proxy_for_log(lease.address),
+            logger.info(
+                f"已跳过重复或正在占用的新代理：{mask_proxy_for_log(lease.address)}"
             )
             continue
         if select_first and selected is None:
@@ -235,11 +224,8 @@ def _mark_proxy_in_use(
         return None
     if thread_name:
         ctx.mark_proxy_in_use(thread_name, lease)
-    logging.debug(
-        "\u7ebf\u7a0b[%s] \u5df2\u5206\u914d\u968f\u673aIP\uff1a%s\uff08\u6765\u6e90=%s\uff09",
-        thread_name or "?",
-        mask_proxy_for_log(lease.address),
-        str(lease.source or "unknown"),
+    logger.debug(
+        f"线程[{thread_name or '?'}] 已分配随机IP：{mask_proxy_for_log(lease.address)}（来源={str(lease.source or 'unknown')}）"
     )
     return lease.address
 
@@ -263,7 +249,7 @@ def _discard_unresponsive_proxy(ctx: ExecutionState, proxy_address: str) -> None
             retained.append(lease)
         ctx.config.proxy_ip_pool = retained
         if removed:
-            logging.info(
-                f"\u5df2\u79fb\u9664\u65e0\u54cd\u5e94\u4ee3\u7406\uff1a{mask_proxy_for_log(proxy_address)}"
+            logger.info(
+                f"已移除无响应代理：{mask_proxy_for_log(proxy_address)}"
             )
             ctx.notify_runtime_change()

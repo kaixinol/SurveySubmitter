@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import copy
-import logging
 import random
+from loguru import logger
 from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import ConfigDict
@@ -430,7 +430,7 @@ def clone_question_entries(entries: list[object] | list[QuestionEntry] | None) -
         try:
             cloned.append(deserialize_question_entry(serialize_question_entry(item)))
         except Exception as exc:
-            logging.info("跳过无法复制的题目配置: %s", exc)
+            logger.info(f"跳过无法复制的题目配置: {exc}")
     return cloned
 
 

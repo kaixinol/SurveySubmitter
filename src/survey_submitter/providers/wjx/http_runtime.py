@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import logging
 import random
 import html as html_lib
+
+from loguru import logger
 import time
 import uuid
 from collections.abc import Awaitable, Callable
@@ -601,7 +602,7 @@ async def _post_wjx_submit_request(
         raise SubmitProxyUnavailableError("提交前未获取到随机 IP")
     submit_proxies = _proxy_arg(submit_proxy_address)
     if submit_proxy_address:
-        logging.debug("问卷星 HTTP 提交使用随机IP：%s", mask_proxy_for_log(submit_proxy_address))
+        logger.debug(f"问卷星 HTTP 提交使用随机IP：{mask_proxy_for_log(submit_proxy_address)}")
     try:
         response = await http_client.apost(
             f"https://{domain}/joinnew/processjq.ashx",

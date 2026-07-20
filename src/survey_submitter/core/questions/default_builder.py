@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
-import logging
+from loguru import logger
 from typing import Any, cast
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
@@ -472,11 +472,8 @@ def _apply_forced_option_overrides(
     config.distribution = "custom"
     config.custom_weights = list(forced_weights)
     config.option_count = option_count
-    logging.info(
-        "题号%s检测到指定作答指令，已强制锁定为第%s项（%s）",
-        q.num,
-        forced_option_index + 1,
-        attrs.forced_option_text or "无文本",
+    logger.info(
+        f"题号{q.num}检测到指定作答指令，已强制锁定为第{forced_option_index + 1}项（{attrs.forced_option_text or '无文本'}）"
     )
 
 

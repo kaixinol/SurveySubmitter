@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import re
+
+from loguru import logger
 
 from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.task import ExecutionState
@@ -90,7 +91,7 @@ def build_ai_question_prompt(
         log_suppressed_exception(
             "build_ai_question_prompt: from survey_submitter.core.persona.context import build_ai_context_prompt",
             exc,
-            level=logging.WARNING,
+            level="WARNING",
         )
     return title
 
@@ -177,12 +178,8 @@ async def agenerate_ai_answer(
             last_error = exc
             if attempt >= _AI_FILL_MAX_ATTEMPTS or not _is_retryable_ai_generation_error(exc):
                 raise AIRuntimeError(f"AI 调用失败：{exc}") from exc
-            logging.warning(
-                "AI 生成失败，准备重试 | attempt=%s/%s | question_type=%s | error=%s",
-                attempt,
-                _AI_FILL_MAX_ATTEMPTS,
-                question_type,
-                exc,
+            logger.warning(
+                f"AI 生成失败，准备重试 | attempt={attempt}/{_AI_FILL_MAX_ATTEMPTS} | question_type={question_type} | error={exc}"
             )
             await asyncio.sleep(_AI_FILL_RETRY_BACKOFF_SECONDS)
     if last_error is not None:

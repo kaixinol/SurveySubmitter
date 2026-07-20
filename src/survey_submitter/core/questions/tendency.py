@@ -3,7 +3,6 @@ from __future__ import annotations
 import random
 import threading
 import math
-import logging
 from survey_submitter.logging.log_utils import log_suppressed_exception
 
 from survey_submitter.core.questions.reliability_mode import get_reliability_profile
@@ -37,7 +36,7 @@ def _generate_base_ratio(
                 return max(0.0, min(1.0, raw + jitter))
         except ImportError as exc:
             log_suppressed_exception(
-                "_generate_base_ratio: get_current_persona", exc, level=logging.ERROR
+                "_generate_base_ratio: get_current_persona", exc, level="ERROR"
             )
         return random.random()
     if isinstance(probabilities, list) and probabilities:

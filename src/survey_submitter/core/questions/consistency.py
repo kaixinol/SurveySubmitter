@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import logging
 import threading
+from loguru import logger
 from typing import Any, Sequence
 
 from pydantic import BaseModel, Field, field_validator
@@ -284,10 +284,8 @@ def _apply_rule(
         return []
     valid_indices = _resolve_valid_rule_indices(rule, len(base_probabilities))
     if not valid_indices:
-        logging.warning(
-            "条件规则[%s]命中但目标选项越界，已忽略该规则（题号=%s）",
-            rule.id,
-            rule.target_question_num,
+        logger.warning(
+            f"条件规则[{rule.id}]命中但目标选项越界，已忽略该规则（题号={rule.target_question_num}）"
         )
         return list(base_probabilities)
     if rule.action_mode == "must_select":
@@ -299,19 +297,12 @@ def _apply_rule(
             0.0 if idx in valid_indices else weight for idx, weight in enumerate(base_probabilities)
         ]
     if sum(adjusted) <= 0:
-        logging.warning(
-            "条件规则[%s]命中后无可用选项，已回退原概率（题号=%s）",
-            rule.id,
-            rule.target_question_num,
+        logger.warning(
+            f"条件规则[{rule.id}]命中后无可用选项，已回退原概率（题号={rule.target_question_num}）"
         )
         return list(base_probabilities)
-    logging.info(
-        "条件规则[%s]已生效：条件题=%s，目标题=%s，动作=%s，目标选项=%s",
-        rule.id,
-        rule.condition_question_num,
-        rule.target_question_num,
-        rule.action_mode,
-        sorted(valid_indices),
+    logger.info(
+        f"条件规则[{rule.id}]已生效：条件题={rule.condition_question_num}，目标题={rule.target_question_num}，动作={rule.action_mode}，目标选项={sorted(valid_indices)}"
     )
     return adjusted
 
@@ -351,19 +342,12 @@ def get_multiple_rule_constraint(
         return set(), set(), None
     valid_indices = _resolve_valid_rule_indices(rule, option_count)
     if not valid_indices:
-        logging.warning(
-            "条件规则[%s]命中但目标选项越界，已忽略该规则（题号=%s）",
-            rule.id,
-            rule.target_question_num,
+        logger.warning(
+            f"条件规则[{rule.id}]命中但目标选项越界，已忽略该规则（题号={rule.target_question_num}）"
         )
         return set(), set(), rule.id
-    logging.info(
-        "条件规则[%s]已生效：条件题=%s，目标题=%s，动作=%s，目标选项=%s",
-        rule.id,
-        rule.condition_question_num,
-        rule.target_question_num,
-        rule.action_mode,
-        sorted(valid_indices),
+    logger.info(
+        f"条件规则[{rule.id}]已生效：条件题={rule.condition_question_num}，目标题={rule.target_question_num}，动作={rule.action_mode}，目标选项={sorted(valid_indices)}"
     )
     if rule.action_mode == "must_select":
         return set(valid_indices), set(), rule.id

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import logging
 import random
 from typing import Any, Protocol
+
+from loguru import logger
 
 from survey_submitter.core.engine.async_wait import sleep_or_stop
 from survey_submitter.core.engine.stop_signal import StopSignalLike
@@ -92,9 +93,8 @@ async def wait_answer_duration_seconds(
     wait_seconds = max(0.0, float(seconds or 0.0))
     if wait_seconds <= 0:
         return False
-    logging.info(
-        "[Action Log] Simulating answer duration: waiting %.1f seconds before submit",
-        wait_seconds,
+    logger.info(
+        f"[Action Log] Simulating answer duration: waiting {wait_seconds:.1f} seconds before submit"
     )
     return bool(await sleep_or_stop(stop_signal, wait_seconds))
 
@@ -119,7 +119,7 @@ async def is_survey_completion_page(driver: _DriverLike, provider: str | None = 
         if "complete" in current_url.lower():
             return True
     except Exception as exc:
-        log_suppressed_exception("is_survey_completion_page: current_url", exc, level=logging.WARNING)
+        log_suppressed_exception("is_survey_completion_page: current_url", exc, level="WARNING")
 
     try:
         from survey_submitter.providers.registry import is_completion_page as _provider_is_completion_page
@@ -127,7 +127,7 @@ async def is_survey_completion_page(driver: _DriverLike, provider: str | None = 
         if await _provider_is_completion_page(driver, provider=provider):
             return True
     except Exception as exc:
-        log_suppressed_exception("is_survey_completion_page: provider_is_completion_page", exc, level=logging.WARNING)
+        log_suppressed_exception("is_survey_completion_page: provider_is_completion_page", exc, level="WARNING")
 
     detected = False
     try:
@@ -141,7 +141,7 @@ async def is_survey_completion_page(driver: _DriverLike, provider: str | None = 
             if any(marker in text for marker in _COMPLETION_MARKERS):
                 detected = True
     except Exception as exc:
-        log_suppressed_exception("is_survey_completion_page: divdsc = None", exc, level=logging.WARNING)
+        log_suppressed_exception("is_survey_completion_page: divdsc = None", exc, level="WARNING")
     if not detected:
         for attempt in range(2):
             try:
@@ -194,11 +194,10 @@ async def is_survey_completion_page(driver: _DriverLike, provider: str | None = 
                     if attempt == 0:
                         await sleep_or_stop(None, 0.2)
                         continue
-                    logging.debug(
-                        "[Suppressed] is_survey_completion_page: page_text during navigation: %s",
-                        exc,
+                    logger.debug(
+                        f"[Suppressed] is_survey_completion_page: page_text during navigation: {exc}"
                     )
                     break
-                log_suppressed_exception("is_survey_completion_page: page_text", exc, level=logging.WARNING)
+                log_suppressed_exception("is_survey_completion_page: page_text", exc, level="WARNING")
                 break
     return bool(detected)

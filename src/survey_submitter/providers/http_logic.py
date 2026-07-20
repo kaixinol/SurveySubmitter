@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Sequence, cast
 
+from loguru import logger
 from survey_submitter.providers.answering import AnswerAction
 from survey_submitter.providers.contracts import (
     LOGIC_PARSE_STATUS_COMPLETE,
@@ -252,9 +253,7 @@ async def build_http_logic_plan(
 
         action = await build_action(question)
         if action is None:
-            import logging
-
-            logging.getLogger(__name__).warning("第%d题暂不支持纯 HTTP 提交，已跳过", question_num)
+            logger.warning(f"第{question_num}题暂不支持纯 HTTP 提交，已跳过")
             skipped_question_nums.append(question_num)
             continue
         action_by_question_num[question_num] = action

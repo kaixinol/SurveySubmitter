@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import logging
 import time
 from urllib.parse import urlsplit
 from typing import Any
@@ -13,7 +12,7 @@ from survey_submitter.constants import (
     PROXY_HEALTH_CHECK_URL,
     PROXY_TTL_GRACE_SECONDS,
 )
-from survey_submitter.logging.log_utils import log_suppressed_exception
+from loguru import logger
 from survey_submitter.network.proxy.source import (
     get_proxy_minute_by_answer_seconds,
 )
@@ -58,7 +57,7 @@ def _mask_proxy_for_log(proxy_address: str | None) -> str:
         if host_port:
             return host_port
     except ValueError as exc:
-        log_suppressed_exception("random_ip._mask_proxy_for_log parse proxy", exc)
+        logger.warning(f"random_ip._mask_proxy_for_log parse proxy failed: {exc}")
     raw = text
     if "://" in raw:
         raw = raw.split("://", 1)[1]
@@ -75,7 +74,7 @@ def _parse_expire_at_to_ts(expire_at: str | None) -> float:
     try:
         parsed = datetime.fromisoformat(text)
     except ValueError:
-        logging.info("代理 expire_at 解析失败：%s", text, exc_info=True)
+        logger.opt(exception=True).debug(f"代理 expire_at 解析失败：{text}")
         return 0.0
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
@@ -187,12 +186,12 @@ def _proxy_is_responsive(proxy_address: str) -> bool:
         )
         elapsed = time.perf_counter() - start
     except Exception as exc:
-        logging.info(f"代理 {masked_proxy} 验证失败: {exc}")
+        logger.info(f"代理 {masked_proxy} 验证失败: {exc}")
         return False
     if response.status_code >= 400:
-        logging.warning(f"代理 {masked_proxy} 返回状态码 {response.status_code}")
+        logger.warning(f"代理 {masked_proxy} 返回状态码 {response.status_code}")
         return False
-    logging.info(f"代理 {masked_proxy} 验证通过，耗时 {elapsed:.2f}s")
+    logger.info(f"代理 {masked_proxy} 验证通过，耗时 {elapsed:.2f}s")
     return True
 
 
@@ -209,12 +208,12 @@ async def _proxy_is_responsive_async(proxy_address: str) -> bool:
         )
         elapsed = time.perf_counter() - start
     except Exception as exc:
-        logging.info(f"代理 {masked_proxy} 验证失败: {exc}")
+        logger.info(f"代理 {masked_proxy} 验证失败: {exc}")
         return False
     if response.status_code >= 400:
-        logging.warning(f"代理 {masked_proxy} 返回状态码 {response.status_code}")
+        logger.warning(f"代理 {masked_proxy} 返回状态码 {response.status_code}")
         return False
-    logging.info(f"代理 {masked_proxy} 验证通过，耗时 {elapsed:.2f}s")
+    logger.info(f"代理 {masked_proxy} 验证通过，耗时 {elapsed:.2f}s")
     return True
 
 

@@ -32,8 +32,7 @@ DEFAULT_HTTP_HEADERS = {
 }
 
 
-LOG_FORMAT = "%(asctime)s [%(levelname)s] %(message)s"
-LOG_BUFFER_CAPACITY = 2000
+LOG_FORMAT = "{time:YYYY-MM-DD HH:mm:ss} [{level}] {message}"
 
 
 PROXY_MAX_PROXIES = 80

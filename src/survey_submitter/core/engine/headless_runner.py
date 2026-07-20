@@ -8,7 +8,7 @@ and polls progress until completion or stop signal.
 from __future__ import annotations
 
 import asyncio
-import logging
+from loguru import logger
 
 from survey_submitter.core.config.yaml_loader import load_yaml_config
 from survey_submitter.core.engine.async_engine import AsyncRuntimeEngine
@@ -17,8 +17,6 @@ from survey_submitter.core.questions.default_builder import build_default_questi
 from survey_submitter.core.task.task_context import ExecutionState
 from survey_submitter.providers.contracts import SurveyDefinition
 from survey_submitter.providers.registry import parse_survey
-
-logger = logging.getLogger(__name__)
 
 
 class HeadlessRunner:
@@ -38,13 +36,10 @@ class HeadlessRunner:
 
     async def _parse_survey(self, url: str) -> SurveyDefinition:
         """Fetch and parse the survey from its URL."""
-        logger.info("正在从网页解析问卷: %s", url)
+        logger.info(f"正在从网页解析问卷: {url}")
         definition = await parse_survey(url)
         logger.info(
-            "解析完成: 标题=%s, 题目数=%d, 平台=%s",
-            definition.title,
-            len(definition.questions),
-            definition.provider,
+            f"解析完成: 标题={definition.title}, 题目数={len(definition.questions)}, 平台={definition.provider}"
         )
         return definition
 
@@ -59,17 +54,12 @@ class HeadlessRunner:
             unsupported = " [不支持]" if q.unsupported else ""
             location = " [地址题]" if q.type_code == TypeCode.LOCATION else ""
             logger.info(
-                "  Q%s: %s (%s)%s%s",
-                q.num,
-                q.title[:60],
-                q.type_code,
-                location,
-                unsupported,
+                f"  Q{q.num}: {q.title[:60]} ({q.type_code}){location}{unsupported}"
             )
 
     async def run(self) -> None:
         """Load config, parse survey, prepare artifacts, and run."""
-        logger.info("加载配置文件: %s", self._config_path)
+        logger.info(f"加载配置文件: {self._config_path}")
         config = load_yaml_config(self._config_path)
 
         if not config.survey.url:
@@ -91,8 +81,7 @@ class HeadlessRunner:
         if self._parse_only:
             self._log_parsed_questions(definition)
             logger.info(
-                "问卷解析完成 (--parse-only 模式，共 %d 题，不提交)",
-                len(definition.questions),
+                f"问卷解析完成 (--parse-only 模式，共 {len(definition.questions)} 题，不提交)"
             )
             return
 
@@ -105,9 +94,7 @@ class HeadlessRunner:
 
         try:
             logger.info(
-                "开始提交: 目标=%d, 并发=%d",
-                exec_config.target_num,
-                exec_config.num_threads,
+                f"开始提交: 目标={exec_config.target_num}, 并发={exec_config.num_threads}"
             )
 
             future = self._engine.start_run(
@@ -120,7 +107,7 @@ class HeadlessRunner:
                 success = state.cur_num
                 fail = state.cur_fail
                 target = exec_config.target_num
-                logger.info("进度: %d/%d 成功, %d 失败", success, target, fail)
+                logger.info(f"进度: {success}/{target} 成功, {fail} 失败")
 
                 if self._stop_requested:
                     logger.info("正在停止...")
@@ -129,13 +116,10 @@ class HeadlessRunner:
             if future.done():
                 exc = future.exception()
                 if exc:
-                    logger.error("运行出错: %s", exc)
+                    logger.error(f"运行出错: {exc}")
                 else:
                     logger.info(
-                        "运行完成: %d/%d 成功, %d 失败",
-                        state.cur_num,
-                        exec_config.target_num,
-                        state.cur_fail,
+                        f"运行完成: {state.cur_num}/{exec_config.target_num} 成功, {state.cur_fail} 失败"
                     )
         finally:
             self._engine.shutdown()

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from typing import Any, Iterable
 from urllib.parse import urlsplit, urlunsplit
 
@@ -11,8 +10,6 @@ _RESPONSES_SUFFIX = "/responses"
 _LEGACY_COMPLETIONS_SUFFIX = "/completions"
 _AI_REQUEST_TIMEOUT_SECONDS = 30
 _AI_MAX_RETRY_ATTEMPTS = 2
-
-logger = logging.getLogger(__name__)
 
 __all__ = [
     "_AI_REQUEST_TIMEOUT_SECONDS",
