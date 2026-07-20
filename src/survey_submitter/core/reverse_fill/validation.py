@@ -56,7 +56,11 @@ def _regular_config_ready(
     entry_type = str(entry.question_type or "").strip()
     normalized_expected = str(expected_type or "").strip()
     if entry_type != normalized_expected:
-        if normalized_expected == "location" and entry_type == "text" and bool(entry.is_location):
+        if (
+            normalized_expected == QuestionType.LOCATION
+            and entry_type == QuestionType.TEXT
+            and bool(entry.is_location)
+        ):
             pass  # text entry with is_location is compatible with location type
         else:
             return False
