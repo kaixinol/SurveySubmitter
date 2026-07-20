@@ -391,7 +391,7 @@ class WjxHtmlParserHelperTests:
         )
 
     def test_attach_display_condition_metadata_marks_source_question(self) -> None:
-        questions = [
+        questions: list[dict[str, object]] = [
             {"num": 1, "display_conditions": [], "controls_display_targets": []},
             {
                 "num": 2,
@@ -406,7 +406,7 @@ class WjxHtmlParserHelperTests:
             },
         ]
 
-        html_parser_rules._attach_display_condition_metadata(questions)  # ty:ignore[invalid-argument-type]
+        html_parser_rules._attach_display_condition_metadata(questions)
 
         assert questions[0]["has_dependent_display_logic"] is True
         assert questions[0]["controls_display_targets"] == [
@@ -599,7 +599,7 @@ class WjxHtmlParserHelperTests:
         )
 
     def test_attach_display_condition_metadata_dedupes_and_clears_empty_targets(self) -> None:
-        questions = [
+        questions: list[dict[str, object]] = [
             {"num": 1, "display_conditions": [], "controls_display_targets": []},
             {
                 "num": 2,
@@ -620,7 +620,7 @@ class WjxHtmlParserHelperTests:
             {"num": 3, "display_conditions": "bad", "controls_display_targets": []},
         ]
 
-        html_parser_rules._attach_display_condition_metadata(questions)  # ty:ignore[invalid-argument-type]
+        html_parser_rules._attach_display_condition_metadata(questions)
 
         assert questions[0]["controls_display_targets"] == [
             {

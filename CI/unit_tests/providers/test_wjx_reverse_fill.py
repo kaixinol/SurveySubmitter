@@ -59,7 +59,7 @@ class WjxReverseFillTests:
                 ]
             )
         )
-        questions_info = [
+        questions_info: list[dict[str, object]] = [
             {
                 "num": 1,
                 "title": "单选题",
@@ -85,7 +85,7 @@ class WjxReverseFillTests:
         spec = build_reverse_fill_spec(
             source_path=workbook_path,
             survey_provider="wjx",
-            questions_info=questions_info,  # ty:ignore[invalid-argument-type]
+            questions_info=questions_info,
             question_entries=[],
             selected_format=REVERSE_FILL_FORMAT_WJX_SEQUENCE,
             start_row=1,
@@ -101,13 +101,13 @@ class WjxReverseFillTests:
 
     def test_build_reverse_fill_spec_blocks_unsupported_composite_value(self) -> None:
         workbook_path = self._track(_write_workbook([["序号", "1、单选题"], [1, "其他〖无〗"]]))
-        questions_info = [
+        questions_info: list[dict[str, object]] = [
             {"num": 1, "title": "单选题", "type_code": "3", "option_texts": ["选项1", "选项2"]}
         ]
         spec = build_reverse_fill_spec(
             source_path=workbook_path,
             survey_provider="wjx",
-            questions_info=questions_info,  # ty:ignore[invalid-argument-type]
+            questions_info=questions_info,
             question_entries=[],
             selected_format=REVERSE_FILL_FORMAT_WJX_TEXT,
             start_row=1,

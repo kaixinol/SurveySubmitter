@@ -39,7 +39,7 @@ class ConsistencyRulesTests:
             ensure_survey_question_meta({"num": 2, "title": "填空", "type_code": "1"}),
             ensure_survey_question_meta({"num": 3, "title": "矩阵", "type_code": "6"}),
         ]
-        rules = [
+        rules: list[dict[str, object]] = [
             {
                 "condition_question_num": 1,
                 "condition_mode": "selected",
@@ -59,7 +59,7 @@ class ConsistencyRulesTests:
             {"bad": "rule"},
         ]
 
-        sanitized, stats = consistency.sanitize_answer_rules(rules, questions)  # ty:ignore[invalid-argument-type]
+        sanitized, stats = consistency.sanitize_answer_rules(rules, questions)
 
         assert len(sanitized) == 1
         assert stats == {"invalid": 1, "unsupported": 1}
