@@ -90,8 +90,8 @@ def _is_select_placeholder_option(index: int, value: str | None, text: str | Non
 def _input_looks_like_location(input_element) -> bool:
     if input_element is None:
         return False
-    verify_value = str(input_element.get("verify") or "").strip()
-    onclick_value = str(input_element.get("onclick") or "").strip().lower()
+    verify_value = (input_element.get("verify") or "")
+    onclick_value = (input_element.get("onclick") or "").lower()
     if not verify_value and "opencitybox" not in onclick_value:
         return False
     if any(
@@ -106,15 +106,15 @@ def _input_looks_like_location(input_element) -> bool:
 def _soup_question_is_required(question_div) -> bool:
     if question_div is None:
         return False
-    if str(question_div.get("req") or "").strip() in {"1", "true", "True"}:
+    if (question_div.get("req") or "") in {"1", "true", "True"}:
         return True
-    if str(question_div.get("required") or "").strip().lower() in {"1", "true", "required"}:
+    if (question_div.get("required") or "").lower() in {"1", "true", "required"}:
         return True
-    if str(question_div.get("must") or "").strip() in {"1", "true", "True"}:
+    if (question_div.get("must") or "") in {"1", "true", "True"}:
         return True
-    if str(question_div.get("wjxreq") or "").strip() in {"1", "true", "True"}:
+    if (question_div.get("wjxreq") or "") in {"1", "true", "True"}:
         return True
-    if str(question_div.get("aria-required") or "").strip().lower() == "true":
+    if (question_div.get("aria-required") or "").lower() == "true":
         return True
 
     marker_selectors = (
@@ -256,8 +256,8 @@ def _count_text_inputs_in_soup(question_div) -> int:
     candidates = question_div.find_all(["input", "textarea", "span", "div"])
     count = 0
     for cand in candidates:
-        tag_name = (cand.name or "").lower()
-        input_type = (cand.get("type") or "").lower()
+        tag_name = cand.name
+        input_type = cand.get("type")
         style_text = (cand.get("style") or "").lower()
         class_attr = cand.get("class") or []
         if isinstance(class_attr, str):
@@ -285,7 +285,7 @@ def _count_text_inputs_in_soup(question_div) -> int:
         ):
             count += 1
             continue
-        contenteditable = (cand.get("contenteditable") or "").lower() == "true"
+        contenteditable = cand.get("contenteditable") == "true"
         if (contenteditable or is_textcont) and tag_name in {"span", "div"}:
             count += 1
     return count
@@ -299,7 +299,7 @@ def _extract_text_input_labels(question_div) -> list[str]:
         parts: list[str] = []
         current = getattr(node, "previous_sibling", None)
         while current is not None:
-            name = str(getattr(current, "name", "") or "").lower()
+            name = str(getattr(current, "name", "")).lower()
             if name in {"input", "textarea", "label", "span"}:
                 if name == "input":
                     current = getattr(current, "previous_sibling", None)
@@ -318,8 +318,8 @@ def _extract_text_input_labels(question_div) -> list[str]:
     candidates = question_div.find_all(["input", "textarea", "span", "div"])
 
     for cand in candidates:
-        tag_name = (cand.name or "").lower()
-        input_type = (cand.get("type") or "").lower()
+        tag_name = cand.name
+        input_type = cand.get("type")
         style_text = (cand.get("style") or "").lower()
         class_attr = cand.get("class") or []
         class_text = (
@@ -378,8 +378,8 @@ def _soup_question_looks_like_description(question_div, type_code: str) -> bool:
 
     if question_div is None:
         return False
-    relation = str(question_div.get("relation") or "").strip()
-    style_text = str(question_div.get("style") or "").lower()
+    relation = (question_div.get("relation") or "")
+    style_text = (question_div.get("style") or "").lower()
     is_unreachable_placeholder = (
         relation == "-1"
         and "display:none" in style_text.replace(" ", "")

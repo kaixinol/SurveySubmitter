@@ -152,8 +152,8 @@ def _collect_question_media(
 def _question_div_is_initially_hidden(question_div) -> bool:
     if question_div is None:
         return False
-    style_text = str(question_div.get("style") or "").lower()
-    hidden_attr = str(question_div.get("hidden") or "").strip().lower()
+    style_text = (question_div.get("style") or "").lower()
+    hidden_attr = (question_div.get("hidden") or "").lower()
     class_text = (
         " ".join(question_div.get("class") or []).lower() if question_div.get("class") else ""
     )
@@ -291,7 +291,7 @@ def _extract_question_features(
         slider_min, slider_max, slider_step = _extract_slider_range(question_div, question_number)
     text_input_count = _count_text_inputs_in_soup(question_div)
     text_input_labels = _extract_text_input_labels(question_div) if text_input_count > 1 else []
-    has_gapfill = str(question_div.get("gapfill") or "").strip() == "1"
+    has_gapfill = (question_div.get("gapfill") or "") == "1"
     is_text_like_question = _should_treat_question_as_text_like(
         type_code,
         option_count,
@@ -435,7 +435,7 @@ def _process_question_div(
             current_display_num = heading_num
         return None, current_display_num, visible_question_counter
 
-    raw_type_code = str(question_div.get("type") or "").strip() or "0"  # ty: ignore[unresolved-attribute]
+    raw_type_code = (question_div.get("type") or "") or "0"  # ty: ignore[unresolved-attribute]
     resolved = _resolve_question_type(question_div, raw_type_code)
     type_code = cast(str, resolved["type_code"])
     is_description = cast(bool, resolved["is_description"])

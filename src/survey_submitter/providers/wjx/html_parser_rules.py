@@ -200,7 +200,7 @@ def _extract_jump_rules_from_html(
 ) -> tuple[bool, list[dict[str, object]]]:
 
     _ = question_number
-    has_jump_attr = str(question_div.get("hasjump") or "").strip() == "1"
+    has_jump_attr = (question_div.get("hasjump") or "") == "1"
     jump_rules: list[dict[str, object]] = []
     terminate_keywords = ("结束作答", "结束答题", "结束填写", "终止作答", "停止作答")
 
@@ -285,7 +285,7 @@ def _extract_display_conditions_from_html(
 ) -> tuple[bool, list[dict[str, object]]]:
 
     _ = question_number
-    relation_raw = str(question_div.get("relation") or "").strip()
+    relation_raw = (question_div.get("relation") or "")
     if not relation_raw:
         return False, []
 

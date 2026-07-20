@@ -120,7 +120,7 @@ def _collect_rowindex_rows(table) -> tuple[int, list[str]]:
     matrix_rows = 0
     row_texts: list[str] = []
     for row in table.find_all("tr"):
-        row_index = str(row.get("rowindex") or "").strip()
+        row_index = (row.get("rowindex") or "")
         if row_index and str(row_index).isdigit():
             matrix_rows += 1
             cells = row.find_all(["td", "th"])
@@ -134,7 +134,7 @@ def _collect_data_rows(table, question_number: int) -> tuple[int, list[str], lis
     data_rows = []
     header_id = f"drv{question_number}_1"
     for row in table.find_all("tr"):
-        row_id = str(row.get("id") or "")
+        row_id = (row.get("id") or "")
         if row_id == header_id:
             continue
         cells = row.find_all(["td", "th"])
