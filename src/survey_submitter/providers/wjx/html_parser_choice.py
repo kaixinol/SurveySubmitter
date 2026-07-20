@@ -407,7 +407,7 @@ def _extract_location_verify_type(question_div) -> str:
         return ""
     inputs = question_div.find_all("input")
     for input_element in inputs:
-        verify_value = str(input_element.get("verify") or "").strip()
+        verify_value = (input_element.get("verify") or "")
         if verify_value:
             return verify_value
     return ""
@@ -422,7 +422,7 @@ def _collect_select_option_texts(question_div, soup, question_number: int) -> li
     options: list[str] = []
     option_elements = select.find_all("option")
     for idx, option in enumerate(option_elements):
-        value = (option.get("value") or "").strip()
+        value = (option.get("value") or "")
         text = _normalize_html_text(option.get_text(" ", strip=True))
         if _is_select_placeholder_option(idx, value, text):
             continue
