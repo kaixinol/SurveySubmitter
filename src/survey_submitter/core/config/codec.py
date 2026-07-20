@@ -20,6 +20,7 @@ from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.config.schema import (
     AnswerConfigSection,
     ExecutionSection,
+    QuestionInfo,
     RuntimeConfig,
     SurveySection,
 )
@@ -30,6 +31,7 @@ from survey_submitter.providers.common import (
     detect_survey_provider,
     normalize_survey_provider,
 )
+from survey_submitter.providers.contracts import SurveyQuestionMeta
 from survey_submitter.constants import USER_AGENT_PRESETS
 
 _TEXT_RANDOM_MODES = {"none", "name", "mobile", "id_card", "integer"}
@@ -64,6 +66,7 @@ __all__ = [
     "serialize_question_entry",
     "deserialize_question_entry",
     "clone_question_entries",
+    "survey_questions_from_definition",
     "build_runtime_config_snapshot",
     "normalize_runtime_config_payload",
     "serialize_runtime_config",
@@ -375,6 +378,28 @@ def clone_question_entries(entries: list[object] | list[QuestionEntry] | None) -
         except Exception as exc:
             logger.info(f"跳过无法复制的题目配置: {exc}")
     return cloned
+
+
+def survey_questions_from_definition(
+    questions: list[SurveyQuestionMeta],
+) -> list[QuestionInfo]:
+    """从解析得到的题目元数据抽取极简题目消息，供持久化与后续网站使用。
+
+    仅保留识别题目所需的字段（题号、标题、题型、选项、是否必填），
+    不含运行时提交所需的 provider 内部 ID 等细节。
+    """
+    infos: list[QuestionInfo] = []
+    for item in questions:
+        infos.append(
+            QuestionInfo(
+                num=int(item.num or 0),
+                title=item.title or "",
+                question_type=str(item.type_code),
+                options=list(getattr(item, "option_texts", None) or []),
+                required=bool(item.required),
+            )
+        )
+    return infos
 
 
 def build_runtime_config_snapshot(

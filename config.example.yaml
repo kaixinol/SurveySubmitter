@@ -71,10 +71,22 @@ execution:
 # ---------------------------------------------------------------------------
 # Answer configuration
 # ---------------------------------------------------------------------------
+# survey_questions is the minimal question catalog persisted for the website
+# to read and generate answering config from. It is populated automatically
+# when you run the headless/dry-run generator (num/title/type_code/options/
+# required only). The full survey definition is NOT persisted — it is
+# re-parsed at runtime from the survey URL.
+#
+# survey_questions:
+#   - num: 1
+#     title: "Your gender"
+#     question_type: "single"
+#     options: ["Male", "Female", "Other", "Prefer not to say"]
+#     required: true
+#
 # question_entries holds the per-question answering strategy (probabilities,
 # fill texts, weights, ...). It is populated automatically when you export a
-# config from the GUI or run the headless/dry-run generator. questions_info is
-# no longer persisted (the survey definition is re-parsed at runtime).
+# config from the GUI or run the headless/dry-run generator.
 #
 # question_entries:
 #   - question_num: 1
@@ -85,5 +97,6 @@ execution:
 #     ...
 
 answer_config:
+  survey_questions: []
   question_entries: []
   answer_rules: []

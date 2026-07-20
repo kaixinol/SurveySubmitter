@@ -169,7 +169,22 @@ class ExecutionSection(BaseConfigModel):
         return _normalize_user_agent_ratios(v)
 
 
+class QuestionInfo(BaseConfigModel):
+    """极简题目消息，持久化在配置中，供后续网站读取并生成作答配置。
+
+    仅保留识别题目所需的精简字段，与运行时完整元数据
+    (:class:`survey_submitter.providers.contracts.SurveyQuestionMeta`) 区分开。
+    """
+
+    num: int
+    title: str = ""
+    question_type: str = ""
+    options: list[str] = []
+    required: bool = False
+
+
 class AnswerConfigSection(BaseConfigModel):
+    survey_questions: list[QuestionInfo] = []
     question_entries: list[QuestionEntry] = []
     answer_rules: list[dict[str, Any]] = []
 
