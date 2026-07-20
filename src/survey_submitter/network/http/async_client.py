@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import atexit
-import logging
 import threading
 import time
 from dataclasses import dataclass
@@ -10,7 +9,7 @@ from typing import Any, Awaitable, Callable, Literal, overload
 
 import httpx
 
-from survey_submitter.logging.log_utils import log_suppressed_exception
+from loguru import logger
 from survey_submitter.network.http.client import _CLIENT_LIMITS, _normalize_timeout, _resolve_proxy
 
 _MAX_CLIENTS = 20
@@ -79,9 +78,7 @@ class _AsyncStreamResponse:
             try:
                 await self._release()
             except Exception as exc:
-                log_suppressed_exception(
-                    "_AsyncStreamResponse.aclose release()", exc, level=logging.WARNING
-                )
+                logger.warning(f"_AsyncStreamResponse.aclose release() failed: {exc}")
 
 
 class _AsyncClientManager:
@@ -142,9 +139,7 @@ class _AsyncClientManager:
             try:
                 await client.aclose()
             except Exception as exc:
-                log_suppressed_exception(
-                    "_AsyncClientManager._close_clients client.aclose()", exc, level=logging.WARNING
-                )
+                logger.warning(f"_AsyncClientManager._close_clients client.aclose() failed: {exc}")
 
     def acquire(
         self,
@@ -249,9 +244,7 @@ def close() -> None:
             return
         loop.create_task(_client_manager.close())
     except Exception as exc:
-        log_suppressed_exception(
-            "async_http_client.close _client_manager.close()", exc, level=logging.WARNING
-        )
+        logger.warning(f"async_http_client.close _client_manager.close() failed: {exc}")
 
 
 atexit.register(close)

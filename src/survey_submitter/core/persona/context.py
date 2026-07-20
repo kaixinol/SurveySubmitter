@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import logging
 import threading
 from dataclasses import dataclass, field
+
+from loguru import logger
 
 from survey_submitter.core.persona.generator import get_current_persona
 from survey_submitter.core.questions.types import QuestionType
@@ -91,12 +92,8 @@ def apply_persona_boost(
         for keyword in all_keywords:
             if keyword in text_lower:
                 boosted[i] *= PERSONA_BOOST_FACTOR
-                logging.info(
-                    "画像约束：选项[%d]「%s」匹配关键词「%s」，权重 x%.1f",
-                    i,
-                    text[:20],
-                    keyword,
-                    PERSONA_BOOST_FACTOR,
+                logger.info(
+                    f"画像约束：选项[{i}]「{text[:20]}」匹配关键词「{keyword}」，权重 x{PERSONA_BOOST_FACTOR:.1f}"
                 )
                 break
     return boosted

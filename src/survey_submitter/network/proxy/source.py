@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import logging
+from loguru import logger
 import re
 import threading
 
@@ -106,7 +106,7 @@ def set_proxy_source(source: str) -> None:
     normalized = normalize_proxy_source(source)
     with _config_lock:
         _current_proxy_source = normalized
-    logging.info(f"代理源已切换为: {normalized}")
+    logger.info(f"代理源已切换为: {normalized}")
 
 
 def get_proxy_source() -> str:
@@ -190,20 +190,12 @@ def set_proxy_occupy_minute_by_answer_duration(
     with _config_lock:
         _proxy_occupy_minute = minute
     if normalized_provider == SURVEY_PROVIDER_WJX:
-        logging.info(
-            "问卷星代理 minute 已固定为 %s（min=%s秒, max=%s秒）",
-            minute,
-            min_seconds,
-            max_seconds,
+        logger.info(
+            f"问卷星代理 minute 已固定为 {minute}（min={min_seconds}秒, max={max_seconds}秒）"
         )
     else:
-        logging.info(
-            "已根据作答时长更新代理 minute=%s（provider=%s, min=%s秒, max=%s秒, ttl=%s秒）",
-            minute,
-            normalized_provider or "unknown",
-            min_seconds,
-            max_seconds,
-            required_seconds,
+        logger.info(
+            f"已根据作答时长更新代理 minute={minute}（provider={normalized_provider or 'unknown'}, min={min_seconds}秒, max={max_seconds}秒, ttl={required_seconds}秒）"
         )
     return minute
 

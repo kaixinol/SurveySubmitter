@@ -10,7 +10,7 @@ spec, and constructs the ExecutionConfig template with probabilities.
 from __future__ import annotations
 
 import copy
-import logging
+from loguru import logger
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -49,8 +49,6 @@ from survey_submitter.providers.wjx.parser import (
     is_enterprise_unavailable_survey_page,
     is_stopped_survey_page,
 )
-
-logger = logging.getLogger(__name__)
 
 # Maximum number of concurrent HTTP threads.
 # Previously imported from survey_submitter.constants; defined here to keep
@@ -154,7 +152,7 @@ def _verify_wjx_survey_is_answerable(config: RuntimeConfig, survey_provider: str
         response = http_client.get(url, timeout=8, headers=DEFAULT_HTTP_HEADERS, proxies={})
         response.raise_for_status()
     except (http_client.HTTPError, OSError, TimeoutError):
-        logger.info("启动前问卷星状态复查失败，已放行到运行时处理", exc_info=True)
+        logger.opt(exception=True).info("启动前问卷星状态复查失败，已放行到运行时处理")
         return
     html = str(getattr(response, "text", "") or "")
     if is_stopped_survey_page(html):
@@ -314,7 +312,7 @@ def prepare_execution_artifacts(
             survey_provider=survey_provider,
         )
     except Exception:
-        logger.debug("同步随机IP占用时长失败", exc_info=True)
+        logger.opt(exception=True).debug("同步随机IP占用时长失败")
 
     execution_config = _build_execution_config_template(
         config,

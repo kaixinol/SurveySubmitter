@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import logging
+from loguru import logger
 import random
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -49,9 +49,9 @@ def _safe_state_operation(operation: Callable[[], _T], operation_name: str) -> N
     try:
         operation()
     except (AttributeError, ValueError, RuntimeError) as exc:
-        logging.debug("%s 失败：%s", operation_name, exc, exc_info=True)
+        logger.opt(exception=True).debug(f"{operation_name} 失败：{exc}")
     except Exception:
-        logging.debug("%s 失败", operation_name, exc_info=True)
+        logger.opt(exception=True).debug(f"{operation_name} 失败")
 
 
 def _get_session_proxy_address(session: object) -> str | None:
@@ -73,13 +73,13 @@ def _handle_ai_runtime_error_standalone(
 ) -> bool:
     _ = state
     if is_ai_timeout_runtime_error(exc):
-        logging.warning("AI 调用超时，本轮丢弃并继续下一轮：%s", exc)
+        logger.warning(f"AI 调用超时，本轮丢弃并继续下一轮：{exc}")
         status_text = "AI超时"
         log_message = (
             f"AI调用超时，本轮按失败处理；连续达到 {AI_FILL_FAIL_THRESHOLD} 次才停止：{exc}"
         )
     else:
-        logging.warning("AI 填空失败，本轮丢弃并继续下一轮：%s", exc, exc_info=True)
+        logger.opt(exception=True).warning(f"AI 填空失败，本轮丢弃并继续下一轮：{exc}")
         status_text = "AI失败"
         log_message = (
             f"AI填空失败，本轮按失败处理；连续达到 {AI_FILL_FAIL_THRESHOLD} 次才停止：{exc}"
@@ -97,7 +97,7 @@ def _handle_ai_runtime_error_standalone(
         submission_failed=False,
     )
     if stopped:
-        logging.error("AI 连续失败达到阈值，任务停止：%s", exc, exc_info=True)
+        logger.opt(exception=True).error(f"AI 连续失败达到阈值，任务停止：{exc}")
     return bool(stopped)
 
 
@@ -109,7 +109,7 @@ def _handle_submission_verification_standalone(
     state: ExecutionState,
 ) -> bool:
     message = str(exc or "").strip() or "提交触发智能验证，请启用随机 IP 后再试"
-    logging.warning("会话[%s]触发提交智能验证：%s", thread_name, message)
+    logger.warning(f"会话[{thread_name}]触发提交智能验证：{message}")
 
     _safe_state_operation(
         lambda: state.end_round(thread_name),
@@ -137,7 +137,7 @@ def _handle_survey_provider_unavailable_standalone(
     state: ExecutionState,
 ) -> bool:
     message = str(exc or "").strip() or "问卷当前不可填写"
-    logging.warning("会话[%s]发现问卷不可继续：%s", thread_name, message)
+    logger.warning(f"会话[{thread_name}]发现问卷不可继续：{message}")
 
     _safe_state_operation(
         lambda: state.end_round(thread_name),
@@ -181,7 +181,7 @@ class _AsyncRoundResources:
         try:
             self.state.reset_pending_distribution(self.slot_label)
         except Exception:
-            logging.debug("重置本轮比例统计缓存失败", exc_info=True)
+            logger.opt(exception=True).debug("重置本轮比例统计缓存失败")
 
         while True:
             if self.stop_requested():
@@ -208,11 +208,8 @@ class _AsyncRoundResources:
                 return False
 
             if reverse_fill_sample.status == "acquired" and reverse_fill_sample.sample is not None:
-                logging.info(
-                    "会话[%s]已锁定反填样本：数据行=%s 工作表行=%s",
-                    self.slot_label,
-                    reverse_fill_sample.sample.data_row_number,
-                    reverse_fill_sample.sample.worksheet_row_number,
+                logger.info(
+                    f"会话[{self.slot_label}]已锁定反填样本：数据行={reverse_fill_sample.sample.data_row_number} 工作表行={reverse_fill_sample.sample.worksheet_row_number}"
                 )
             return True
 
@@ -223,7 +220,7 @@ class _AsyncRoundResources:
                 submission_failed=submission_failed,
             )
         except Exception:
-            logging.debug("释放轮次资源失败", exc_info=True)
+            logger.opt(exception=True).debug("释放轮次资源失败")
 
 
 class AsyncSlotRunner:
@@ -274,7 +271,7 @@ class AsyncSlotRunner:
         try:
             self.state.update_thread_status(self.slot_label, status_text, running=running)
         except Exception:
-            logging.debug("更新 slot 状态失败：%s", status_text, exc_info=True)
+            logger.opt(exception=True).debug(f"更新 slot 状态失败：{status_text}")
 
     def _update_step(self, status_text: str) -> None:
         try:
@@ -282,7 +279,7 @@ class AsyncSlotRunner:
                 self.slot_label, 0, 0, status_text=status_text, running=True
             )
         except Exception:
-            logging.debug("更新 slot 步骤失败：%s", status_text, exc_info=True)
+            logger.opt(exception=True).debug(f"更新 slot 步骤失败：{status_text}")
 
     async def _update_http_step(self, status_text: str) -> None:
         await update_http_submit_step(self.state, self.slot_label, status_text)
@@ -327,7 +324,7 @@ class AsyncSlotRunner:
             try:
                 terminal_category = str(self.state.get_terminal_stop_snapshot()[0] or "").strip()
             except Exception:
-                logging.debug("获取终端停止快照失败", exc_info=True)
+                logger.opt(exception=True).debug("获取终端停止快照失败")
                 terminal_category = ""
             if terminal_category == "target_reached":
                 return "已完成"
@@ -396,7 +393,7 @@ class AsyncSlotRunner:
             try:
                 _mark_proxy_temporarily_bad(self.state, self.proxy_session.proxy_address)
             except Exception:
-                logging.debug("标记风控代理失败", exc_info=True)
+                logger.opt(exception=True).debug("标记风控代理失败")
             stopped = self.stop_policy.record_failure(
                 self.stop_proxy,
                 thread_name=self.slot_label,
@@ -432,7 +429,7 @@ class AsyncSlotRunner:
             try:
                 _discard_unresponsive_proxy(self.state, self.proxy_session.proxy_address)
             except Exception:
-                logging.debug("废弃 HTTP 连接失败代理失败", exc_info=True)
+                logger.opt(exception=True).debug("废弃 HTTP 连接失败代理失败")
         return self._handle_proxy_unavailable(
             status_text="代理连接失败" if self.proxy_session.proxy_address else "网络请求失败",
             log_message=f"HTTP 请求失败，本轮按失败处理：{exc}",
@@ -450,7 +447,7 @@ class AsyncSlotRunner:
 
     def _block_http_runtime(self, reason: str) -> None:
         message = str(reason or "").strip() or "当前问卷不支持纯 HTTP 提交"
-        logging.error("会话[%s]已阻止纯 HTTP 提交：%s", self.slot_label, message)
+        logger.error(f"会话[{self.slot_label}]已阻止纯 HTTP 提交：{message}")
         self._update_status("纯 HTTP 不支持", running=False)
         self.stop_policy.record_failure(
             self.stop_proxy,
@@ -514,7 +511,7 @@ class AsyncSlotRunner:
                 self.slot_label, status_text=self._resolve_finished_status_text()
             )
         except Exception:
-            logging.debug("阻止纯 HTTP 提交后的收尾状态更新失败", exc_info=True)
+            logger.opt(exception=True).debug("阻止纯 HTTP 提交后的收尾状态更新失败")
         return True
 
     def _finalize_http_runtime(self) -> None:
@@ -524,7 +521,7 @@ class AsyncSlotRunner:
                 self.slot_label, status_text=self._resolve_finished_status_text()
             )
         except Exception:
-            logging.debug("HTTP slot 收尾状态更新失败", exc_info=True)
+            logger.opt(exception=True).debug("HTTP slot 收尾状态更新失败")
 
     async def _run_http_round_attempt(self) -> _RoundOutcome:
         try:
@@ -555,7 +552,7 @@ class AsyncSlotRunner:
         except Exception as exc:
             if self.run_context.stop_requested():
                 return _RoundOutcome(requeue=False, stop=True)
-            logging.exception("HTTP 会话[%s]运行异常", self.slot_label)
+            logger.exception(f"HTTP 会话[{self.slot_label}]运行异常")
             if self.stop_policy.record_failure(
                 self.stop_proxy,
                 thread_name=self.slot_label,

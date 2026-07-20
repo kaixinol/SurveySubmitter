@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import logging
 import random
+
+from loguru import logger
 
 _WARNED_PROB_MISMATCH: set[int] = set()
 
@@ -32,11 +33,8 @@ def _resolve_rule_sets(
     overlap = blocked.intersection(required)
     if overlap:
         blocked -= set(required)
-        logging.warning(
-            "第%d题（多选）：条件规则[%s]同时将选项%s标记为必选和禁选，已按必选优先处理。",
-            current,
-            rule_id or "-",
-            sorted(overlap),
+        logger.warning(
+            f"第{current}题（多选）：条件规则[{rule_id or '-'}]同时将选项{sorted(overlap)}标记为必选和禁选，已按必选优先处理。"
         )
     return required, blocked
 
@@ -54,12 +52,8 @@ def _apply_rule_constraints(
 ) -> list[int]:
     required = _normalize_selected_indices(required_indices, option_count)
     if len(required) > max_allowed:
-        logging.warning(
-            "第%d题（多选）：条件规则[%s]要求必选 %d 项，但题目最多只能选 %d 项，已截断必选集合。",
-            current,
-            rule_id or "-",
-            len(required),
-            max_allowed,
+        logger.warning(
+            f"第{current}题（多选）：条件规则[{rule_id or '-'}]要求必选 {len(required)} 项，但题目最多只能选 {max_allowed} 项，已截断必选集合。"
         )
         required = required[:max_allowed]
 
@@ -97,12 +91,8 @@ def _apply_rule_constraints(
         fill_pool = priority + fallback
         resolved.extend(fill_pool[:needed])
         if len(resolved) < min_required:
-            logging.warning(
-                "第%d题（多选）：条件规则[%s]生效后可用选项不足，要求最少选 %d 项，实际最多可选 %d 项。",
-                current,
-                rule_id or "-",
-                min_required,
-                len(resolved),
+            logger.warning(
+                f"第{current}题（多选）：条件规则[{rule_id or '-'}]生效后可用选项不足，要求最少选 {min_required} 项，实际最多可选 {len(resolved)} 项。"
             )
 
     if len(resolved) > max_allowed:

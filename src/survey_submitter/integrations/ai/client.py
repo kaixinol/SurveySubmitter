@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import logging
+from loguru import logger
 
 from survey_submitter.core.task import ExecutionState
 from survey_submitter.integrations.ai.protocols import (
@@ -20,8 +20,6 @@ from survey_submitter.integrations.ai.settings import (
     get_default_system_prompt,
     save_ai_settings,
 )
-
-logger = logging.getLogger(__name__)
 
 __all__ = [
     "CUSTOM_API_PROTOCOLS",
@@ -86,8 +84,8 @@ async def atest_connection() -> str:
             preview = " | ".join(result[:3])
         else:
             preview = str(result)
-        logger.info("AI 连接测试成功 | preview=%s", preview[:80])
+        logger.info(f"AI 连接测试成功 | preview={preview[:80]}")
         return f"连接成功！AI 回复: {preview[:50]}..."
     except Exception as exc:
-        logger.error("AI 连接测试失败: %s", exc)
+        logger.error(f"AI 连接测试失败: {exc}")
         return f"连接失败: {exc}"

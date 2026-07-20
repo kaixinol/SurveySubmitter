@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import atexit
-import logging
 import threading
 import time
 from dataclasses import dataclass
@@ -11,7 +10,7 @@ from urllib.parse import urlsplit
 import httpx
 from packaging.version import InvalidVersion, Version
 
-from survey_submitter.logging.log_utils import log_suppressed_exception
+from loguru import logger
 
 T = TypeVar("T")
 
@@ -19,7 +18,7 @@ T = TypeVar("T")
 def _safe_suppress_and_log(
     operation: Callable[[], T],
     operation_name: str,
-    level: int = logging.WARNING,
+    level: str = "WARNING",
 ) -> T | None:
     """Execute an operation safely, logging any exceptions without raising.
 
@@ -28,7 +27,7 @@ def _safe_suppress_and_log(
     try:
         return operation()
     except Exception as exc:
-        log_suppressed_exception(operation_name, exc, level=level)
+        logger.log(level, f"{operation_name} failed: {exc}")
         return None
 
 
@@ -374,9 +373,7 @@ def prewarm() -> None:
             )
             _PREWARMED = True
         except (httpx.HTTPError, OSError) as exc:
-            log_suppressed_exception(
-                "http_client.prewarm httpx.Client()", exc, level=logging.WARNING
-            )
+            logger.warning(f"http_client.prewarm httpx.Client() failed: {exc}")
         finally:
             if temp_client is not None:
                 _safe_suppress_and_log(

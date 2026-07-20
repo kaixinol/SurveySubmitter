@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import logging
+from loguru import logger
 import math
 import time
 from typing import Callable, TypeVar
@@ -23,11 +23,11 @@ def _safe_cleanup_call(
     try:
         return operation()
     except (AttributeError, ValueError, TypeError, RuntimeError) as exc:
-        logging.debug("%s 失败：%s", operation_name, exc, exc_info=True)
+        logger.opt(exception=True).debug(f"{operation_name} 失败：{exc}")
         return None
     except Exception:
         # Catch-all for unexpected errors in cleanup operations
-        logging.debug("%s 失败", operation_name, exc_info=True)
+        logger.opt(exception=True).debug(f"{operation_name} 失败")
         return None
 
 
@@ -79,18 +79,16 @@ class RunStopPolicy:
                 consecutive_failures = int(self.state.cur_fail or 0)
             message = str(log_message or "").strip()
             if message:
-                logging.warning("%s", message)
+                logger.warning(f"{message}")
             threshold_enabled = bool(
                 self.config.stop_on_fail or force_stop_when_threshold_reached
             )
             if threshold_enabled:
-                logging.warning(
-                    "已连续失败%s次，连续失败达到%s次将强制停止",
-                    consecutive_failures,
-                    stop_threshold,
+                logger.warning(
+                    f"已连续失败{consecutive_failures}次，连续失败达到{stop_threshold}次将强制停止"
                 )
             else:
-                logging.warning("已连续失败%s次（失败止损已关闭）", consecutive_failures)
+                logger.warning(f"已连续失败{consecutive_failures}次（失败止损已关闭）")
         if thread_name:
             _safe_cleanup_call(
                 lambda: self.state.end_round(
@@ -105,7 +103,7 @@ class RunStopPolicy:
             )
         if self.state.is_round_target_unreachable():
             message = "反填样本已耗尽，剩余样本不足以完成目标份数"
-            logging.critical("%s", message)
+            logger.critical(f"{message}")
             self.state.mark_terminal_stop(
                 "reverse_fill_exhausted",
                 failure_reason=FailureReason.FILL_FAILED.value,
@@ -118,7 +116,7 @@ class RunStopPolicy:
             self.config.stop_on_fail or force_stop_when_threshold_reached
         )
         if threshold_enabled and consecutive_failures >= stop_threshold:
-            logging.critical("连续失败次数过多，强制停止，请检查配置是否正确")
+            logger.critical("连续失败次数过多，强制停止，请检查配置是否正确")
             self.state.mark_terminal_stop(
                 terminal_stop_category,
                 failure_reason=failure_reason.value,
@@ -149,15 +147,12 @@ class RunStopPolicy:
                 self.state.cur_fail = 0
                 self.state.proxy_unavailable_fail_count = 0
                 record_thread_success = True
-                logging.info(
-                    "[OK] 已填写%s份 - 连续失败%s次 - %s",
-                    self.state.cur_num,
-                    self.state.cur_fail,
-                    time.strftime("%H:%M:%S", time.localtime(time.time())),
+                logger.info(
+                    f"[OK] 已填写{self.state.cur_num}份 - 连续失败{self.state.cur_fail}次 - {time.strftime('%H:%M:%S', time.localtime(time.time()))}"
                 )
                 if previous_consecutive_failures > 0:
-                    logging.info(
-                        "提交成功，连续失败计数已清零（重置前=%s）", previous_consecutive_failures
+                    logger.info(
+                        f"提交成功，连续失败计数已清零（重置前={previous_consecutive_failures}）"
                     )
                 if self.config.target_num > 0 and self.state.cur_num >= self.config.target_num:
                     trigger_target_stop = True

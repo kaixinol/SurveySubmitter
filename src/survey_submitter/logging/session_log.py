@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import logging
-import os
 import shutil
 import threading
 from datetime import datetime
 from pathlib import Path
+
+from loguru import logger
 
 from survey_submitter.constants import LOG_FORMAT
 from survey_submitter.constants import (
@@ -20,78 +20,58 @@ from survey_submitter.io.config.settings_store import (
     get_bool_setting,
     get_int_setting,
 )
+from survey_submitter.logging.log_utils import _safe_internal_log
 from survey_submitter.system.paths import get_user_logs_directory
 
-
-_SESSION_LOG_HANDLER: logging.Handler | None = None
+_SESSION_LOG_SINK_ID: int | None = None
 _SESSION_LOG_PATH = ""
 _SESSION_LOG_LOCK = threading.Lock()
-_SESSION_LOG_BACKFILLED = False
 _DELETE_SESSION_LOG_ON_SHUTDOWN = False
 
 
 def _create_session_log_file_path() -> str:
     logs_dir = get_user_logs_directory()
-    os.makedirs(logs_dir, exist_ok=True)
+    Path(logs_dir).mkdir(parents=True, exist_ok=True)
     file_name = datetime.now().strftime("session_%Y%m%d_%H%M%S.log")
     return str(Path(logs_dir) / file_name)
 
 
-def _backfill_session_log_from_buffer() -> None:
-    import survey_submitter.logging.log_utils as _log_utils
+def _ensure_session_log_sink() -> str:
+    global _SESSION_LOG_SINK_ID, _SESSION_LOG_PATH
 
-    global _SESSION_LOG_BACKFILLED
-    if _SESSION_LOG_BACKFILLED or not _SESSION_LOG_PATH:
-        return
-
-
-    records = _log_utils.LOG_BUFFER_HANDLER.get_records()
-    if not records:
-        _SESSION_LOG_BACKFILLED = True
-        return
-    try:
-        with open(_SESSION_LOG_PATH, "a", encoding="utf-8") as file:
-            for entry in records:
-                text = str(getattr(entry, "text", "") or "")
-                if text:
-                    file.write(text)
-                    file.write("\n")
-        _SESSION_LOG_BACKFILLED = True
-    except OSError as exc:
-        _log_utils._safe_internal_log("backfill session log from buffer failed", exc)
-
-
-def _ensure_session_log_handler(root_logger: logging.Logger | None = None) -> str:
-    import survey_submitter.logging.log_utils as _log_utils
-
-    global _SESSION_LOG_HANDLER, _SESSION_LOG_PATH
-
-    logger = root_logger or logging.getLogger()
     with _SESSION_LOG_LOCK:
-        if _SESSION_LOG_HANDLER is not None and _SESSION_LOG_PATH:
+        if _SESSION_LOG_SINK_ID is not None and _SESSION_LOG_PATH:
             return _SESSION_LOG_PATH
 
         session_log_path = _create_session_log_file_path()
-        handler = _log_utils.AsyncFileHandler(session_log_path, encoding="utf-8")
-        handler.setFormatter(logging.Formatter(LOG_FORMAT, datefmt="%Y-%m-%d %H:%M:%S"))
-        logger.addHandler(handler)
-        _SESSION_LOG_HANDLER = handler
+        sink_id = logger.add(
+            session_log_path,
+            format=LOG_FORMAT,
+            level="DEBUG",
+            encoding="utf-8",
+            rotation="10 MB",
+        )
+        _SESSION_LOG_SINK_ID = sink_id
         _SESSION_LOG_PATH = session_log_path
-        _backfill_session_log_from_buffer()
         return session_log_path
 
 
-def flush_session_log_file() -> None:
-    import survey_submitter.logging.log_utils as _log_utils
+def _remove_session_log_sink() -> None:
+    global _SESSION_LOG_SINK_ID
 
-    handler = _SESSION_LOG_HANDLER
-    if handler is None:
+    sink_id = _SESSION_LOG_SINK_ID
+    if sink_id is None:
         return
     with _SESSION_LOG_LOCK:
         try:
-            handler.flush()
-        except OSError as exc:
-            _log_utils._safe_internal_log("flush_session_log_file failed", exc)
+            logger.remove(sink_id)
+        except (ValueError, KeyError):
+            pass
+        _SESSION_LOG_SINK_ID = None
+
+
+def flush_session_log_file() -> None:
+    pass
 
 
 def get_current_session_log_path() -> str:
@@ -108,12 +88,11 @@ def _ensure_logs_dir(runtime_directory: str) -> str:
         logs_dir = normalized
     else:
         logs_dir = str(Path(normalized) / "logs")
-    os.makedirs(logs_dir, exist_ok=True)
+    Path(logs_dir).mkdir(parents=True, exist_ok=True)
     return logs_dir
 
 
 def get_auto_save_log_settings() -> tuple[bool, int]:
-
     settings = app_settings()
     enabled = get_bool_setting(settings.value(AUTO_SAVE_LOGS_SETTING_KEY), DEFAULT_AUTO_SAVE_LOGS)
     max_keep = (
@@ -130,36 +109,32 @@ def get_auto_save_log_settings() -> tuple[bool, int]:
 
 
 def prune_session_log_files(runtime_directory: str, keep_count: int) -> int:
-    import survey_submitter.logging.log_utils as _log_utils
-
     logs_dir = _ensure_logs_dir(runtime_directory)
     keep_count = max(1, int(keep_count))
     candidates: list[tuple[float, str]] = []
-    for name in os.listdir(logs_dir):
+    for path in Path(logs_dir).iterdir():
+        name = path.name
         if not (name.startswith("session_") and name.endswith(".log")):
             continue
-        path = str(Path(logs_dir) / name)
-        if not Path(path).is_file():
+        if not path.is_file():
             continue
         try:
-            candidates.append((Path(path).stat().st_mtime, path))
+            candidates.append((path.stat().st_mtime, str(path)))
         except OSError:
             continue
     candidates.sort(key=lambda item: (item[0], item[1]), reverse=True)
 
     removed = 0
-    for _mtime, path in candidates[keep_count:]:
+    for _mtime, path_str in candidates[keep_count:]:
         try:
-            os.remove(path)
+            Path(path_str).unlink()
             removed += 1
         except OSError as exc:
-            _log_utils._safe_internal_log(f"prune_session_log_files failed: {path}", exc)
+            _safe_internal_log(f"prune_session_log_files failed: {path_str}", exc)
     return removed
 
 
 def finalize_session_log_persistence(runtime_directory: str) -> None:
-    import survey_submitter.logging.log_utils as _log_utils
-
     global _DELETE_SESSION_LOG_ON_SHUTDOWN
 
     enabled, keep_count = get_auto_save_log_settings()
@@ -167,61 +142,32 @@ def finalize_session_log_persistence(runtime_directory: str) -> None:
     last_session_path = str(Path(logs_dir) / "last_session.log")
 
     if enabled:
-        export_full_log_to_file(
-            runtime_directory,
-            last_session_path,
-            fallback_records=_log_utils.LOG_BUFFER_HANDLER.get_records(),
-        )
+        export_full_log_to_file(runtime_directory, last_session_path)
         prune_session_log_files(runtime_directory, keep_count)
         _DELETE_SESSION_LOG_ON_SHUTDOWN = False
         return
 
     _DELETE_SESSION_LOG_ON_SHUTDOWN = True
     try:
-        if Path(last_session_path).is_file():
-            os.remove(last_session_path)
+        last_session = Path(last_session_path)
+        if last_session.is_file():
+            last_session.unlink()
     except OSError as exc:
-        _log_utils._safe_internal_log(
+        _safe_internal_log(
             "finalize_session_log_persistence failed to remove last_session.log", exc
         )
-
-
-def save_log_records_to_file(
-    records,
-    runtime_directory: str,
-    file_path: str | None = None,
-) -> str:
-
-    if not runtime_directory:
-        raise ValueError("runtime_directory 不能为空")
-    if file_path:
-        parent_dir = str(Path(file_path).parent)
-        if parent_dir:
-            os.makedirs(parent_dir, exist_ok=True)
-    else:
-        logs_dir = _ensure_logs_dir(runtime_directory)
-        file_name = datetime.now().strftime("log_%Y%m%d_%H%M%S.txt")
-        file_path = str(Path(logs_dir) / file_name)
-    text_records = [entry.text for entry in (records or [])]
-    with open(file_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(text_records))
-    return file_path
 
 
 def export_full_log_to_file(
     runtime_directory: str,
     file_path: str | None = None,
-    *,
-    fallback_records=None,
 ) -> str:
-    import survey_submitter.logging.log_utils as _log_utils
-
     if not runtime_directory:
         raise ValueError("runtime_directory 不能为空")
     if file_path:
-        parent_dir = str(Path(file_path).parent)
-        if parent_dir:
-            os.makedirs(parent_dir, exist_ok=True)
+        parent_dir = Path(file_path).parent
+        if parent_dir != Path("."):
+            parent_dir.mkdir(parents=True, exist_ok=True)
     else:
         logs_dir = _ensure_logs_dir(runtime_directory)
         file_name = datetime.now().strftime("log_%Y%m%d_%H%M%S.txt")
@@ -229,26 +175,25 @@ def export_full_log_to_file(
 
     session_log_path = get_current_session_log_path()
     if session_log_path and Path(session_log_path).is_file():
-        flush_session_log_file()
         src = str(Path(session_log_path).resolve())
         dst = str(Path(file_path).resolve())
         if Path(src) == Path(dst):
             return file_path
         try:
-            with (
-                open(src, "r", encoding="utf-8") as source,
-                open(dst, "w", encoding="utf-8") as target,
-            ):
-                shutil.copyfileobj(source, target)
+            shutil.copyfile(src, dst)
             return file_path
         except OSError as exc:
-            _log_utils._safe_internal_log(
-                "export_full_log_to_file fallback to buffer failed to read session log", exc
-            )
+            _safe_internal_log("export_full_log_to_file failed to copy session log", exc)
 
-    records = (
-        fallback_records
-        if fallback_records is not None
-        else _log_utils.LOG_BUFFER_HANDLER.get_records()
-    )
-    return save_log_records_to_file(records, runtime_directory, file_path)
+    Path(file_path).touch()
+    return file_path
+
+
+__all__ = [
+    "export_full_log_to_file",
+    "finalize_session_log_persistence",
+    "flush_session_log_file",
+    "get_auto_save_log_settings",
+    "get_current_session_log_path",
+    "prune_session_log_files",
+]

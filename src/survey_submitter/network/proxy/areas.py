@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 import json
-import logging
 import re
 import threading
 from importlib import resources
@@ -10,6 +9,7 @@ from typing import Any, cast
 
 import survey_submitter.network.http as http_client
 from survey_submitter.constants import DEFAULT_HTTP_HEADERS
+from loguru import logger
 
 _BENEFIT_AREA_INFO_URL = "https://www.juliangip.com/downLoadAreaInfo"
 _BENEFIT_FETCH_TIMEOUT_SECONDS = 10
@@ -299,13 +299,11 @@ def _ensure_benefit_cache(force_refresh: bool = False) -> None:
             supported_areas, city_code_index = _build_benefit_supported_data_from_online()
             if not supported_areas or not city_code_index:
                 raise RuntimeError("benefit 在线地区列表为空")
-            logging.info(
-                "benefit 地区支持列表已从在线 TXT 刷新：省份=%s 城市=%s",
-                len(supported_areas),
-                len(city_code_index),
+            logger.info(
+                f"benefit 地区支持列表已从在线 TXT 刷新：省份={len(supported_areas)} 城市={len(city_code_index)}"
             )
         except Exception as exc:
-            logging.warning("benefit 在线地区查询失败，回退本地地区交集：%s", exc)
+            logger.warning(f"benefit 在线地区查询失败，回退本地地区交集：{exc}")
             supported_areas, city_code_index = _build_benefit_supported_data_from_local_fallback()
         _BENEFIT_SUPPORTED_AREAS_CACHE = supported_areas
         _BENEFIT_CITY_CODE_INDEX_CACHE = city_code_index

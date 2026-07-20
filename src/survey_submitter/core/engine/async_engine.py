@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
-import logging
+from loguru import logger
 import threading
 from typing import Any, Coroutine
 
@@ -68,15 +68,15 @@ async def _run_proxy_prefetch(
             )
             if state.stop_event.is_set() or stop_event.is_set():
                 return
-            merged_count = merge_prefetched_proxy_leases(state, fetched)
+            merge_prefetched_proxy_leases(state, fetched)
         except (http_client.TransportError, OSError, TimeoutError):
-            logging.debug("随机IP异步预热失败", exc_info=True)
+            logger.opt(exception=True).debug("随机IP异步预热失败")
         finally:
             if fetch_lock_acquired:
                 try:
                     release_proxy_fetch_lock(state)
                 except Exception:
-                    logging.debug("释放随机IP异步预热锁失败", exc_info=True)
+                    logger.opt(exception=True).debug("释放随机IP异步预热锁失败")
         if await wait_for_proxy_prefetch_cycle(state, state.stop_event):
             return
 
@@ -161,18 +161,8 @@ class AsyncRuntimeEngine:
             pause_event=self._pause_event,
             status_sink=self._status_bus.emit,
         )
-        logging.info(
-            "任务启动：版本=%s 问卷链接=%s 平台=%s 目标份数=%s 当前进度=%s/%s 并发数=%s 作答时长=%s 随机IP=%s 代理源=%s 运行时=纯HTTP",
-            pkg_version("surveysubmitter"),
-            config.url or "",
-            config.survey_provider or "",
-            config.target_num,
-            state.cur_num,
-            config.target_num,
-            worker_count,
-            _format_seconds_range(config.answer_duration_range_seconds),
-            "开启" if config.random_proxy_ip else "关闭",
-            _format_proxy_source(config.proxy_source),
+        logger.info(
+            f"任务启动：版本={pkg_version('surveysubmitter')} 问卷链接={config.url or ''} 平台={config.survey_provider or ''} 目标份数={config.target_num} 当前进度={state.cur_num}/{config.target_num} 并发数={worker_count} 作答时长={_format_seconds_range(config.answer_duration_range_seconds)} 随机IP={'开启' if config.random_proxy_ip else '关闭'} 代理源={_format_proxy_source(config.proxy_source)} 运行时=纯HTTP"
         )
         stop_event = self._stop_event
         if stop_event is None:
@@ -261,7 +251,7 @@ class AsyncRuntimeEngine:
             try:
                 future.result(timeout=max(0.0, float(timeout or 0.0)))
             except Exception:
-                logging.debug("AsyncRuntimeEngine shutdown 等待运行结束失败", exc_info=True)
+                logger.opt(exception=True).debug("AsyncRuntimeEngine shutdown 等待运行结束失败")
         loop = self._loop
         thread = self._thread
         if loop is not None and not loop.is_closed():

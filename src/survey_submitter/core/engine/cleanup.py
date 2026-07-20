@@ -1,13 +1,11 @@
 from __future__ import annotations
-import logging
-from survey_submitter.logging.log_utils import log_suppressed_exception
 
 import threading
 import time
 from collections import deque
 from typing import Callable
 
-logger = logging.getLogger(__name__)
+from survey_submitter.logging.log_utils import log_suppressed_exception
 
 
 class CleanupRunner:
@@ -39,4 +37,4 @@ class CleanupRunner:
             try:
                 task()
             except Exception as exc:
-                log_suppressed_exception("_worker: task()", exc, level=logging.WARNING)
+                log_suppressed_exception("_worker: task()", exc, level="WARNING")

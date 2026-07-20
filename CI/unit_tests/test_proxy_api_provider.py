@@ -1,14 +1,23 @@
 from __future__ import annotations
 
 import asyncio
-import logging
+import io
 import threading
 
 import pytest
+from loguru import logger
 
 from survey_submitter.core.task import ProxyLease
 from survey_submitter.network.proxy import api as provider
 from survey_submitter.network.proxy import source as proxy_source
+
+
+@pytest.fixture()
+def loguru_sink():
+    buf = io.StringIO()
+    sink_id = logger.add(buf, level="WARNING", format="{message}")
+    yield buf
+    logger.remove(sink_id)
 
 
 class _Response:
@@ -157,7 +166,7 @@ class ProxyApiProviderTests:
             proxy_source.set_proxy_api_override(original_override)
 
     def test_fetch_custom_proxy_batch_warns_when_returned_batch_exceeds_request_by_twenty_percent(
-        self, patch_attrs, caplog
+        self, patch_attrs, loguru_sink
     ) -> None:
         original_source = proxy_source.get_proxy_source()
         original_override = proxy_source.get_custom_proxy_api_override()
@@ -170,15 +179,15 @@ class ProxyApiProviderTests:
 
             patch_attrs((provider.http_client, "aget", fake_get))
 
-            with caplog.at_level(logging.WARNING):
-                leases = asyncio.run(provider.fetch_proxy_batch_async(expected_count=1))
+            leases = asyncio.run(provider.fetch_proxy_batch_async(expected_count=1))
 
             assert [lease.address for lease in leases] == [
                 "http://4.4.4.4:8000",
                 "http://5.5.5.5:8000",
             ]
-            assert "自定义代理API返回 2 个有效代理" in caplog.text
-            assert "当前运行本轮请求 1 个" in caplog.text
+            sink_output = loguru_sink.getvalue()
+            assert "自定义代理API返回 2 个有效代理" in sink_output
+            assert "当前运行本轮请求 1 个" in sink_output
         finally:
             proxy_source.set_proxy_source(original_source)
             proxy_source.set_proxy_api_override(original_override)
@@ -190,27 +199,27 @@ class ProxyApiProviderTests:
             proxy_source.set_proxy_source(proxy_source.PROXY_SOURCE_CUSTOM)
             proxy_source.set_proxy_api_override("https://proxy.example/api")
             stop_signal = threading.Event()
-            popups: list[tuple[str, str]] = []
+            error_logs: list[str] = []
 
             async def fake_get(*_args, **_kwargs):
                 return _Response('{"code": 2, "message": "白名单错误"}')
 
-            patch_attrs(
-                (provider.http_client, "aget", fake_get),
-                (
-                    provider,
-                    "log_popup_error",
-                    lambda title, message: popups.append((title, message)),
-                ),
-            )
-
-            with pytest.raises(provider.ProxyApiFatalError, match="白名单"):
-                asyncio.run(
-                    provider.fetch_proxy_batch_async(expected_count=1, stop_signal=stop_signal)
+            original_logger_error = provider.logger.error
+            provider.logger.error = lambda msg, *args, **kwargs: error_logs.append(str(msg))
+            try:
+                patch_attrs(
+                    (provider.http_client, "aget", fake_get),
                 )
 
-            assert stop_signal.is_set()
-            assert popups == [("代理API错误", "请先添加当前IP到代理商白名单")]
+                with pytest.raises(provider.ProxyApiFatalError, match="白名单"):
+                    asyncio.run(
+                        provider.fetch_proxy_batch_async(expected_count=1, stop_signal=stop_signal)
+                    )
+
+                assert stop_signal.is_set()
+                assert any("白名单" in log for log in error_logs)
+            finally:
+                provider.logger.error = original_logger_error
         finally:
             proxy_source.set_proxy_source(original_source)
             proxy_source.set_proxy_api_override(original_override)

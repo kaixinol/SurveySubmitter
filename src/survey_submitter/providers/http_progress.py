@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import logging
+
+from loguru import logger
 from typing import Any
 
 
@@ -37,7 +38,7 @@ async def update_http_submit_step(
             running=True,
         )
     except Exception:
-        logging.info("更新 HTTP 提交步骤失败：%s", label, exc_info=True)
+        logger.opt(exception=True).info(f"更新 HTTP 提交步骤失败：{label}")
     delay = max(0.0, float(min_visible_seconds or 0.0))
     if delay > 0:
         await asyncio.sleep(delay)
