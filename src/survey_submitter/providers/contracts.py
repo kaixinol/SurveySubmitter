@@ -8,7 +8,7 @@ from survey_submitter.core.questions.types import TypeCode, QuestionType, conver
 from survey_submitter.providers.common import SURVEY_PROVIDER_WJX, normalize_survey_provider
 
 type JumpRule = dict[str, str | int | bool]
-type DisplayCondition = dict[str, str | list[str]]
+type DisplayCondition = dict[str, str | list[str] | int | list[int]]
 type QuestionMedia = dict[str, str | int | None]
 type AttachedOptionSelect = dict[str, str | list[str] | list[float]]
 

@@ -305,7 +305,7 @@ def _extract_display_conditions_from_html(
         option_indices: list[int] = []
         seen_indices = set()
         option_text = str(match.group("options") or "")
-        for raw_option in option_text.split(","):
+        for raw_option in re.split(r"[,;]", option_text):
             try:
                 option_num = int(str(raw_option or "").strip())
             except (ValueError, TypeError):

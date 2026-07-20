@@ -76,7 +76,7 @@ WJX_RELATION_CHUNK_RE = re.compile(
     ^
     (?P<source>\d+)
     \s*,\s*
-    (?P<options>\d+(?:\s*,\s*\d+)*)
+    (?P<options>\d+(?:\s*[,;]\s*\d+)*)
     $
     """,
     re.VERBOSE,
