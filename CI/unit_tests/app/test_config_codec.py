@@ -66,7 +66,7 @@ class ConfigCodecTests:
         )
         payload = serialize_runtime_config(config)
         restored = deserialize_runtime_config(payload)
-        assert payload["execution"]["answer_datetime_window"] == ("2026-02-10 09:00:00", "2026-02-10 10:00:00")  # ty:ignore[not-subscriptable]
+        assert payload["execution"]["answer_datetime_window"] == ("2026-02-10 09:00:00", "2026-02-10 10:00:00")
         assert restored.execution.answer_datetime_window == ("2026-02-10 09:00:00", "2026-02-10 10:00:00")
 
     def test_build_runtime_config_snapshot_returns_detached_copies(self) -> None:

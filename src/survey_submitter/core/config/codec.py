@@ -563,9 +563,9 @@ def _ensure_supported_config_payload(
     return dict(payload)
 
 
-def serialize_runtime_config(config: RuntimeConfig) -> dict[str, object]:
-    payload: dict[str, object] = config.model_dump()
-    answer_config_payload = cast("dict[str, object]", payload["answer_config"])
+def serialize_runtime_config(config: RuntimeConfig) -> dict[str, Any]:
+    payload: dict[str, Any] = config.model_dump()
+    answer_config_payload = cast("dict[str, Any]", payload["answer_config"])
     answer_config_payload["question_entries"] = [
         serialize_question_entry(entry)
         for entry in list(config.answer_config.question_entries or [])
