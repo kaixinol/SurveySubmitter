@@ -540,9 +540,11 @@ def _assemble_question_entry(
         attached_option_selects=(
             normalize_attached_option_selects(
                 attrs.attached_option_selects,
-                config.attached_selects if attrs.q_type == QuestionType.SINGLE else None,
+                config.attached_selects
+                if attrs.q_type in (QuestionType.SINGLE, QuestionType.MULTIPLE)
+                else None,
             )
-            if attrs.q_type == QuestionType.SINGLE
+            if attrs.q_type in (QuestionType.SINGLE, QuestionType.MULTIPLE)
             else []
         ),
         is_location=attrs.is_location,
