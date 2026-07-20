@@ -86,8 +86,8 @@ def infer_reverse_fill_question_type(
     if inferred:
         return inferred
     if entry is not None:
-        return str(entry.question_type or "single").strip() or "single"
-    return "single"
+        return str(entry.question_type or QuestionType.SINGLE).strip() or QuestionType.SINGLE
+    return QuestionType.SINGLE
 
 
 def supports_reverse_fill_runtime(

@@ -4,6 +4,7 @@ from enum import StrEnum
 
 
 class QuestionType(StrEnum):
+    UNKNOWN = "unknown"
     SINGLE = "single"
     MULTIPLE = "multiple"
     TEXT = "text"
@@ -20,20 +21,10 @@ class QuestionType(StrEnum):
     DESCRIPTION = "description"
 
 
-class TypeCode(StrEnum):
-    UNKNOWN = "unknown"
-    SINGLE = "single"
-    MULTIPLE = "multiple"
-    TEXT = "text"
-    MULTI_TEXT = "multi_text"
-    MATRIX = "matrix"
-    SCALE = "scale"
-    SCORE = "score"
-    DROPDOWN = "dropdown"
-    SLIDER = "slider"
-    ORDER = "order"
-    LOCATION = "location"
-    DESCRIPTION = "description"
+# ``TypeCode`` 是 ``QuestionType`` 的别名（``StrEnum`` 为 final 不可子类化，
+# 故以别名方式表达「问卷平台原始题型码 / wire-provenance」语义层）。
+# 两者成员与值完全一致，``TypeCode.X`` 与 ``QuestionType.X`` 等价。
+TypeCode = QuestionType
 
 
 CHOICE_TYPES = frozenset(
@@ -45,42 +36,42 @@ MATRIX_TYPES = frozenset({QuestionType.MATRIX})
 CHOICE_LIKE_TYPES = frozenset({QuestionType.SINGLE, QuestionType.MULTIPLE, QuestionType.DROPDOWN})
 
 
-def convert_wire_type_code(raw: str) -> TypeCode:
-    """Convert numeric wire-format type code to semantic TypeCode."""
+def convert_wire_type_code(raw: str) -> QuestionType:
+    """Convert numeric wire-format type code to semantic QuestionType."""
     match str(raw or "").strip():
         case "3":
-            return TypeCode.SINGLE
+            return QuestionType.SINGLE
         case "4":
-            return TypeCode.MULTIPLE
+            return QuestionType.MULTIPLE
         case "5":
-            return TypeCode.SCORE
+            return QuestionType.SCORE
         case "6":
-            return TypeCode.MATRIX
+            return QuestionType.MATRIX
         case "7":
-            return TypeCode.DROPDOWN
+            return QuestionType.DROPDOWN
         case "8":
-            return TypeCode.SLIDER
+            return QuestionType.SLIDER
         case "9":
-            return TypeCode.MATRIX
+            return QuestionType.MATRIX
         case "11":
-            return TypeCode.ORDER
+            return QuestionType.ORDER
         case "1":
-            return TypeCode.TEXT
+            return QuestionType.TEXT
         case "2":
-            return TypeCode.LOCATION
+            return QuestionType.LOCATION
         case "description":
-            return TypeCode.DESCRIPTION
+            return QuestionType.DESCRIPTION
         case "score":
-            return TypeCode.SCORE
+            return QuestionType.SCORE
         case "scale":
-            return TypeCode.SCALE
+            return QuestionType.SCALE
         case "multi_text":
-            return TypeCode.MULTI_TEXT
+            return QuestionType.MULTI_TEXT
         case _:
             try:
-                return TypeCode(str(raw or "").strip())
+                return QuestionType(str(raw or "").strip())
             except ValueError:
-                return TypeCode.UNKNOWN
+                return QuestionType.UNKNOWN
 
 
 __all__ = [

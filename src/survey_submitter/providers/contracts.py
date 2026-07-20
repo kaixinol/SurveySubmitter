@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Iterable, Mapping, cast
 
 from survey_submitter.core.config.base import BaseConfigModel
-from survey_submitter.core.questions.types import TypeCode, convert_wire_type_code
+from survey_submitter.core.questions.types import TypeCode, QuestionType, convert_wire_type_code
 from survey_submitter.providers.common import SURVEY_PROVIDER_WJX, normalize_survey_provider
 
 type JumpRule = dict[str, str | int | bool]
@@ -239,13 +239,13 @@ def survey_question_meta_to_dict(question: SurveyQuestionMeta) -> dict[str, obje
     return question.model_dump()
 
 
-def _resolve_type_code(normalized: Mapping[str, object]) -> TypeCode:
+def _resolve_type_code(normalized: Mapping[str, object]) -> QuestionType:
     raw = str(normalized.get("type_code") or "unknown").strip()
     return convert_wire_type_code(raw)
 
 
 def _build_common_kwargs(
-    normalized: dict[str, object], type_code: TypeCode, question_number: int
+    normalized: dict[str, object], type_code: QuestionType, question_number: int
 ) -> dict[str, object]:
     unsupported_reason = str(normalized.get("unsupported_reason") or "").strip()
     if bool(normalized.get("unsupported")) and not unsupported_reason:

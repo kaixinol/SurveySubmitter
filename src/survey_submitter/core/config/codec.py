@@ -17,6 +17,7 @@ from survey_submitter.core.reverse_fill import (
     REVERSE_FILL_FORMAT_WJX_TEXT,
 )
 from survey_submitter.core.config.base import BaseConfigModel
+from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.config.schema import (
     AnswerConfigSection,
     ExecutionSection,
@@ -117,6 +118,14 @@ def _coerce_int(value: object, default: int = 0) -> int:
         return default
     except (ValueError, TypeError):
         return default
+
+
+def _normalize_question_type(value: object) -> str:
+    raw = str(value or "").strip() or QuestionType.UNKNOWN
+    try:
+        return str(QuestionType(raw))
+    except ValueError:
+        return str(QuestionType.UNKNOWN)
 
 
 def _as_str(value: object, default: str = "") -> str:
@@ -333,7 +342,7 @@ def deserialize_question_entry(data: dict[str, object]) -> QuestionEntry:
         "distribution_mode": mode_raw,
         "probabilities": probabilities,
         "custom_weights": custom_weights,
-        "question_type": str(normalized_data.get("question_type") or "text").strip(),
+        "question_type": _normalize_question_type(normalized_data.get("question_type")),
         "rows": _coerce_int(normalized_data.get("rows"), 1),
         "option_count": _coerce_int(normalized_data.get("option_count"), 0),
         "survey_provider": normalize_survey_provider(
