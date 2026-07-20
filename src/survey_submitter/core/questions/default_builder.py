@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import dataclasses
 from loguru import logger
-from typing import Any, cast
+from typing import Any, Callable, cast
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.questions.meta_helpers import (
@@ -376,6 +376,63 @@ def _resolve_config_from_existing(
     )
 
 
+# Maps each question type to a resolver returning
+# (probabilities, distribution, custom_weights, texts, option_count).
+_DefaultConfigTuple = tuple[object, str, object, object, int]
+_DefaultConfigResolver = Callable[["_QuestionAttrs", int], _DefaultConfigTuple]
+
+_DEFAULT_CONFIG_DISPATCH: dict[QuestionType, _DefaultConfigResolver] = {
+    QuestionType.SINGLE: lambda _attrs, option_count: (-1, "random", None, None, option_count),
+    QuestionType.DROPDOWN: lambda _attrs, option_count: (-1, "random", None, None, option_count),
+    QuestionType.SCALE: lambda _attrs, option_count: (-1, "random", None, None, option_count),
+    QuestionType.MULTIPLE: (
+        lambda _attrs, option_count: (
+            [DEFAULT_MULTIPLE_PROBABILITY] * option_count,
+            "random",
+            None,
+            None,
+            option_count,
+        )
+    ),
+    QuestionType.MATRIX: lambda _attrs, option_count: (-1, "random", None, None, option_count),
+    QuestionType.ORDER: lambda _attrs, option_count: (-1, "random", None, None, option_count),
+    QuestionType.SCORE: (
+        lambda _attrs, option_count: (
+            list(weights := _build_mid_bias_weights(max(option_count, 2))),
+            "custom",
+            list(weights),
+            None,
+            max(option_count, 2),
+        )
+    ),
+    QuestionType.SLIDER: (
+        lambda attrs, option_count: _resolve_slider_default_config(attrs)
+    ),
+}
+
+
+def _resolve_fallback_default_config(
+    attrs: "_QuestionAttrs", option_count: int
+) -> _DefaultConfigTuple:
+    return ([1.0], "random", None, [DEFAULT_FILL_TEXT], option_count)
+
+
+_DEFAULT_CONFIG_DISPATCH_FALLBACK: _DefaultConfigResolver = _resolve_fallback_default_config
+
+
+def _resolve_slider_default_config(attrs: "_QuestionAttrs") -> _DefaultConfigTuple:
+    min_val = float(attrs.slider_min) if isinstance(attrs.slider_min, (int, float, str)) else 0.0
+    max_val_raw = attrs.slider_max
+    if isinstance(max_val_raw, (int, float, str)):
+        max_val = float(max_val_raw)
+    else:
+        max_val = float(DEFAULT_SLIDER_MAX)
+    if max_val <= min_val:
+        max_val = min_val + DEFAULT_SLIDER_MAX
+    midpoint = min_val + (max_val - min_val) / 2.0
+    return ([midpoint], "custom", [midpoint], None, 1)
+
+
 def _resolve_default_config(
     q: SurveyQuestionMeta,
     attrs: _QuestionAttrs,
@@ -384,53 +441,9 @@ def _resolve_default_config(
     q_type = attrs.q_type
     option_count = attrs.option_count
 
-    if q_type in {QuestionType.SINGLE, QuestionType.DROPDOWN, QuestionType.SCALE}:
-        probabilities: object = -1
-        distribution = "random"
-        custom_weights: object = None
-        texts: object = None
-    elif q_type == QuestionType.SCORE:
-        option_count = max(option_count, 2)
-        weights = _build_mid_bias_weights(option_count)
-        probabilities = list(weights)
-        distribution = "custom"
-        custom_weights = list(weights)
-        texts = None
-    elif q_type == QuestionType.MULTIPLE:
-        probabilities = [DEFAULT_MULTIPLE_PROBABILITY] * option_count
-        distribution = "random"
-        custom_weights = None
-        texts = None
-    elif q_type == QuestionType.MATRIX:
-        probabilities = -1
-        distribution = "random"
-        custom_weights = None
-        texts = None
-    elif q_type == QuestionType.ORDER:
-        probabilities = -1
-        distribution = "random"
-        custom_weights = None
-        texts = None
-    elif q_type == QuestionType.SLIDER:
-        min_val = float(attrs.slider_min) if isinstance(attrs.slider_min, (int, float, str)) else 0.0
-        max_val_raw = attrs.slider_max
-        if isinstance(max_val_raw, (int, float, str)):
-            max_val = float(max_val_raw)
-        else:
-            max_val = float(DEFAULT_SLIDER_MAX)
-        if max_val <= min_val:
-            max_val = min_val + DEFAULT_SLIDER_MAX
-        midpoint = min_val + (max_val - min_val) / 2.0
-        probabilities = [midpoint]
-        distribution = "custom"
-        custom_weights = [midpoint]
-        texts = None
-        option_count = 1
-    else:
-        probabilities = [1.0]
-        distribution = "random"
-        custom_weights = None
-        texts = [DEFAULT_FILL_TEXT]
+    probabilities, distribution, custom_weights, texts, option_count = _DEFAULT_CONFIG_DISPATCH.get(
+        q_type, _DEFAULT_CONFIG_DISPATCH_FALLBACK
+    )(attrs, option_count)
 
     multi_text_blank_modes = (
         _infer_multi_text_blank_modes(q, attrs.text_inputs)

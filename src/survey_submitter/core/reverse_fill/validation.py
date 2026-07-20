@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Callable, cast
 
 from survey_submitter.core.config.schema import RuntimeConfig
 from survey_submitter.core.questions.default_builder import build_default_question_entries
@@ -268,35 +268,52 @@ def _parse_answer_for_row(
     typed_row = cast(Any, raw_row)
     typed_export = cast(Any, export)
     values_by_column = typed_row.values_by_column or {}
+    first_column_value = values_by_column.get(int(getattr(ordered_columns[0], "column_index")))
 
-    if question_type in CHOICE_TYPES:
-        return parse_choice_answer(
+    qtype = QuestionType(str(question_type))
+    parse_dispatch: dict[QuestionType, Callable[[], object]] = {
+        QuestionType.SINGLE: lambda: parse_choice_answer(
             question_num=question_num,
             question_type=question_type,
-            raw_value=values_by_column.get(int(getattr(ordered_columns[0], "column_index"))),
+            raw_value=first_column_value,
             export_format=typed_export.selected_format,
             option_texts=cast(Any, option_texts),
-        )
-    if question_type == QuestionType.TEXT:
-        return parse_text_answer(
+        ),
+        QuestionType.MULTIPLE: lambda: parse_choice_answer(
             question_num=question_num,
-            raw_value=values_by_column.get(int(getattr(ordered_columns[0], "column_index"))),
-        )
-    if question_type == QuestionType.MULTI_TEXT:
-        return parse_multi_text_answer(
+            question_type=question_type,
+            raw_value=first_column_value,
+            export_format=typed_export.selected_format,
+            option_texts=cast(Any, option_texts),
+        ),
+        QuestionType.DROPDOWN: lambda: parse_choice_answer(
+            question_num=question_num,
+            question_type=question_type,
+            raw_value=first_column_value,
+            export_format=typed_export.selected_format,
+            option_texts=cast(Any, option_texts),
+        ),
+        QuestionType.TEXT: lambda: parse_text_answer(
+            question_num=question_num,
+            raw_value=first_column_value,
+        ),
+        QuestionType.MULTI_TEXT: lambda: parse_multi_text_answer(
             question_num=question_num,
             ordered_columns=cast(Any, ordered_columns),
             raw_row=cast(Any, raw_row),
-        )
-    if question_type == QuestionType.MATRIX:
-        return parse_matrix_answer(
+        ),
+        QuestionType.MATRIX: lambda: parse_matrix_answer(
             question_num=question_num,
             ordered_columns=cast(Any, ordered_columns),
             raw_row=cast(Any, raw_row),
             export_format=typed_export.selected_format,
             option_texts=cast(Any, option_texts),
-        )
-    return None
+        ),
+    }
+    parser = parse_dispatch.get(qtype)
+    if parser is None:
+        return None
+    return parser()
 
 
 def _check_question_type_constraints(

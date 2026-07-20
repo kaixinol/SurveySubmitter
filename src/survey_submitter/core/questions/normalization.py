@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import re
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT, DIMENSION_UNGROUPED
 from survey_submitter.core.questions.schema import (
@@ -39,8 +39,6 @@ from survey_submitter.core.questions.utils import (
 )
 from survey_submitter.core.questions.types import (
     QuestionType,
-    TEXT_TYPES,
-    RATING_TYPES,
 )
 from survey_submitter.providers.common import make_provider_question_key
 
@@ -549,8 +547,8 @@ def _handle_text(
     probs: object,
     target: "ExecutionConfig",
     idx_text: int,
-) -> tuple[int, bool]:
-    """Returns (new_idx_text, was_location)."""
+) -> int:
+    """Returns the new text index."""
     is_location = bool(entry.is_location)
     if not is_location:
         mapped_value = ("text", idx_text)
@@ -642,7 +640,90 @@ def _handle_text(
     )
     target.multi_text_blank_ai_flags.append(normalized_blank_ai_flags)
     target.multi_text_blank_int_ranges.append(normalized_blank_int_ranges)
-    return idx_text, is_location
+    return idx_text
+
+
+# ---------------------------------------------------------------------------
+# Per-question-type dispatch table
+# ---------------------------------------------------------------------------
+
+
+# Each handler keeps its own signature; the dispatch table wraps it so the loop
+# only needs a uniform call. `idx` is a mutable holder keyed by question group;
+# wrappers return ``True`` when the loop should ``continue`` (skip remaining work).
+_NormalizationHandler = Callable[
+    [
+        QuestionEntry,
+        int,
+        object,
+        bool,
+        "ExecutionConfig",
+        dict[str, int],
+        bool,
+        list[tuple[int, bool, str]],
+    ],
+    bool,
+]
+
+_NORMALIZATION_DISPATCH: dict[QuestionType, _NormalizationHandler] = {
+    QuestionType.SINGLE: (
+        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
+            "single", _handle_single(e, qn, p, sr, t, idx["single"], rel, cand)
+        )
+        or False
+    ),
+    QuestionType.DROPDOWN: (
+        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
+            "dropdown", _handle_dropdown(e, qn, p, sr, t, idx["dropdown"], rel, cand)
+        )
+        or False
+    ),
+    QuestionType.MULTIPLE: (
+        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
+            "multiple", _handle_multiple(e, qn, p, t, idx["multiple"])
+        )
+        or False
+    ),
+    QuestionType.MATRIX: (
+        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
+            "matrix", _handle_matrix(e, qn, p, sr, t, idx["matrix"], rel, cand)
+        )
+        or False
+    ),
+    QuestionType.SCALE: (
+        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
+            "scale", _handle_scale(e, qn, p, sr, t, idx["scale"], rel, cand)
+        )
+        or False
+    ),
+    QuestionType.SCORE: (
+        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
+            "scale", _handle_scale(e, qn, p, sr, t, idx["scale"], rel, cand)
+        )
+        or False
+    ),
+    QuestionType.SLIDER: (
+        lambda e, qn, p, sr, t, idx, rel, cand: _handle_slider(e, qn, p, t, idx["slider"])[1]
+    ),
+    QuestionType.ORDER: (
+        lambda e, qn, p, sr, t, idx, rel, cand: _handle_order(e, qn, t) or False
+    ),
+    QuestionType.LOCATION: (
+        lambda e, qn, p, sr, t, idx, rel, cand: _handle_location(e, qn, t) or False
+    ),
+    QuestionType.TEXT: (
+        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
+            "text", _handle_text(e, qn, p, t, idx["text"])
+        )
+        or False
+    ),
+    QuestionType.MULTI_TEXT: (
+        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
+            "text", _handle_text(e, qn, p, t, idx["text"])
+        )
+        or False
+    ),
+}
 
 
 # ---------------------------------------------------------------------------
@@ -679,11 +760,19 @@ def configure_probabilities(
     target = ctx
     _init_target_collections(target)
 
-    idx_single = idx_dropdown = idx_multiple = idx_matrix = idx_scale = idx_slider = idx_text = 0
+    idx: dict[str, int] = {
+        "single": 0,
+        "dropdown": 0,
+        "multiple": 0,
+        "matrix": 0,
+        "scale": 0,
+        "slider": 0,
+        "text": 0,
+    }
     reliability_candidates: list[tuple[int, bool, str]] = []
 
-    for idx, entry in enumerate(entries, start=1):
-        question_num = entry.question_num if entry.question_num is not None else idx
+    for idx_num, entry in enumerate(entries, start=1):
+        question_num = entry.question_num if entry.question_num is not None else idx_num
         inferred_count = _infer_option_count(entry)
         if inferred_count and inferred_count != entry.option_count:
             entry.option_count = inferred_count
@@ -700,63 +789,10 @@ def configure_probabilities(
         )
         target.question_strict_ratio_map[question_num] = strict_ratio
 
-        if entry.question_type == QuestionType.SINGLE:
-            idx_single = _handle_single(
-                entry,
-                question_num,
-                probs,
-                strict_ratio,
-                target,
-                idx_single,
-                reliability_mode_enabled,
-                reliability_candidates,
-            )
-        elif entry.question_type == QuestionType.DROPDOWN:
-            idx_dropdown = _handle_dropdown(
-                entry,
-                question_num,
-                probs,
-                strict_ratio,
-                target,
-                idx_dropdown,
-                reliability_mode_enabled,
-                reliability_candidates,
-            )
-        elif entry.question_type == QuestionType.MULTIPLE:
-            idx_multiple = _handle_multiple(entry, question_num, probs, target, idx_multiple)
-        elif entry.question_type == QuestionType.MATRIX:
-            idx_matrix = _handle_matrix(
-                entry,
-                question_num,
-                probs,
-                strict_ratio,
-                target,
-                idx_matrix,
-                reliability_mode_enabled,
-                reliability_candidates,
-            )
-        elif entry.question_type in RATING_TYPES:
-            idx_scale = _handle_scale(
-                entry,
-                question_num,
-                probs,
-                strict_ratio,
-                target,
-                idx_scale,
-                reliability_mode_enabled,
-                reliability_candidates,
-            )
-        elif entry.question_type == QuestionType.SLIDER:
-            idx_slider, should_continue = _handle_slider(
-                entry, question_num, probs, target, idx_slider
-            )
-            if should_continue:
-                continue
-        elif entry.question_type == QuestionType.ORDER:
-            _handle_order(entry, question_num, target)
-        elif entry.question_type == QuestionType.LOCATION:
-            _handle_location(entry, question_num, target)
-        elif entry.question_type in TEXT_TYPES:
-            idx_text, _ = _handle_text(entry, question_num, probs, target, idx_text)
+        handler = _NORMALIZATION_DISPATCH.get(QuestionType(str(entry.question_type)))
+        if handler is None:
+            continue
+        if handler(entry, question_num, probs, strict_ratio, target, idx, reliability_mode_enabled, reliability_candidates):
+            continue
 
     _apply_reliability_fallback(target, reliability_mode_enabled, reliability_candidates)
