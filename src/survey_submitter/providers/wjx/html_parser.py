@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import cast
 
 from survey_submitter.core.questions.types import TypeCode, convert_wire_type_code
@@ -10,9 +11,10 @@ from survey_submitter.providers.contracts import (
 )
 
 try:
-    from bs4 import BeautifulSoup
+    from bs4 import BeautifulSoup, Tag
 except ImportError:
     BeautifulSoup = None  # ty: ignore[invalid-assignment]
+    Tag = None  # ty: ignore[invalid-assignment]
 
 from .html_parser_choice import (
     _extract_choice_attached_selects,
@@ -540,5 +542,73 @@ def parse_survey_questions_from_html(html: str) -> list[dict[str, object]]:
             if question_info is not None:
                 questions_info.append(question_info)
 
+    _propagate_cut_field_display_conditions(container, questions_info)
     _finalize_logic_parse_status(questions_info)
     return questions_info
+
+
+def _propagate_cut_field_display_conditions(
+    container: object, questions_info: list[dict[str, object]]
+) -> None:
+    """问卷星的分区标题（cut field，class='cutfield'）可携带 relation，
+    表示整段（从本分区 qtopic 到下一分区 qtopic 之前）都在该选项下才显示。
+
+    例如“🎓 研究生专属模块” cut field 带 relation='4,3;4'，其下 Q7~Q10 均无
+    自身 relation，需由分区 relation 传播到这些题目，否则显隐逻辑丢失。
+    """
+    if not BeautifulSoup or not isinstance(container, Tag):
+        return
+    cut_fields = container.find_all("div", class_="cutfield", attrs={"qtopic": True})
+    if not cut_fields:
+        return
+
+    blocks: list[tuple[int, int, str]] = []
+    starts = []
+    for cut in cut_fields:
+        qtopic = cut.get("qtopic")
+        if qtopic is None:
+            continue
+        try:
+            starts.append(int(str(qtopic)))
+        except (TypeError, ValueError):
+            continue
+    if not starts:
+        return
+    ordered = sorted(set(starts))
+    relations = {}
+    for cut in cut_fields:
+        qtopic = cut.get("qtopic")
+        relation = str(cut.get("relation") or "").strip()
+        if not qtopic or not relation:
+            continue
+        try:
+            relations[int(str(qtopic))] = relation
+        except (TypeError, ValueError):
+            continue
+    max_topic = max(
+        int(str(q.get("num")))
+        for q in questions_info
+        if str(q.get("num", "")).isdigit()
+    )
+    for i, start in enumerate(ordered):
+        end = (ordered[i + 1] - 1) if i + 1 < len(ordered) else max_topic
+        relation = relations.get(start)
+        if relation:
+            blocks.append((start, end, relation))
+
+    for start, end, relation in blocks:
+        has_cond, conditions = _extract_display_conditions_from_html(
+            SimpleNamespace(get=lambda _k, _r=relation: _r if _k == "relation" else None),
+            start,
+        )
+        if not has_cond:
+            continue
+        for question in questions_info:
+            num = question.get("num")
+            if not isinstance(num, int) or not (start <= num <= end):
+                continue
+            if question.get("has_display_condition"):
+                continue
+            question["has_display_condition"] = True
+            question["display_conditions"] = conditions
+
