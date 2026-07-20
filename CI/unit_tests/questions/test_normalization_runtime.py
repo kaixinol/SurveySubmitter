@@ -16,6 +16,7 @@ from survey_submitter.core.questions.schema import (
     _TEXT_RANDOM_MOBILE_TOKEN,
     _TEXT_RANDOM_NAME,
     _TEXT_RANDOM_NAME_TOKEN,
+    make_question_entry,
 )
 from survey_submitter.providers.contracts import ensure_survey_question_meta
 
@@ -24,7 +25,7 @@ class NormalizationRuntimeTests:
     def test_configure_probabilities_maps_all_supported_question_types(self) -> None:
         ctx = SimpleNamespace()
         entries = [
-            QuestionEntry(
+            make_question_entry(
                 question_type="single",
                 probabilities=[0, 3, 0],
                 option_count=3,
@@ -32,21 +33,21 @@ class NormalizationRuntimeTests:
                 option_fill_texts=["", "补充", None],
                 attached_option_selects=[{"option_index": 1, "weights": [1, 0]}],
             ),
-            QuestionEntry(
+            make_question_entry(
                 question_type="dropdown",
                 probabilities=[1, 1],
                 option_count=2,
                 question_num=2,
                 dimension="满意度",
             ),
-            QuestionEntry(
+            make_question_entry(
                 question_type="multiple",
                 probabilities=[25, 75],
                 option_count=2,
                 question_num=3,
                 option_fill_texts=["A", "B"],
             ),
-            QuestionEntry(
+            make_question_entry(
                 question_type="matrix",
                 probabilities=[[1, 0, 0], [0, 2, 0]],
                 rows=3,
@@ -54,31 +55,31 @@ class NormalizationRuntimeTests:
                 question_num=4,
                 dimension="态度",
             ),
-            QuestionEntry(
+            make_question_entry(
                 question_type="scale",
                 probabilities=[1, 3],
                 option_count=2,
                 question_num=5,
             ),
-            QuestionEntry(
+            make_question_entry(
                 question_type="score", probabilities=[2, 2], option_count=2, question_num=6
             ),
-            QuestionEntry(
+            make_question_entry(
                 question_type="slider",
                 probabilities=[75],
                 option_count=1,
                 question_num=7,
                 distribution_mode="custom",
             ),
-            QuestionEntry(
+            make_question_entry(
                 question_type="slider",
                 probabilities=-1,
                 option_count=1,
                 question_num=8,
                 distribution_mode="random",
             ),
-            QuestionEntry(question_type="order", probabilities=-1, question_num=9),
-            QuestionEntry(
+            make_question_entry(question_type="order", probabilities=-1, question_num=9),
+            make_question_entry(
                 question_type="text",
                 probabilities=[1, 3],
                 texts=["甲", "乙"],
@@ -86,7 +87,7 @@ class NormalizationRuntimeTests:
                 ai_enabled=True,
                 question_title="填空",
             ),
-            QuestionEntry(
+            make_question_entry(
                 question_type="multi_text",
                 probabilities=-1,
                 texts=[],
@@ -96,7 +97,7 @@ class NormalizationRuntimeTests:
                 multi_text_blank_ai_flags=[True, True],
                 multi_text_blank_int_ranges=[[9, 3], []],
             ),
-            QuestionEntry(
+            make_question_entry(
                 question_type="text",
                 probabilities=-1,
                 texts=["位置"],
@@ -135,7 +136,7 @@ class NormalizationRuntimeTests:
     def test_configure_probabilities_builds_provider_question_mapping(self) -> None:
         ctx = SimpleNamespace()
         entries = [
-            QuestionEntry(
+            make_question_entry(
                 question_type="scale",
                 probabilities=[1, 2, 3],
                 option_count=3,
@@ -144,7 +145,7 @@ class NormalizationRuntimeTests:
                 provider_page_id="4",
                 provider_question_id="question-1",
             ),
-            QuestionEntry(
+            make_question_entry(
                 question_type="scale",
                 probabilities=[3, 2, 1],
                 option_count=3,
@@ -168,10 +169,10 @@ class NormalizationRuntimeTests:
     ) -> None:
         ctx = SimpleNamespace()
         entries = [
-            QuestionEntry(
+            make_question_entry(
                 question_type="dropdown", probabilities=[1, 1], option_count=2, question_num=1
             ),
-            QuestionEntry(
+            make_question_entry(
                 question_type="scale", probabilities=[1, 1], option_count=2, question_num=2
             ),
         ]
@@ -200,13 +201,13 @@ class NormalizationRuntimeTests:
             }
         )
         entries = [
-            QuestionEntry(
+            make_question_entry(
                 question_type="single",
                 probabilities=[1, 1, 1, 1, 1],
                 option_count=5,
                 question_num=1,
             ),
-            QuestionEntry(
+            make_question_entry(
                 question_type="single", probabilities=[1, 1], option_count=2, question_num=2
             ),
         ]
@@ -235,7 +236,7 @@ class NormalizationRuntimeTests:
             }
         )
         entries = [
-            QuestionEntry(
+            make_question_entry(
                 question_type="single",
                 probabilities=[1, 1, 1, 1, 1],
                 option_count=5,
@@ -251,19 +252,19 @@ class NormalizationRuntimeTests:
         ("entry", "message"),
         [
             (
-                QuestionEntry(
+                make_question_entry(
                     question_type="single", probabilities=[0, 0], option_count=2, question_num=1
                 ),
                 "所有选项配比均为 0",
             ),
             (
-                QuestionEntry(
+                make_question_entry(
                     question_type="dropdown", probabilities=[0, 0], option_count=2, question_num=2
                 ),
                 "所有选项配比均为 0",
             ),
             (
-                QuestionEntry(
+                make_question_entry(
                     question_type="matrix",
                     probabilities=[[1, 0], [0, 0]],
                     rows=2,
@@ -273,7 +274,7 @@ class NormalizationRuntimeTests:
                 "第 2 行配比全部为 0",
             ),
             (
-                QuestionEntry(
+                make_question_entry(
                     question_type="matrix",
                     probabilities=[0, 0],
                     rows=1,
@@ -283,17 +284,17 @@ class NormalizationRuntimeTests:
                 "矩阵题",
             ),
             (
-                QuestionEntry(
+                make_question_entry(
                     question_type="multiple", probabilities=-1, option_count=2, question_num=5
                 ),
                 "多选题必须提供概率列表",
             ),
             (
-                QuestionEntry(question_type="text", probabilities=-1, texts=[], question_num=6),
+                make_question_entry(question_type="text", probabilities=-1, texts=[], question_num=6),
                 "填空题至少需要一个候选答案",
             ),
             (
-                QuestionEntry(
+                make_question_entry(
                     question_type="text",
                     probabilities=-1,
                     texts=[],
@@ -304,7 +305,7 @@ class NormalizationRuntimeTests:
                 "随机整数范围未设置完整",
             ),
             (
-                QuestionEntry(
+                make_question_entry(
                     question_type="multi_text",
                     probabilities=-1,
                     texts=["x"],
@@ -315,7 +316,7 @@ class NormalizationRuntimeTests:
                 "多项填空题第1个空位",
             ),
             (
-                QuestionEntry(
+                make_question_entry(
                     question_type="single",
                     probabilities=[1, 1],
                     option_count=2,
@@ -346,7 +347,7 @@ class NormalizationRuntimeTests:
         ctx = SimpleNamespace()
         configure_probabilities(
             [
-                QuestionEntry(
+                make_question_entry(
                     question_type="text",
                     probabilities=-1,
                     texts=["原值"],
@@ -366,7 +367,7 @@ class NormalizationRuntimeTests:
 
         configure_probabilities(
             [
-                QuestionEntry(
+                make_question_entry(
                     question_type="text",
                     probabilities=-1,
                     texts=["原值"],

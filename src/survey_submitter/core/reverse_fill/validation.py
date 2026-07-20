@@ -7,7 +7,10 @@ from typing import Any, cast
 
 from survey_submitter.core.config.schema import RuntimeConfig
 from survey_submitter.core.questions.default_builder import build_default_question_entries
-from survey_submitter.core.questions.schema import QuestionEntry, _infer_option_count
+from survey_submitter.core.questions.schema import (
+    QuestionEntry,
+    _infer_option_count,
+)
 from survey_submitter.core.questions.types import CHOICE_TYPES, TEXT_TYPES, QuestionType, TypeCode
 from survey_submitter.core.questions.validation import validate_question_config
 from survey_submitter.core.reverse_fill.parser import (

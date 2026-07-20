@@ -11,7 +11,14 @@ from survey_submitter.core.questions.meta_helpers import (
     normalize_attached_option_selects,
     normalize_fillable_option_indices,
 )
-from survey_submitter.core.questions.schema import QuestionEntry
+from survey_submitter.core.questions.schema import (
+    ChoiceQuestionEntry,
+    LocationQuestionEntry,
+    MultiTextQuestionEntry,
+    QuestionEntry,
+    TextQuestionEntry,
+    entry_type_for_question_type,
+)
 from survey_submitter.core.questions.schema import (
     _TEXT_RANDOM_ID_CARD,
     _TEXT_RANDOM_MOBILE,
@@ -327,6 +334,10 @@ def _resolve_config_from_existing(
     q_type: QuestionType,
 ) -> _ResolvedConfig:
     """Deep-copy configuration values from an existing *QuestionEntry*."""
+    assert isinstance(existing_config, entry_type_for_question_type(q_type))
+    text_entry = existing_config if isinstance(existing_config, TextQuestionEntry) else None
+    multi_entry = existing_config if isinstance(existing_config, MultiTextQuestionEntry) else None
+    choice_entry = existing_config if isinstance(existing_config, ChoiceQuestionEntry) else None
     return _ResolvedConfig(
         probabilities=copy.deepcopy(existing_config.probabilities),
         distribution=existing_config.distribution_mode or "random",
@@ -335,42 +346,33 @@ def _resolve_config_from_existing(
         option_count=0,  # caller fills in from attrs
         ai_enabled=existing_config.ai_enabled if q_type in TEXT_TYPES else False,
         text_random_mode=(
-            str(existing_config.text_random_mode or "none")
-            if q_type == QuestionType.TEXT
+            str(text_entry.text_random_mode or "none")
+            if text_entry is not None
             else "none"
         ),
         text_random_int_range=cast(
             list[object],
-            copy.deepcopy(existing_config.text_random_int_range)
-            if q_type == QuestionType.TEXT
-            else []
+            copy.deepcopy(text_entry.text_random_int_range) if text_entry is not None else [],
         ),
         multi_text_blank_modes=(
-            copy.deepcopy(existing_config.multi_text_blank_modes)
-            if q_type == QuestionType.MULTI_TEXT
-            else []
+            copy.deepcopy(multi_entry.multi_text_blank_modes) if multi_entry is not None else []
         ),
         multi_text_blank_ai_flags=(
-            copy.deepcopy(existing_config.multi_text_blank_ai_flags)
-            if q_type == QuestionType.MULTI_TEXT
-            else []
+            copy.deepcopy(multi_entry.multi_text_blank_ai_flags) if multi_entry is not None else []
         ),
         multi_text_blank_int_ranges=(
-            copy.deepcopy(existing_config.multi_text_blank_int_ranges)
-            if q_type == QuestionType.MULTI_TEXT
-            else []
+            copy.deepcopy(multi_entry.multi_text_blank_int_ranges) if multi_entry is not None else []
         ),
         option_fill_texts=(
-            copy.deepcopy(existing_config.option_fill_texts)
-            if q_type in CHOICE_LIKE_TYPES
-            else None
+            copy.deepcopy(choice_entry.option_fill_texts) if choice_entry is not None else None
         ),
         fillable_indices=(
-            copy.deepcopy(existing_config.fillable_option_indices)
-            if q_type in CHOICE_LIKE_TYPES
-            else None
+            copy.deepcopy(choice_entry.fillable_option_indices) if choice_entry is not None else None
         ),
-        attached_selects=cast(list[object], copy.deepcopy(existing_config.attached_option_selects or [])),
+        attached_selects=cast(
+            list[object],
+            copy.deepcopy(choice_entry.attached_option_selects or []) if choice_entry is not None else [],
+        ),
     )
 
 
@@ -505,7 +507,8 @@ def _assemble_question_entry(
         else None
     )
 
-    return QuestionEntry(
+    entry_cls = entry_type_for_question_type(attrs.q_type)
+    kwargs: dict[str, Any] = dict(
         question_type=attrs.q_type,
         probabilities=cast(Any, config.probabilities),
         texts=cast(Any, config.texts),
@@ -519,22 +522,12 @@ def _assemble_question_entry(
         provider_question_id=attrs.provider_question_id or None,
         provider_page_id=attrs.provider_page_id or None,
         ai_enabled=config.ai_enabled if attrs.q_type in TEXT_TYPES else False,
-        multi_text_blank_modes=config.multi_text_blank_modes
-        if attrs.q_type == QuestionType.MULTI_TEXT
-        else [],
-        multi_text_blank_ai_flags=config.multi_text_blank_ai_flags
-        if attrs.q_type == QuestionType.MULTI_TEXT
-        else [],
-        multi_text_blank_int_ranges=config.multi_text_blank_int_ranges
-        if attrs.q_type == QuestionType.MULTI_TEXT
-        else [],
-        text_random_mode=config.text_random_mode if attrs.q_type == QuestionType.TEXT else "none",
-        text_random_int_range=cast(Any, config.text_random_int_range)
-        if attrs.q_type == QuestionType.TEXT
-        else [],
-        option_fill_texts=option_fill_texts,
-        fillable_option_indices=fillable_option_indices,
-        attached_option_selects=(
+    )
+
+    if entry_cls is ChoiceQuestionEntry:
+        kwargs["option_fill_texts"] = option_fill_texts
+        kwargs["fillable_option_indices"] = fillable_option_indices
+        kwargs["attached_option_selects"] = (
             normalize_attached_option_selects(
                 attrs.attached_option_selects,
                 config.attached_selects
@@ -543,10 +536,23 @@ def _assemble_question_entry(
             )
             if attrs.q_type in (QuestionType.SINGLE, QuestionType.MULTIPLE)
             else []
-        ),
-        is_location=attrs.is_location,
-        location_parts=list(existing_config.location_parts or []) if existing_config else [],
-    )
+        )
+    elif entry_cls is TextQuestionEntry:
+        kwargs["text_random_mode"] = (
+            config.text_random_mode if attrs.q_type == QuestionType.TEXT else "none"
+        )
+        kwargs["text_random_int_range"] = cast(Any, config.text_random_int_range)
+    elif entry_cls is MultiTextQuestionEntry:
+        kwargs["multi_text_blank_modes"] = config.multi_text_blank_modes
+        kwargs["multi_text_blank_ai_flags"] = config.multi_text_blank_ai_flags
+        kwargs["multi_text_blank_int_ranges"] = config.multi_text_blank_int_ranges
+    elif entry_cls is LocationQuestionEntry:
+        kwargs["is_location"] = attrs.is_location
+        kwargs["location_parts"] = (
+            list(existing_config.location_parts or []) if existing_config else []
+        )
+
+    return entry_cls(**kwargs)
 
 
 # ---------------------------------------------------------------------------

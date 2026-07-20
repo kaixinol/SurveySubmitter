@@ -4,7 +4,7 @@ import os
 import tempfile
 import xlsxwriter
 from survey_submitter.constants import DEFAULT_FILL_TEXT
-from survey_submitter.core.questions.schema import QuestionEntry
+from survey_submitter.core.questions.schema import make_question_entry
 from survey_submitter.core.reverse_fill.schema import (
     REVERSE_FILL_FORMAT_WJX_SEQUENCE,
     REVERSE_FILL_FORMAT_WJX_TEXT,
@@ -162,7 +162,7 @@ class WjxReverseFillTests:
             survey_provider="wjx",
             questions_info=[{"num": 1, "title": "姓名", "type_code": "1"}],
             question_entries=[
-                QuestionEntry(
+                make_question_entry(
                     question_type="text",
                     probabilities=[1.0],
                     texts=["手动配置值"],
@@ -187,7 +187,7 @@ class WjxReverseFillTests:
             survey_provider="wjx",
             questions_info=[{"num": 1, "title": "姓名", "type_code": "1"}],
             question_entries=[
-                QuestionEntry(
+                make_question_entry(
                     question_type="text",
                     probabilities=[1.0],
                     texts=[DEFAULT_FILL_TEXT],
@@ -267,7 +267,7 @@ class WjxReverseFillTests:
             ),
             questions_info=[{"num": 1, "title": "所在地区", "type_code": "1", "is_location": True}],
             question_entries=[
-                QuestionEntry(
+                make_question_entry(
                     question_type="text",
                     probabilities=[1.0],
                     texts=["上海"],

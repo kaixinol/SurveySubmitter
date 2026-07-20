@@ -1,7 +1,7 @@
 from __future__ import annotations
 import pytest
 from unittest.mock import patch
-from survey_submitter.core.questions.config import QuestionEntry
+from survey_submitter.core.questions.config import make_question_entry
 from survey_submitter.core.config.schema import (
     RuntimeConfig,
     SurveySection,
@@ -52,7 +52,7 @@ class RuntimePreparationTests:
             answer_config=AnswerConfigSection(
                 answer_rules=[{"num": 1, "equals": [1]}],
                 question_entries=[
-                    QuestionEntry(
+                    make_question_entry(
                         question_type="single",
                         probabilities=[100.0, 0.0],
                         option_count=2,

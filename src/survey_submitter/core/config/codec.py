@@ -17,6 +17,14 @@ from survey_submitter.core.reverse_fill import (
     REVERSE_FILL_FORMAT_WJX_TEXT,
 )
 from survey_submitter.core.config.base import BaseConfigModel
+from survey_submitter.core.questions.schema import (
+    ChoiceQuestionEntry,
+    LocationQuestionEntry,
+    MultiTextQuestionEntry,
+    QuestionEntry,
+    TextQuestionEntry,
+    entry_type_for_question_type,
+)
 from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.config.schema import (
     AnswerConfigSection,
@@ -281,7 +289,7 @@ def serialize_question_entry(entry) -> dict[str, object]:
         and _custom_weights_has_positive(entry.custom_weights)
     ):
         probabilities = entry.custom_weights
-    return {
+    payload: dict[str, object] = {
         "question_type": entry.question_type,
         "probabilities": probabilities,
         "texts": entry.texts,
@@ -295,22 +303,29 @@ def serialize_question_entry(entry) -> dict[str, object]:
         "provider_question_id": str(entry.provider_question_id or ""),
         "provider_page_id": str(entry.provider_page_id or ""),
         "ai_enabled": bool(entry.ai_enabled),
-        "multi_text_blank_modes": _normalize_multi_text_blank_modes(entry.multi_text_blank_modes),
-        "multi_text_blank_ai_flags": _normalize_multi_text_blank_ai_flags(
-            entry.multi_text_blank_ai_flags
-        ),
-        "multi_text_blank_int_ranges": _normalize_multi_text_blank_int_ranges(
-            entry.multi_text_blank_int_ranges
-        ),
-        "text_random_mode": str(entry.text_random_mode or "none"),
-        "text_random_int_range": _normalize_random_int_range(entry.text_random_int_range),
-        "option_fill_texts": entry.option_fill_texts,
-        "fillable_option_indices": entry.fillable_option_indices,
-        "attached_option_selects": list(entry.attached_option_selects or []),
         "is_location": entry.is_location,
         "location_parts": list(entry.location_parts or []),
         "dimension": _normalize_dimension_value(entry.dimension),
     }
+
+    if isinstance(entry, ChoiceQuestionEntry):
+        payload["option_fill_texts"] = entry.option_fill_texts
+        payload["fillable_option_indices"] = entry.fillable_option_indices
+        payload["attached_option_selects"] = list(entry.attached_option_selects or [])
+    if isinstance(entry, TextQuestionEntry):
+        payload["text_random_mode"] = str(entry.text_random_mode or "none")
+        payload["text_random_int_range"] = _normalize_random_int_range(entry.text_random_int_range)
+    if isinstance(entry, MultiTextQuestionEntry):
+        payload["multi_text_blank_modes"] = _normalize_multi_text_blank_modes(
+            entry.multi_text_blank_modes
+        )
+        payload["multi_text_blank_ai_flags"] = _normalize_multi_text_blank_ai_flags(
+            entry.multi_text_blank_ai_flags
+        )
+        payload["multi_text_blank_int_ranges"] = _normalize_multi_text_blank_int_ranges(
+            entry.multi_text_blank_int_ranges
+        )
+    return payload
 
 
 def deserialize_question_entry(data: dict[str, object]) -> QuestionEntry:
@@ -373,8 +388,26 @@ def deserialize_question_entry(data: dict[str, object]) -> QuestionEntry:
         "dimension": _normalize_dimension_value(normalized_data.get("dimension")),
     })
 
+    entry_cls = entry_type_for_question_type(str(normalized_data.get("question_type")))
+    allowed = set(entry_cls.model_fields.keys())
+    filtered = {key: value for key, value in normalized_data.items() if key in allowed}
+
+    known_fields = set(QuestionEntry.model_fields.keys())
+    for _subcls in (
+        ChoiceQuestionEntry,
+        TextQuestionEntry,
+        MultiTextQuestionEntry,
+        LocationQuestionEntry,
+    ):
+        known_fields |= set(_subcls.model_fields.keys())
+    unknown = [key for key in normalized_data if key not in known_fields]
+    if unknown:
+        raise ValueError(
+            f"{_CONFIG_CORRUPTED_MESSAGE}：题目配置包含未知字段 {sorted(unknown)}"
+        )
+
     try:
-        return QuestionEntry.model_validate(normalized_data)
+        return entry_cls.model_validate(filtered)
     except Exception as exc:
         raise ValueError(f"{_CONFIG_CORRUPTED_MESSAGE}：{exc}") from exc
 

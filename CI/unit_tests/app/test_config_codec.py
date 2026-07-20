@@ -24,7 +24,11 @@ from survey_submitter.core.config.schema import (
     QuestionInfo,
 )
 from survey_submitter.providers.contracts import ensure_survey_question_meta
-from survey_submitter.core.questions.schema import QuestionEntry
+from survey_submitter.core.questions.schema import (
+    MultiTextQuestionEntry,
+    TextQuestionEntry,
+    make_question_entry,
+)
 from survey_submitter.core.reverse_fill.schema import REVERSE_FILL_FORMAT_WJX_SEQUENCE
 
 
@@ -71,7 +75,7 @@ class ConfigCodecTests:
             answer_config=AnswerConfigSection(
                 answer_rules=[{"question_num": 1, "equals": [0]}],
                 question_entries=[
-                    QuestionEntry(
+                    make_question_entry(
                         question_type="single",
                         probabilities=[60.0, 40.0],
                         texts=["A", "B"],
@@ -131,7 +135,7 @@ class ConfigCodecTests:
                     QuestionInfo(num=2, title="建议", question_type="text", options=[]),
                 ],
                 question_entries=[
-                    QuestionEntry(
+                    make_question_entry(
                         question_type="single",
                         probabilities=[100.0, 0.0],
                         option_count=2,
@@ -201,9 +205,6 @@ class ConfigCodecTests:
                 "provider_question_id": " q1 ",
                 "provider_page_id": " p1 ",
                 "ai_enabled": True,
-                "multi_text_blank_modes": ["name", "bad", "integer"],
-                "multi_text_blank_ai_flags": [1, 0],
-                "multi_text_blank_int_ranges": [[1, 3], "", ["bad"]],
                 "text_random_mode": "integer",
                 "text_random_int_range": ["5", "9"],
                 "is_location": True,
@@ -217,8 +218,7 @@ class ConfigCodecTests:
         assert entry.survey_provider == "wjx"
         assert entry.provider_question_id == "q1"
         assert entry.provider_page_id == "p1"
-        assert entry.multi_text_blank_modes == ["name", "none", "integer"]
-        assert entry.multi_text_blank_ai_flags == [True, False]
+        assert isinstance(entry, TextQuestionEntry)
         assert entry.text_random_int_range == [5, 9]
         assert entry.is_location is True
         assert entry.location_parts == ["北京", "北京", "东城区"]
@@ -228,6 +228,26 @@ class ConfigCodecTests:
         assert payload["dimension"] is None
         assert payload["text_random_int_range"] == [5, 9]
         assert payload["location_parts"] == ["北京", "北京", "东城区"]
+
+    def test_question_entry_normalizes_multi_text_blank_fields(self) -> None:
+        entry = deserialize_question_entry(
+            {
+                "question_type": "multi_text",
+                "probabilities": [],
+                "texts": ["答案"],
+                "multi_text_blank_modes": ["name", "bad", "integer"],
+                "multi_text_blank_ai_flags": [1, 0],
+                "multi_text_blank_int_ranges": [[1, 3], "", ["bad"]],
+            }
+        )
+
+        assert isinstance(entry, MultiTextQuestionEntry)
+        assert entry.multi_text_blank_modes == ["name", "none", "integer"]
+        assert entry.multi_text_blank_ai_flags == [True, False]
+
+        payload = serialize_question_entry(entry)
+        assert payload["multi_text_blank_modes"] == ["name", "none", "integer"]
+        assert payload["multi_text_blank_ai_flags"] == [True, False]
 
     def test_normalize_runtime_config_payload_covers_boundaries_and_invalid_values(self) -> None:
         cfg = normalize_runtime_config_payload(
