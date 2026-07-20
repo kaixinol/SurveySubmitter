@@ -8,7 +8,12 @@ from survey_submitter.core.questions.meta_helpers import (
     find_all_zero_attached_selects,
     find_all_zero_matrix_rows,
 )
-from survey_submitter.core.questions.schema import QuestionEntry
+from survey_submitter.core.questions.schema import (
+    ChoiceQuestionEntry,
+    MultiTextQuestionEntry,
+    QuestionEntry,
+    TextQuestionEntry,
+)
 from survey_submitter.core.questions.types import QuestionType, CHOICE_TYPES, TEXT_TYPES
 from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_survey_question_meta
 
@@ -40,7 +45,7 @@ def _is_text_ai_enabled(entry: QuestionEntry) -> bool:
     question_type = str(entry.question_type or "").strip()
     if question_type == QuestionType.TEXT:
         return bool(entry.ai_enabled)
-    if question_type == QuestionType.MULTI_TEXT:
+    if question_type == QuestionType.MULTI_TEXT and isinstance(entry, MultiTextQuestionEntry):
         blank_flags = entry.multi_text_blank_ai_flags or []
         return bool(entry.ai_enabled) or (
             bool(blank_flags) and all(bool(flag) for flag in blank_flags)
@@ -160,7 +165,11 @@ def _validate_text_entry(
     min_text_length = _extract_text_min_length(question_info.title, question_info.description)
     if min_text_length is None or min_text_length <= 0:
         return
-    text_random_mode = str(entry.text_random_mode or "").strip().lower()
+    text_random_mode = (
+        str(entry.text_random_mode or "").strip().lower()
+        if isinstance(entry, TextQuestionEntry)
+        else ""
+    )
     if question_type == QuestionType.TEXT and text_random_mode not in ("", "none"):
         errors.append(
             f"第 {display_question_num} 题（填空题）配置冲突：\n"
@@ -229,6 +238,8 @@ def _validate_attached_selects(
     display_question_num: Any,
     errors: list[str],
 ) -> None:
+    if not isinstance(entry, ChoiceQuestionEntry):
+        return
     for cfg_idx, option_text in find_all_zero_attached_selects(entry.attached_option_selects or []):
         errors.append(
             f"第 {display_question_num} 题（嵌入式下拉）配置无效：\n"

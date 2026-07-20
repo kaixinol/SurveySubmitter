@@ -6,8 +6,12 @@ from typing import TYPE_CHECKING, Any, cast
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT, DIMENSION_UNGROUPED
 from survey_submitter.core.questions.schema import (
+    ChoiceQuestionEntry,
     GLOBAL_RELIABILITY_DIMENSION,
+    LocationQuestionEntry,
+    MultiTextQuestionEntry,
     QuestionEntry,
+    TextQuestionEntry,
     _TEXT_RANDOM_ID_CARD,
     _TEXT_RANDOM_ID_CARD_TOKEN,
     _TEXT_RANDOM_INTEGER,
@@ -76,6 +80,8 @@ def _raise_if_all_zero_matrix(raw_weights: object, question_num: int) -> None:
 
 
 def _raise_if_all_zero_attached_selects(entry: QuestionEntry, question_num: int) -> None:
+    if not isinstance(entry, ChoiceQuestionEntry):
+        return
     issues = find_all_zero_attached_selects(entry.attached_option_selects or [])
     if not issues:
         return
@@ -301,6 +307,7 @@ def _handle_single(
     reliability_mode_enabled: bool,
     reliability_candidates: list[tuple[int, bool, str]],
 ) -> int:
+    assert isinstance(entry, ChoiceQuestionEntry)
     _raise_if_all_zero_single_like(probs, question_num, "single")
     mapped_value = ("single", idx)
     target.question_config_index_map[question_num] = mapped_value
@@ -341,6 +348,7 @@ def _handle_dropdown(
     reliability_mode_enabled: bool,
     reliability_candidates: list[tuple[int, bool, str]],
 ) -> int:
+    assert isinstance(entry, ChoiceQuestionEntry)
     _raise_if_all_zero_single_like(probs, question_num, "dropdown")
     mapped_value = ("dropdown", idx)
     target.question_config_index_map[question_num] = mapped_value
@@ -366,6 +374,7 @@ def _handle_multiple(
     target: "ExecutionConfig",
     idx: int,
 ) -> int:
+    assert isinstance(entry, ChoiceQuestionEntry)
     mapped_value = ("multiple", idx)
     target.question_config_index_map[question_num] = mapped_value
     _remember_provider_mapping(target, entry, mapped_value)
@@ -525,6 +534,7 @@ def _handle_location(
     question_num: int,
     target: "ExecutionConfig",
 ) -> None:
+    assert isinstance(entry, LocationQuestionEntry)
     mapped_value = ("location", -1)
     target.question_config_index_map[question_num] = mapped_value
     _remember_provider_mapping(target, entry, mapped_value)
@@ -541,12 +551,12 @@ def _handle_text(
     idx_text: int,
 ) -> tuple[int, bool]:
     """Returns (new_idx_text, was_location)."""
-    if not entry.is_location:
+    is_location = bool(entry.is_location)
+    if not is_location:
         mapped_value = ("text", idx_text)
         target.question_config_index_map[question_num] = mapped_value
         _remember_provider_mapping(target, entry, mapped_value)
         idx_text += 1
-        is_location = False
     else:
         mapped_value = ("location", -1)
         target.question_config_index_map[question_num] = mapped_value
@@ -554,13 +564,16 @@ def _handle_text(
         target.location_parts[question_num] = [
             str(item or "").strip() for item in list(entry.location_parts or [])[:3]
         ]
-        is_location = True
 
-    text_random_mode = str(entry.text_random_mode or _TEXT_RANDOM_NONE).strip().lower()
+    text_random_mode = (
+        str(entry.text_random_mode or _TEXT_RANDOM_NONE).strip().lower()
+        if isinstance(entry, TextQuestionEntry)
+        else _TEXT_RANDOM_NONE
+    )
     normalized_values = [str(item).strip() for item in (entry.texts or []) if str(item).strip()]
     normalized_blank_ai_flags: list[bool] = []
     normalized_blank_int_ranges: list[list[int]] = []
-    if entry.question_type == QuestionType.MULTI_TEXT:
+    if isinstance(entry, MultiTextQuestionEntry):
         raw_blank_ai_flags = entry.multi_text_blank_ai_flags or []
         if isinstance(raw_blank_ai_flags, list):
             normalized_blank_ai_flags = [bool(flag) for flag in raw_blank_ai_flags]
@@ -599,7 +612,11 @@ def _handle_text(
         elif text_random_mode == _TEXT_RANDOM_ID_CARD:
             normalized_values = [_TEXT_RANDOM_ID_CARD_TOKEN]
         else:
-            text_random_range = serialize_random_int_range(entry.text_random_int_range)
+            text_random_range = (
+                serialize_random_int_range(entry.text_random_int_range)
+                if isinstance(entry, TextQuestionEntry)
+                else []
+            )
             if len(text_random_range) != 2:
                 raise ValueError("填空题随机整数范围未设置完整")
             normalized_values = [build_random_int_token(*text_random_range)]
@@ -620,7 +637,9 @@ def _handle_text(
     target.text_entry_types.append(entry.question_type)
     target.text_ai_flags.append(ai_enabled)
     target.text_titles.append(str(entry.question_title or ""))
-    target.multi_text_blank_modes.append(entry.multi_text_blank_modes)
+    target.multi_text_blank_modes.append(
+        list(entry.multi_text_blank_modes) if isinstance(entry, MultiTextQuestionEntry) else []
+    )
     target.multi_text_blank_ai_flags.append(normalized_blank_ai_flags)
     target.multi_text_blank_int_ranges.append(normalized_blank_int_ranges)
     return idx_text, is_location

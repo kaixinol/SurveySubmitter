@@ -3,9 +3,11 @@ from __future__ import annotations
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.questions.default_builder import build_default_question_entries
 from survey_submitter.core.questions.schema import (
-    QuestionEntry,
+    ChoiceQuestionEntry,
+    MultiTextQuestionEntry,
     _TEXT_RANDOM_MOBILE,
     _TEXT_RANDOM_NONE,
+    make_question_entry,
 )
 from survey_submitter.providers.contracts import ensure_survey_question_meta
 
@@ -85,6 +87,7 @@ class DefaultBuilderRuntimeTests:
         )
 
         assert entries[0].question_type == "multi_text"
+        assert isinstance(entries[0], MultiTextQuestionEntry)
         assert entries[0].multi_text_blank_modes == [
             _TEXT_RANDOM_NONE,
             _TEXT_RANDOM_MOBILE,
@@ -92,7 +95,7 @@ class DefaultBuilderRuntimeTests:
         ]
 
     def test_build_default_question_entries_reuses_existing_by_provider_num_and_title(self) -> None:
-        existing_by_provider = QuestionEntry(
+        existing_by_provider = make_question_entry(
             question_type="single",
             probabilities=[0, 1],
             option_count=2,
@@ -106,7 +109,7 @@ class DefaultBuilderRuntimeTests:
             fillable_option_indices=[1],
             attached_option_selects=[{"option_index": 1, "weights": [1, 0]}],
         )
-        existing_by_num = QuestionEntry(
+        existing_by_num = make_question_entry(
             question_type="multiple",
             probabilities=[10, 90],
             option_count=2,
@@ -115,7 +118,7 @@ class DefaultBuilderRuntimeTests:
             distribution_mode="custom",
             custom_weights=[10, 90],
         )
-        existing_by_title = QuestionEntry(
+        existing_by_title = make_question_entry(
             question_type="text",
             probabilities=[1],
             texts=["旧答案"],
@@ -156,6 +159,7 @@ class DefaultBuilderRuntimeTests:
 
         assert entries[0].probabilities == [0, 1]
         assert entries[0].custom_weights == [0, 1]
+        assert isinstance(entries[0], ChoiceQuestionEntry)
         assert entries[0].option_fill_texts == [None, "其他"]
         assert entries[0].fillable_option_indices == [1]
         assert entries[0].attached_option_selects == [
@@ -172,7 +176,7 @@ class DefaultBuilderRuntimeTests:
         assert entries[2].ai_enabled is True
 
     def test_build_default_question_entries_drops_stale_option_fill_texts(self) -> None:
-        existing = QuestionEntry(
+        existing = make_question_entry(
             question_type="single",
             probabilities=[1, 0],
             option_count=2,
@@ -196,11 +200,12 @@ class DefaultBuilderRuntimeTests:
             existing_entries=[existing],
         )
 
+        assert isinstance(entries[0], ChoiceQuestionEntry)
         assert entries[0].fillable_option_indices == []
         assert entries[0].option_fill_texts is None
 
     def test_build_default_question_entries_does_not_reuse_mismatched_title_or_type(self) -> None:
-        existing = QuestionEntry(
+        existing = make_question_entry(
             question_type="single",
             probabilities=[0, 1],
             option_count=2,
@@ -243,6 +248,7 @@ class DefaultBuilderRuntimeTests:
         entries = build_default_question_entries(questions)
 
         assert entries[0].question_type == "multiple"
+        assert isinstance(entries[0], ChoiceQuestionEntry)
         assert entries[0].attached_option_selects == [
             {
                 "option_index": 2,

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
+
+from pydantic import Field
 
 from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.questions.types import QuestionType
@@ -27,6 +30,10 @@ __all__ = [
     "MultiTextBlankConfig",
     "ProviderInfo",
     "QuestionEntry",
+    "ChoiceQuestionEntry",
+    "TextQuestionEntry",
+    "MultiTextQuestionEntry",
+    "LocationQuestionEntry",
     "TextRandomConfig",
     "_TEXT_RANDOM_ID_CARD",
     "_TEXT_RANDOM_ID_CARD_TOKEN",
@@ -37,6 +44,7 @@ __all__ = [
     "_TEXT_RANDOM_NAME_TOKEN",
     "_TEXT_RANDOM_NONE",
     "_infer_option_count",
+    "entry_type_for_question_type",
 ]
 
 
@@ -136,22 +144,20 @@ def _infer_option_count(entry: "QuestionEntry") -> int:
 
 
 # ---------------------------------------------------------------------------
-# QuestionEntry
+# QuestionEntry hierarchy (discriminated on `question_type`)
 # ---------------------------------------------------------------------------
 
 
 class QuestionEntry(BaseConfigModel):
     """Configuration for a single survey question.
 
-    Attributes are organized into six logical groups.  Each group can also be
-    accessed as a nested dataclass via the corresponding ``@property``:
+    Base class holds only the fields common to every question type. Type-specific
+    fields live on the narrow subclasses (see ``entry_type_for_question_type``):
 
-    * **Provider** – ``provider_info`` → :class:`ProviderInfo`
-    * **Distribution** – ``distribution_config`` → :class:`DistributionConfig`
-    * **Multi-text blanks** – ``multi_text_blank_config`` → :class:`MultiTextBlankConfig`
-    * **Text random** – ``text_random_config`` → :class:`TextRandomConfig`
-    * **Fill options** – ``fill_options_config`` → :class:`FillOptionsConfig`
-    * **Location** – ``location_info`` → :class:`LocationInfo`
+    * :class:`ChoiceQuestionEntry` – single / multiple / dropdown / order
+    * :class:`TextQuestionEntry` – text
+    * :class:`MultiTextQuestionEntry` – multi-text
+    * :class:`LocationQuestionEntry` – location
     """
 
     # -- Identity -----------------------------------------------------------
@@ -176,25 +182,9 @@ class QuestionEntry(BaseConfigModel):
     option_count: int = 0
     ai_enabled: bool = False
 
-    # -- Multi-text blank handling ------------------------------------------
-    multi_text_blank_modes: list[str] = []
-    multi_text_blank_ai_flags: list[bool] = []
-    multi_text_blank_int_ranges: list[list[int]] = []
-
-    # -- Text random config -------------------------------------------------
-    text_random_mode: str = _TEXT_RANDOM_NONE
-    text_random_int_range: list[int] = []
-
-    # -- Fill options -------------------------------------------------------
-    option_fill_texts: list[str | None] | None = None
-    fillable_option_indices: list[int] | None = None
-    attached_option_selects: list[dict] = []
-
-    # -- Location info ------------------------------------------------------
+    # -- Location flag (orthogonal: a text-typed question may also be a location)
     is_location: bool = False
-    location_parts: list[str] = []
-
-    # -- Nested-group property accessors ------------------------------------
+    location_parts: list[str] = Field(default_factory=list)
 
     @property
     def provider_info(self) -> ProviderInfo:
@@ -213,20 +203,13 @@ class QuestionEntry(BaseConfigModel):
             dimension=self.dimension,
         )
 
-    @property
-    def multi_text_blank_config(self) -> MultiTextBlankConfig:
-        return MultiTextBlankConfig(
-            modes=list(self.multi_text_blank_modes),
-            ai_flags=list(self.multi_text_blank_ai_flags),
-            int_ranges=list(self.multi_text_blank_int_ranges),
-        )
 
-    @property
-    def text_random_config(self) -> TextRandomConfig:
-        return TextRandomConfig(
-            mode=self.text_random_mode,
-            int_range=list(self.text_random_int_range),
-        )
+class ChoiceQuestionEntry(QuestionEntry):
+    """Choice-style questions (single / multiple / dropdown / order)."""
+
+    attached_option_selects: list[dict] = Field(default_factory=list)
+    fillable_option_indices: list[int] | None = None
+    option_fill_texts: list[str | None] | None = None
 
     @property
     def fill_options_config(self) -> FillOptionsConfig:
@@ -236,9 +219,79 @@ class QuestionEntry(BaseConfigModel):
             attached_option_selects=list(self.attached_option_selects or []),
         )
 
+
+class TextQuestionEntry(QuestionEntry):
+    """Single-text questions."""
+
+    text_random_mode: str = _TEXT_RANDOM_NONE
+    text_random_int_range: list[int] = Field(default_factory=list)
+
+    @property
+    def text_random_config(self) -> TextRandomConfig:
+        return TextRandomConfig(
+            mode=self.text_random_mode,
+            int_range=list(self.text_random_int_range),
+        )
+
+
+class MultiTextQuestionEntry(QuestionEntry):
+    """Multi-text (多项填空) questions."""
+
+    multi_text_blank_modes: list[str] = Field(default_factory=list)
+    multi_text_blank_ai_flags: list[bool] = Field(default_factory=list)
+    multi_text_blank_int_ranges: list[list[int]] = Field(default_factory=list)
+
+    @property
+    def multi_text_blank_config(self) -> MultiTextBlankConfig:
+        return MultiTextBlankConfig(
+            modes=list(self.multi_text_blank_modes),
+            ai_flags=list(self.multi_text_blank_ai_flags),
+            int_ranges=list(self.multi_text_blank_int_ranges),
+        )
+
+
+class LocationQuestionEntry(QuestionEntry):
+    """Location questions."""
+
     @property
     def location_info(self) -> LocationInfo:
         return LocationInfo(
             is_location=self.is_location,
             location_parts=list(self.location_parts),
         )
+
+
+# Question types that map to each narrow subclass. Any type not listed uses the
+# base QuestionEntry directly. Keys are the string values of QuestionType.
+_ENTRY_TYPE_BY_QUESTION_TYPE: dict[str, type[QuestionEntry]] = {
+    str(QuestionType.SINGLE): ChoiceQuestionEntry,
+    str(QuestionType.MULTIPLE): ChoiceQuestionEntry,
+    str(QuestionType.DROPDOWN): ChoiceQuestionEntry,
+    str(QuestionType.ORDER): ChoiceQuestionEntry,
+    str(QuestionType.TEXT): TextQuestionEntry,
+    str(QuestionType.MULTI_TEXT): MultiTextQuestionEntry,
+    str(QuestionType.LOCATION): LocationQuestionEntry,
+}
+
+
+def entry_type_for_question_type(question_type: str | QuestionType) -> type[QuestionEntry]:
+    """Return the concrete QuestionEntry subclass for a given question type."""
+    try:
+        key = str(QuestionType(str(question_type)))
+    except ValueError:
+        return QuestionEntry
+    return _ENTRY_TYPE_BY_QUESTION_TYPE.get(key, QuestionEntry)
+
+
+def make_question_entry(**kwargs: Any) -> QuestionEntry:
+    """Construct the appropriate QuestionEntry subclass for ``question_type``.
+
+    Fields irrelevant to the resolved subclass are ignored, so callers may pass a
+    full flat field set (e.g. parsed from legacy YAML) without worrying about the
+    ``extra="forbid"`` policy of the concrete model.
+    """
+    qtype = kwargs.get("question_type")
+    cls = entry_type_for_question_type(str(qtype)) if qtype is not None else QuestionEntry
+    allowed = set(cls.model_fields.keys())
+    filtered = {key: value for key, value in kwargs.items() if key in allowed}
+    return cls(**filtered)
