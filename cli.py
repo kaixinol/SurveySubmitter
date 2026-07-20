@@ -10,7 +10,7 @@ import os
 import signal
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 import io
 
@@ -93,7 +93,7 @@ def shutdown() -> None:
 
 
 def _out() -> io.TextIOBase:
-    return _ORIG_STDOUT or sys.stdout  # type: ignore[return-value]
+    return cast("io.TextIOBase", _ORIG_STDOUT or sys.stdout)
 
 
 def _type_label(type_code: str) -> str:
@@ -107,7 +107,7 @@ def _print_survey(definition: object) -> None:
     )
 
     out = _out()
-    defn: SurveyDefinition = definition  # type: ignore[assignment]
+    defn: SurveyDefinition = definition  # ty: ignore[invalid-assignment]
     out.write(f"问卷标题: {defn.title}\n")
     out.write(f"平台: {defn.provider}\n")
     out.write(f"题目数量: {len(defn.questions)}\n")
@@ -236,7 +236,7 @@ def main() -> None:
     )
 
     global _ORIG_STDOUT
-    _ORIG_STDOUT = sys.stdout
+    _ORIG_STDOUT = cast("io.TextIOBase", sys.stdout)
 
     bootstrap()
 

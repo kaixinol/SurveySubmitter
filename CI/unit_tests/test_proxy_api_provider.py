@@ -205,7 +205,7 @@ class ProxyApiProviderTests:
                 return _Response('{"code": 2, "message": "白名单错误"}')
 
             original_logger_error = provider.logger.error
-            provider.logger.error = lambda msg, *args, **kwargs: error_logs.append(str(msg))
+            provider.logger.error = lambda msg, *args, **kwargs: error_logs.append(str(msg))  # ty: ignore[invalid-assignment]
             try:
                 patch_attrs(
                     (provider.http_client, "aget", fake_get),
@@ -219,7 +219,7 @@ class ProxyApiProviderTests:
                 assert stop_signal.is_set()
                 assert any("白名单" in log for log in error_logs)
             finally:
-                provider.logger.error = original_logger_error
+                provider.logger.error = original_logger_error  # ty: ignore[invalid-assignment]
         finally:
             proxy_source.set_proxy_source(original_source)
             proxy_source.set_proxy_api_override(original_override)
