@@ -153,8 +153,7 @@ def shutdown_logging() -> None:
 
         _session_log._remove_session_log_sink()
 
-        for sink_id in list(logger._core.handlers.keys()):  # ty: ignore[unresolved-attribute]
-            logger.remove(sink_id)
+        logger.remove()
 
         if (
             _session_log._DELETE_SESSION_LOG_ON_SHUTDOWN
