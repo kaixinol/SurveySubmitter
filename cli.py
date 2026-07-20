@@ -32,6 +32,7 @@ _TYPE_LABELS = {
     "score": "评分",
     "dropdown": "下拉",
     "slider": "滑块",
+    "location": "地区",
     "unknown": "未知",
 }
 
@@ -100,6 +101,18 @@ def _type_label(type_code: str) -> str:
     return _TYPE_LABELS.get(type_code, type_code)
 
 
+def _question_type_label(question: object) -> str:
+    """题型展示标签；location 题按 verify 子类型区分「地区」与「高校」。"""
+    from survey_submitter.providers.contracts import TextQuestionMeta
+
+    type_code = getattr(question, "type_code", None)
+    type_code_value = type_code.value if hasattr(type_code, "value") else str(type_code or "")
+    label = _type_label(type_code_value)
+    if isinstance(question, TextQuestionMeta) and question.is_location:
+        label = "高校" if "高校" in (question.location_verify_type or "") else "地区"
+    return label
+
+
 def _print_survey(definition: object) -> None:
     from survey_submitter.providers.contracts import (
         SurveyDefinition,
@@ -114,7 +127,7 @@ def _print_survey(definition: object) -> None:
     out.write("-" * 60 + "\n")
 
     for q in defn.questions:
-        label = _type_label(q.type_code.value)
+        label = _question_type_label(q)
         required_mark = " *" if q.required else ""
         out.write(f"\n第{q.num}题 [{label}]{required_mark}\n")
         out.write(f"  {q.title}\n")
