@@ -13,6 +13,7 @@ from survey_submitter.core.config.codec import (
     normalize_runtime_config_payload,
     serialize_question_entry,
     serialize_runtime_config,
+    survey_questions_from_definition,
 )
 from survey_submitter.core.config.schema import (
     RuntimeConfig,
@@ -20,7 +21,9 @@ from survey_submitter.core.config.schema import (
     ExecutionSection,
     AnswerConfigSection,
     ReverseFillSection,
+    QuestionInfo,
 )
+from survey_submitter.providers.contracts import ensure_survey_question_meta
 from survey_submitter.core.questions.schema import QuestionEntry
 from survey_submitter.core.reverse_fill.schema import REVERSE_FILL_FORMAT_WJX_SEQUENCE
 
@@ -112,6 +115,77 @@ class ConfigCodecTests:
             {"survey": {"url": "https://example.test"}}, config_path="demo.json"
         )
         assert payload == {"survey": {"url": "https://example.test"}}
+
+    def test_survey_questions_roundtrip_preserves_minimal_fields(self) -> None:
+        config = RuntimeConfig(
+            survey=SurveySection(survey_provider="wjx"),
+            answer_config=AnswerConfigSection(
+                survey_questions=[
+                    QuestionInfo(
+                        num=1,
+                        title="性别",
+                        question_type="single",
+                        options=["男", "女"],
+                        required=True,
+                    ),
+                    QuestionInfo(num=2, title="建议", question_type="text", options=[]),
+                ],
+                question_entries=[
+                    QuestionEntry(
+                        question_type="single",
+                        probabilities=[100.0, 0.0],
+                        option_count=2,
+                        question_num=1,
+                    )
+                ],
+            ),
+        )
+        payload = serialize_runtime_config(config)
+        assert "survey_questions" in payload["answer_config"]
+        assert payload["answer_config"]["survey_questions"][0]["question_type"] == "single"
+        assert payload["answer_config"]["survey_questions"][0]["options"] == ["男", "女"]
+        assert payload["answer_config"]["survey_questions"][1]["options"] == []
+        restored = deserialize_runtime_config(payload)
+        assert len(restored.answer_config.survey_questions) == 2
+        assert restored.answer_config.survey_questions[0].title == "性别"
+        assert restored.answer_config.survey_questions[0].question_type == "single"
+        assert restored.answer_config.question_entries[0].question_num == 1
+
+    def test_config_without_survey_questions_still_loads(self) -> None:
+        config = normalize_runtime_config_payload(
+            {
+                "survey": {"url": "https://example.test"},
+                "answer_config": {"question_entries": [], "answer_rules": []},
+            }
+        )
+        assert config.answer_config.survey_questions == []
+
+    def test_survey_questions_from_definition_extracts_minimal_fields(self) -> None:
+        definition = [
+            ensure_survey_question_meta(
+                {
+                    "num": 1,
+                    "title": "性别",
+                    "type_code": "single",
+                    "option_texts": ["男", "女"],
+                    "required": True,
+                    "provider_question_id": "q1",
+                    "provider_page_id": "p1",
+                }
+            ),
+            ensure_survey_question_meta(
+                {"num": 2, "title": "建议", "type_code": "text"}
+            ),
+        ]
+        infos = survey_questions_from_definition(definition)
+        assert len(infos) == 2
+        assert infos[0].num == 1
+        assert infos[0].title == "性别"
+        assert infos[0].question_type == "single"
+        assert infos[0].options == ["男", "女"]
+        assert infos[0].required is True
+        assert infos[1].question_type == "text"
+        assert infos[1].options == []
 
     def test_question_entry_normalizes_text_modes_ranges_provider_and_dimensions(self) -> None:
         entry = deserialize_question_entry(

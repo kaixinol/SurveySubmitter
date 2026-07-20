@@ -153,6 +153,7 @@ async def _cmd_parse_url(url: str) -> None:
 
 
 def _cmd_dry_run(config_path: str) -> None:
+    from survey_submitter.core.config.codec import survey_questions_from_definition
     from survey_submitter.core.config.yaml_loader import load_yaml_config
     from survey_submitter.core.engine.execution_builder import prepare_execution_artifacts
     from survey_submitter.providers.registry import parse_survey
@@ -167,6 +168,7 @@ def _cmd_dry_run(config_path: str) -> None:
     definition = asyncio.run(parse_survey(config.survey.url))
     config.survey.survey_title = config.survey.survey_title or definition.title
     config.survey.survey_provider = definition.provider
+    config.answer_config.survey_questions = survey_questions_from_definition(definition.questions)
 
     if not config.answer_config.question_entries:
         from survey_submitter.core.questions.config import build_default_question_entries

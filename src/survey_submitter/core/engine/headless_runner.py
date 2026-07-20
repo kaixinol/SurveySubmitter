@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 from loguru import logger
 
+from survey_submitter.core.config.codec import survey_questions_from_definition
 from survey_submitter.core.config.yaml_loader import load_yaml_config
 from survey_submitter.core.engine.async_engine import AsyncRuntimeEngine
 from survey_submitter.core.engine.execution_builder import prepare_execution_artifacts
@@ -69,6 +70,7 @@ class HeadlessRunner:
 
         config.survey.survey_title = config.survey.survey_title or definition.title
         config.survey.survey_provider = definition.provider
+        config.answer_config.survey_questions = survey_questions_from_definition(definition.questions)
 
         if not config.answer_config.question_entries:
             logger.info("未配置题目权重，自动生成默认配置")
