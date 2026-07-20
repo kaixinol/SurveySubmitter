@@ -9,6 +9,7 @@ spec, and constructs the ExecutionConfig template with probabilities.
 
 from __future__ import annotations
 
+import asyncio
 import copy
 from loguru import logger
 from dataclasses import dataclass
@@ -19,7 +20,6 @@ from survey_submitter.core.config.answer_datetime_window import (
     normalize_answer_datetime_window,
     parse_answer_datetime_string,
 )
-from survey_submitter.core.config.codec import clone_questions_info
 from survey_submitter.core.config.schema import RuntimeConfig
 from survey_submitter.core.questions.config import (
     configure_probabilities,
@@ -259,11 +259,17 @@ def prepare_execution_artifacts(
     config: RuntimeConfig,
     *,
     fallback_survey_title: str = "",
+    questions_info: list[SurveyQuestionMeta] | None = None,
 ) -> PreparedExecutionArtifacts:
     """Validate *config* and build everything the engine needs to run.
 
     This is the GUI-agnostic equivalent of the former
     ``runtime_preparation.prepare_execution_artifacts``.
+
+    ``questions_info`` is the parsed survey definition (question metadata).
+    It is no longer persisted in the config; callers that already have the
+    parsed definition (e.g. the CLI after fetching the survey) should pass it
+    here. If omitted, it is re-parsed from ``config.survey.url``.
     """
     question_entries = list(config.answer_config.question_entries or [])
     if not question_entries:
@@ -282,10 +288,17 @@ def prepare_execution_artifacts(
             log_message=f"启动前问卷状态检查失败：{exc}",
         ) from exc
 
-    questions_info = clone_questions_info(
-        config.answer_config.questions_info or [],
-        default_provider=survey_provider,
-    )
+    if questions_info is None:
+        from survey_submitter.providers.registry import parse_survey
+
+        if not config.survey.url:
+            raise RuntimePreparationError(
+                "未提供问卷 URL，无法解析题目元数据",
+                log_message="缺少 survey.url，无法解析 questions_info",
+            )
+        definition = asyncio.run(parse_survey(config.survey.url))
+        questions_info = definition.questions
+    assert questions_info is not None
     questions_info_inputs = cast(list[SurveyQuestionMeta | dict[str, Any]], list(questions_info))
 
     validation_error = validate_question_config(question_entries, questions_info_inputs)

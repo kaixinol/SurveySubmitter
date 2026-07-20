@@ -28,14 +28,7 @@ from survey_submitter.core.questions.utils import serialize_random_int_range
 from survey_submitter.providers.common import (
     SURVEY_PROVIDER_WJX,
     detect_survey_provider,
-    ensure_questions_provider_fields,
     normalize_survey_provider,
-)
-from survey_submitter.providers.contracts import (
-    SurveyQuestionMeta,
-    clone_survey_question_metas,
-    ensure_survey_question_metas,
-    serialize_survey_question_metas,
 )
 from survey_submitter.constants import USER_AGENT_PRESETS
 
@@ -71,7 +64,6 @@ __all__ = [
     "serialize_question_entry",
     "deserialize_question_entry",
     "clone_question_entries",
-    "clone_questions_info",
     "build_runtime_config_snapshot",
     "normalize_runtime_config_payload",
     "serialize_runtime_config",
@@ -107,55 +99,6 @@ _QUESTION_ENTRY_FIELDS = {
     "is_location",
     "location_parts",
     "dimension",
-}
-
-_SURVEY_QUESTION_META_FIELDS = {
-    "num",
-    "title",
-    "type_code",
-    "required",
-    "description",
-    "unsupported",
-    "unsupported_reason",
-    "display_num",
-    "has_jump",
-    "jump_rules",
-    "has_display_condition",
-    "display_conditions",
-    "has_dependent_display_logic",
-    "controls_display_targets",
-    "logic_parse_status",
-    "question_media",
-    "option_texts",
-    "forced_option_index",
-    "forced_option_text",
-    "fillable_options",
-    "attached_option_selects",
-    "has_attached_option_select",
-    "multi_min_limit",
-    "multi_max_limit",
-    "rows",
-    "row_texts",
-    "rating_max",
-    "text_inputs",
-    "text_input_labels",
-    "is_location",
-    "slider_min",
-    "slider_max",
-    "slider_step",
-    "page",
-    "provider",
-    "provider_question_id",
-    "provider_page_id",
-    "provider_type",
-    "provider_page_raw",
-    "options",
-    "forced_texts",
-    "is_rating",
-    "is_description",
-    "is_multi_text",
-    "is_text_like",
-    "is_slider_matrix",
 }
 
 _SURVEY_SECTION_FIELDS = frozenset(SurveySection.model_fields.keys())
@@ -434,17 +377,10 @@ def clone_question_entries(entries: list[object] | list[QuestionEntry] | None) -
     return cloned
 
 
-def clone_questions_info(
-    questions: list[SurveyQuestionMeta] | None, *, default_provider: str = SURVEY_PROVIDER_WJX
-) -> list[SurveyQuestionMeta]:
-    return clone_survey_question_metas(questions or [], default_provider=default_provider)
-
-
 def build_runtime_config_snapshot(
     config: RuntimeConfig,
     *,
     question_entries: list[object] | None = None,
-    questions_info: list[SurveyQuestionMeta] | None = None,
 ) -> RuntimeConfig:
     snapshot = copy.deepcopy(config)
     default_provider = normalize_survey_provider(
@@ -455,13 +391,7 @@ def build_runtime_config_snapshot(
     entry_source = (
         question_entries if question_entries is not None else snapshot.answer_config.question_entries
     )
-    info_source = (
-        questions_info if questions_info is not None else snapshot.answer_config.questions_info
-    )
     snapshot.answer_config.question_entries = clone_question_entries(entry_source)
-    snapshot.answer_config.questions_info = clone_questions_info(
-        info_source, default_provider=default_provider
-    )
     snapshot.answer_config.answer_rules = copy.deepcopy(
         list(snapshot.answer_config.answer_rules or [])
     )
@@ -510,45 +440,17 @@ def _normalize_question_entries_list(
     return entries
 
 
-def _normalize_questions_info_data(
-    raw_data: object,
-    survey_provider: str,
-) -> list[SurveyQuestionMeta]:
-    if not isinstance(raw_data, list):
-        return []
-    dict_items: list[dict[str, object]] = []
-    for item in raw_data:
-        if isinstance(item, dict):
-            unknown_question_keys = set(item) - _SURVEY_QUESTION_META_FIELDS
-            if unknown_question_keys:
-                raise ValueError(
-                    f"{_CONFIG_CORRUPTED_MESSAGE}：题目元数据包含不支持的字段（"
-                    f"{', '.join(sorted(unknown_question_keys))}）"
-                )
-            question_dict: dict[str, object] = {str(k): v for k, v in item.items()}
-            dict_items.append(question_dict)
-    normalized_questions = ensure_questions_provider_fields(
-        dict_items,
-        default_provider=survey_provider,
-    )
-    return ensure_survey_question_metas(
-        normalized_questions,
-        default_provider=survey_provider,
-    )
-
-
 def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
     _validate_no_unknown_keys(raw)
 
     # Extract fields that need special handling before Pydantic validation
     answer_config_raw = cast("dict[str, object]", raw.get("answer_config") or {})
 
-    # Remove question_entries and questions_info from raw to avoid validation errors
+    # Remove question_entries from raw to avoid validation errors
     raw_copy = dict(raw)
     if "answer_config" in raw_copy and isinstance(raw_copy["answer_config"], dict):
         answer_config_copy = dict(raw_copy["answer_config"])
         answer_config_copy.pop("question_entries", None)
-        answer_config_copy.pop("questions_info", None)
         raw_copy["answer_config"] = answer_config_copy
 
     # Let Pydantic validate the structure and apply validators
@@ -566,12 +468,6 @@ def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
         config.survey.survey_provider,
     )
 
-    # Post-process questions_info (needs provider context)
-    config.answer_config.questions_info = _normalize_questions_info_data(
-        answer_config_raw.get("questions_info"),
-        config.survey.survey_provider,
-    )
-
     # Normalize answer_rules from raw YAML data
     raw_rules = answer_config_raw.get("answer_rules")
     normalized_rules: list[dict[str, Any]] = []
@@ -584,10 +480,10 @@ def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
                     normalized_rules.append(normalized_rule)
     config.answer_config.answer_rules = normalized_rules
 
-    # Sanitize answer_rules (needs questions_info context)
+    # Sanitize answer_rules (persisted config has no questions_info context)
     config.answer_config.answer_rules, _ = sanitize_answer_rules(
         config.answer_config.answer_rules,
-        config.answer_config.questions_info or [],
+        None,
     )
 
     return config
@@ -607,9 +503,6 @@ def serialize_runtime_config(config: RuntimeConfig) -> dict[str, object]:
         serialize_question_entry(entry)
         for entry in list(config.answer_config.question_entries or [])
     ]
-    answer_config_payload["questions_info"] = serialize_survey_question_metas(
-        config.answer_config.questions_info or []
-    )
     return payload
 
 

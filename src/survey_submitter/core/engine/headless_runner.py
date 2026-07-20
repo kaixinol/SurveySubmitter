@@ -67,7 +67,6 @@ class HeadlessRunner:
 
         definition = await self._parse_survey(config.survey.url)
 
-        config.answer_config.questions_info = definition.questions
         config.survey.survey_title = config.survey.survey_title or definition.title
         config.survey.survey_provider = definition.provider
 
@@ -85,7 +84,10 @@ class HeadlessRunner:
             )
             return
 
-        artifacts = prepare_execution_artifacts(config)
+        artifacts = prepare_execution_artifacts(
+            config,
+            questions_info=definition.questions,
+        )
         exec_config = artifacts.execution_config_template
         state = ExecutionState(config=exec_config)
 
