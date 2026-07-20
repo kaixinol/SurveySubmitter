@@ -192,34 +192,30 @@ class ProxyApiProviderTests:
             proxy_source.set_proxy_source(original_source)
             proxy_source.set_proxy_api_override(original_override)
 
-    def test_fetch_custom_proxy_batch_sets_stop_signal_on_fatal_error(self, patch_attrs) -> None:
+    def test_fetch_custom_proxy_batch_sets_stop_signal_on_fatal_error(
+        self, patch_attrs, loguru_sink
+    ) -> None:
         original_source = proxy_source.get_proxy_source()
         original_override = proxy_source.get_custom_proxy_api_override()
         try:
             proxy_source.set_proxy_source(proxy_source.PROXY_SOURCE_CUSTOM)
             proxy_source.set_proxy_api_override("https://proxy.example/api")
             stop_signal = threading.Event()
-            error_logs: list[str] = []
 
             async def fake_get(*_args, **_kwargs):
                 return _Response('{"code": 2, "message": "白名单错误"}')
 
-            original_logger_error = provider.logger.error
-            provider.logger.error = lambda msg, *args, **kwargs: error_logs.append(str(msg))  # ty: ignore[invalid-assignment]
-            try:
-                patch_attrs(
-                    (provider.http_client, "aget", fake_get),
+            patch_attrs(
+                (provider.http_client, "aget", fake_get),
+            )
+
+            with pytest.raises(provider.ProxyApiFatalError, match="白名单"):
+                asyncio.run(
+                    provider.fetch_proxy_batch_async(expected_count=1, stop_signal=stop_signal)
                 )
 
-                with pytest.raises(provider.ProxyApiFatalError, match="白名单"):
-                    asyncio.run(
-                        provider.fetch_proxy_batch_async(expected_count=1, stop_signal=stop_signal)
-                    )
-
-                assert stop_signal.is_set()
-                assert any("白名单" in log for log in error_logs)
-            finally:
-                provider.logger.error = original_logger_error  # ty: ignore[invalid-assignment]
+            assert stop_signal.is_set()
+            assert "白名单" in loguru_sink.getvalue()
         finally:
             proxy_source.set_proxy_source(original_source)
             proxy_source.set_proxy_api_override(original_override)
