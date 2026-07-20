@@ -499,3 +499,64 @@ class WjxHtmlParserTests:
         assert slider_matrix["slider_min"] == 1.0
         assert slider_matrix["slider_max"] == 5.0
         assert slider_matrix["slider_step"] == 1.0
+
+    def test_parse_survey_questions_propagates_cut_field_relation_to_block(self) -> None:
+        html = """
+        <html>
+          <body>
+            <div id="divQuestion">
+              <fieldset>
+                <div class="cutfield" id="divCut1" qtopic="1">
+                  <div>📝 基本信息</div>
+                </div>
+                <div topic="1" id="div1" type="3">
+                  <div class="topichtml">1. 触发题</div>
+                  <div class="ui-controlgroup">
+                    <div><span class="label">大专</span></div>
+                    <div><span class="label">本科</span></div>
+                    <div><span class="label">硕士</span></div>
+                    <div><span class="label">博士</span></div>
+                  </div>
+                </div>
+                <div class="cutfield" id="divCut2" qtopic="2" relation="1,3;4">
+                  <div>🎓 研究生专属模块</div>
+                </div>
+                <div topic="2" id="div2" type="4">
+                  <div class="topichtml">2. 研究生题A（无自身 relation）</div>
+                </div>
+                <div topic="3" id="div3" type="4">
+                  <div class="topichtml">3. 研究生题B（无自身 relation）</div>
+                </div>
+                <div topic="4" id="div4" type="4" relation="1,3;4">
+                  <div class="topichtml">4. 研究生题C（自身 relation 同分区）</div>
+                </div>
+                <div class="cutfield" id="divCut3" qtopic="5">
+                  <div>🛏️ 其他模块</div>
+                </div>
+                <div topic="5" id="div5" type="4">
+                  <div class="topichtml">5. 不在研究生模块内</div>
+                </div>
+              </fieldset>
+            </div>
+          </body>
+        </html>
+        """
+
+        questions = parse_survey_questions_from_html(html)
+        by_topic = {q["num"]: q for q in questions}
+
+        expected = {
+            "condition_question_num": 1,
+            "condition_mode": "selected",
+            "condition_option_indices": [2, 3],
+            "raw_relation": "1,3;4",
+        }
+        # 分区 relation 传播到其下无自身 relation 的题目
+        assert by_topic[2]["has_display_condition"]
+        assert by_topic[2]["display_conditions"] == [expected]
+        assert by_topic[3]["has_display_condition"]
+        assert by_topic[3]["display_conditions"] == [expected]
+        # 自身已有 relation 的题目不重复添加
+        assert by_topic[4]["display_conditions"] == [expected]
+        # 下一分区的题目不受影响
+        assert not by_topic[5]["has_display_condition"]
