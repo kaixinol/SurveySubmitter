@@ -29,6 +29,8 @@ from survey_submitter.core.questions.utils import (
     weighted_index,
 )
 
+_OPTION_FILL_WEIGHT_SEP = ":"
+
 
 async def resolve_option_fill_text_from_config(
     fill_entries: Sequence[str | None] | None,
@@ -49,7 +51,7 @@ async def resolve_option_fill_text_from_config(
     if not text:
         return None
     if text != OPTION_FILL_AI_TOKEN:
-        return resolve_dynamic_text_token(text)
+        return resolve_option_fill_list_value(text)
     if not ai_answering:
         return DEFAULT_FILL_TEXT
     if allow_ai_placeholder:
@@ -66,6 +68,52 @@ async def resolve_option_fill_text_from_config(
     except AIRuntimeError as exc:
         raise AIRuntimeError(f"第{question_number}题附加填空 AI 生成失败：{exc}") from exc
     return str(answer).strip() or DEFAULT_FILL_TEXT
+
+
+def resolve_option_fill_list_value(text: str) -> str:
+    """Resolve an option-fill value that may be a weighted candidate list.
+
+    When ``text`` contains the ``||`` delimiter it is treated as a list of
+    candidate answers; one entry is chosen at random. Each candidate may carry
+    an explicit weight using the ``answer:weight`` syntax (e.g.
+    ``"北京:3||上海:1||广州"``); candidates without a weight default to 1. The
+    chosen candidate still goes through :func:`resolve_dynamic_text_token` so
+    dynamic tokens such as ``__RANDOM_NAME__`` keep working inside a list.
+
+    Plain text (no delimiter) is returned through
+    :func:`resolve_dynamic_text_token` unchanged.
+    """
+    if not text or MULTI_TEXT_DELIMITER not in text:
+        return resolve_dynamic_text_token(text)
+
+    candidates: list[str] = []
+    weights: list[float] = []
+    for raw_part in text.split(MULTI_TEXT_DELIMITER):
+        part = raw_part.strip()
+        if not part:
+            continue
+        if _OPTION_FILL_WEIGHT_SEP in part:
+            answer, sep, weight_text = part.rpartition(_OPTION_FILL_WEIGHT_SEP)
+            if sep and answer.strip():
+                try:
+                    weight = max(0.0, float(weight_text.strip()))
+                except (ValueError, TypeError):
+                    weight = 0.0
+                candidates.append(answer.strip())
+                weights.append(weight)
+                continue
+        candidates.append(part)
+        weights.append(1.0)
+
+    if not candidates:
+        return resolve_dynamic_text_token(text)
+
+    try:
+        normalized_weights = normalize_probabilities(weights)
+    except (ValueError, TypeError):
+        normalized_weights = [1.0 / len(candidates)] * len(candidates)
+    chosen = candidates[weighted_index(normalized_weights)]
+    return resolve_dynamic_text_token(chosen)
 
 
 def resolve_text_values_from_config(
@@ -127,6 +175,7 @@ def resolve_text_values_from_config(
 
 __all__ = [
     "OPTION_FILL_AI_TOKEN",
+    "resolve_option_fill_list_value",
     "resolve_option_fill_text_from_config",
     "resolve_text_values_from_config",
 ]

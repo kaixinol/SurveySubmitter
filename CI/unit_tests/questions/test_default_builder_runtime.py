@@ -219,3 +219,35 @@ class DefaultBuilderRuntimeTests:
 
         assert entries[0].probabilities == -1
         assert entries[0].distribution_mode == "random"
+
+    def test_build_default_question_entries_retains_attached_selects_for_multiple(self) -> None:
+        questions = [
+            ensure_survey_question_meta(
+                {
+                    "num": 2,
+                    "title": "多选题",
+                    "type_code": "4",
+                    "option_texts": ["A", "B", "C"],
+                    "fillable_options": [2],
+                    "attached_option_selects": [
+                        {
+                            "option_index": "2",
+                            "option_text": "其他",
+                            "select_options": ["北京", "上海", "广州"],
+                        }
+                    ],
+                }
+            )
+        ]
+
+        entries = build_default_question_entries(questions)
+
+        assert entries[0].question_type == "multiple"
+        assert entries[0].attached_option_selects == [
+            {
+                "option_index": 2,
+                "option_text": "其他",
+                "select_options": ["北京", "上海", "广州"],
+                "weights": None,
+            }
+        ]
