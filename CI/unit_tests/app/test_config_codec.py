@@ -23,7 +23,6 @@ from survey_submitter.core.config.schema import (
 )
 from survey_submitter.core.questions.schema import QuestionEntry
 from survey_submitter.core.reverse_fill.schema import REVERSE_FILL_FORMAT_WJX_SEQUENCE
-from survey_submitter.providers.contracts import ensure_survey_question_meta
 
 
 class ConfigCodecTests:
@@ -63,54 +62,6 @@ class ConfigCodecTests:
         assert payload["execution"]["answer_datetime_window"] == ("2026-02-10 09:00:00", "2026-02-10 10:00:00")  # ty:ignore[not-subscriptable]
         assert restored.execution.answer_datetime_window == ("2026-02-10 09:00:00", "2026-02-10 10:00:00")
 
-    def test_runtime_config_roundtrip_keeps_questions_info_provider_metadata(self) -> None:
-        config = RuntimeConfig(
-            survey=SurveySection(survey_provider="wjx"),
-            answer_config=AnswerConfigSection(
-                questions_info=[
-                    ensure_survey_question_meta(
-                        {
-                            "num": 3,
-                            "title": "联系方式",
-                            "type_code": "3",
-                            "provider_question_id": "question-3",
-                            "provider_page_id": "page-2",
-                            "option_texts": ["姓名", "电话"],
-                            "required": True,
-                            "logic_parse_status": "unknown",
-                            "question_media": [
-                                {
-                                    "kind": "image",
-                                    "scope": "title",
-                                    "index": None,
-                                    "source_url": "https://example.com/q3.png",
-                                    "label": "题干图",
-                                }
-                            ],
-                        }
-                    )
-                ]
-            ),
-        )
-        payload = serialize_runtime_config(config)
-        restored = deserialize_runtime_config(payload)
-        assert payload["answer_config"]["questions_info"][0]["provider_question_id"] == "question-3"  # ty:ignore[not-subscriptable]
-        assert payload["answer_config"]["questions_info"][0]["provider_page_id"] == "page-2"  # ty:ignore[not-subscriptable]
-        assert payload["answer_config"]["questions_info"][0]["required"]  # ty:ignore[not-subscriptable]
-        assert payload["answer_config"]["questions_info"][0]["logic_parse_status"] == "unknown"  # ty:ignore[not-subscriptable]
-        assert (
-            payload["answer_config"]["questions_info"][0]["question_media"][0]["source_url"]  # ty:ignore[not-subscriptable]
-            == "https://example.com/q3.png"
-        )
-        assert len(restored.answer_config.questions_info or []) == 1
-        assert restored.answer_config.questions_info is not None
-        restored_info = restored.answer_config.questions_info[0]
-        assert restored_info.provider_question_id == "question-3"
-        assert restored_info.provider_page_id == "page-2"
-        assert restored_info.required
-        assert restored_info.logic_parse_status == "unknown"
-        assert restored_info.question_media[0]["label"] == "题干图"  # ty:ignore[unresolved-attribute]
-
     def test_build_runtime_config_snapshot_returns_detached_copies(self) -> None:
         config = RuntimeConfig(
             survey=SurveySection(survey_provider="wjx"),
@@ -125,34 +76,17 @@ class ConfigCodecTests:
                         question_num=1,
                     )
                 ],
-                questions_info=[
-                    ensure_survey_question_meta(
-                        {
-                            "num": 1,
-                            "title": "单选题",
-                            "type_code": "3",
-                            "option_texts": ["A", "B"],
-                            "provider_question_id": "q1",
-                        }
-                    )
-                ],
             ),
         )
         snapshot = build_runtime_config_snapshot(config)
         assert snapshot is not config
         assert snapshot.answer_config.question_entries is not config.answer_config.question_entries
-        assert snapshot.answer_config.questions_info is not config.answer_config.questions_info
         assert snapshot.answer_config.question_entries[0] is not config.answer_config.question_entries[0]
-        assert snapshot.answer_config.questions_info is not None
-        assert config.answer_config.questions_info is not None
-        assert snapshot.answer_config.questions_info[0] is not config.answer_config.questions_info[0]
         assert snapshot.answer_config.question_entries[0].texts is not None
         snapshot.answer_config.question_entries[0].texts[0] = "已修改"
-        snapshot.answer_config.questions_info[0].option_texts[0] = "已修改"  # ty:ignore[unresolved-attribute]
         snapshot.answer_config.answer_rules[0]["equals"][0] = 9
         assert config.answer_config.question_entries[0].texts is not None
         assert config.answer_config.question_entries[0].texts[0] == "A"
-        assert config.answer_config.questions_info[0].option_texts[0] == "A"  # ty:ignore[unresolved-attribute]
         assert config.answer_config.answer_rules[0]["equals"][0] == 0
 
     def test_unknown_fields_raise_corruption_error(self) -> None:
@@ -243,7 +177,6 @@ class ConfigCodecTests:
                     },
                 },
                 "answer_config": {
-                    "questions_info": "bad",
                     "question_entries": [{"question_type": "single", "rows": "bad"}],
                 },
             }
@@ -261,7 +194,6 @@ class ConfigCodecTests:
         assert cfg.execution.reverse_fill.format == "auto"
         assert cfg.execution.reverse_fill.start_row == 1
         assert cfg.execution.reverse_fill.threads == 1
-        assert cfg.answer_config.questions_info == []
         assert len(cfg.answer_config.question_entries) == 1
         assert cfg.answer_config.question_entries[0].rows == 1
 

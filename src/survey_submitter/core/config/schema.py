@@ -14,7 +14,6 @@ from survey_submitter.core.reverse_fill.schema import (
     REVERSE_FILL_FORMAT_WJX_TEXT,
 )
 from survey_submitter.providers.common import SURVEY_PROVIDER_WJX, detect_survey_provider, normalize_survey_provider
-from survey_submitter.providers.contracts import SurveyQuestionMeta
 
 
 # Reverse fill format constants
@@ -172,15 +171,7 @@ class ExecutionSection(BaseConfigModel):
 
 class AnswerConfigSection(BaseConfigModel):
     question_entries: list[QuestionEntry] = []
-    questions_info: list[SurveyQuestionMeta] | None = []
     answer_rules: list[dict[str, Any]] = []
-
-    @field_validator("questions_info", mode="before")
-    @classmethod
-    def coerce_questions_info(cls, v: Any) -> list[SurveyQuestionMeta]:
-        if not isinstance(v, list):
-            return []
-        return v
 
 
 class RuntimeConfig(BaseConfigModel):

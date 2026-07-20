@@ -71,8 +71,10 @@ execution:
 # ---------------------------------------------------------------------------
 # Answer configuration
 # ---------------------------------------------------------------------------
-# question_entries and questions_info are populated automatically when you
-# export a config from the GUI. Below is a minimal example structure.
+# question_entries holds the per-question answering strategy (probabilities,
+# fill texts, weights, ...). It is populated automatically when you export a
+# config from the GUI or run the headless/dry-run generator. questions_info is
+# no longer persisted (the survey definition is re-parsed at runtime).
 #
 # question_entries:
 #   - question_num: 1
@@ -81,15 +83,7 @@ execution:
 #     option_count: 4
 #     distribution_mode: "random"
 #     ...
-#
-# questions_info:
-#   - num: 1
-#     title: "Your gender"
-#     type_code: "single"
-#     options: ["Male", "Female", "Other", "Prefer not to say"]
-#     ...
 
 answer_config:
   question_entries: []
-  questions_info: []
   answer_rules: []

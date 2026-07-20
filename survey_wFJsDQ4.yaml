@@ -1,0 +1,910 @@
+survey:
+  url: https://v.wjx.cn/vm/wFJsDQ4.aspx#
+  survey_title: 校园生活现状调研问卷
+  survey_provider: wjx
+execution:
+  target_num: 1
+  num_threads: 1
+  submit_interval_range_seconds:
+  - 0
+  - 0
+  answer_duration_range_seconds:
+  - 60
+  - 120
+  answer_datetime_window:
+  - ''
+  - ''
+  random_proxy_ip: false
+  proxy_source: default
+  custom_proxy_api: ''
+  proxy_area_code: null
+  random_user_agent: false
+  user_agent_ratios:
+    wechat: 33
+    mobile: 33
+    pc: 34
+  stop_on_fail: true
+  pause_on_aliyun_captcha: true
+  reliability_mode: true
+  persona: true
+  ai:
+    answering: true
+    api_key: ''
+    base_url: ''
+    api_protocol: auto
+    model: ''
+    system_prompt: ''
+  reverse_fill:
+    enabled: false
+    source_path: ''
+    format: auto
+    start_row: 1
+    threads: 1
+answer_config:
+  question_entries:
+  - question_type: text
+    probabilities:
+    - 1.0
+    texts:
+    - 无
+    rows: 1
+    option_count: 1
+    distribution_mode: random
+    custom_weights: null
+    question_num: 1
+    question_title: 如果您在主观题中留下了精彩见解，并希望在最终报告中获得署名，请留下您的常用网名/代号（留空则视为自愿以‘匿名受访者’身份参与开源共享）：[___________]
+      （1到4字）
+    survey_provider: wjx
+    provider_question_id: '1'
+    provider_page_id: '1'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: location
+    probabilities:
+    - 1.0
+    texts:
+    - 无
+    rows: 1
+    option_count: 1
+    distribution_mode: random
+    custom_weights: null
+    question_num: 2
+    question_title: 你的学校是全称是？
+    survey_provider: wjx
+    provider_question_id: '2'
+    provider_page_id: '1'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: true
+    location_parts: []
+    dimension: null
+  - question_type: multi_text
+    probabilities:
+    - 1.0
+    texts:
+    - 无
+    rows: 1
+    option_count: 3
+    distribution_mode: random
+    custom_weights: null
+    question_num: 3
+    question_title: 你的入学年份及就读专业是什么？ 年入学，专业为 ，你的性別是 （不愿透露） ？ *
+    survey_provider: wjx
+    provider_question_id: '3'
+    provider_page_id: '1'
+    ai_enabled: false
+    multi_text_blank_modes:
+    - none
+    - none
+    - none
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: single
+    probabilities: -1
+    texts: null
+    rows: 1
+    option_count: 4
+    distribution_mode: random
+    custom_weights: null
+    question_num: 4
+    question_title: 你的培养层次是？
+    survey_provider: wjx
+    provider_question_id: '4'
+    provider_page_id: '1'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices:
+    - 0
+    - 1
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: location
+    probabilities:
+    - 1.0
+    texts:
+    - 无
+    rows: 1
+    option_count: 1
+    distribution_mode: random
+    custom_weights: null
+    question_num: 5
+    question_title: 你目前在哪一个校区就读？
+    survey_provider: wjx
+    provider_question_id: '5'
+    provider_page_id: '1'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: true
+    location_parts: []
+    dimension: null
+  - question_type: single
+    probabilities: -1
+    texts: null
+    rows: 1
+    option_count: 4
+    distribution_mode: random
+    custom_weights: null
+    question_num: 6
+    question_title: 学校转专业容易吗？（可选）
+    survey_provider: wjx
+    provider_question_id: '6'
+    provider_page_id: '1'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: multiple
+    probabilities:
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    texts: null
+    rows: 1
+    option_count: 6
+    distribution_mode: random
+    custom_weights: null
+    question_num: 7
+    question_title: 导师管理风格与组内学术氛围如何？ 【 最少 选择2项】
+    survey_provider: wjx
+    provider_question_id: '7'
+    provider_page_id: '2'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: multiple
+    probabilities:
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    texts: null
+    rows: 1
+    option_count: 7
+    distribution_mode: random
+    custom_weights: null
+    question_num: 8
+    question_title: 实验室与工位硬件条件如何？ 【请选择1 - 5项】
+    survey_provider: wjx
+    provider_question_id: '8'
+    provider_page_id: '2'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: text
+    probabilities:
+    - 1.0
+    texts:
+    - 无
+    rows: 1
+    option_count: 1
+    distribution_mode: random
+    custom_weights: null
+    question_num: 9
+    question_title: 研究生的补助与福利待遇大概在什么水平？
+    survey_provider: wjx
+    provider_question_id: '9'
+    provider_page_id: '2'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: multiple
+    probabilities:
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    texts: null
+    rows: 1
+    option_count: 6
+    distribution_mode: random
+    custom_weights: null
+    question_num: 10
+    question_title: 是否存在“异地研究院/分院/校外基地”联培情况？生存现状如何？（没有请跳过）
+    survey_provider: wjx
+    provider_question_id: '10'
+    provider_page_id: '2'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: multiple
+    probabilities:
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    texts: null
+    rows: 1
+    option_count: 6
+    distribution_mode: random
+    custom_weights: null
+    question_num: 11
+    question_title: 宿舍的床位结构是怎样的？ 【请选择1 - 5项】
+    survey_provider: wjx
+    provider_question_id: '11'
+    provider_page_id: '3'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: multiple
+    probabilities:
+    - 50.0
+    - 50.0
+    texts: null
+    rows: 1
+    option_count: 2
+    distribution_mode: random
+    custom_weights: null
+    question_num: 12
+    question_title: 教室和宿舍有空调吗？
+    survey_provider: wjx
+    provider_question_id: '12'
+    provider_page_id: '3'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices:
+    - 0
+    - 1
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: multiple
+    probabilities:
+    - 50.0
+    - 50.0
+    - 50.0
+    texts: null
+    rows: 1
+    option_count: 3
+    distribution_mode: random
+    custom_weights: null
+    question_num: 13
+    question_title: 宿舍有独立卫浴吗？
+    survey_provider: wjx
+    provider_question_id: '13'
+    provider_page_id: '3'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices:
+    - 0
+    - 1
+    - 2
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: multiple
+    probabilities:
+    - 50.0
+    - 50.0
+    texts: null
+    rows: 1
+    option_count: 2
+    distribution_mode: random
+    custom_weights: null
+    question_num: 14
+    question_title: 每天会断电断网吗？
+    survey_provider: wjx
+    provider_question_id: '14'
+    provider_page_id: '3'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices:
+    - 0
+    - 1
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: text
+    probabilities:
+    - 1.0
+    texts:
+    - 无
+    rows: 1
+    option_count: 1
+    distribution_mode: random
+    custom_weights: null
+    question_num: 15
+    question_title: 宿舍的限电功率是多少？会没收违禁电器吗 / 查违章电器严不严？宿舍允许挂隐私床帘 / 遮光窗帘吗？（可选）
+    survey_provider: wjx
+    provider_question_id: '15'
+    provider_page_id: '3'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: single
+    probabilities: -1
+    texts: null
+    rows: 1
+    option_count: 3
+    distribution_mode: random
+    custom_weights: null
+    question_num: 16
+    question_title: 大一刚入学允许带电脑吗？
+    survey_provider: wjx
+    provider_question_id: '16'
+    provider_page_id: '3'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: single
+    probabilities: -1
+    texts: null
+    rows: 1
+    option_count: 4
+    distribution_mode: random
+    custom_weights: null
+    question_num: 17
+    question_title: 晚上宿舍会查寝或封寝吗？
+    survey_provider: wjx
+    provider_question_id: '17'
+    provider_page_id: '3'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices:
+    - 0
+    - 1
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: text
+    probabilities:
+    - 1.0
+    texts:
+    - 无
+    rows: 1
+    option_count: 1
+    distribution_mode: random
+    custom_weights: null
+    question_num: 18
+    question_title: 食堂的价格与卫生质量如何？
+    survey_provider: wjx
+    provider_question_id: '18'
+    provider_page_id: '4'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: text
+    probabilities:
+    - 1.0
+    texts:
+    - 无
+    rows: 1
+    option_count: 1
+    distribution_mode: random
+    custom_weights: null
+    question_num: 19
+    question_title: 校园网的收费和网络质量如何？带宽多大 ？（不用校园网则跳过）
+    survey_provider: wjx
+    provider_question_id: '19'
+    provider_page_id: '4'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: multiple
+    probabilities:
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    texts: null
+    rows: 1
+    option_count: 5
+    distribution_mode: random
+    custom_weights: null
+    question_num: 20
+    question_title: 校园内用什么卡消费？
+    survey_provider: wjx
+    provider_question_id: '20'
+    provider_page_id: '4'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices:
+    - 4
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: text
+    probabilities:
+    - 1.0
+    texts:
+    - 无
+    rows: 1
+    option_count: 1
+    distribution_mode: random
+    custom_weights: null
+    question_num: 21
+    question_title: 学校的快递收发政策怎么样？
+    survey_provider: wjx
+    provider_question_id: '21'
+    provider_page_id: '4'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: multiple
+    probabilities:
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    - 50.0
+    texts: null
+    rows: 1
+    option_count: 6
+    distribution_mode: random
+    custom_weights: null
+    question_num: 22
+    question_title: 校园内超市的物价和服务怎么样？ 【请选择2项】
+    survey_provider: wjx
+    provider_question_id: '22'
+    provider_page_id: '4'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: single
+    probabilities: -1
+    texts: null
+    rows: 1
+    option_count: 3
+    distribution_mode: random
+    custom_weights: null
+    question_num: 23
+    question_title: 学校允许点外卖吗？
+    survey_provider: wjx
+    provider_question_id: '23'
+    provider_page_id: '5'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices:
+    - 1
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: single
+    probabilities: -1
+    texts: null
+    rows: 1
+    option_count: 3
+    distribution_mode: random
+    custom_weights: null
+    question_num: 24
+    question_title: 校园内可以骑私家电瓶车吗？
+    survey_provider: wjx
+    provider_question_id: '24'
+    provider_page_id: '5'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices:
+    - 0
+    - 1
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: single
+    probabilities: -1
+    texts: null
+    rows: 1
+    option_count: 3
+    distribution_mode: random
+    custom_weights: null
+    question_num: 25
+    question_title: 校内共享单车的数量与种类如何？
+    survey_provider: wjx
+    provider_question_id: '25'
+    provider_page_id: '5'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: single
+    probabilities: -1
+    texts: null
+    rows: 1
+    option_count: 3
+    distribution_mode: random
+    custom_weights: null
+    question_num: 26
+    question_title: 学校周边的交通便利度如何？
+    survey_provider: wjx
+    provider_question_id: '26'
+    provider_page_id: '5'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices:
+    - 1
+    - 2
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: multiple
+    probabilities:
+    - 50.0
+    - 50.0
+    - 50.0
+    texts: null
+    rows: 1
+    option_count: 3
+    distribution_mode: random
+    custom_weights: null
+    question_num: 27
+    question_title: 日常考勤管理严格吗？ 【请选择1 - 2项】
+    survey_provider: wjx
+    provider_question_id: '27'
+    provider_page_id: '6'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices:
+    - 0
+    - 1
+    - 2
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: text
+    probabilities:
+    - 1.0
+    texts:
+    - 无
+    rows: 1
+    option_count: 1
+    distribution_mode: random
+    custom_weights: null
+    question_num: 28
+    question_title: 每学期跑步打卡的要求是多少公里？（可选，没有请跳过）
+    survey_provider: wjx
+    provider_question_id: '28'
+    provider_page_id: '6'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: text
+    probabilities:
+    - 1.0
+    texts:
+    - 无
+    rows: 1
+    option_count: 1
+    distribution_mode: random
+    custom_weights: null
+    question_num: 29
+    question_title: 寒暑假一般放多久？有小学期吗？有的话是多长？
+    survey_provider: wjx
+    provider_question_id: '29'
+    provider_page_id: '6'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: text
+    probabilities:
+    - 1.0
+    texts:
+    - 无
+    rows: 1
+    option_count: 1
+    distribution_mode: random
+    custom_weights: null
+    question_num: 30
+    question_title: 自习资源和图书馆体验如何？
+    survey_provider: wjx
+    provider_question_id: '30'
+    provider_page_id: '6'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  - question_type: text
+    probabilities:
+    - 1.0
+    texts:
+    - 无
+    rows: 1
+    option_count: 1
+    distribution_mode: random
+    custom_weights: null
+    question_num: 31
+    question_title: 🤔💬 自由补充
+    survey_provider: wjx
+    provider_question_id: '31'
+    provider_page_id: '6'
+    ai_enabled: false
+    multi_text_blank_modes: []
+    multi_text_blank_ai_flags: []
+    multi_text_blank_int_ranges: []
+    text_random_mode: none
+    text_random_int_range: []
+    option_fill_texts: null
+    fillable_option_indices: []
+    attached_option_selects: []
+    is_location: false
+    location_parts: []
+    dimension: null
+  answer_rules: []

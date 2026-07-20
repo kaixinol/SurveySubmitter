@@ -165,7 +165,6 @@ def _cmd_dry_run(config_path: str) -> None:
         raise ValueError("配置文件中未指定问卷 URL")
 
     definition = asyncio.run(parse_survey(config.survey.url))
-    config.answer_config.questions_info = definition.questions
     config.survey.survey_title = config.survey.survey_title or definition.title
     config.survey.survey_provider = definition.provider
 
@@ -179,7 +178,10 @@ def _cmd_dry_run(config_path: str) -> None:
 
     out.write(f"[dry-run] 问卷解析成功: {definition.title} ({len(definition.questions)} 题)\n")
 
-    artifacts = prepare_execution_artifacts(config)
+    artifacts = prepare_execution_artifacts(
+        config,
+        questions_info=definition.questions,
+    )
     exec_config = artifacts.execution_config_template
 
     out.write(f"[dry-run] 执行配置验证通过\n")

@@ -14,6 +14,7 @@ from survey_submitter.core.engine.execution_builder import (
     RuntimePreparationError,
     prepare_execution_artifacts,
 )
+from survey_submitter.providers.contracts import ensure_survey_question_meta
 
 
 class _FakeHttpResponse:
@@ -25,6 +26,12 @@ class _FakeHttpResponse:
 
 
 class RuntimePreparationTests:
+    _SAMPLE_QUESTIONS_INFO = [
+        ensure_survey_question_meta(
+            {"num": 1, "title": "Q1", "provider_question_id": "q1", "provider_page_id": "p1"}
+        )
+    ]
+
     def _build_config(self) -> RuntimeConfig:
         config = RuntimeConfig(
             survey=SurveySection(
@@ -55,9 +62,6 @@ class RuntimePreparationTests:
                         provider_page_id="p1",
                     )
                 ],
-                questions_info=[
-                    {"num": 1, "title": "Q1", "provider_question_id": "q1", "provider_page_id": "p1"}
-                ],
             ),
         )
         return config
@@ -75,7 +79,9 @@ class RuntimePreparationTests:
             return_value="第1题配置冲突",
         ):
             with pytest.raises(RuntimePreparationError) as cm:
-                prepare_execution_artifacts(config)
+                prepare_execution_artifacts(
+                    config, questions_info=self._SAMPLE_QUESTIONS_INFO
+                )
         assert "题目配置存在冲突" in cm.value.user_message
         assert "第1题配置冲突" in cm.value.log_message
 
@@ -97,7 +103,9 @@ class RuntimePreparationTests:
             ),
         ):
             with pytest.raises(RuntimePreparationError) as cm:
-                prepare_execution_artifacts(config)
+                prepare_execution_artifacts(
+                    config, questions_info=self._SAMPLE_QUESTIONS_INFO
+                )
         assert cm.value.user_message == "问卷已停止，无法作答"
         assert http_get.call_args.kwargs.get("proxies") == {}
 
@@ -122,7 +130,9 @@ class RuntimePreparationTests:
             ),
         ):
             with pytest.raises(RuntimePreparationError) as cm:
-                prepare_execution_artifacts(config)
+                prepare_execution_artifacts(
+                    config, questions_info=self._SAMPLE_QUESTIONS_INFO
+                )
         assert cm.value.user_message == "问卷发布者企业标准版未购买或已到期，暂时不能填写"
 
     def test_prepare_execution_artifacts_marks_reverse_fill_error_as_detailed(self) -> None:
@@ -132,7 +142,9 @@ class RuntimePreparationTests:
             side_effect=RuntimeError("反填源文件损坏"),
         ):
             with pytest.raises(RuntimePreparationError) as cm:
-                prepare_execution_artifacts(config)
+                prepare_execution_artifacts(
+                    config, questions_info=self._SAMPLE_QUESTIONS_INFO
+                )
         assert cm.value.detailed
         assert cm.value.user_message == "反填源文件损坏"
 
@@ -158,7 +170,11 @@ class RuntimePreparationTests:
                 "survey_submitter.core.engine.execution_builder.set_proxy_occupy_minute_by_answer_duration"
             ) as sync_proxy_duration,
         ):
-            artifacts = prepare_execution_artifacts(config, fallback_survey_title="后备标题")
+            artifacts = prepare_execution_artifacts(
+                config,
+                fallback_survey_title="后备标题",
+                questions_info=self._SAMPLE_QUESTIONS_INFO,
+            )
         assert isinstance(artifacts, PreparedExecutionArtifacts)
         assert artifacts.survey_provider == "wjx"
         assert artifacts.execution_config_template.survey_title == "测试问卷"
@@ -179,6 +195,10 @@ class RuntimePreparationTests:
         config.survey.survey_title = ""
         with (
             patch(
+                "survey_submitter.core.engine.execution_builder._verify_wjx_survey_is_answerable",
+                return_value=None,
+            ),
+            patch(
                 "survey_submitter.core.engine.execution_builder.build_enabled_reverse_fill_spec",
                 return_value=None,
             ),
@@ -187,10 +207,15 @@ class RuntimePreparationTests:
                 return_value=None,
             ),
         ):
-            artifacts = prepare_execution_artifacts(config, fallback_survey_title="解析得到的标题")
+            artifacts = prepare_execution_artifacts(
+                config,
+                fallback_survey_title="解析得到的标题",
+                questions_info=self._SAMPLE_QUESTIONS_INFO,
+            )
         assert artifacts.execution_config_template.survey_title == "解析得到的标题"
         assert artifacts.survey_provider == "wjx"
-        assert artifacts.questions_info[0] is not config.answer_config.questions_info[0]  # ty:ignore[not-subscriptable]
+        assert len(artifacts.questions_info) == 1
+        assert artifacts.questions_info[0].title == "Q1"
 
     def test_prepare_execution_artifacts_clamps_threads_by_http_limit(self) -> None:
         config = self._build_config()
@@ -205,7 +230,9 @@ class RuntimePreparationTests:
                 return_value=None,
             ),
         ):
-            artifacts = prepare_execution_artifacts(config)
+            artifacts = prepare_execution_artifacts(
+                config, questions_info=self._SAMPLE_QUESTIONS_INFO
+            )
         assert artifacts.execution_config_template.num_threads == 64
 
     def test_prepare_execution_artifacts_uses_reverse_fill_sample_count_and_threads(self) -> None:
@@ -224,6 +251,10 @@ class RuntimePreparationTests:
         )
         with (
             patch(
+                "survey_submitter.core.engine.execution_builder._verify_wjx_survey_is_answerable",
+                return_value=None,
+            ),
+            patch(
                 "survey_submitter.core.engine.execution_builder.build_enabled_reverse_fill_spec",
                 return_value=reverse_fill_spec,
             ),
@@ -232,6 +263,8 @@ class RuntimePreparationTests:
                 return_value=None,
             ),
         ):
-            artifacts = prepare_execution_artifacts(config)
+            artifacts = prepare_execution_artifacts(
+                config, questions_info=self._SAMPLE_QUESTIONS_INFO
+            )
         assert artifacts.execution_config_template.target_num == 9
         assert artifacts.execution_config_template.num_threads == 3

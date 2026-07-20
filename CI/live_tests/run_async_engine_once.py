@@ -24,6 +24,7 @@ from survey_submitter.core.config.schema import (
 )
 from survey_submitter.core.engine.async_engine import AsyncRuntimeEngine
 from survey_submitter.core.questions.config import build_default_question_entries
+from survey_submitter.providers.contracts import SurveyQuestionMeta
 from survey_submitter.core.task import ExecutionState
 from survey_submitter.providers.registry import parse_survey
 from survey_submitter.core.engine.execution_builder import prepare_execution_artifacts
@@ -52,7 +53,7 @@ def _print_failure(exc: BaseException) -> None:
         print(f"{prefix}: {message}")
 
 
-def _build_live_test_config(url: str) -> RuntimeConfig:
+def _build_live_test_config(url: str) -> tuple[RuntimeConfig, list[SurveyQuestionMeta]]:
     normalized_url = str(url or "").strip()
     if not normalized_url:
         raise ValueError("问卷链接为空")
@@ -82,11 +83,10 @@ def _build_live_test_config(url: str) -> RuntimeConfig:
             reverse_fill=ReverseFillSection(enabled=False),
         ),
         answer_config=AnswerConfigSection(
-            questions_info=list(questions_info),
             question_entries=list(question_entries),
         ),
     )
-    return config
+    return config, questions_info
 
 
 def main() -> int:
@@ -97,9 +97,13 @@ def main() -> int:
 
     try:
         logging.disable(logging.CRITICAL)
-        config = _build_live_test_config(args.url)
+        config, questions_info = _build_live_test_config(args.url)
 
-        prepared = prepare_execution_artifacts(config, fallback_survey_title=config.survey.survey_title)
+        prepared = prepare_execution_artifacts(
+            config,
+            fallback_survey_title=config.survey.survey_title,
+            questions_info=list(questions_info),
+        )
         execution_config = prepared.execution_config_template
         execution_config.target_num = 1
         execution_config.num_threads = 1
