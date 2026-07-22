@@ -70,6 +70,9 @@ class ExecutionConfig(BaseConfigModel):
     persona: bool = True
     ai_answering: bool = True
 
+    test_profiles: list[dict[int, str]] = []
+    current_profile_index: int = 0
+
 
 @dataclass
 class ExecutionState(
