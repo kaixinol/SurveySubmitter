@@ -327,7 +327,11 @@ def _build_matrix_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     row_texts = _normalize_text_list(normalized.get("row_texts"))
     rows_raw = normalized.get("rows")
     try:
-        rows = max(1, int(rows_raw)) if isinstance(rows_raw, (int, float, str)) else (len(row_texts) or 1)
+        rows = (
+            max(1, int(rows_raw))
+            if isinstance(rows_raw, (int, float, str))
+            else (len(row_texts) or 1)
+        )
     except (ValueError, TypeError):
         rows = len(row_texts) or 1
     return {
@@ -341,12 +345,20 @@ def _build_rating_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     options_raw = normalized.get("options")
     option_texts = _normalize_text_list(normalized.get("option_texts"))
     try:
-        option_count = max(0, int(options_raw)) if isinstance(options_raw, (int, float, str)) else len(option_texts)
+        option_count = (
+            max(0, int(options_raw))
+            if isinstance(options_raw, (int, float, str))
+            else len(option_texts)
+        )
     except (ValueError, TypeError):
         option_count = len(option_texts)
     rating_max_raw = normalized.get("rating_max")
     try:
-        rating_max = max(0, int(rating_max_raw)) if isinstance(rating_max_raw, (int, float, str)) else option_count
+        rating_max = (
+            max(0, int(rating_max_raw))
+            if isinstance(rating_max_raw, (int, float, str))
+            else option_count
+        )
     except (ValueError, TypeError):
         rating_max = option_count
     return {
@@ -360,7 +372,9 @@ def _build_text_kwargs(
     text_input_labels = _normalize_text_list(normalized.get("text_input_labels")) or None
     text_inputs_raw = normalized.get("text_inputs")
     try:
-        text_inputs = max(0, int(text_inputs_raw)) if isinstance(text_inputs_raw, (int, float, str)) else 0
+        text_inputs = (
+            max(0, int(text_inputs_raw)) if isinstance(text_inputs_raw, (int, float, str)) else 0
+        )
     except (ValueError, TypeError):
         text_inputs = 0
     if text_inputs == 0 and text_input_labels:

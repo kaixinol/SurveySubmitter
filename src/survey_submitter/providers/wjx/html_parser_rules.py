@@ -285,7 +285,7 @@ def _extract_display_conditions_from_html(
 ) -> tuple[bool, list[dict[str, object]]]:
 
     _ = question_number
-    relation_raw = (question_div.get("relation") or "")
+    relation_raw = question_div.get("relation") or ""
     if not relation_raw:
         return False, []
 

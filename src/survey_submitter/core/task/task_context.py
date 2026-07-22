@@ -87,9 +87,7 @@ class ExecutionState(
     terminal_stop_message: str = ""
     thread_progress: dict[str, ThreadProgressState] = field(default_factory=dict)
     distribution_runtime_stats: dict[str, dict[str, Any]] = field(default_factory=dict)
-    pending_by_thread: dict[str, list[tuple[str, int, int]]] = field(
-        default_factory=dict
-    )
+    pending_by_thread: dict[str, list[tuple[str, int, int]]] = field(default_factory=dict)
 
     proxy_waiting_threads: int = 0
     proxy_in_use_by_thread: dict[str, ProxyLease] = field(default_factory=dict)

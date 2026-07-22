@@ -148,7 +148,9 @@ def sanitize_answer_rules(
                 stats["unsupported"] += 1
                 continue
         sanitized_constraints.append(normalized)
-    return AnswerRulesConfig(constraints=sanitized_constraints, per_question=per_question_rules), stats
+    return AnswerRulesConfig(
+        constraints=sanitized_constraints, per_question=per_question_rules
+    ), stats
 
 
 def normalize_rule_dict(raw: dict[str, object]) -> dict[str, object] | None:

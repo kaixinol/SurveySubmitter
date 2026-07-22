@@ -372,9 +372,7 @@ class SessionPolicyTests:
         ]
 
     def test_merge_prefetched_proxy_leases_discards_proxy_below_http_ttl_floor(self) -> None:
-        ctx = ExecutionState(
-            config=ExecutionConfig(random_proxy_ip=True, provider="wjx")
-        )
+        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip=True, provider="wjx"))
         fetched = [
             ProxyLease(address="http://1.1.1.1:8000", expire_ts=time.time() + 10),
             ProxyLease(address="http://2.2.2.2:8000", expire_ts=time.time() + 55),

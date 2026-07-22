@@ -22,9 +22,7 @@ class OptionFillListTests:
         assert result in {"北京", "上海", "广州"}
 
     def test_uniform_distribution_over_many_trials(self) -> None:
-        counts = Counter(
-            resolve_option_fill_list_value("北京||上海||广州") for _ in range(600)
-        )
+        counts = Counter(resolve_option_fill_list_value("北京||上海||广州") for _ in range(600))
         assert set(counts) == {"北京", "上海", "广州"}
         for value in counts.values():
             assert 120 < value < 280
@@ -36,16 +34,12 @@ class OptionFillListTests:
         assert counts["北京"] > counts["上海"] + counts["广州"]
 
     def test_missing_weight_defaults_to_one(self) -> None:
-        counts = Counter(
-            resolve_option_fill_list_value("A:3||B") for _ in range(800)
-        )
+        counts = Counter(resolve_option_fill_list_value("A:3||B") for _ in range(800))
         assert set(counts) == {"A", "B"}
         assert counts["A"] > counts["B"]
 
     def test_all_zero_weights_fall_back_to_uniform(self) -> None:
-        counts = Counter(
-            resolve_option_fill_list_value("A:0||B:0||C:0") for _ in range(900)
-        )
+        counts = Counter(resolve_option_fill_list_value("A:0||B:0||C:0") for _ in range(900))
         assert set(counts) == {"A", "B", "C"}
 
     def test_dynamic_token_inside_list(self) -> None:

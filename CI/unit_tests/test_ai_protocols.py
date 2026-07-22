@@ -90,9 +90,7 @@ class AIProtocolTests:
 
         from openai import APIStatusError
 
-        mock_response = SimpleNamespace(
-            status_code=404, request=SimpleNamespace(), headers={}
-        )
+        mock_response = SimpleNamespace(status_code=404, request=SimpleNamespace(), headers={})
         status_err = APIStatusError("not found", response=mock_response, body=None)  # ty:ignore[invalid-argument-type]
         assert is_endpoint_mismatch_error(status_err)
 

@@ -59,7 +59,9 @@ def _build_live_test_config(url: str) -> tuple[RuntimeConfig, list[SurveyQuestio
         raise ValueError("问卷链接为空")
 
     definition = asyncio.run(parse_survey(normalized_url))
-    questions_info = [question for question in definition.questions if question.type_code != "description"]
+    questions_info = [
+        question for question in definition.questions if question.type_code != "description"
+    ]
     survey_questions = build_default_survey_questions(
         questions_info,
         survey_url=normalized_url,

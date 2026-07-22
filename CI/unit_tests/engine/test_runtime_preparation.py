@@ -86,9 +86,7 @@ class RuntimePreparationTests:
             return_value="第1题配置冲突",
         ):
             with pytest.raises(RuntimePreparationError) as cm:
-                prepare_execution_artifacts(
-                    config, questions_info=self._SAMPLE_QUESTIONS_INFO
-                )
+                prepare_execution_artifacts(config, questions_info=self._SAMPLE_QUESTIONS_INFO)
         assert "题目配置存在冲突" in cm.value.user_message
         assert "第1题配置冲突" in cm.value.log_message
 
@@ -109,9 +107,7 @@ class RuntimePreparationTests:
             ),
         ):
             with pytest.raises(RuntimePreparationError) as cm:
-                prepare_execution_artifacts(
-                    config, questions_info=self._SAMPLE_QUESTIONS_INFO
-                )
+                prepare_execution_artifacts(config, questions_info=self._SAMPLE_QUESTIONS_INFO)
         assert cm.value.user_message == "问卷已停止，无法作答"
         assert http_get.call_args.kwargs.get("proxies") == {}
 
@@ -135,9 +131,7 @@ class RuntimePreparationTests:
             ),
         ):
             with pytest.raises(RuntimePreparationError) as cm:
-                prepare_execution_artifacts(
-                    config, questions_info=self._SAMPLE_QUESTIONS_INFO
-                )
+                prepare_execution_artifacts(config, questions_info=self._SAMPLE_QUESTIONS_INFO)
         assert cm.value.user_message == "问卷发布者企业标准版未购买或已到期，暂时不能填写"
 
     def test_prepare_execution_artifacts_marks_reverse_fill_error_as_detailed(self) -> None:
@@ -147,9 +141,7 @@ class RuntimePreparationTests:
             side_effect=RuntimeError("反填源文件损坏"),
         ):
             with pytest.raises(RuntimePreparationError) as cm:
-                prepare_execution_artifacts(
-                    config, questions_info=self._SAMPLE_QUESTIONS_INFO
-                )
+                prepare_execution_artifacts(config, questions_info=self._SAMPLE_QUESTIONS_INFO)
         assert cm.value.detailed
         assert cm.value.user_message == "反填源文件损坏"
 

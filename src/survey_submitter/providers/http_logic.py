@@ -78,7 +78,9 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
             if not isinstance(condition, dict):
                 return f"第{question_num}题显隐条件格式异常"
             try:
-                source_question_num = int(cast("str | None", condition.get("condition_question_num")) or 0)
+                source_question_num = int(
+                    cast("str | None", condition.get("condition_question_num")) or 0
+                )
             except (ValueError, TypeError):
                 source_question_num = 0
             condition_mode = (
@@ -95,7 +97,9 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
             if not isinstance(target, dict):
                 return f"第{question_num}题控制显示规则格式异常"
             try:
-                target_question_num = int(cast("str | None", target.get("target_question_num")) or 0)
+                target_question_num = int(
+                    cast("str | None", target.get("target_question_num")) or 0
+                )
             except (ValueError, TypeError):
                 target_question_num = 0
             condition_mode = str(target.get("condition_mode") or "selected").strip() or "selected"
@@ -172,7 +176,9 @@ def _question_is_visible(
         if not isinstance(condition, dict):
             continue
         try:
-            source_question_num = int(cast("str | None", condition.get("condition_question_num")) or 0)
+            source_question_num = int(
+                cast("str | None", condition.get("condition_question_num")) or 0
+            )
         except (ValueError, TypeError):
             source_question_num = 0
         if source_question_num <= 0:

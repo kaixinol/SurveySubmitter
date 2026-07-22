@@ -130,9 +130,7 @@ class ReverseFillRuntimeStateTests:
         calls: list[tuple[int, str]] = []
 
         class _Ctx:
-            def get_answer(
-                self, question_num: int, thread_name: str
-            ) -> ReverseFillAnswer:
+            def get_answer(self, question_num: int, thread_name: str) -> ReverseFillAnswer:
                 calls.append((question_num, thread_name))
                 return expected
 

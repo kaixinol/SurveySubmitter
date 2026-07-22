@@ -371,9 +371,7 @@ class AsyncSlotRunner:
         if stopped:
             self.run_context.stop_event.set()
             return True
-        if self.config.random_proxy_ip and _record_bad_proxy_and_maybe_pause(
-            self.state
-        ):
+        if self.config.random_proxy_ip and _record_bad_proxy_and_maybe_pause(self.state):
             return True
         return False
 

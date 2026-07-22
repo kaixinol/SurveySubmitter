@@ -62,6 +62,7 @@ def _regular_config_ready(
     if entry_type != normalized_expected:
         # Location questions may have a different type_code in questions_info
         from survey_submitter.core.questions.schema import LocationQuestionAnswerConfig
+
         if isinstance(qi.details.answer_config, LocationQuestionAnswerConfig):
             return True
         return False
@@ -128,9 +129,7 @@ def _build_question_plan(
     )
 
 
-def _entry_differs_from_default(
-    qi: QuestionInfo | None, default_qi: QuestionInfo | None
-) -> bool:
+def _entry_differs_from_default(qi: QuestionInfo | None, default_qi: QuestionInfo | None) -> bool:
     if qi is None or default_qi is None:
         return False
 

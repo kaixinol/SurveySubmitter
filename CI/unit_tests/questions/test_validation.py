@@ -14,7 +14,15 @@ class QuestionValidationTests:
 
     def test_validate_question_config_blocks_unsupported_questions(self) -> None:
         result = validate_question_config(
-            [QuestionInfo(num=1, title="Q1", question_type="single", options=[], details=QuestionDetail(probabilities=[100.0]))],
+            [
+                QuestionInfo(
+                    num=1,
+                    title="Q1",
+                    question_type="single",
+                    options=[],
+                    details=QuestionDetail(probabilities=[100.0]),
+                )
+            ],
             [
                 {
                     "num": 9,

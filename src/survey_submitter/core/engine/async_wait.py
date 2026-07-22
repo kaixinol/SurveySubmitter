@@ -43,9 +43,7 @@ def _resolve_async_event(
     return None
 
 
-async def sleep_or_stop(
-    stop_signal: StopSignalLike | asyncio.Event | None, seconds: float
-) -> bool:
+async def sleep_or_stop(stop_signal: StopSignalLike | asyncio.Event | None, seconds: float) -> bool:
     delay = max(0.0, float(seconds or 0.0))
     if delay <= 0:
         return is_stop_requested(stop_signal)

@@ -213,9 +213,7 @@ class _ResolvedConfig:
 
 def _build_existing_entry_maps(
     existing_entries: list[QuestionInfo] | None,
-) -> tuple[
-    dict[int, QuestionInfo], dict[str, QuestionInfo], dict[tuple[str, str], QuestionInfo]
-]:
+) -> tuple[dict[int, QuestionInfo], dict[str, QuestionInfo], dict[tuple[str, str], QuestionInfo]]:
     """Build lookup dicts for existing entries keyed by number, title, and provider."""
     existing_by_num: dict[int, QuestionInfo] = {}
     existing_by_title: dict[str, QuestionInfo] = {}
@@ -368,11 +366,11 @@ def _resolve_config_from_existing(
         ),
         attached_selects=cast(
             list[object],
-            copy.deepcopy(choice_cfg.attached_option_selects or []) if choice_cfg is not None else [],
+            copy.deepcopy(choice_cfg.attached_option_selects or [])
+            if choice_cfg is not None
+            else [],
         ),
-        location_parts=(
-            list(location_cfg.location_parts) if location_cfg is not None else []
-        ),
+        location_parts=(list(location_cfg.location_parts) if location_cfg is not None else []),
     )
 
 
@@ -403,9 +401,7 @@ _DEFAULT_CONFIG_DISPATCH: dict[QuestionType, _DefaultConfigResolver] = {
             max(option_count, 2),
         )
     ),
-    QuestionType.SLIDER: (
-        lambda attrs, option_count: _resolve_slider_default_config(attrs)
-    ),
+    QuestionType.SLIDER: (lambda attrs, option_count: _resolve_slider_default_config(attrs)),
 }
 
 
@@ -542,9 +538,7 @@ def _assemble_question_info(
         answer_config_kwargs["text_random_mode"] = (
             config.text_random_mode if attrs.q_type == QuestionType.TEXT else "none"
         )
-        answer_config_kwargs["text_random_int_range"] = cast(
-            Any, config.text_random_int_range
-        )
+        answer_config_kwargs["text_random_int_range"] = cast(Any, config.text_random_int_range)
     elif answer_config_cls is MultiTextQuestionAnswerConfig:
         answer_config_kwargs["multi_text_blank_modes"] = config.multi_text_blank_modes
         answer_config_kwargs["multi_text_blank_ai_flags"] = config.multi_text_blank_ai_flags
@@ -572,7 +566,10 @@ def _assemble_question_info(
         num=q.num,
         title=attrs.title_text or "",
         question_type=str(attrs.q_type),
-        options=cast(list[str], q.option_texts if isinstance(q, ChoiceQuestionMeta) and q.option_texts else []),
+        options=cast(
+            list[str],
+            q.option_texts if isinstance(q, ChoiceQuestionMeta) and q.option_texts else [],
+        ),
         required=getattr(q, "required", False),
         details=detail,
     )

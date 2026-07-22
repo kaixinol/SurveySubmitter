@@ -37,7 +37,13 @@ def _path_endswith(path: str, suffix: str) -> bool:
 def _replace_path_suffix(url_parts, suffix: str) -> str:
     normalized_path = (url_parts.path or "").rstrip("/")
     return urlunsplit(
-        (url_parts.scheme, url_parts.netloc, normalized_path + suffix, url_parts.query, url_parts.fragment)
+        (
+            url_parts.scheme,
+            url_parts.netloc,
+            normalized_path + suffix,
+            url_parts.query,
+            url_parts.fragment,
+        )
     )
 
 

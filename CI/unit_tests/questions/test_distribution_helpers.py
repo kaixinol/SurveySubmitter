@@ -39,9 +39,7 @@ class DistributionHelperTests:
 
         assert result == [0.5, 0.5]
 
-    def test_resolve_probabilities_applies_runtime_correction(
-        self, monkeypatch
-    ) -> None:
+    def test_resolve_probabilities_applies_runtime_correction(self, monkeypatch) -> None:
         monkeypatch.setattr(
             distribution,
             "normalize_dropdown_probs",

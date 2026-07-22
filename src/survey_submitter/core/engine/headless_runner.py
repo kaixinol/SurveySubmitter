@@ -53,9 +53,7 @@ class HeadlessRunner:
                 continue
             unsupported = " [不支持]" if q.unsupported else ""
             location = " [地址题]" if q.type_code == TypeCode.LOCATION else ""
-            logger.info(
-                f"  Q{q.num}: {q.title[:60]} ({q.type_code}){location}{unsupported}"
-            )
+            logger.info(f"  Q{q.num}: {q.title[:60]} ({q.type_code}){location}{unsupported}")
 
     async def run(self) -> None:
         """Load config, parse survey, prepare artifacts, and run."""
@@ -97,9 +95,7 @@ class HeadlessRunner:
         self._engine.start()
 
         try:
-            logger.info(
-                f"开始提交: 目标={exec_config.target_num}, 并发={exec_config.num_threads}"
-            )
+            logger.info(f"开始提交: 目标={exec_config.target_num}, 并发={exec_config.num_threads}")
 
             future = self._engine.start_run(
                 config=exec_config,

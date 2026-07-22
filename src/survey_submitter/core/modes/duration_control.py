@@ -20,6 +20,7 @@ class _DriverLike(Protocol):
     async def find_element(self, by: str, value: str) -> Any: ...
     async def execute_script(self, script: str, *args: Any) -> Any: ...
 
+
 _COMPLETION_MARKERS = (
     "答卷已经提交",
     "感谢您的参与",
@@ -122,12 +123,16 @@ async def is_survey_completion_page(driver: _DriverLike, provider: str | None = 
         log_suppressed_exception("is_survey_completion_page: current_url", exc, level="WARNING")
 
     try:
-        from survey_submitter.providers.registry import is_completion_page as _provider_is_completion_page
+        from survey_submitter.providers.registry import (
+            is_completion_page as _provider_is_completion_page,
+        )
 
         if await _provider_is_completion_page(driver, provider=provider):
             return True
     except Exception as exc:
-        log_suppressed_exception("is_survey_completion_page: provider_is_completion_page", exc, level="WARNING")
+        log_suppressed_exception(
+            "is_survey_completion_page: provider_is_completion_page", exc, level="WARNING"
+        )
 
     detected = False
     try:
@@ -145,9 +150,12 @@ async def is_survey_completion_page(driver: _DriverLike, provider: str | None = 
     if not detected:
         for attempt in range(2):
             try:
-                page_text = await driver.execute_script(
-                    "return (document.body && document.body.innerText) || '';"
-                ) or ""
+                page_text = (
+                    await driver.execute_script(
+                        "return (document.body && document.body.innerText) || '';"
+                    )
+                    or ""
+                )
                 has_marker = any(marker in page_text for marker in _COMPLETION_MARKERS)
                 if has_marker:
                     action_visible = bool(
@@ -198,6 +206,8 @@ async def is_survey_completion_page(driver: _DriverLike, provider: str | None = 
                         f"[Suppressed] is_survey_completion_page: page_text during navigation: {exc}"
                     )
                     break
-                log_suppressed_exception("is_survey_completion_page: page_text", exc, level="WARNING")
+                log_suppressed_exception(
+                    "is_survey_completion_page: page_text", exc, level="WARNING"
+                )
                 break
     return bool(detected)

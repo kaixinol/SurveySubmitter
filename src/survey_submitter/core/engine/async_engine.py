@@ -172,9 +172,7 @@ class AsyncRuntimeEngine:
             name="AsyncProxyPrefetch",
         )
         try:
-            await self._run_slots(
-                worker_count, config, state, run_context, scheduler
-            )
+            await self._run_slots(worker_count, config, state, run_context, scheduler)
         except* Exception as exc_group:
             errors = [
                 exc for exc in exc_group.exceptions if not isinstance(exc, asyncio.CancelledError)
