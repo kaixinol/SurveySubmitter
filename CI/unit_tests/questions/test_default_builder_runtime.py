@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.config.schema import QuestionInfo
 from survey_submitter.core.questions.default_builder import build_default_survey_questions
@@ -13,6 +15,7 @@ from survey_submitter.core.questions.schema import (
 from survey_submitter.providers.contracts import ensure_survey_question_meta
 
 
+@pytest.mark.config
 class DefaultBuilderRuntimeTests:
     def test_build_default_question_entries_creates_defaults_for_common_types(self) -> None:
         questions = [

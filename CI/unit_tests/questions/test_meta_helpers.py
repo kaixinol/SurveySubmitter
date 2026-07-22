@@ -68,10 +68,6 @@ class QuestionMetaHelperTests:
         assert question.controls_display_targets == [
             {"target_question_num": "2", "condition_option_indices": ["0"]}
         ]
-        assert question.has_dependent_display_logic
-        assert question.controls_display_targets == [
-            {"target_question_num": "2", "condition_option_indices": ["0"]}
-        ]
 
     def test_build_survey_definition_preserves_logic_status_and_media(self) -> None:
         definition = build_survey_definition(

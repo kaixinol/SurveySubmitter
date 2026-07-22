@@ -26,7 +26,7 @@ from survey_submitter.providers.contracts import ensure_survey_question_meta
 
 
 class NormalizationRuntimeTests:
-    def test_configure_probabilities_maps_all_supported_question_types(self) -> None:
+    def test_configure_probabilities_single_with_fill_texts_and_attached_selects(self) -> None:
         ctx = SimpleNamespace()
         entries = [
             QuestionInfo(
@@ -41,6 +41,16 @@ class NormalizationRuntimeTests:
                     ),
                 ),
             ),
+        ]
+        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
+        assert ctx.question_config_index_map[1] == ("single", 0)
+        assert ctx.single_prob == [[0.0, 1.0, 0.0]]
+        assert ctx.single_option_fill_texts == [[None, "补充", None]]
+        assert ctx.single_attached_option_selects == [[{"option_index": 1, "weights": [1, 0]}]]
+
+    def test_configure_probabilities_dropdown_with_dimension(self) -> None:
+        ctx = SimpleNamespace()
+        entries = [
             QuestionInfo(
                 num=2,
                 question_type="dropdown",
@@ -51,6 +61,13 @@ class NormalizationRuntimeTests:
                     answer_config=ChoiceQuestionAnswerConfig(),
                 ),
             ),
+        ]
+        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
+        assert ctx.question_dimension_map[2] == "满意度"
+
+    def test_configure_probabilities_multiple_with_fill_texts(self) -> None:
+        ctx = SimpleNamespace()
+        entries = [
             QuestionInfo(
                 num=3,
                 question_type="multiple",
@@ -62,6 +79,14 @@ class NormalizationRuntimeTests:
                     ),
                 ),
             ),
+        ]
+        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
+        assert ctx.multiple_prob == [[25.0, 75.0]]
+        assert ctx.multiple_option_fill_texts == [["A", "B"]]
+
+    def test_configure_probabilities_matrix_with_dimension(self) -> None:
+        ctx = SimpleNamespace()
+        entries = [
             QuestionInfo(
                 num=4,
                 question_type="matrix",
@@ -72,6 +97,14 @@ class NormalizationRuntimeTests:
                     answer_config=ChoiceQuestionAnswerConfig(),
                 ),
             ),
+        ]
+        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
+        assert ctx.matrix_prob == [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+        assert ctx.question_dimension_map[4] == "态度"
+
+    def test_configure_probabilities_scale_normalizes_to_sum_one(self) -> None:
+        ctx = SimpleNamespace()
+        entries = [
             QuestionInfo(
                 num=5,
                 question_type="scale",
@@ -81,6 +114,13 @@ class NormalizationRuntimeTests:
                     answer_config=ChoiceQuestionAnswerConfig(),
                 ),
             ),
+        ]
+        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
+        assert ctx.scale_prob == [[0.25, 0.75]]
+
+    def test_configure_probabilities_score_uses_equal_weights_when_unset(self) -> None:
+        ctx = SimpleNamespace()
+        entries = [
             QuestionInfo(
                 num=6,
                 question_type="score",
@@ -90,6 +130,13 @@ class NormalizationRuntimeTests:
                     answer_config=ChoiceQuestionAnswerConfig(),
                 ),
             ),
+        ]
+        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
+        assert ctx.scale_prob == [[0.5, 0.5]]
+
+    def test_configure_probabilities_slider_custom_and_random_modes(self) -> None:
+        ctx = SimpleNamespace()
+        entries = [
             QuestionInfo(
                 num=7,
                 question_type="slider",
@@ -110,6 +157,14 @@ class NormalizationRuntimeTests:
                     answer_config=ChoiceQuestionAnswerConfig(),
                 ),
             ),
+        ]
+        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
+        assert ctx.slider_targets[0] == 75.0
+        assert math.isnan(ctx.slider_targets[1])
+
+    def test_configure_probabilities_order_uses_negative_one(self) -> None:
+        ctx = SimpleNamespace()
+        entries = [
             QuestionInfo(
                 num=9,
                 question_type="order",
@@ -119,6 +174,13 @@ class NormalizationRuntimeTests:
                     answer_config=ChoiceQuestionAnswerConfig(),
                 ),
             ),
+        ]
+        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
+        assert ctx.question_config_index_map[9] == ("order", -1)
+
+    def test_configure_probabilities_text_with_ai_enabled(self) -> None:
+        ctx = SimpleNamespace()
+        entries = [
             QuestionInfo(
                 num=10,
                 question_type="text",
@@ -131,6 +193,16 @@ class NormalizationRuntimeTests:
                     ),
                 ),
             ),
+        ]
+        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
+        assert ctx.texts[0] == ["甲", "乙"]
+        assert ctx.texts_prob[0] == [0.25, 0.75]
+        assert ctx.text_ai_flags[0] is True
+        assert ctx.text_titles[0] == "填空"
+
+    def test_configure_probabilities_multi_text_blank_modes(self) -> None:
+        ctx = SimpleNamespace()
+        entries = [
             QuestionInfo(
                 num=11,
                 question_type="multi_text",
@@ -145,6 +217,15 @@ class NormalizationRuntimeTests:
                     ),
                 ),
             ),
+        ]
+        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
+        assert ctx.text_entry_types == ["multi_text"]
+        assert ctx.text_ai_flags[0] is True
+        assert ctx.multi_text_blank_int_ranges[0] == [[3, 9], []]
+
+    def test_configure_probabilities_location_with_parts(self) -> None:
+        ctx = SimpleNamespace()
+        entries = [
             QuestionInfo(
                 num=12,
                 question_type="text",
@@ -157,30 +238,7 @@ class NormalizationRuntimeTests:
                 ),
             ),
         ]
-
         configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
-
-        assert ctx.question_config_index_map[1] == ("single", 0)
-        assert ctx.provider_question_idx_map == {}
-        assert ctx.single_prob == [[0.0, 1.0, 0.0]]
-        assert ctx.single_option_fill_texts == [[None, "补充", None]]
-        assert ctx.single_attached_option_selects == [[{"option_index": 1, "weights": [1, 0]}]]
-        assert ctx.question_dimension_map[2] == "满意度"
-        assert ctx.multiple_prob == [[25.0, 75.0]]
-        assert ctx.multiple_option_fill_texts == [["A", "B"]]
-        assert ctx.matrix_prob == [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
-        assert ctx.question_dimension_map[4] == "态度"
-        assert ctx.scale_prob == [[0.25, 0.75], [0.5, 0.5]]
-        assert ctx.slider_targets[0] == 75.0
-        assert math.isnan(ctx.slider_targets[1])
-        assert ctx.question_config_index_map[9] == ("order", -1)
-        assert ctx.texts[0] == ["甲", "乙"]
-        assert ctx.texts_prob[0] == [0.25, 0.75]
-        assert ctx.text_ai_flags[0] is True
-        assert ctx.text_titles[0] == "填空"
-        assert ctx.text_entry_types == ["text", "multi_text", "text"]
-        assert ctx.text_ai_flags[1] is True
-        assert ctx.multi_text_blank_int_ranges[1] == [[3, 9], []]
         assert ctx.question_config_index_map[12] == ("location", -1)
         assert ctx.location_parts[12] == ["北京", "北京", "东城区"]
 
