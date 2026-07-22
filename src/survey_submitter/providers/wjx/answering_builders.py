@@ -58,6 +58,21 @@ PROBABILITY_CEILING = 100.0
 MAX_MULTIPLE_SELECTION_ATTEMPTS = 32
 
 
+def _get_fixed_answer(config: ExecutionConfig, question_num: int) -> str | None:
+    """Get the fixed answer for the current question from test profiles."""
+    if not config.test_profiles:
+        return None
+    profile = config.test_profiles[config.current_profile_index]
+    return profile.get(question_num)
+
+
+def _cycle_profile_index(config: ExecutionConfig) -> None:
+    """Advance to the next test profile after a successful submission."""
+    if not config.test_profiles:
+        return
+    config.current_profile_index = (config.current_profile_index + 1) % len(config.test_profiles)
+
+
 async def _resolve_runtime_option_texts(
     question: SurveyQuestionMeta,
 ) -> list[str]:
@@ -237,6 +252,32 @@ async def _build_wjx_choice_action(
     option_texts = await _resolve_runtime_option_texts(question)
     option_count = max(1, len(option_texts))
 
+    fixed_answer = _get_fixed_answer(config, current)
+    if fixed_answer is not None:
+        forced_index = None
+        for idx, text in enumerate(option_texts):
+            if text == fixed_answer:
+                forced_index = idx
+                break
+        if forced_index is not None:
+            return await _build_choice_action_result(
+                question=question,
+                current=current,
+                selected_index=forced_index,
+                option_texts=option_texts,
+                option_count=option_count,
+                config=config,
+                config_index=config_index,
+                fill_config_key=fill_config_key,
+                kind=kind,
+                record_type=record_type,
+                forced_index=forced_index,
+                strict_ratio=False,
+                has_reliability_dimension=False,
+                ctx=ctx,
+                allow_ai_placeholder=allow_ai_placeholder,
+            )
+
     forced_index = _resolve_choice_forced_index(question, option_count, ctx, thread_name)
 
     selected_index, strict_ratio, has_reliability_dimension = await _select_choice_index(
@@ -337,6 +378,16 @@ async def _build_wjx_text_action(
     config = ctx.config
     current = int(question.num or 0)
     blank_count = max(1, int(question.text_inputs or 0))  # ty: ignore[unresolved-attribute]
+
+    fixed_answer = _get_fixed_answer(config, current)
+    if fixed_answer is not None:
+        return AnswerAction(
+            question_num=current,
+            kind="text",
+            text_values=tuple([fixed_answer] * blank_count),
+            record_type="text",
+        )
+
     reverse_fill_answer = resolve_current_reverse_fill_answer(
         ctx,
         current,
@@ -715,6 +766,28 @@ async def _build_wjx_multiple_action(
     option_texts = await _resolve_runtime_option_texts(question)
     option_count = max(1, len(option_texts))
 
+    fixed_answer = _get_fixed_answer(config, current)
+    if fixed_answer is not None:
+        fixed_indices = []
+        fixed_parts = [p.strip() for p in str(fixed_answer).split(",")]
+        for part in fixed_parts:
+            for idx, text in enumerate(option_texts):
+                if text == part:
+                    fixed_indices.append(idx)
+                    break
+        if fixed_indices:
+            return await _build_multiple_answer_action(
+                fixed_indices,
+                option_texts=option_texts,
+                option_count=option_count,
+                config=config,
+                config_index=config_index,
+                question=question,
+                current=current,
+                ctx=ctx,
+                allow_ai_placeholder=allow_ai_placeholder,
+            )
+
     min_required, max_allowed = _resolve_multiple_selection_bounds(question, option_count)
     required_indices, blocked_indices = _resolve_multiple_rule_constraints(current, option_count)
 
@@ -949,7 +1022,16 @@ async def _build_wjx_location_action(
     )
 
     current = int(question.num or 0)
-    
+
+    fixed_answer = _get_fixed_answer(ctx.config, current)
+    if fixed_answer is not None:
+        return AnswerAction(
+            question_num=current,
+            kind="text",
+            text_values=(fixed_answer,),
+            record_type="location",
+        )
+
     # Check for random_value_pool first
     random_value_pool = ctx.config.location_random_value_pools.get(current)
     if random_value_pool:
@@ -960,7 +1042,7 @@ async def _build_wjx_location_action(
             text_values=(text_value,),
             record_type="location",
         )
-    
+
     # Fall back to default behavior
     verify_type = ""
     if isinstance(question, TextQuestionMeta):

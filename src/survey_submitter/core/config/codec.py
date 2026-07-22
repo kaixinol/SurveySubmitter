@@ -26,6 +26,7 @@ from survey_submitter.core.config.schema import (
     QuestionInfo,
     RuntimeConfig,
     SurveySection,
+    TestProfile,
 )
 from survey_submitter.core.questions.consistency import normalize_rule_dict, sanitize_answer_rules
 from survey_submitter.core.questions.utils import serialize_random_int_range
@@ -577,6 +578,14 @@ def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
         raw_answer_rules = answer_config_copy.get("answer_rules")
         if isinstance(raw_answer_rules, list):
             answer_config_copy["answer_rules"] = {"constraints": raw_answer_rules}
+        # Pre-filter test_profiles to remove invalid entries
+        raw_test_profiles = answer_config_copy.get("test_profiles")
+        if isinstance(raw_test_profiles, list):
+            filtered_profiles = []
+            for item in raw_test_profiles:
+                if isinstance(item, dict) and isinstance(item.get("fixed_answers"), dict):
+                    filtered_profiles.append(item)
+            answer_config_copy["test_profiles"] = filtered_profiles
         raw_copy["answer_config"] = answer_config_copy
 
     config = RuntimeConfig.model_validate(raw_copy)
@@ -638,7 +647,33 @@ def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
         None,
     )
 
+    config.answer_config.test_profiles = _normalize_test_profiles(
+        answer_config_raw.get("test_profiles")
+    )
+
     return config
+
+
+def _normalize_test_profiles(raw: object) -> list[TestProfile]:
+    if not isinstance(raw, list):
+        return []
+    profiles: list[TestProfile] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        fixed_answers_raw = item.get("fixed_answers")
+        if not isinstance(fixed_answers_raw, dict):
+            continue
+        fixed_answers: dict[int, str] = {}
+        for key, value in fixed_answers_raw.items():
+            try:
+                question_num = int(key)
+            except (ValueError, TypeError):
+                continue
+            fixed_answers[question_num] = str(value or "").strip()
+        if fixed_answers:
+            profiles.append(TestProfile(fixed_answers=fixed_answers))
+    return profiles
 
 
 def _ensure_supported_config_payload(

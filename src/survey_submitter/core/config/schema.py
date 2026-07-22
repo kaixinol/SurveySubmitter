@@ -195,9 +195,14 @@ class AnswerRulesConfig(BaseConfigModel):
     per_question: list[dict[str, Any]] = []
 
 
+class TestProfile(BaseConfigModel):
+    fixed_answers: dict[int, str] = {}
+
+
 class AnswerConfigSection(BaseConfigModel):
     survey_questions: list[QuestionInfo] = []
     answer_rules: AnswerRulesConfig = Field(default_factory=AnswerRulesConfig)
+    test_profiles: list[TestProfile] = []
 
 
 class RuntimeConfig(BaseConfigModel):

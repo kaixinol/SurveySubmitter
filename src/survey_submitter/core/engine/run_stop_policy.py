@@ -143,6 +143,12 @@ class RunStopPolicy:
                 self.state.consecutive_fail_count = 0
                 self.state.proxy_unavailable_fail_count = 0
                 record_thread_success = True
+
+                if self.config.test_profiles:
+                    self.config.current_profile_index = (
+                        self.config.current_profile_index + 1
+                    ) % len(self.config.test_profiles)
+
                 logger.info(
                     f"[OK] 已填写{self.state.success_count}份 - 连续失败{self.state.consecutive_fail_count}次 - {time.strftime('%H:%M:%S', time.localtime(time.time()))}"
                 )

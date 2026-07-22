@@ -526,3 +526,71 @@ class ConfigCodecTests:
             "text", location_parts=["北京"], is_university=False
         )
         assert result is LocationQuestionAnswerConfig
+
+    def test_serialize_deserialize_test_profiles(self) -> None:
+        from survey_submitter.core.config.schema import TestProfile
+
+        config = RuntimeConfig(
+            answer_config=AnswerConfigSection(
+                test_profiles=[
+                    TestProfile(fixed_answers={1: "北京", 2: "海淀区"}),
+                    TestProfile(fixed_answers={1: "上海", 2: "浦东新区"}),
+                ]
+            )
+        )
+        payload = serialize_runtime_config(config)
+        assert payload["answer_config"]["test_profiles"] == [
+            {"fixed_answers": {1: "北京", 2: "海淀区"}},
+            {"fixed_answers": {1: "上海", 2: "浦东新区"}},
+        ]
+
+        deserialized = deserialize_runtime_config(payload)
+        assert len(deserialized.answer_config.test_profiles) == 2
+        assert deserialized.answer_config.test_profiles[0].fixed_answers == {1: "北京", 2: "海淀区"}
+        assert deserialized.answer_config.test_profiles[1].fixed_answers == {
+            1: "上海",
+            2: "浦东新区",
+        }
+
+    def test_normalize_test_profiles_invalid(self) -> None:
+        payload = {
+            "answer_config": {
+                "test_profiles": [
+                    {"invalid": "structure"},
+                    {"fixed_answers": "not_a_dict"},
+                    {"fixed_answers": {1: "valid", 2: "valid"}},
+                ]
+            }
+        }
+        config = normalize_runtime_config_payload(payload)
+        assert len(config.answer_config.test_profiles) == 1
+        assert config.answer_config.test_profiles[0].fixed_answers == {1: "valid", 2: "valid"}
+
+    def test_normalize_test_profiles_empty(self) -> None:
+        payload = {"answer_config": {"test_profiles": []}}
+        config = normalize_runtime_config_payload(payload)
+        assert config.answer_config.test_profiles == []
+
+    def test_execution_config_test_profiles(self) -> None:
+        from survey_submitter.core.task.task_context import ExecutionConfig
+
+        config = ExecutionConfig(test_profiles=[{1: "北京", 2: "上海"}, {1: "广州", 2: "深圳"}])
+        assert len(config.test_profiles) == 2
+        assert config.current_profile_index == 0
+        assert config.test_profiles[0] == {1: "北京", 2: "上海"}
+
+    def test_profile_cycling(self) -> None:
+        from survey_submitter.core.task.task_context import ExecutionConfig
+
+        config = ExecutionConfig(
+            test_profiles=[{1: "A"}, {1: "B"}, {1: "C"}],
+            target_num=5,
+        )
+        results = []
+        for _ in range(5):
+            profile = config.test_profiles[config.current_profile_index]
+            results.append(profile.get(1))
+            config.current_profile_index = (config.current_profile_index + 1) % len(
+                config.test_profiles
+            )
+        assert results == ["A", "B", "C", "A", "B"]
