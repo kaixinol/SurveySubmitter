@@ -53,6 +53,7 @@ def _make_question_info(
     )
 
 
+@pytest.mark.config
 class ConfigCodecTests:
     def test_default_user_agent_is_pc_web(self) -> None:
         assert DEFAULT_USER_AGENT == USER_AGENT_PRESETS["pc_web"]["ua"]

@@ -27,6 +27,7 @@ class _FakeHttpResponse:
         return None
 
 
+@pytest.mark.config
 class RuntimePreparationTests:
     _SAMPLE_QUESTIONS_INFO = [
         ensure_survey_question_meta(

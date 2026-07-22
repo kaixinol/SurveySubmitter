@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import pytest
 
 from survey_submitter.core.questions.schema import _infer_option_count
 
 
+@pytest.mark.config
 class SchemaHelperTests:
     def test_infer_option_count_prefers_matrix_nested_lengths(self) -> None:
         assert (

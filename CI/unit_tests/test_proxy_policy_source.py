@@ -21,7 +21,6 @@ class ProxyPolicySourceTests:
 
     def test_proxy_source_mode_helpers(self) -> None:
         assert proxy_source.is_custom_proxy_source(proxy_source.PROXY_SOURCE_CUSTOM)
-        assert proxy_source.is_custom_proxy_source(proxy_source.PROXY_SOURCE_CUSTOM)
 
     def test_answer_duration_mapping(self) -> None:
         assert (

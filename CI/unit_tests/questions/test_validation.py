@@ -8,6 +8,10 @@ from survey_submitter.core.questions.schema import (
 from survey_submitter.core.questions.validation import validate_question_config
 
 
+import pytest
+
+
+@pytest.mark.config
 class QuestionValidationTests:
     def test_validate_question_config_rejects_empty_entries(self) -> None:
         assert validate_question_config([]) == "未配置任何题目"
@@ -33,7 +37,6 @@ class QuestionValidationTests:
                 }
             ],
         )
-        assert result is not None
         assert result is not None
         assert "暂不支持的题型" in result
         assert "第 9 题" in result
@@ -65,7 +68,6 @@ class QuestionValidationTests:
         result = validate_question_config(
             [entry], [{"num": 6, "type_code": "4", "multi_min_limit": 2, "multi_max_limit": 3}]
         )
-        assert result is not None
         assert result is not None
         assert "最少选择 2 项" in result
 
@@ -109,7 +111,6 @@ class QuestionValidationTests:
         )
         result = validate_question_config([entry])
         assert result is not None
-        assert result is not None
         assert "第 3 题（single）配置无效" in result
 
     def test_matrix_question_rejects_zero_weight_row(self) -> None:
@@ -121,7 +122,6 @@ class QuestionValidationTests:
             details=QuestionDetail(probabilities=[[100.0, 0.0], [0.0, 0.0]]),
         )
         result = validate_question_config([entry])
-        assert result is not None
         assert result is not None
         assert "第 2 行所有选项配比都小于等于 0" in result
 
@@ -139,7 +139,6 @@ class QuestionValidationTests:
             ),
         )
         result = validate_question_config([entry])
-        assert result is not None
         assert result is not None
         assert "嵌入式下拉" in result
         assert "其他" in result
