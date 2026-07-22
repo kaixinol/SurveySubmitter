@@ -3,8 +3,18 @@ import pytest
 import os
 import tempfile
 import xlsxwriter
-from survey_submitter.constants import DEFAULT_FILL_TEXT
-from survey_submitter.core.questions.schema import make_question_entry
+from survey_submitter.core.config.schema import (
+    RuntimeConfig,
+    SurveySection,
+    ExecutionSection,
+    ReverseFillSection,
+    QuestionInfo,
+)
+from survey_submitter.core.questions.schema import (
+    QuestionDetail,
+    TextQuestionAnswerConfig,
+    LocationQuestionAnswerConfig,
+)
 from survey_submitter.core.reverse_fill.schema import (
     REVERSE_FILL_FORMAT_WJX_SEQUENCE,
     REVERSE_FILL_FORMAT_WJX_TEXT,
@@ -15,12 +25,6 @@ from survey_submitter.core.reverse_fill.schema import (
 from survey_submitter.core.reverse_fill.validation import (
     build_enabled_reverse_fill_spec,
     build_reverse_fill_spec,
-)
-from survey_submitter.core.config.schema import (
-    RuntimeConfig,
-    SurveySection,
-    ExecutionSection,
-    ReverseFillSection,
 )
 
 
@@ -86,7 +90,7 @@ class WjxReverseFillTests:
             source_path=workbook_path,
             provider="wjx",
             questions_info=questions_info,
-            question_entries=[],
+            survey_questions=[],
             selected_format=REVERSE_FILL_FORMAT_WJX_SEQUENCE,
             start_row=1,
             target_num=1,
@@ -108,7 +112,7 @@ class WjxReverseFillTests:
             source_path=workbook_path,
             provider="wjx",
             questions_info=questions_info,
-            question_entries=[],
+            survey_questions=[],
             selected_format=REVERSE_FILL_FORMAT_WJX_TEXT,
             start_row=1,
             target_num=1,
@@ -129,7 +133,7 @@ class WjxReverseFillTests:
             questions_info=[
                 {"num": 1, "title": "单选题", "type_code": "3", "option_texts": ["选项1", "选项2"]}
             ],
-            question_entries=[],
+            survey_questions=[],
             selected_format=REVERSE_FILL_FORMAT_WJX_SEQUENCE,
             start_row=2,
             target_num=0,
@@ -145,7 +149,7 @@ class WjxReverseFillTests:
             questions_info=[
                 {"num": 1, "title": "单选题", "type_code": "3", "option_texts": ["选项1", "选项2"]}
             ],
-            question_entries=[],
+            survey_questions=[],
             selected_format=REVERSE_FILL_FORMAT_WJX_SEQUENCE,
             start_row=2,
             target_num=0,
@@ -161,13 +165,15 @@ class WjxReverseFillTests:
             source_path=workbook_path,
             provider="wjx",
             questions_info=[{"num": 1, "title": "姓名", "type_code": "1"}],
-            question_entries=[
-                make_question_entry(
+            survey_questions=[
+                QuestionInfo(
+                    num=1,
+                    title="姓名",
                     question_type="text",
-                    probabilities=[1.0],
-                    texts=["手动配置值"],
-                    question_num=1,
-                    question_title="姓名",
+                    details=QuestionDetail(
+                        probabilities=[1.0],
+                        answer_config=TextQuestionAnswerConfig(),
+                    ),
                 )
             ],
             selected_format=REVERSE_FILL_FORMAT_WJX_TEXT,
@@ -176,7 +182,7 @@ class WjxReverseFillTests:
         )
         assert spec.question_plans[0].status == "fallback_config"
         assert spec.question_plans[0].fallback_ready
-        assert spec.question_plans[0].fallback_resolved
+        assert not spec.question_plans[0].fallback_resolved
 
     def test_build_reverse_fill_spec_keeps_default_fallback_unresolved(self) -> None:
         workbook_path = self._track(
@@ -186,13 +192,15 @@ class WjxReverseFillTests:
             source_path=workbook_path,
             provider="wjx",
             questions_info=[{"num": 1, "title": "姓名", "type_code": "1"}],
-            question_entries=[
-                make_question_entry(
+            survey_questions=[
+                QuestionInfo(
+                    num=1,
+                    title="姓名",
                     question_type="text",
-                    probabilities=[1.0],
-                    texts=[DEFAULT_FILL_TEXT],
-                    question_num=1,
-                    question_title="姓名",
+                    details=QuestionDetail(
+                        probabilities=[1.0],
+                        answer_config=TextQuestionAnswerConfig(),
+                    ),
                 )
             ],
             selected_format=REVERSE_FILL_FORMAT_WJX_TEXT,
@@ -211,7 +219,7 @@ class WjxReverseFillTests:
             questions_info=[
                 {"num": 1, "title": "排序题", "type_code": "11", "option_texts": ["A", "B", "C"]}
             ],
-            question_entries=[],
+            survey_questions=[],
             selected_format=REVERSE_FILL_FORMAT_WJX_TEXT,
             start_row=1,
             target_num=0,
@@ -246,7 +254,7 @@ class WjxReverseFillTests:
                         "option_texts": ["选项1", "选项2"],
                     }
                 ],
-                question_entries=[],
+                survey_questions=[],
             )
         assert "第 1 题" in str(context.value)
         assert "无法匹配选项" in str(context.value)
@@ -266,14 +274,15 @@ class WjxReverseFillTests:
                 ),
             ),
             questions_info=[{"num": 1, "title": "所在地区", "type_code": "1", "is_location": True}],
-            question_entries=[
-                make_question_entry(
+            survey_questions=[
+                QuestionInfo(
+                    num=1,
+                    title="所在地区",
                     question_type="text",
-                    probabilities=[1.0],
-                    texts=["上海"],
-                    question_num=1,
-                    question_title="所在地区",
-                    is_location=True,
+                    details=QuestionDetail(
+                        probabilities=[1.0],
+                        answer_config=LocationQuestionAnswerConfig(),
+                    ),
                 )
             ],
         )
@@ -304,7 +313,7 @@ class WjxReverseFillTests:
             questions_info=[
                 {"num": 1, "title": "单选题", "type_code": "3", "option_texts": ["选项1", "选项2"]}
             ],
-            question_entries=[],
+            survey_questions=[],
         )
         assert spec is None
 
@@ -328,7 +337,7 @@ class WjxReverseFillTests:
             questions_info=[
                 {"num": 1, "title": "单选题", "type_code": "3", "option_texts": ["选项1", "选项2"]}
             ],
-            question_entries=[],
+            survey_questions=[],
         )
         assert spec is not None
         assert spec.target_num == 2

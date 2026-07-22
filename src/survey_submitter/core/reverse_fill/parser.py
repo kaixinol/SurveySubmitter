@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable, cast
 
-from survey_submitter.core.questions.schema import QuestionEntry
+from survey_submitter.core.config.schema import QuestionInfo
 from survey_submitter.core.questions.meta_helpers import infer_question_entry_type
 from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.reverse_fill.schema import (
@@ -78,7 +78,7 @@ def is_reverse_fill_blank(value: object) -> bool:
 
 
 def infer_reverse_fill_question_type(
-    info: SurveyQuestionMeta | dict[str, object], entry: QuestionEntry | None = None
+    info: SurveyQuestionMeta | dict[str, object], entry: QuestionInfo | None = None
 ) -> str:
     if isinstance(info, dict) and bool(info.get("is_multi_text")):
         return QuestionType.MULTI_TEXT
@@ -115,22 +115,22 @@ def supports_reverse_fill_runtime(
 
 
 def resolve_question_entry(
-    info: SurveyQuestionMeta | dict[str, object], entries: list[QuestionEntry]
-) -> QuestionEntry | None:
+    info: SurveyQuestionMeta | dict[str, object], entries: list[QuestionInfo]
+) -> QuestionInfo | None:
     raw_question_num = info.num if isinstance(info, SurveyQuestionMeta) else info.get("num")
     question_num = int(cast(Any, raw_question_num)) if raw_question_num is not None else None
     raw_title = info.title if isinstance(info, SurveyQuestionMeta) else info.get("title")
     title_key = normalize_reverse_fill_key(raw_title)
-    matched_by_title: QuestionEntry | None = None
+    matched_by_title: QuestionInfo | None = None
     for entry in list(entries or []):
-        raw_entry_num = entry.question_num
+        raw_entry_num = entry.num
         entry_num = int(raw_entry_num) if raw_entry_num is not None else None
         if entry_num is not None and question_num is not None and question_num == entry_num:
             return entry
         if (
             matched_by_title is None
             and title_key
-            and normalize_reverse_fill_key(entry.question_title) == title_key
+            and normalize_reverse_fill_key(entry.title) == title_key
         ):
             matched_by_title = entry
     return matched_by_title

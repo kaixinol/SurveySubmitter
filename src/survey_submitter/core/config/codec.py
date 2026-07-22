@@ -3,31 +3,24 @@ from __future__ import annotations
 import copy
 import random
 from loguru import logger
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 from pydantic import ConfigDict
 
-if TYPE_CHECKING:
-    from survey_submitter.core.questions.config import QuestionEntry
-
-from survey_submitter.core.reverse_fill import (
-    REVERSE_FILL_FORMAT_AUTO,
-    REVERSE_FILL_FORMAT_WJX_SCORE,
-    REVERSE_FILL_FORMAT_WJX_SEQUENCE,
-    REVERSE_FILL_FORMAT_WJX_TEXT,
-)
 from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.questions.schema import (
-    ChoiceQuestionEntry,
-    LocationQuestionEntry,
-    MultiTextQuestionEntry,
-    QuestionEntry,
-    TextQuestionEntry,
-    entry_type_for_question_type,
+    ChoiceQuestionAnswerConfig,
+    LocationQuestionAnswerConfig,
+    MultiTextQuestionAnswerConfig,
+    QuestionAnswerConfig,
+    QuestionDetail,
+    TextQuestionAnswerConfig,
+    answer_config_type_for_question_type,
 )
 from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.config.schema import (
     AnswerConfigSection,
+    AnswerRulesConfig,
     ExecutionSection,
     QuestionInfo,
     RuntimeConfig,
@@ -36,7 +29,6 @@ from survey_submitter.core.config.schema import (
 from survey_submitter.core.questions.consistency import normalize_rule_dict, sanitize_answer_rules
 from survey_submitter.core.questions.utils import serialize_random_int_range
 from survey_submitter.providers.common import (
-    SURVEY_PROVIDER_WJX,
     detect_survey_provider,
     normalize_survey_provider,
 )
@@ -44,12 +36,6 @@ from survey_submitter.providers.contracts import SurveyQuestionMeta
 from survey_submitter.constants import USER_AGENT_PRESETS
 
 _TEXT_RANDOM_MODES = {"none", "name", "mobile", "id_card", "integer"}
-_REVERSE_FILL_FORMATS = {
-    REVERSE_FILL_FORMAT_AUTO,
-    REVERSE_FILL_FORMAT_WJX_SEQUENCE,
-    REVERSE_FILL_FORMAT_WJX_SCORE,
-    REVERSE_FILL_FORMAT_WJX_TEXT,
-}
 DEFAULT_ANSWER_DURATION_RANGE_SECONDS = (60, 120)
 MAX_ANSWER_DURATION_SECONDS = 30 * 60
 _USER_AGENT_DEVICE_TO_PRESET_KEYS = {
@@ -71,9 +57,9 @@ __all__ = [
     "CURRENT_CONFIG_SCHEMA_VERSION",
     "UserAgentProfile",
     "_select_user_agent_from_ratios",
-    "serialize_question_entry",
-    "deserialize_question_entry",
-    "clone_question_entries",
+    "serialize_question_detail",
+    "deserialize_question_detail",
+    "clone_question_details",
     "survey_questions_from_definition",
     "build_runtime_config_snapshot",
     "normalize_runtime_config_payload",
@@ -83,33 +69,29 @@ __all__ = [
 ]
 
 _CONFIG_CORRUPTED_MESSAGE = "该配置文件损坏，请输入问卷链接/二维码重新配置"
-CURRENT_CONFIG_SCHEMA_VERSION = 6
+CURRENT_CONFIG_SCHEMA_VERSION = 7
 
-_QUESTION_ENTRY_FIELDS = {
-    "question_type",
-    "probabilities",
-    "texts",
-    "rows",
-    "option_count",
-    "distribution_mode",
-    "custom_weights",
-    "question_num",
-    "question_title",
-    "survey_provider",
+_QUESTION_DETAIL_FIELDS = {
     "provider_question_id",
     "provider_page_id",
+    "probabilities",
+    "distribution_mode",
+    "custom_weights",
+    "dimension",
+    "answer_config",
+}
+
+_ANSWER_CONFIG_FIELDS = {
     "ai_enabled",
-    "multi_text_blank_modes",
-    "multi_text_blank_ai_flags",
-    "multi_text_blank_int_ranges",
-    "text_random_mode",
-    "text_random_int_range",
     "option_fill_texts",
     "fillable_option_indices",
     "attached_option_selects",
-    "is_location",
+    "text_random_mode",
+    "text_random_int_range",
+    "multi_text_blank_modes",
+    "multi_text_blank_ai_flags",
+    "multi_text_blank_int_ranges",
     "location_parts",
-    "dimension",
 }
 
 _SURVEY_SECTION_FIELDS = frozenset(SurveySection.model_fields.keys())
@@ -280,142 +262,158 @@ def _normalize_dimension_value(raw: object) -> str | None:
     return text
 
 
-def serialize_question_entry(entry) -> dict[str, object]:
-    probabilities = entry.probabilities
-    if (
-        entry.distribution_mode == "custom"
-        and _prob_config_is_unset(probabilities)
-        and _custom_weights_has_positive(entry.custom_weights)
-    ):
-        probabilities = entry.custom_weights
+def serialize_question_detail(qi: QuestionInfo) -> dict[str, object]:
+    detail = qi.details
+    ac = detail.answer_config
     payload: dict[str, object] = {
-        "question_type": entry.question_type,
-        "probabilities": probabilities,
-        "texts": entry.texts,
-        "rows": entry.rows,
-        "option_count": entry.option_count,
-        "distribution_mode": entry.distribution_mode,
-        "custom_weights": entry.custom_weights,
-        "question_num": entry.question_num,
-        "question_title": entry.question_title,
-        "survey_provider": normalize_survey_provider(entry.survey_provider),
-        "provider_question_id": str(entry.provider_question_id or ""),
-        "provider_page_id": str(entry.provider_page_id or ""),
-        "ai_enabled": bool(entry.ai_enabled),
-        "is_location": entry.is_location,
-        "location_parts": list(entry.location_parts or []),
-        "dimension": _normalize_dimension_value(entry.dimension),
+        "num": qi.num,
+        "title": qi.title,
+        "question_type": qi.question_type,
+        "options": list(qi.options),
+        "required": qi.required,
+        "details": {
+            "provider_question_id": str(detail.provider_question_id or ""),
+            "provider_page_id": str(detail.provider_page_id or ""),
+            "probabilities": detail.probabilities,
+            "distribution_mode": detail.distribution_mode,
+            "custom_weights": detail.custom_weights,
+            "dimension": _normalize_dimension_value(detail.dimension),
+            "answer_config": {},
+        },
     }
-
-    if isinstance(entry, ChoiceQuestionEntry):
-        payload["option_fill_texts"] = entry.option_fill_texts
-        payload["fillable_option_indices"] = entry.fillable_option_indices
-        payload["attached_option_selects"] = list(entry.attached_option_selects or [])
-    if isinstance(entry, TextQuestionEntry):
-        payload["text_random_mode"] = str(entry.text_random_mode or "none")
-        payload["text_random_int_range"] = _normalize_random_int_range(entry.text_random_int_range)
-    if isinstance(entry, MultiTextQuestionEntry):
-        payload["multi_text_blank_modes"] = _normalize_multi_text_blank_modes(
-            entry.multi_text_blank_modes
-        )
-        payload["multi_text_blank_ai_flags"] = _normalize_multi_text_blank_ai_flags(
-            entry.multi_text_blank_ai_flags
-        )
-        payload["multi_text_blank_int_ranges"] = _normalize_multi_text_blank_int_ranges(
-            entry.multi_text_blank_int_ranges
-        )
+    ac_dict: dict[str, object] = {}
+    if isinstance(ac, ChoiceQuestionAnswerConfig):
+        ac_dict["ai_enabled"] = bool(ac.ai_enabled)
+        if ac.option_fill_texts is not None:
+            ac_dict["option_fill_texts"] = ac.option_fill_texts
+        if ac.fillable_option_indices:
+            ac_dict["fillable_option_indices"] = ac.fillable_option_indices
+        if ac.attached_option_selects:
+            ac_dict["attached_option_selects"] = list(ac.attached_option_selects)
+    elif isinstance(ac, TextQuestionAnswerConfig):
+        ac_dict = {
+            "ai_enabled": bool(ac.ai_enabled),
+            "text_random_mode": str(ac.text_random_mode or "none"),
+            "text_random_int_range": _normalize_random_int_range(ac.text_random_int_range),
+        }
+    elif isinstance(ac, MultiTextQuestionAnswerConfig):
+        ac_dict = {
+            "ai_enabled": bool(ac.ai_enabled),
+            "multi_text_blank_modes": _normalize_multi_text_blank_modes(ac.multi_text_blank_modes),
+            "multi_text_blank_ai_flags": _normalize_multi_text_blank_ai_flags(ac.multi_text_blank_ai_flags),
+            "multi_text_blank_int_ranges": _normalize_multi_text_blank_int_ranges(ac.multi_text_blank_int_ranges),
+        }
+    elif isinstance(ac, LocationQuestionAnswerConfig):
+        ac_dict = {
+            "ai_enabled": bool(ac.ai_enabled),
+            "location_parts": list(ac.location_parts or []),
+        }
+    else:
+        ac_dict = {"ai_enabled": bool(ac.ai_enabled)}
+    payload["details"]["answer_config"] = ac_dict  # type: ignore[index]
     return payload
 
 
-def deserialize_question_entry(data: dict[str, object]) -> QuestionEntry:
-    from survey_submitter.core.questions.config import QuestionEntry
+_QUESTION_INFO_FIELDS = frozenset({"num", "title", "question_type", "options", "required", "details"})
+_QUESTION_DETAIL_FIELDS = frozenset({
+    "provider_question_id", "provider_page_id", "probabilities",
+    "distribution_mode", "custom_weights", "dimension", "answer_config",
+})
+_ANSWER_CONFIG_FIELDS = frozenset({"ai_enabled"})
 
+
+def deserialize_question_detail(data: dict[str, object]) -> QuestionInfo:
     if not isinstance(data, dict):
         raise ValueError(f"{_CONFIG_CORRUPTED_MESSAGE}：题目配置必须是字典类型")
 
-    normalized_data = dict(data)
-
-    mode_raw = str(normalized_data.get("distribution_mode") or "random").strip()
-    probabilities = normalized_data.get("probabilities")
-    custom_weights = normalized_data.get("custom_weights")
-
-    if (
-        mode_raw == "custom"
-        and _prob_config_is_unset(probabilities)
-        and _custom_weights_has_positive(custom_weights)
-    ):
-        probabilities = custom_weights
-    if (
-        mode_raw == "custom"
-        and (custom_weights is None or custom_weights == [])
-        and isinstance(probabilities, list)
-    ):
-        custom_weights = list(probabilities)
-
-    normalized_data.update({
-        "distribution_mode": mode_raw,
-        "probabilities": probabilities,
-        "custom_weights": custom_weights,
-        "question_type": _normalize_question_type(normalized_data.get("question_type")),
-        "rows": _coerce_int(normalized_data.get("rows"), 1),
-        "option_count": _coerce_int(normalized_data.get("option_count"), 0),
-        "survey_provider": normalize_survey_provider(
-            normalized_data.get("survey_provider"),
-            default=SURVEY_PROVIDER_WJX,
-        ),
-        "provider_question_id": str(normalized_data.get("provider_question_id") or "").strip() or None,
-        "provider_page_id": str(normalized_data.get("provider_page_id") or "").strip() or None,
-        "ai_enabled": bool(normalized_data.get("ai_enabled", False)),
-        "multi_text_blank_modes": _normalize_multi_text_blank_modes(
-            normalized_data.get("multi_text_blank_modes")
-        ),
-        "multi_text_blank_ai_flags": _normalize_multi_text_blank_ai_flags(
-            normalized_data.get("multi_text_blank_ai_flags")
-        ),
-        "multi_text_blank_int_ranges": _normalize_multi_text_blank_int_ranges(
-            normalized_data.get("multi_text_blank_int_ranges")
-        ),
-        "text_random_mode": str(normalized_data.get("text_random_mode") or "none").strip(),
-        "text_random_int_range": _normalize_random_int_range(
-            normalized_data.get("text_random_int_range")
-        ),
-        "option_fill_texts": normalized_data.get("option_fill_texts"),
-        "fillable_option_indices": normalized_data.get("fillable_option_indices"),
-        "attached_option_selects": _as_list(normalized_data.get("attached_option_selects")),
-        "is_location": bool(normalized_data.get("is_location")),
-        "location_parts": _as_list(normalized_data.get("location_parts")),
-        "dimension": _normalize_dimension_value(normalized_data.get("dimension")),
-    })
-
-    entry_cls = entry_type_for_question_type(str(normalized_data.get("question_type")))
-    allowed = set(entry_cls.model_fields.keys())
-    filtered = {key: value for key, value in normalized_data.items() if key in allowed}
-
-    known_fields = set(QuestionEntry.model_fields.keys())
-    for _subcls in (
-        ChoiceQuestionEntry,
-        TextQuestionEntry,
-        MultiTextQuestionEntry,
-        LocationQuestionEntry,
-    ):
-        known_fields |= set(_subcls.model_fields.keys())
-    unknown = [key for key in normalized_data if key not in known_fields]
+    unknown = set(data) - _QUESTION_INFO_FIELDS
     if unknown:
         raise ValueError(
             f"{_CONFIG_CORRUPTED_MESSAGE}：题目配置包含未知字段 {sorted(unknown)}"
         )
 
-    try:
-        return entry_cls.model_validate(filtered)
-    except Exception as exc:
-        raise ValueError(f"{_CONFIG_CORRUPTED_MESSAGE}：{exc}") from exc
+    num = _coerce_int(data.get("num"), 0)
+    title = str(data.get("title") or "").strip()
+    question_type = _normalize_question_type(data.get("question_type"))
+    options = _as_list(data.get("options")) if isinstance(data.get("options"), list) else []
+    required = _as_bool(data.get("required"))
+
+    detail_raw: dict[str, object] = data.get("details") if isinstance(data.get("details"), dict) else {}  # type: ignore[assignment]
+    unknown_detail = set(detail_raw) - _QUESTION_DETAIL_FIELDS
+    if unknown_detail:
+        raise ValueError(
+            f"{_CONFIG_CORRUPTED_MESSAGE}：题目详情包含未知字段 {sorted(unknown_detail)}"
+        )
+
+    mode_raw = str(detail_raw.get("distribution_mode") or "random").strip()
+    probabilities = detail_raw.get("probabilities")
+    custom_weights = detail_raw.get("custom_weights")
+    if mode_raw == "custom" and _prob_config_is_unset(probabilities) and _custom_weights_has_positive(custom_weights):
+        probabilities = custom_weights
+    if mode_raw == "custom" and (custom_weights is None or custom_weights == []) and isinstance(probabilities, list):
+        custom_weights = list(probabilities)
+
+    ac_raw: dict[str, object] = detail_raw.get("answer_config") if isinstance(detail_raw.get("answer_config"), dict) else {}  # type: ignore[assignment]
+    ac_location_parts = ac_raw.get("location_parts")
+    location_parts: list[str] = [str(p) for p in ac_location_parts] if isinstance(ac_location_parts, list) else [str(p) for p in _as_list(detail_raw.get("location_parts"))]
+    ac_cls = answer_config_type_for_question_type(question_type, location_parts=location_parts or None)
+
+    ac_fields = dict(ac_raw)
+    if ac_cls is ChoiceQuestionAnswerConfig:
+        answer_config = ChoiceQuestionAnswerConfig(
+            ai_enabled=_as_bool(ac_fields.get("ai_enabled")),
+            option_fill_texts=ac_fields.get("option_fill_texts"),
+            fillable_option_indices=ac_fields.get("fillable_option_indices"),
+            attached_option_selects=_as_list(ac_fields.get("attached_option_selects")),
+        )
+    elif ac_cls is TextQuestionAnswerConfig:
+        answer_config = TextQuestionAnswerConfig(
+            ai_enabled=_as_bool(ac_fields.get("ai_enabled")),
+            text_random_mode=str(ac_fields.get("text_random_mode") or "none").strip(),
+            text_random_int_range=_normalize_random_int_range(ac_fields.get("text_random_int_range")),
+        )
+    elif ac_cls is MultiTextQuestionAnswerConfig:
+        answer_config = MultiTextQuestionAnswerConfig(
+            ai_enabled=_as_bool(ac_fields.get("ai_enabled")),
+            multi_text_blank_modes=_normalize_multi_text_blank_modes(ac_fields.get("multi_text_blank_modes")),
+            multi_text_blank_ai_flags=_normalize_multi_text_blank_ai_flags(ac_fields.get("multi_text_blank_ai_flags")),
+            multi_text_blank_int_ranges=_normalize_multi_text_blank_int_ranges(ac_fields.get("multi_text_blank_int_ranges")),
+        )
+    elif ac_cls is LocationQuestionAnswerConfig:
+        answer_config = LocationQuestionAnswerConfig(
+            ai_enabled=_as_bool(ac_fields.get("ai_enabled")),
+            location_parts=_as_list(ac_fields.get("location_parts")),
+        )
+    else:
+        answer_config = QuestionAnswerConfig(ai_enabled=_as_bool(ac_fields.get("ai_enabled")))
+
+    detail = QuestionDetail(
+        provider_question_id=str(detail_raw.get("provider_question_id") or "").strip() or None,
+        provider_page_id=str(detail_raw.get("provider_page_id") or "").strip() or None,
+        probabilities=probabilities,
+        distribution_mode=mode_raw,
+        custom_weights=custom_weights,
+        dimension=_normalize_dimension_value(detail_raw.get("dimension")),
+        answer_config=answer_config,
+    )
+
+    return QuestionInfo(
+        num=num,
+        title=title,
+        question_type=question_type,
+        options=[str(o) for o in options],
+        required=required,
+        details=detail,
+    )
 
 
-def clone_question_entries(entries: list[object] | list[QuestionEntry] | None) -> list[QuestionEntry]:
-    cloned: list[QuestionEntry] = []
-    for item in list(entries or []):
+def clone_question_details(
+    questions: list[QuestionInfo] | None,
+) -> list[QuestionInfo]:
+    cloned: list[QuestionInfo] = []
+    for item in list(questions or []):
         try:
-            cloned.append(deserialize_question_entry(serialize_question_entry(item)))
+            cloned.append(deserialize_question_detail(serialize_question_detail(item)))
         except Exception as exc:
             logger.info(f"跳过无法复制的题目配置: {exc}")
     return cloned
@@ -446,7 +444,7 @@ def survey_questions_from_definition(
 def build_runtime_config_snapshot(
     config: RuntimeConfig,
     *,
-    question_entries: list[object] | None = None,
+    survey_questions: list[QuestionInfo] | None = None,
 ) -> RuntimeConfig:
     snapshot = copy.deepcopy(config)
     default_provider = normalize_survey_provider(
@@ -454,12 +452,12 @@ def build_runtime_config_snapshot(
         default=detect_survey_provider(snapshot.survey.url),
     )
     snapshot.survey.provider = default_provider
-    entry_source = (
-        question_entries if question_entries is not None else snapshot.answer_config.question_entries
+    questions_source = (
+        survey_questions if survey_questions is not None else snapshot.answer_config.survey_questions
     )
-    snapshot.answer_config.question_entries = clone_question_entries(entry_source)
+    snapshot.answer_config.survey_questions = clone_question_details(questions_source)
     snapshot.answer_config.answer_rules = copy.deepcopy(
-        list(snapshot.answer_config.answer_rules or [])
+        snapshot.answer_config.answer_rules
     )
     snapshot.execution.user_agent_ratios = copy.deepcopy(
         dict(snapshot.execution.user_agent_ratios or {})
@@ -489,64 +487,80 @@ def _validate_no_unknown_keys(raw: dict[str, object]) -> None:
             )
 
 
-def _normalize_question_entries_list(
-    raw_entries: list[dict[str, object]],
-    survey_provider: str,
-) -> list[QuestionEntry]:
-    entries: list[QuestionEntry] = []
-    for item in raw_entries:
-        entry = deserialize_question_entry(item)
-        if (
-            survey_provider != SURVEY_PROVIDER_WJX
-            and entry.provider_question_id
-            and normalize_survey_provider(entry.survey_provider) == SURVEY_PROVIDER_WJX
-        ):
-            entry.survey_provider = survey_provider
-        entries.append(entry)
-    return entries
+def _normalize_question_details_list(
+    raw_questions: list[dict[str, object]],
+) -> list[QuestionInfo]:
+    details: list[QuestionInfo] = []
+    for item in raw_questions:
+        details.append(deserialize_question_detail(item))
+    return details
 
 
 def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
     _validate_no_unknown_keys(raw)
 
-    # Extract fields that need special handling before Pydantic validation
     answer_config_raw = cast("dict[str, object]", raw.get("answer_config") or {})
 
-    # Remove question_entries from raw to avoid validation errors
     raw_copy = dict(raw)
     if "answer_config" in raw_copy and isinstance(raw_copy["answer_config"], dict):
         answer_config_copy = dict(raw_copy["answer_config"])
-        answer_config_copy.pop("question_entries", None)
+        answer_config_copy.pop("survey_questions", None)
+        # Convert legacy flat list answer_rules to AnswerRulesConfig
+        raw_answer_rules = answer_config_copy.get("answer_rules")
+        if isinstance(raw_answer_rules, list):
+            answer_config_copy["answer_rules"] = {"constraints": raw_answer_rules}
         raw_copy["answer_config"] = answer_config_copy
 
-    # Let Pydantic validate the structure and apply validators
     config = RuntimeConfig.model_validate(raw_copy)
 
-    # Post-process question_entries (needs provider context)
-    raw_question_entries = answer_config_raw.get("question_entries") or []
-    question_entry_dicts: list[dict[str, object]] = [
+    raw_survey_questions = answer_config_raw.get("survey_questions") or []
+    question_info_dicts: list[dict[str, object]] = [
         {str(k): v for k, v in item.items()}
-        for item in raw_question_entries
+        for item in raw_survey_questions
         if isinstance(item, dict)
-    ] if isinstance(raw_question_entries, list) else []
-    config.answer_config.question_entries = _normalize_question_entries_list(
-        question_entry_dicts,
-        config.survey.provider,
+    ] if isinstance(raw_survey_questions, list) else []
+    config.answer_config.survey_questions = _normalize_question_details_list(
+        question_info_dicts,
     )
 
-    # Normalize answer_rules from raw YAML data
     raw_rules = answer_config_raw.get("answer_rules")
-    normalized_rules: list[dict[str, Any]] = []
-    if isinstance(raw_rules, list):
+    if isinstance(raw_rules, dict):
+        raw_constraints = raw_rules.get("constraints")
+        raw_per_question = raw_rules.get("per_question")
+        normalized_constraints: list[dict[str, Any]] = []
+        if isinstance(raw_constraints, list):
+            for item in raw_constraints:
+                if isinstance(item, dict):
+                    rule_dict: dict[str, object] = {str(k): v for k, v in item.items()}
+                    normalized_rule = normalize_rule_dict(rule_dict)
+                    if normalized_rule:
+                        normalized_constraints.append(normalized_rule)
+        normalized_per_question: list[dict[str, Any]] = []
+        if isinstance(raw_per_question, list):
+            for item in raw_per_question:
+                if isinstance(item, dict):
+                    rule_dict = {str(k): v for k, v in item.items()}
+                    normalized_rule = normalize_rule_dict(rule_dict)
+                    if normalized_rule:
+                        normalized_per_question.append(normalized_rule)
+        config.answer_config.answer_rules = AnswerRulesConfig(
+            constraints=normalized_constraints,
+            per_question=normalized_per_question,
+        )
+    elif isinstance(raw_rules, list):
+        normalized_constraints = []
+        normalized_per_question = []
         for item in raw_rules:
             if isinstance(item, dict):
-                rule_dict: dict[str, object] = {str(k): v for k, v in item.items()}
+                rule_dict = {str(k): v for k, v in item.items()}
                 normalized_rule = normalize_rule_dict(rule_dict)
                 if normalized_rule:
-                    normalized_rules.append(normalized_rule)
-    config.answer_config.answer_rules = normalized_rules
+                    normalized_constraints.append(normalized_rule)
+        config.answer_config.answer_rules = AnswerRulesConfig(
+            constraints=normalized_constraints,
+            per_question=normalized_per_question,
+        )
 
-    # Sanitize answer_rules (persisted config has no questions_info context)
     config.answer_config.answer_rules, _ = sanitize_answer_rules(
         config.answer_config.answer_rules,
         None,
@@ -565,9 +579,9 @@ def _ensure_supported_config_payload(
 def serialize_runtime_config(config: RuntimeConfig) -> dict[str, Any]:
     payload: dict[str, Any] = config.model_dump()
     answer_config_payload = cast("dict[str, Any]", payload["answer_config"])
-    answer_config_payload["question_entries"] = [
-        serialize_question_entry(entry)
-        for entry in list(config.answer_config.question_entries or [])
+    answer_config_payload["survey_questions"] = [
+        serialize_question_detail(qi)
+        for qi in list(config.answer_config.survey_questions or [])
     ]
     return payload
 

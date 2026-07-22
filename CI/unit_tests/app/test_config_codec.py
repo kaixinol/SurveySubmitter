@@ -8,10 +8,10 @@ from survey_submitter.core.config.codec import (
     _ensure_supported_config_payload,
     _select_user_agent_from_ratios,
     build_runtime_config_snapshot,
-    deserialize_question_entry,
+    deserialize_question_detail,
     deserialize_runtime_config,
     normalize_runtime_config_payload,
-    serialize_question_entry,
+    serialize_question_detail,
     serialize_runtime_config,
     survey_questions_from_definition,
 )
@@ -20,16 +20,36 @@ from survey_submitter.core.config.schema import (
     SurveySection,
     ExecutionSection,
     AnswerConfigSection,
+    AnswerRulesConfig,
     ReverseFillSection,
     QuestionInfo,
 )
 from survey_submitter.providers.contracts import ensure_survey_question_meta
 from survey_submitter.core.questions.schema import (
-    MultiTextQuestionEntry,
-    TextQuestionEntry,
-    make_question_entry,
+    TextQuestionAnswerConfig,
+    MultiTextQuestionAnswerConfig,
+    LocationQuestionAnswerConfig,
+    QuestionDetail,
 )
 from survey_submitter.core.reverse_fill.schema import REVERSE_FILL_FORMAT_WJX_SEQUENCE
+
+
+def _make_question_info(
+    *,
+    question_type: str = "single",
+    num: int = 1,
+    probabilities=None,
+    options: list[str] | None = None,
+    **detail_kwargs,
+) -> QuestionInfo:
+    detail = QuestionDetail(probabilities=probabilities, **detail_kwargs)
+    return QuestionInfo(
+        num=num,
+        title=f"Q{num}",
+        question_type=question_type,
+        options=options or [],
+        details=detail,
+    )
 
 
 class ConfigCodecTests:
@@ -70,31 +90,27 @@ class ConfigCodecTests:
         assert restored.execution.answer_datetime_window == ("2026-02-10 09:00:00", "2026-02-10 10:00:00")
 
     def test_build_runtime_config_snapshot_returns_detached_copies(self) -> None:
+        qi = _make_question_info(
+            question_type="single",
+            num=1,
+            probabilities=[60.0, 40.0],
+            options=["A", "B"],
+        )
         config = RuntimeConfig(
             survey=SurveySection(provider="wjx"),
             answer_config=AnswerConfigSection(
-                answer_rules=[{"question_num": 1, "equals": [0]}],
-                question_entries=[
-                    make_question_entry(
-                        question_type="single",
-                        probabilities=[60.0, 40.0],
-                        texts=["A", "B"],
-                        option_count=2,
-                        question_num=1,
-                    )
-                ],
+                answer_rules=AnswerRulesConfig(
+                    constraints=[{"question_num": 1, "equals": [0]}],
+                ),
+                survey_questions=[qi],
             ),
         )
         snapshot = build_runtime_config_snapshot(config)
         assert snapshot is not config
-        assert snapshot.answer_config.question_entries is not config.answer_config.question_entries
-        assert snapshot.answer_config.question_entries[0] is not config.answer_config.question_entries[0]
-        assert snapshot.answer_config.question_entries[0].texts is not None
-        snapshot.answer_config.question_entries[0].texts[0] = "已修改"
-        snapshot.answer_config.answer_rules[0]["equals"][0] = 9
-        assert config.answer_config.question_entries[0].texts is not None
-        assert config.answer_config.question_entries[0].texts[0] == "A"
-        assert config.answer_config.answer_rules[0]["equals"][0] == 0
+        assert snapshot.answer_config.survey_questions is not config.answer_config.survey_questions
+        assert snapshot.answer_config.survey_questions[0] is not config.answer_config.survey_questions[0]
+        snapshot.answer_config.answer_rules.constraints[0]["equals"][0] = 9
+        assert config.answer_config.answer_rules.constraints[0]["equals"][0] == 0
 
     def test_unknown_fields_raise_corruption_error(self) -> None:
         with pytest.raises(ValueError, match="该配置文件损坏"):
@@ -103,7 +119,7 @@ class ConfigCodecTests:
             normalize_runtime_config_payload(
                 {
                     "survey": {"url": "https://example.test"},
-                    "answer_config": {"question_entries": [{"question_type": "single", "unexpected": 1}]},
+                    "answer_config": {"survey_questions": [{"question_type": "single", "unexpected": 1}]},
                 }
             )
         with pytest.raises(ValueError, match="该配置文件损坏"):
@@ -134,14 +150,6 @@ class ConfigCodecTests:
                     ),
                     QuestionInfo(num=2, title="建议", question_type="text", options=[]),
                 ],
-                question_entries=[
-                    make_question_entry(
-                        question_type="single",
-                        probabilities=[100.0, 0.0],
-                        option_count=2,
-                        question_num=1,
-                    )
-                ],
             ),
         )
         payload = serialize_runtime_config(config)
@@ -153,13 +161,12 @@ class ConfigCodecTests:
         assert len(restored.answer_config.survey_questions) == 2
         assert restored.answer_config.survey_questions[0].title == "性别"
         assert restored.answer_config.survey_questions[0].question_type == "single"
-        assert restored.answer_config.question_entries[0].question_num == 1
 
     def test_config_without_survey_questions_still_loads(self) -> None:
         config = normalize_runtime_config_payload(
             {
                 "survey": {"url": "https://example.test"},
-                "answer_config": {"question_entries": [], "answer_rules": []},
+                "answer_config": {"answer_rules": []},
             }
         )
         assert config.answer_config.survey_questions == []
@@ -191,63 +198,94 @@ class ConfigCodecTests:
         assert infos[1].question_type == "text"
         assert infos[1].options == []
 
-    def test_question_entry_normalizes_text_modes_ranges_provider_and_dimensions(self) -> None:
-        entry = deserialize_question_entry(
+    def test_question_detail_normalizes_text_modes_ranges_and_dimensions(self) -> None:
+        qi = deserialize_question_detail(
             {
+                "num": 1,
+                "title": "Q1",
                 "question_type": "text",
-                "probabilities": [],
-                "texts": ["答案"],
-                "rows": "2",
-                "option_count": "0",
-                "distribution_mode": "custom",
-                "custom_weights": [0, "3"],
-                "survey_provider": "unknown",
-                "provider_question_id": " q1 ",
-                "provider_page_id": " p1 ",
-                "ai_enabled": True,
-                "text_random_mode": "integer",
-                "text_random_int_range": ["5", "9"],
-                "is_location": True,
-                "location_parts": ["北京", "北京", "东城区"],
-                "dimension": " 未分组 ",
+                "options": [],
+                "details": {
+                    "provider_question_id": " q1 ",
+                    "provider_page_id": " p1 ",
+                    "probabilities": [],
+                    "distribution_mode": "custom",
+                    "custom_weights": [0, "3"],
+                    "dimension": " 未分组 ",
+                    "answer_config": {
+                        "ai_enabled": True,
+                        "text_random_mode": "integer",
+                        "text_random_int_range": ["5", "9"],
+                    },
+                },
             }
         )
 
-        assert entry.probabilities == [0.0, 3.0]
-        assert entry.custom_weights == [0.0, 3.0]
-        assert entry.survey_provider == "wjx"
-        assert entry.provider_question_id == "q1"
-        assert entry.provider_page_id == "p1"
-        assert isinstance(entry, TextQuestionEntry)
-        assert entry.text_random_int_range == [5, 9]
-        assert entry.is_location is True
-        assert entry.location_parts == ["北京", "北京", "东城区"]
-        assert entry.dimension is None
+        assert qi.details.probabilities == [0.0, 3.0]
+        assert qi.details.custom_weights == [0.0, 3.0]
+        assert qi.details.provider_question_id == "q1"
+        assert qi.details.provider_page_id == "p1"
+        assert isinstance(qi.details.answer_config, TextQuestionAnswerConfig)
+        assert qi.details.answer_config.text_random_int_range == [5, 9]
+        assert qi.details.dimension is None
 
-        payload = serialize_question_entry(entry)
-        assert payload["dimension"] is None
-        assert payload["text_random_int_range"] == [5, 9]
-        assert payload["location_parts"] == ["北京", "北京", "东城区"]
+        payload = serialize_question_detail(qi)
+        assert payload["details"]["dimension"] is None
+        assert payload["details"]["answer_config"]["text_random_int_range"] == [5, 9]
 
-    def test_question_entry_normalizes_multi_text_blank_fields(self) -> None:
-        entry = deserialize_question_entry(
+    def test_question_detail_location_parts_produces_location_config(self) -> None:
+        qi = deserialize_question_detail(
             {
-                "question_type": "multi_text",
-                "probabilities": [],
-                "texts": ["答案"],
-                "multi_text_blank_modes": ["name", "bad", "integer"],
-                "multi_text_blank_ai_flags": [1, 0],
-                "multi_text_blank_int_ranges": [[1, 3], "", ["bad"]],
+                "num": 1,
+                "title": "Q1",
+                "question_type": "text",
+                "options": [],
+                "details": {
+                    "provider_question_id": " q1 ",
+                    "provider_page_id": " p1 ",
+                    "probabilities": [],
+                    "distribution_mode": "custom",
+                    "custom_weights": [0, "3"],
+                    "dimension": " 未分组 ",
+                    "answer_config": {
+                        "ai_enabled": True,
+                        "location_parts": ["北京", "北京", "东城区"],
+                    },
+                },
             }
         )
 
-        assert isinstance(entry, MultiTextQuestionEntry)
-        assert entry.multi_text_blank_modes == ["name", "none", "integer"]
-        assert entry.multi_text_blank_ai_flags == [True, False]
+        assert isinstance(qi.details.answer_config, LocationQuestionAnswerConfig)
+        assert qi.details.answer_config.location_parts == ["北京", "北京", "东城区"]
 
-        payload = serialize_question_entry(entry)
-        assert payload["multi_text_blank_modes"] == ["name", "none", "integer"]
-        assert payload["multi_text_blank_ai_flags"] == [True, False]
+        payload = serialize_question_detail(qi)
+        assert payload["details"]["answer_config"]["location_parts"] == ["北京", "北京", "东城区"]
+
+    def test_question_detail_normalizes_multi_text_blank_fields(self) -> None:
+        qi = deserialize_question_detail(
+            {
+                "num": 1,
+                "title": "Q1",
+                "question_type": "multi_text",
+                "options": [],
+                "details": {
+                    "probabilities": [],
+                    "answer_config": {
+                        "multi_text_blank_modes": ["name", "bad", "integer"],
+                        "multi_text_blank_ai_flags": [1, 0],
+                        "multi_text_blank_int_ranges": [[1, 3], "", ["bad"]],
+                    },
+                },
+            }
+        )
+
+        assert isinstance(qi.details.answer_config, MultiTextQuestionAnswerConfig)
+        assert qi.details.answer_config.multi_text_blank_modes == ["name", "none", "integer"]
+        assert qi.details.answer_config.multi_text_blank_ai_flags == [True, False]
+
+        payload = serialize_question_detail(qi)
+        assert payload["details"]["answer_config"]["multi_text_blank_modes"] == ["name", "none", "integer"]
+        assert payload["details"]["answer_config"]["multi_text_blank_ai_flags"] == [True, False]
 
     def test_normalize_runtime_config_payload_covers_boundaries_and_invalid_values(self) -> None:
         cfg = normalize_runtime_config_payload(
@@ -271,7 +309,7 @@ class ConfigCodecTests:
                     },
                 },
                 "answer_config": {
-                    "question_entries": [{"question_type": "single", "rows": "bad"}],
+                    "survey_questions": [{"num": 1, "title": "Q1", "question_type": "single", "options": []}],
                 },
             }
         )
@@ -288,8 +326,7 @@ class ConfigCodecTests:
         assert cfg.execution.reverse_fill.format == "auto"
         assert cfg.execution.reverse_fill.start_row == 1
         assert cfg.execution.reverse_fill.threads == 1
-        assert len(cfg.answer_config.question_entries) == 1
-        assert cfg.answer_config.question_entries[0].rows == 1
+        assert len(cfg.answer_config.survey_questions) == 1
 
     def test_random_ip_enabled_survives_official_proxy_sources(self) -> None:
         for source in ("default", "benefit", "custom"):

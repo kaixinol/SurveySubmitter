@@ -6,6 +6,7 @@ from typing import Any, Sequence
 
 from pydantic import BaseModel, Field, field_validator
 
+from survey_submitter.core.config.schema import AnswerRulesConfig
 from survey_submitter.core.persona.context import get_answered
 from survey_submitter.core.questions.types import TypeCode
 from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_survey_question_meta
@@ -111,16 +112,26 @@ def _build_question_info_map(
 
 
 def sanitize_answer_rules(
-    answer_rules: Sequence[dict[str, object]] | None,
+    answer_rules: AnswerRulesConfig | Sequence[dict[str, object]] | None,
     questions_info: Sequence[SurveyQuestionMeta | dict[str, object]] | None = None,
-) -> tuple[list[dict[str, object]], dict[str, int]]:
+) -> tuple[AnswerRulesConfig, dict[str, int]]:
 
     stats = {"invalid": 0, "unsupported": 0}
-    sanitized: list[dict[str, object]] = []
+    sanitized_constraints: list[dict[str, object]] = []
     question_map = _build_question_info_map(questions_info)
     has_question_info = bool(question_map)
 
-    for item in answer_rules or []:
+    if isinstance(answer_rules, AnswerRulesConfig):
+        constraint_rules = answer_rules.constraints or []
+        per_question_rules = list(answer_rules.per_question or [])
+    elif answer_rules:
+        constraint_rules = list(answer_rules)
+        per_question_rules = []
+    else:
+        constraint_rules = []
+        per_question_rules = []
+
+    for item in constraint_rules:
         normalized = normalize_rule_dict(item)
         if not normalized:
             stats["invalid"] += 1
@@ -136,8 +147,8 @@ def sanitize_answer_rules(
             ) or not question_supports_answer_rule(target_info):
                 stats["unsupported"] += 1
                 continue
-        sanitized.append(normalized)
-    return sanitized, stats
+        sanitized_constraints.append(normalized)
+    return AnswerRulesConfig(constraints=sanitized_constraints, per_question=per_question_rules), stats
 
 
 def normalize_rule_dict(raw: dict[str, object]) -> dict[str, object] | None:
@@ -187,13 +198,13 @@ def _normalize_rule(raw: dict[str, object]) -> AnswerRule | None:
 
 
 def reset_consistency_context(
-    answer_rules: Sequence[dict[str, object]] | None = None,
+    answer_rules: AnswerRulesConfig | Sequence[dict[str, object]] | None = None,
     questions_info: Sequence[SurveyQuestionMeta | dict[str, object]] | None = None,
 ) -> None:
 
     parsed_rules: list[AnswerRule] = []
-    sanitized_rules, _ = sanitize_answer_rules(answer_rules, questions_info)
-    for item in sanitized_rules:
+    sanitized_result, _ = sanitize_answer_rules(answer_rules, questions_info)
+    for item in sanitized_result.constraints:
         normalized = _normalize_rule(item)
         if normalized:
             parsed_rules.append(normalized)

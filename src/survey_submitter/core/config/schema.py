@@ -6,7 +6,7 @@ from pydantic import Field, field_validator, model_validator
 
 from survey_submitter.core.config.answer_datetime_window import normalize_answer_datetime_window
 from survey_submitter.core.config.base import BaseConfigModel
-from survey_submitter.core.questions.schema import QuestionEntry
+from survey_submitter.core.questions.schema import QuestionAnswerConfig, QuestionDetail
 from survey_submitter.core.reverse_fill.schema import (
     REVERSE_FILL_FORMAT_AUTO,
     REVERSE_FILL_FORMAT_WJX_SCORE,
@@ -181,12 +181,19 @@ class QuestionInfo(BaseConfigModel):
     question_type: str = ""
     options: list[str] = []
     required: bool = False
+    details: QuestionDetail = Field(default_factory=QuestionDetail)
+
+
+class AnswerRulesConfig(BaseConfigModel):
+    """Global answer rules with nested constraints and per-question overrides."""
+
+    constraints: list[dict[str, Any]] = []
+    per_question: list[dict[str, Any]] = []
 
 
 class AnswerConfigSection(BaseConfigModel):
     survey_questions: list[QuestionInfo] = []
-    question_entries: list[QuestionEntry] = []
-    answer_rules: list[dict[str, Any]] = []
+    answer_rules: AnswerRulesConfig = Field(default_factory=AnswerRulesConfig)
 
 
 class RuntimeConfig(BaseConfigModel):

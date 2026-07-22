@@ -23,8 +23,7 @@ from survey_submitter.core.config.schema import (
     ReverseFillSection,
 )
 from survey_submitter.core.engine.async_engine import AsyncRuntimeEngine
-from survey_submitter.core.questions.config import build_default_question_entries
-from survey_submitter.core.config.codec import survey_questions_from_definition
+from survey_submitter.core.questions.default_builder import build_default_survey_questions
 from survey_submitter.providers.contracts import SurveyQuestionMeta
 from survey_submitter.core.task import ExecutionState
 from survey_submitter.providers.registry import parse_survey
@@ -61,7 +60,7 @@ def _build_live_test_config(url: str) -> tuple[RuntimeConfig, list[SurveyQuestio
 
     definition = asyncio.run(parse_survey(normalized_url))
     questions_info = [question for question in definition.questions if question.type_code != "description"]
-    question_entries = build_default_question_entries(
+    survey_questions = build_default_survey_questions(
         questions_info,
         survey_url=normalized_url,
     )
@@ -84,8 +83,7 @@ def _build_live_test_config(url: str) -> tuple[RuntimeConfig, list[SurveyQuestio
             reverse_fill=ReverseFillSection(enabled=False),
         ),
         answer_config=AnswerConfigSection(
-            survey_questions=survey_questions_from_definition(definition.questions),
-            question_entries=list(question_entries),
+            survey_questions=list(survey_questions),
         ),
     )
     return config, questions_info

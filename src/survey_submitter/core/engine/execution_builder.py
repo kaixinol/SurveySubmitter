@@ -20,7 +20,7 @@ from survey_submitter.core.config.answer_datetime_window import (
     normalize_answer_datetime_window,
     parse_answer_datetime_string,
 )
-from survey_submitter.core.config.schema import RuntimeConfig
+from survey_submitter.core.config.schema import QuestionInfo, RuntimeConfig
 from survey_submitter.core.questions.config import (
     configure_probabilities,
     validate_question_config,
@@ -67,7 +67,7 @@ class PreparedExecutionArtifacts:
 
     execution_config_template: ExecutionConfig
     provider: str
-    question_entries: list[Any]
+    survey_questions: list[QuestionInfo]
     questions_info: list[SurveyQuestionMeta]
     reverse_fill_spec: ReverseFillSpec | None
 
@@ -236,7 +236,10 @@ def _build_execution_config_template(
         user_agent_ratios=copy.deepcopy(dict(config.execution.user_agent_ratios or {})),
         pause_on_aliyun_captcha=bool(config.execution.pause_on_aliyun_captcha),
         stop_on_fail=bool(config.execution.stop_on_fail),
-        answer_rules=copy.deepcopy(list(config.answer_config.answer_rules or [])),
+        answer_rules=copy.deepcopy(
+            list(config.answer_config.answer_rules.constraints or [])
+            + list(config.answer_config.answer_rules.per_question or [])
+        ),
         reverse_fill_spec=copy.deepcopy(reverse_fill_spec),
         ai_system_prompt=str(config.execution.ai.system_prompt or "").strip(),
         persona=bool(config.execution.persona),
@@ -271,8 +274,8 @@ def prepare_execution_artifacts(
     parsed definition (e.g. the CLI after fetching the survey) should pass it
     here. If omitted, it is re-parsed from ``config.survey.url``.
     """
-    question_entries = list(config.answer_config.question_entries or [])
-    if not question_entries:
+    survey_questions = list(config.answer_config.survey_questions or [])
+    if not survey_questions:
         raise RuntimePreparationError(
             '未配置任何题目，无法开始执行（请先在"题目配置"页添加/配置题目）',
             log_message="未配置任何题目，无法启动",
@@ -301,7 +304,7 @@ def prepare_execution_artifacts(
     assert questions_info is not None
     questions_info_inputs = cast(list[SurveyQuestionMeta | dict[str, Any]], list(questions_info))
 
-    validation_error = validate_question_config(question_entries, questions_info_inputs)
+    validation_error = validate_question_config(survey_questions, questions_info_inputs)
     if validation_error:
         raise RuntimePreparationError(
             f"题目配置存在冲突，无法启动：\n\n{validation_error}",
@@ -312,7 +315,7 @@ def prepare_execution_artifacts(
         reverse_fill_spec = build_enabled_reverse_fill_spec(
             config,
             questions_info_inputs,
-            question_entries,
+            survey_questions,
         )
     except Exception as exc:
         raise RuntimePreparationError(
@@ -337,7 +340,7 @@ def prepare_execution_artifacts(
 
     try:
         configure_probabilities(
-            question_entries,
+            survey_questions,
             ctx=execution_config,
             reliability_mode_enabled=bool(config.execution.reliability_mode),
         )
@@ -347,7 +350,7 @@ def prepare_execution_artifacts(
     return PreparedExecutionArtifacts(
         execution_config_template=execution_config,
         provider=provider,
-        question_entries=list(question_entries),
+        survey_questions=list(survey_questions),
         questions_info=questions_info,
         reverse_fill_spec=reverse_fill_spec,
     )

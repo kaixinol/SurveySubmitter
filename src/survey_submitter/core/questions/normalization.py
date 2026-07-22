@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING, Any, Callable, cast
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT, DIMENSION_UNGROUPED
 from survey_submitter.core.questions.schema import (
-    ChoiceQuestionEntry,
     GLOBAL_RELIABILITY_DIMENSION,
-    LocationQuestionEntry,
-    MultiTextQuestionEntry,
-    QuestionEntry,
-    TextQuestionEntry,
+    ChoiceQuestionAnswerConfig,
+    LocationQuestionAnswerConfig,
+    MultiTextQuestionAnswerConfig,
+    QuestionAnswerConfig,
+    TextQuestionAnswerConfig,
     _TEXT_RANDOM_ID_CARD,
     _TEXT_RANDOM_ID_CARD_TOKEN,
     _TEXT_RANDOM_INTEGER,
@@ -45,6 +45,7 @@ from survey_submitter.providers.common import make_provider_question_key
 DEFAULT_SLIDER_TARGET = 50.0
 
 if TYPE_CHECKING:
+    from survey_submitter.core.config.schema import QuestionInfo
     from survey_submitter.core.task import ExecutionConfig
 
 __all__ = ["configure_probabilities"]
@@ -77,10 +78,10 @@ def _raise_if_all_zero_matrix(raw_weights: object, question_num: int) -> None:
     )
 
 
-def _raise_if_all_zero_attached_selects(entry: QuestionEntry, question_num: int) -> None:
-    if not isinstance(entry, ChoiceQuestionEntry):
+def _raise_if_all_zero_attached_selects(qi: "QuestionInfo", question_num: int) -> None:
+    if not isinstance(qi.details.answer_config, ChoiceQuestionAnswerConfig):
         return
-    issues = find_all_zero_attached_selects(entry.attached_option_selects or [])
+    issues = find_all_zero_attached_selects(qi.details.answer_config.attached_option_selects or [])
     if not issues:
         return
     cfg_idx, option_text = issues[0]
@@ -127,13 +128,14 @@ def _init_target_collections(target: "ExecutionConfig") -> None:
 
 def _remember_provider_mapping(
     target: "ExecutionConfig",
-    entry: QuestionEntry,
+    qi: "QuestionInfo",
     mapped_value: tuple[str, int],
+    survey_provider: str,
 ) -> None:
     provider_key = make_provider_question_key(
-        entry.survey_provider,
-        entry.provider_page_id,
-        entry.provider_question_id,
+        survey_provider,
+        qi.details.provider_page_id,
+        qi.details.provider_question_id,
     )
     if provider_key:
         target.provider_question_idx_map[provider_key] = mapped_value
@@ -145,7 +147,7 @@ def _remember_provider_mapping(
 
 
 def _resolve_runtime_dimension(
-    entry: QuestionEntry,
+    qi: "QuestionInfo",
     *,
     reliability_mode_enabled: bool,
     strict_ratio: bool,
@@ -154,7 +156,7 @@ def _resolve_runtime_dimension(
     allows_joint_ratio = bool(allows_reliability) if allows_reliability is not None else True
     if not reliability_mode_enabled or (strict_ratio and not allows_joint_ratio):
         return None
-    raw_dimension = str(entry.dimension or "").strip()
+    raw_dimension = str(qi.details.dimension or "").strip()
     if not raw_dimension or raw_dimension == DIMENSION_UNGROUPED:
         return None
     return raw_dimension
@@ -296,7 +298,7 @@ def _is_ordinal_options(option_texts: list[str]) -> bool:
 
 
 def _handle_single(
-    entry: QuestionEntry,
+    qi: "QuestionInfo",
     question_num: int,
     probs: object,
     strict_ratio: bool,
@@ -304,12 +306,14 @@ def _handle_single(
     idx: int,
     reliability_mode_enabled: bool,
     reliability_candidates: list[tuple[int, bool, str]],
+    option_count: int,
+    survey_provider: str,
 ) -> int:
-    assert isinstance(entry, ChoiceQuestionEntry)
+    assert isinstance(qi.details.answer_config, ChoiceQuestionAnswerConfig)
     _raise_if_all_zero_single_like(probs, question_num, "single")
     mapped_value = ("single", idx)
     target.question_config_index_map[question_num] = mapped_value
-    _remember_provider_mapping(target, entry, mapped_value)
+    _remember_provider_mapping(target, qi, mapped_value, survey_provider)
     raw_meta = (
         getattr(target, "questions_metadata", {}).get(question_num)
         if hasattr(target, "questions_metadata")
@@ -317,27 +321,27 @@ def _handle_single(
     )
     option_texts = list(getattr(raw_meta, "option_texts", []) or [])
     is_ordinal_single = _is_ordinal_options(option_texts) and len(option_texts) == max(
-        1, entry.option_count
+        1, option_count
     )
     if is_ordinal_single:
         target.question_dimension_map[question_num] = _resolve_runtime_dimension(
-            entry,
+            qi,
             reliability_mode_enabled=reliability_mode_enabled,
             strict_ratio=strict_ratio,
             allows_reliability=True,
         )
-        reliability_candidates.append((question_num, strict_ratio, entry.question_type))
+        reliability_candidates.append((question_num, strict_ratio, qi.question_type))
     idx += 1
-    target.single_prob.append(_normalize_single_like_prob_config(cast(Any, probs), entry.option_count))
+    target.single_prob.append(_normalize_single_like_prob_config(cast(Any, probs), option_count))
     target.single_option_fill_texts.append(
-        _normalize_option_fill_texts(entry.option_fill_texts, entry.option_count)
+        _normalize_option_fill_texts(qi.details.answer_config.option_fill_texts, option_count)
     )
-    target.single_attached_option_selects.append(copy.deepcopy(entry.attached_option_selects or []))
+    target.single_attached_option_selects.append(copy.deepcopy(qi.details.answer_config.attached_option_selects or []))
     return idx
 
 
 def _handle_dropdown(
-    entry: QuestionEntry,
+    qi: "QuestionInfo",
     question_num: int,
     probs: object,
     strict_ratio: bool,
@@ -345,43 +349,47 @@ def _handle_dropdown(
     idx: int,
     reliability_mode_enabled: bool,
     reliability_candidates: list[tuple[int, bool, str]],
+    option_count: int,
+    survey_provider: str,
 ) -> int:
-    assert isinstance(entry, ChoiceQuestionEntry)
+    assert isinstance(qi.details.answer_config, ChoiceQuestionAnswerConfig)
     _raise_if_all_zero_single_like(probs, question_num, "dropdown")
     mapped_value = ("dropdown", idx)
     target.question_config_index_map[question_num] = mapped_value
-    _remember_provider_mapping(target, entry, mapped_value)
+    _remember_provider_mapping(target, qi, mapped_value, survey_provider)
     target.question_dimension_map[question_num] = _resolve_runtime_dimension(
-        entry,
+        qi,
         reliability_mode_enabled=reliability_mode_enabled,
         strict_ratio=strict_ratio,
     )
-    reliability_candidates.append((question_num, strict_ratio, entry.question_type))
+    reliability_candidates.append((question_num, strict_ratio, qi.question_type))
     idx += 1
-    target.dropdown_prob.append(_normalize_single_like_prob_config(cast(Any, probs), entry.option_count))
+    target.dropdown_prob.append(_normalize_single_like_prob_config(cast(Any, probs), option_count))
     target.dropdown_option_fill_texts.append(
-        _normalize_option_fill_texts(entry.option_fill_texts, entry.option_count)
+        _normalize_option_fill_texts(qi.details.answer_config.option_fill_texts, option_count)
     )
     return idx
 
 
 def _handle_multiple(
-    entry: QuestionEntry,
+    qi: "QuestionInfo",
     question_num: int,
     probs: object,
     target: "ExecutionConfig",
     idx: int,
+    option_count: int,
+    survey_provider: str,
 ) -> int:
-    assert isinstance(entry, ChoiceQuestionEntry)
+    assert isinstance(qi.details.answer_config, ChoiceQuestionAnswerConfig)
     mapped_value = ("multiple", idx)
     target.question_config_index_map[question_num] = mapped_value
-    _remember_provider_mapping(target, entry, mapped_value)
+    _remember_provider_mapping(target, qi, mapped_value, survey_provider)
     idx += 1
     if not isinstance(probs, list):
         raise ValueError("多选题必须提供概率列表，数值范围0-100")
     target.multiple_prob.append([float(cast(Any, value)) for value in probs])
     target.multiple_option_fill_texts.append(
-        _normalize_option_fill_texts(entry.option_fill_texts, entry.option_count)
+        _normalize_option_fill_texts(qi.details.answer_config.option_fill_texts, option_count)
     )
     return idx
 
@@ -408,7 +416,7 @@ def _normalize_matrix_row(raw_row: object, option_count: int) -> list[float] | N
 
 
 def _handle_matrix(
-    entry: QuestionEntry,
+    qi: "QuestionInfo",
     question_num: int,
     probs: object,
     strict_ratio: bool,
@@ -416,28 +424,42 @@ def _handle_matrix(
     idx: int,
     reliability_mode_enabled: bool,
     reliability_candidates: list[tuple[int, bool, str]],
+    survey_provider: str,
 ) -> int:
     _raise_if_all_zero_matrix(probs, question_num)
-    rows = max(1, entry.rows)
+    cw = qi.details.custom_weights
+    prob = qi.details.probabilities
+    if isinstance(cw, list) and any(isinstance(item, (list, tuple)) for item in cw):
+        rows = len(cw)
+    elif isinstance(prob, list) and any(isinstance(item, (list, tuple)) for item in prob):
+        rows = len(prob)
+    else:
+        rows = 1
+    rows = max(1, rows)
     mapped_value = ("matrix", idx)
     target.question_config_index_map[question_num] = mapped_value
-    _remember_provider_mapping(target, entry, mapped_value)
+    _remember_provider_mapping(target, qi, mapped_value, survey_provider)
     target.question_dimension_map[question_num] = _resolve_runtime_dimension(
-        entry,
+        qi,
         reliability_mode_enabled=reliability_mode_enabled,
         strict_ratio=strict_ratio,
     )
-    reliability_candidates.append((question_num, strict_ratio, entry.question_type))
+    reliability_candidates.append((question_num, strict_ratio, qi.question_type))
     idx += rows
-    option_count = max(1, _infer_option_count(entry))
+    option_count = max(1, _infer_option_count(
+        qi.question_type,
+        custom_weights=cw,
+        probabilities=prob,
+        option_count=len(qi.options),
+    ))
 
     row_weights_source: list[object] | None = None
     if isinstance(probs, list) and any(isinstance(item, (list, tuple)) for item in probs):
         row_weights_source = cast(Any, probs)
-    elif isinstance(entry.custom_weights, list) and any(
-        isinstance(item, (list, tuple)) for item in entry.custom_weights
+    elif isinstance(cw, list) and any(
+        isinstance(item, (list, tuple)) for item in cw
     ):
-        row_weights_source = cast(Any, entry.custom_weights)
+        row_weights_source = cast(Any, cw)
 
     if row_weights_source is not None:
         last_row: object | None = None
@@ -461,7 +483,7 @@ def _handle_matrix(
 
 
 def _handle_scale(
-    entry: QuestionEntry,
+    qi: "QuestionInfo",
     question_num: int,
     probs: object,
     strict_ratio: bool,
@@ -469,41 +491,44 @@ def _handle_scale(
     idx: int,
     reliability_mode_enabled: bool,
     reliability_candidates: list[tuple[int, bool, str]],
+    option_count: int,
+    survey_provider: str,
 ) -> int:
-    _raise_if_all_zero_single_like(probs, question_num, entry.question_type)
-    mapped_value = (entry.question_type, idx)
+    _raise_if_all_zero_single_like(probs, question_num, qi.question_type)
+    mapped_value = (qi.question_type, idx)
     target.question_config_index_map[question_num] = mapped_value
-    _remember_provider_mapping(target, entry, mapped_value)
+    _remember_provider_mapping(target, qi, mapped_value, survey_provider)
     target.question_dimension_map[question_num] = _resolve_runtime_dimension(
-        entry,
+        qi,
         reliability_mode_enabled=reliability_mode_enabled,
         strict_ratio=strict_ratio,
     )
-    reliability_candidates.append((question_num, strict_ratio, entry.question_type))
+    reliability_candidates.append((question_num, strict_ratio, qi.question_type))
     idx += 1
-    target.scale_prob.append(_normalize_single_like_prob_config(cast(Any, probs), entry.option_count))
+    target.scale_prob.append(_normalize_single_like_prob_config(cast(Any, probs), option_count))
     return idx
 
 
 def _handle_slider(
-    entry: QuestionEntry,
+    qi: "QuestionInfo",
     question_num: int,
     probs: object,
     target: "ExecutionConfig",
     idx: int,
+    survey_provider: str,
 ) -> tuple[int, bool]:
     """Returns (new_idx, should_continue)."""
     mapped_value = ("slider", idx)
     target.question_config_index_map[question_num] = mapped_value
-    _remember_provider_mapping(target, entry, mapped_value)
+    _remember_provider_mapping(target, qi, mapped_value, survey_provider)
     idx += 1
-    mode = str(entry.distribution_mode or "").strip().lower()
+    mode = str(qi.details.distribution_mode or "").strip().lower()
     if mode == "random":
         target.slider_targets.append(float("nan"))
         return idx, True
     target_value: float | None = None
-    if isinstance(entry.custom_weights, (list, tuple)) and entry.custom_weights:
-        first = entry.custom_weights[0]
+    if isinstance(qi.details.custom_weights, (list, tuple)) and qi.details.custom_weights:
+        first = qi.details.custom_weights[0]
         target_value = float(first) if isinstance(first, (int, float)) else None
     if target_value is None:
         if isinstance(probs, (int, float)):
@@ -518,69 +543,72 @@ def _handle_slider(
 
 
 def _handle_order(
-    entry: QuestionEntry,
+    qi: "QuestionInfo",
     question_num: int,
     target: "ExecutionConfig",
+    survey_provider: str,
 ) -> None:
     mapped_value = ("order", -1)
     target.question_config_index_map[question_num] = mapped_value
-    _remember_provider_mapping(target, entry, mapped_value)
+    _remember_provider_mapping(target, qi, mapped_value, survey_provider)
 
 
 def _handle_location(
-    entry: QuestionEntry,
+    qi: "QuestionInfo",
     question_num: int,
     target: "ExecutionConfig",
+    survey_provider: str,
 ) -> None:
-    assert isinstance(entry, LocationQuestionEntry)
+    assert isinstance(qi.details.answer_config, LocationQuestionAnswerConfig)
     mapped_value = ("location", -1)
     target.question_config_index_map[question_num] = mapped_value
-    _remember_provider_mapping(target, entry, mapped_value)
+    _remember_provider_mapping(target, qi, mapped_value, survey_provider)
     target.location_parts[question_num] = [
-        str(item or "").strip() for item in list(entry.location_parts or [])[:3]
+        str(item or "").strip() for item in list(qi.details.answer_config.location_parts or [])[:3]
     ]
 
 
 def _handle_text(
-    entry: QuestionEntry,
+    qi: "QuestionInfo",
     question_num: int,
     probs: object,
     target: "ExecutionConfig",
     idx_text: int,
+    survey_provider: str,
 ) -> int:
     """Returns the new text index."""
-    is_location = bool(entry.is_location)
+    is_location = isinstance(qi.details.answer_config, LocationQuestionAnswerConfig)
     if not is_location:
         mapped_value = ("text", idx_text)
         target.question_config_index_map[question_num] = mapped_value
-        _remember_provider_mapping(target, entry, mapped_value)
+        _remember_provider_mapping(target, qi, mapped_value, survey_provider)
         idx_text += 1
     else:
         mapped_value = ("location", -1)
         target.question_config_index_map[question_num] = mapped_value
-        _remember_provider_mapping(target, entry, mapped_value)
+        _remember_provider_mapping(target, qi, mapped_value, survey_provider)
         target.location_parts[question_num] = [
-            str(item or "").strip() for item in list(entry.location_parts or [])[:3]
+            str(item or "").strip() for item in list(qi.details.answer_config.location_parts or [])[:3]
         ]
 
     text_random_mode = (
-        str(entry.text_random_mode or _TEXT_RANDOM_NONE).strip().lower()
-        if isinstance(entry, TextQuestionEntry)
+        str(qi.details.answer_config.text_random_mode or _TEXT_RANDOM_NONE).strip().lower()
+        if isinstance(qi.details.answer_config, TextQuestionAnswerConfig)
         else _TEXT_RANDOM_NONE
     )
-    normalized_values = [str(item).strip() for item in (entry.texts or []) if str(item).strip()]
+    normalized_values = [str(item).strip() for item in (qi.options or []) if str(item).strip()]
     normalized_blank_ai_flags: list[bool] = []
     normalized_blank_int_ranges: list[list[int]] = []
-    if isinstance(entry, MultiTextQuestionEntry):
-        raw_blank_ai_flags = entry.multi_text_blank_ai_flags or []
+    if isinstance(qi.details.answer_config, MultiTextQuestionAnswerConfig):
+        raw_blank_ai_flags = qi.details.answer_config.multi_text_blank_ai_flags or []
         if isinstance(raw_blank_ai_flags, list):
             normalized_blank_ai_flags = [bool(flag) for flag in raw_blank_ai_flags]
-        raw_blank_int_ranges = entry.multi_text_blank_int_ranges or []
+        raw_blank_int_ranges = qi.details.answer_config.multi_text_blank_int_ranges or []
         if isinstance(raw_blank_int_ranges, list):
             normalized_blank_int_ranges = [
                 serialize_random_int_range(item) for item in raw_blank_int_ranges
             ]
-        for blank_idx, mode in enumerate(entry.multi_text_blank_modes or []):
+        for blank_idx, mode in enumerate(qi.details.answer_config.multi_text_blank_modes or []):
             if str(mode or _TEXT_RANDOM_NONE).strip().lower() != _TEXT_RANDOM_INTEGER:
                 continue
             target_range = (
@@ -588,15 +616,15 @@ def _handle_text(
             )
             if try_parse_random_int_range(target_range) is None:
                 raise ValueError(f"多项填空题第{blank_idx + 1}个空位的随机整数范围未设置完整")
-    if entry.question_type == QuestionType.TEXT:
-        ai_enabled = bool(entry.ai_enabled)
-    elif entry.question_type == QuestionType.MULTI_TEXT:
-        ai_enabled = bool(entry.ai_enabled) or (
+    if qi.question_type == QuestionType.TEXT:
+        ai_enabled = bool(qi.details.answer_config.ai_enabled)
+    elif qi.question_type == QuestionType.MULTI_TEXT:
+        ai_enabled = bool(qi.details.answer_config.ai_enabled) or (
             bool(normalized_blank_ai_flags) and all(normalized_blank_ai_flags)
         )
     else:
         ai_enabled = False
-    if entry.question_type == QuestionType.TEXT and text_random_mode in (
+    if qi.question_type == QuestionType.TEXT and text_random_mode in (
         _TEXT_RANDOM_NAME,
         _TEXT_RANDOM_MOBILE,
         _TEXT_RANDOM_ID_CARD,
@@ -611,8 +639,8 @@ def _handle_text(
             normalized_values = [_TEXT_RANDOM_ID_CARD_TOKEN]
         else:
             text_random_range = (
-                serialize_random_int_range(entry.text_random_int_range)
-                if isinstance(entry, TextQuestionEntry)
+                serialize_random_int_range(qi.details.answer_config.text_random_int_range)
+                if isinstance(qi.details.answer_config, TextQuestionAnswerConfig)
                 else []
             )
             if len(text_random_range) != 2:
@@ -632,11 +660,11 @@ def _handle_text(
         normalized = normalize_probabilities([1.0] * len(normalized_values))
     target.texts.append(normalized_values)
     target.texts_prob.append(normalized)
-    target.text_entry_types.append(entry.question_type)
+    target.text_entry_types.append(qi.question_type)
     target.text_ai_flags.append(ai_enabled)
-    target.text_titles.append(str(entry.question_title or ""))
+    target.text_titles.append(str(qi.title or ""))
     target.multi_text_blank_modes.append(
-        list(entry.multi_text_blank_modes) if isinstance(entry, MultiTextQuestionEntry) else []
+        list(qi.details.answer_config.multi_text_blank_modes) if isinstance(qi.details.answer_config, MultiTextQuestionAnswerConfig) else []
     )
     target.multi_text_blank_ai_flags.append(normalized_blank_ai_flags)
     target.multi_text_blank_int_ranges.append(normalized_blank_int_ranges)
@@ -653,7 +681,7 @@ def _handle_text(
 # wrappers return ``True`` when the loop should ``continue`` (skip remaining work).
 _NormalizationHandler = Callable[
     [
-        QuestionEntry,
+        "QuestionInfo",
         int,
         object,
         bool,
@@ -661,65 +689,67 @@ _NormalizationHandler = Callable[
         dict[str, int],
         bool,
         list[tuple[int, bool, str]],
+        int,
+        str,
     ],
     bool,
 ]
 
 _NORMALIZATION_DISPATCH: dict[QuestionType, _NormalizationHandler] = {
     QuestionType.SINGLE: (
-        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
-            "single", _handle_single(e, qn, p, sr, t, idx["single"], rel, cand)
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
+            "single", _handle_single(e, qn, p, sr, t, idx["single"], rel, cand, oc, sp)
         )
         or False
     ),
     QuestionType.DROPDOWN: (
-        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
-            "dropdown", _handle_dropdown(e, qn, p, sr, t, idx["dropdown"], rel, cand)
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
+            "dropdown", _handle_dropdown(e, qn, p, sr, t, idx["dropdown"], rel, cand, oc, sp)
         )
         or False
     ),
     QuestionType.MULTIPLE: (
-        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
-            "multiple", _handle_multiple(e, qn, p, t, idx["multiple"])
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
+            "multiple", _handle_multiple(e, qn, p, t, idx["multiple"], oc, sp)
         )
         or False
     ),
     QuestionType.MATRIX: (
-        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
-            "matrix", _handle_matrix(e, qn, p, sr, t, idx["matrix"], rel, cand)
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
+            "matrix", _handle_matrix(e, qn, p, sr, t, idx["matrix"], rel, cand, sp)
         )
         or False
     ),
     QuestionType.SCALE: (
-        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
-            "scale", _handle_scale(e, qn, p, sr, t, idx["scale"], rel, cand)
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
+            "scale", _handle_scale(e, qn, p, sr, t, idx["scale"], rel, cand, oc, sp)
         )
         or False
     ),
     QuestionType.SCORE: (
-        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
-            "scale", _handle_scale(e, qn, p, sr, t, idx["scale"], rel, cand)
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
+            "scale", _handle_scale(e, qn, p, sr, t, idx["scale"], rel, cand, oc, sp)
         )
         or False
     ),
     QuestionType.SLIDER: (
-        lambda e, qn, p, sr, t, idx, rel, cand: _handle_slider(e, qn, p, t, idx["slider"])[1]
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: _handle_slider(e, qn, p, t, idx["slider"], sp)[1]
     ),
     QuestionType.ORDER: (
-        lambda e, qn, p, sr, t, idx, rel, cand: _handle_order(e, qn, t) or False
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: _handle_order(e, qn, t, sp) or False
     ),
     QuestionType.LOCATION: (
-        lambda e, qn, p, sr, t, idx, rel, cand: _handle_location(e, qn, t) or False
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: _handle_location(e, qn, t, sp) or False
     ),
     QuestionType.TEXT: (
-        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
-            "text", _handle_text(e, qn, p, t, idx["text"])
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
+            "text", _handle_text(e, qn, p, t, idx["text"], sp)
         )
         or False
     ),
     QuestionType.MULTI_TEXT: (
-        lambda e, qn, p, sr, t, idx, rel, cand: idx.__setitem__(
-            "text", _handle_text(e, qn, p, t, idx["text"])
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
+            "text", _handle_text(e, qn, p, t, idx["text"], sp)
         )
         or False
     ),
@@ -753,9 +783,10 @@ def _apply_reliability_fallback(
 
 
 def configure_probabilities(
-    entries: list[QuestionEntry],
+    entries: list["QuestionInfo"],
     ctx: "ExecutionConfig",
     reliability_mode_enabled: bool = True,
+    survey_provider: str = "wjx",
 ) -> None:
     target = ctx
     _init_target_collections(target)
@@ -771,28 +802,33 @@ def configure_probabilities(
     }
     reliability_candidates: list[tuple[int, bool, str]] = []
 
-    for idx_num, entry in enumerate(entries, start=1):
-        question_num = entry.question_num if entry.question_num is not None else idx_num
-        inferred_count = _infer_option_count(entry)
-        if inferred_count and inferred_count != entry.option_count:
-            entry.option_count = inferred_count
-        probs = _resolve_prob_config(
-            entry.probabilities,
-            entry.custom_weights,
-            prefer_custom=(entry.distribution_mode == "custom"),
+    for idx_num, qi in enumerate(entries, start=1):
+        question_num = qi.num if qi.num is not None else idx_num
+        inferred_count = _infer_option_count(
+            qi.question_type,
+            custom_weights=qi.details.custom_weights,
+            probabilities=qi.details.probabilities,
+            option_count=len(qi.options),
+            texts=qi.options,
         )
-        _raise_if_all_zero_attached_selects(entry, question_num)
+        option_count = inferred_count if inferred_count else len(qi.options)
+        probs = _resolve_prob_config(
+            qi.details.probabilities,
+            qi.details.custom_weights,
+            prefer_custom=(qi.details.distribution_mode == "custom"),
+        )
+        _raise_if_all_zero_attached_selects(qi, question_num)
         strict_ratio = is_strict_custom_ratio_mode(
-            entry.distribution_mode,
+            qi.details.distribution_mode,
             probs,
-            entry.custom_weights,
+            qi.details.custom_weights,
         )
         target.question_strict_ratio_map[question_num] = strict_ratio
 
-        handler = _NORMALIZATION_DISPATCH.get(QuestionType(str(entry.question_type)))
+        handler = _NORMALIZATION_DISPATCH.get(QuestionType(str(qi.question_type)))
         if handler is None:
             continue
-        if handler(entry, question_num, probs, strict_ratio, target, idx, reliability_mode_enabled, reliability_candidates):
+        if handler(qi, question_num, probs, strict_ratio, target, idx, reliability_mode_enabled, reliability_candidates, option_count, survey_provider):
             continue
 
     _apply_reliability_fallback(target, reliability_mode_enabled, reliability_candidates)

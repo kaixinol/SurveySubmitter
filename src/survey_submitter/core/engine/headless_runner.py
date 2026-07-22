@@ -10,11 +10,10 @@ from __future__ import annotations
 import asyncio
 from loguru import logger
 
-from survey_submitter.core.config.codec import survey_questions_from_definition
 from survey_submitter.core.config.yaml_loader import load_yaml_config
 from survey_submitter.core.engine.async_engine import AsyncRuntimeEngine
 from survey_submitter.core.engine.execution_builder import prepare_execution_artifacts
-from survey_submitter.core.questions.default_builder import build_default_question_entries
+from survey_submitter.core.questions.default_builder import build_default_survey_questions
 from survey_submitter.core.task.task_context import ExecutionState
 from survey_submitter.providers.contracts import SurveyDefinition
 from survey_submitter.providers.registry import parse_survey
@@ -70,14 +69,15 @@ class HeadlessRunner:
 
         config.survey.title = config.survey.title or definition.title
         config.survey.provider = definition.provider
-        config.answer_config.survey_questions = survey_questions_from_definition(definition.questions)
 
-        if not config.answer_config.question_entries:
+        existing_questions = config.answer_config.survey_questions
+        config.answer_config.survey_questions = build_default_survey_questions(
+            definition.questions,
+            survey_url=config.survey.url,
+            existing_entries=existing_questions or None,
+        )
+        if not existing_questions:
             logger.info("未配置题目权重，自动生成默认配置")
-            config.answer_config.question_entries = build_default_question_entries(
-                definition.questions,
-                survey_url=config.survey.url,
-            )
 
         if self._parse_only:
             self._log_parsed_questions(definition)
