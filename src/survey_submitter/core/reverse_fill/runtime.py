@@ -32,7 +32,7 @@ def resolve_current_reverse_fill_answer(
 ) -> ReverseFillAnswer | None:
     if task_ctx is None:
         return None
-    getter = getattr(task_ctx, "get_reverse_fill_answer", None)
+    getter = getattr(task_ctx, "get_answer", None)
     if not callable(getter):
         return None
     try:

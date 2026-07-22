@@ -14,7 +14,7 @@ from survey_submitter.system.runtime_paths import get_resource_path
 
 from survey_submitter.core.questions.types import TypeCode
 
-_KNOWN_NON_TEXT_QUESTION_TYPES = {
+_NON_TEXT_TYPES = {
     TypeCode.SINGLE,
     TypeCode.MULTIPLE,
     TypeCode.SCORE,
@@ -41,7 +41,7 @@ def _normalize_question_type_code(value: str | int | None) -> str:
         return ""
 
 
-def _should_treat_question_as_text_like(
+def _is_text_like_question(
     type_code: Any,
     option_count: int,
     text_input_count: int,
@@ -55,7 +55,7 @@ def _should_treat_question_as_text_like(
     normalized = _normalize_question_type_code(type_code)
     if normalized in {TypeCode.TEXT, TypeCode.LOCATION, TypeCode.MATRIX}:
         return text_input_count > 0
-    if normalized in _KNOWN_NON_TEXT_QUESTION_TYPES:
+    if normalized in _NON_TEXT_TYPES:
         return False
     return (option_count or 0) <= 1 and text_input_count > 0
 
@@ -455,10 +455,10 @@ def normalize_single_like_prob_config(
 
     if prob_config == -1 or prob_config is None:
         return -1
-    return normalize_droplist_probs(prob_config, option_count)
+    return normalize_dropdown_probs(prob_config, option_count)
 
 
-def normalize_droplist_probs(
+def normalize_dropdown_probs(
     prob_config: list[float] | int | float | None, option_count: int
 ) -> list[float]:
 

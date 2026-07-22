@@ -121,7 +121,7 @@ def test_live_runtime_regression(survey_case: LiveSurveyCase) -> None:
             f"Exit code: {result.returncode}\n"
             f"Output:\n{output}"
         )
-    if "cur_num=1" not in output:
+    if "success_count=1" not in output:
         _fail_without_assert_repr(
             f"Live runtime regression did not report a successful submission for {survey_case.name}.\n"
             f"Output:\n{output}"

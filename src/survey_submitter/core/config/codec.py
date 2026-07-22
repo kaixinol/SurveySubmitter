@@ -52,7 +52,6 @@ _REVERSE_FILL_FORMATS = {
 }
 DEFAULT_ANSWER_DURATION_RANGE_SECONDS = (60, 120)
 MAX_ANSWER_DURATION_SECONDS = 30 * 60
-_DEFAULT_RANDOM_UA_RATIOS = {"wechat": 33, "mobile": 33, "pc": 34}
 _USER_AGENT_DEVICE_TO_PRESET_KEYS = {
     "wechat": ["wechat_android"],
     "mobile": ["mobile_android"],
@@ -451,10 +450,10 @@ def build_runtime_config_snapshot(
 ) -> RuntimeConfig:
     snapshot = copy.deepcopy(config)
     default_provider = normalize_survey_provider(
-        snapshot.survey.survey_provider,
+        snapshot.survey.provider,
         default=detect_survey_provider(snapshot.survey.url),
     )
-    snapshot.survey.survey_provider = default_provider
+    snapshot.survey.provider = default_provider
     entry_source = (
         question_entries if question_entries is not None else snapshot.answer_config.question_entries
     )
@@ -532,7 +531,7 @@ def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
     ] if isinstance(raw_question_entries, list) else []
     config.answer_config.question_entries = _normalize_question_entries_list(
         question_entry_dicts,
-        config.survey.survey_provider,
+        config.survey.provider,
     )
 
     # Normalize answer_rules from raw YAML data

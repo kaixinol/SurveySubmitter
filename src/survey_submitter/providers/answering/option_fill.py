@@ -64,7 +64,7 @@ def resolve_static_option_fill_text(
     return resolve_dynamic_text_token(text)
 
 
-def mapping_contains_fillblank(value: Mapping[str, Any], *keys: str) -> bool:
+def mapping_contains_fill_blank(value: Mapping[str, Any], *keys: str) -> bool:
     for key in keys:
         raw = value.get(key)
         if raw is not None and str(raw).strip():

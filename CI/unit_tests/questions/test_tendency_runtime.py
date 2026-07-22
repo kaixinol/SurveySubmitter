@@ -45,7 +45,7 @@ class TendencyRuntimeTests:
         tendency.reset_tendency()
         patch_attrs(
             (tendency, "_generate_base_ratio", lambda _count, _probabilities: 0.75),
-            (tendency, "_apply_consistency", lambda base, _count, _probabilities: base),
+            (tendency, "_apply_consistency_gate", lambda base, _count, _probabilities: base),
         )
 
         first = tendency.get_tendency_index(5, [1, 1, 1, 1, 1], dimension="满意度")
@@ -54,7 +54,7 @@ class TendencyRuntimeTests:
         assert first == 3
         assert second == 2
 
-    def test_apply_consistency_uses_weighted_adjusted_probabilities(self, patch_attrs) -> None:
+    def test_apply_consistency_gate_uses_weighted_adjusted_probabilities(self, patch_attrs) -> None:
         patch_attrs(
             (
                 tendency,
@@ -74,9 +74,9 @@ class TendencyRuntimeTests:
             ),
         )
 
-        assert tendency._apply_consistency(2, 5, [1, 1, 5, 1, 1]) == 2
+        assert tendency._apply_consistency_gate(2, 5, [1, 1, 5, 1, 1]) == 2
 
-    def test_apply_consistency_falls_back_to_distance_weighted_random(self, patch_attrs) -> None:
+    def test_apply_consistency_gate_falls_back_to_distance_weighted_random(self, patch_attrs) -> None:
         patch_attrs(
             (
                 tendency,
@@ -92,7 +92,7 @@ class TendencyRuntimeTests:
             (tendency.random, "random", lambda: 0.0),
         )
 
-        assert tendency._apply_consistency(3, 7, -1) == 1
+        assert tendency._apply_consistency_gate(3, 7, -1) == 1
 
     def test_resolve_fluctuation_window_and_decay(self, patch_attrs) -> None:
         patch_attrs(

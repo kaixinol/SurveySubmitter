@@ -5,7 +5,7 @@ import random
 from typing import Any
 
 
-def coerce_positive_int(value: Any, default: int) -> int:
+def coerce_non_negative_int(value: Any, default: int) -> int:
     try:
         number = int(value)
     except (ValueError, TypeError):
@@ -48,7 +48,7 @@ def resolve_selected_weight_text(
     return "随机"
 
 
-def positive_multiple_indexes(weights: Any, option_count: int) -> list[int]:
+def positive_multiple_indices(weights: Any, option_count: int) -> list[int]:
     count = max(0, int(option_count or 0))
     if count <= 0:
         return []
@@ -72,7 +72,7 @@ def positive_multiple_indexes(weights: Any, option_count: int) -> list[int]:
     return selected
 
 
-def positive_multiple_indexes_with_limits(
+def positive_multiple_indices_with_limits(
     weights: Any,
     option_count: int,
     *,
@@ -90,7 +90,7 @@ def positive_multiple_indexes_with_limits(
     if resolved_min > resolved_max:
         resolved_min = resolved_max
 
-    selected = list(dict.fromkeys(positive_multiple_indexes(weights, count)))
+    selected = list(dict.fromkeys(positive_multiple_indices(weights, count)))
     if resolved_max < len(selected):
         selected = random.sample(selected, resolved_max)
 

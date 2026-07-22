@@ -27,11 +27,11 @@ class StrictRatioHelperTests:
         monkeypatch.setattr(strict_ratio.random, "random", lambda: 0.9)
         assert strict_ratio.stochastic_round(2.3) == 2
 
-    def test_weighted_sample_without_replacement_and_rank_order_helpers(self, monkeypatch) -> None:
+    def test_weighted_sample_no_replacement_and_rank_order_helpers(self, monkeypatch) -> None:
         random_values = iter([0.0, 0.99])
         monkeypatch.setattr(strict_ratio.random, "random", lambda: next(random_values))
 
-        sampled = strict_ratio.weighted_sample_without_replacement([1, 2, 3], [5, 1, 1], 2)
+        sampled = strict_ratio.weighted_sample_no_replacement([1, 2, 3], [5, 1, 1], 2)
         groups = strict_ratio.build_rank_groups([0.4, 0.2, 0.4, 0.0])
         adjusted = strict_ratio.enforce_reference_rank_order([0.6, 0.3, 0.1], [0.5, 0.1, 0.1])
 

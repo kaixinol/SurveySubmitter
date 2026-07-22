@@ -11,8 +11,8 @@
 # ---------------------------------------------------------------------------
 survey:
   url: "https://www.wjx.cn/s/your-survey-id.aspx"
-  survey_title: ""                       # Optional; auto-detected if blank
-  survey_provider: "wjx"                 # "wjx" (default) or auto-detected from URL
+  title: ""                       # Optional; auto-detected if blank
+  provider: "wjx"                 # "wjx" (default) or auto-detected from URL
 
 # ---------------------------------------------------------------------------
 # Execution settings

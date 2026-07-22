@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from survey_submitter.core.task.task_context import ExecutionState
 
 from survey_submitter.core.questions.reliability_mode import get_reliability_profile
-from survey_submitter.core.questions.utils import normalize_droplist_probs
+from survey_submitter.core.questions.utils import normalize_dropdown_probs
 
 # Standard correction algorithm parameters:
 _STANDARD_WARMUP_SAMPLES = 12  # minimum samples before correction kicks in
@@ -36,7 +36,7 @@ def _normalize_distribution_target(
 ) -> list[float]:
     if option_count <= 0:
         return []
-    return normalize_droplist_probs(probabilities, option_count)
+    return normalize_dropdown_probs(probabilities, option_count)
 
 
 def _resolve_runtime_counts(
@@ -77,7 +77,7 @@ def _resolve_correction_params(
     )
 
 
-def resolve_distribution_probabilities(
+def resolve_probabilities(
     probabilities: list[float] | int | float | None,
     option_count: int,
     ctx: ExecutionState | None,
@@ -121,7 +121,7 @@ def resolve_distribution_probabilities(
     return [value / adjusted_total for value in adjusted]
 
 
-def record_pending_distribution_choice(
+def record_pending_choice(
     ctx: ExecutionState | None,
     question_index: int | None,
     option_index: int,

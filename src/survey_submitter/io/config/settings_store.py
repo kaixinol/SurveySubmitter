@@ -44,7 +44,7 @@ class _JsonSettings:
         result = store.get(key, default)
         return result
 
-    def setValue(self, key: str, value: Any) -> None:
+    def set_value(self, key: str, value: Any) -> None:
         with _settings_lock:
             store = _load_settings()
             store[key] = value

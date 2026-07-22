@@ -116,7 +116,7 @@ def _find_matrix_table(soup, question_div, question_number: int):
     return table
 
 
-def _collect_rowindex_rows(table) -> tuple[int, list[str]]:
+def _collect_row_index_rows(table) -> tuple[int, list[str]]:
     matrix_rows = 0
     row_texts: list[str] = []
     for row in table.find_all("tr"):
@@ -231,7 +231,7 @@ def _collect_matrix_option_texts(
     row_texts: list[str] = []
 
     if table:
-        matrix_rows, row_texts = _collect_rowindex_rows(table)
+        matrix_rows, row_texts = _collect_row_index_rows(table)
 
     if matrix_rows > 0:
         pass
@@ -310,7 +310,7 @@ def _format_slider_matrix_value(value: float) -> str:
     return f"{value:.6f}".rstrip("0").rstrip(".")
 
 
-def _build_slider_matrix_option_texts_from_input(slider_input) -> list[str]:
+def _slider_matrix_option_texts_from_input(slider_input) -> list[str]:
     def _parse(raw: str | float | int | None) -> float | None:
         if raw is None:
             return None
@@ -365,7 +365,7 @@ def _collect_slider_matrix_metadata(question_div) -> tuple[int, list[str], list[
 
     slider_inputs = question_div.select("input.ui-slider-input[rowid]")
     if not option_texts and slider_inputs:
-        option_texts = _build_slider_matrix_option_texts_from_input(slider_inputs[0])
+        option_texts = _slider_matrix_option_texts_from_input(slider_inputs[0])
 
     matrix_rows = len(slider_inputs) if slider_inputs else len(row_texts)
     if matrix_rows <= 0:

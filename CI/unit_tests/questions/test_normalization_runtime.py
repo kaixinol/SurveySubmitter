@@ -110,7 +110,7 @@ class NormalizationRuntimeTests:
         configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
 
         assert ctx.question_config_index_map[1] == ("single", 0)
-        assert ctx.provider_question_config_index_map == {}
+        assert ctx.provider_question_idx_map == {}
         assert ctx.single_prob == [[0.0, 1.0, 0.0]]
         assert ctx.single_option_fill_texts == [[None, "补充", None]]
         assert ctx.single_attached_option_selects == [[{"option_index": 1, "weights": [1, 0]}]]
@@ -141,7 +141,7 @@ class NormalizationRuntimeTests:
                 probabilities=[1, 2, 3],
                 option_count=3,
                 question_num=2,
-                survey_provider="wjx",
+                provider="wjx",
                 provider_page_id="4",
                 provider_question_id="question-1",
             ),
@@ -150,7 +150,7 @@ class NormalizationRuntimeTests:
                 probabilities=[3, 2, 1],
                 option_count=3,
                 question_num=2,
-                survey_provider="wjx",
+                provider="wjx",
                 provider_page_id="5",
                 provider_question_id="question-1",
             ),
@@ -159,7 +159,7 @@ class NormalizationRuntimeTests:
         configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
 
         assert ctx.question_config_index_map[2] == ("scale", 1)
-        assert ctx.provider_question_config_index_map == {
+        assert ctx.provider_question_idx_map == {
             "wjx:4:question-1": ("scale", 0),
             "wjx:5:question-1": ("scale", 1),
         }

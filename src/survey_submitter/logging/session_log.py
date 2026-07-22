@@ -9,7 +9,7 @@ from loguru import logger
 
 from survey_submitter.constants import LOG_FORMAT
 from survey_submitter.constants import (
-    AUTO_SAVE_LOG_RETENTION_COUNT_SETTING_KEY,
+    AUTO_SAVE_LOG_RETENTION_COUNT_KEY,
     AUTO_SAVE_LOG_RETENTION_OPTIONS,
     AUTO_SAVE_LOGS_SETTING_KEY,
     DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT,
@@ -70,10 +70,6 @@ def _remove_session_log_sink() -> None:
         _SESSION_LOG_SINK_ID = None
 
 
-def flush_session_log_file() -> None:
-    pass
-
-
 def get_current_session_log_path() -> str:
     return str(_SESSION_LOG_PATH or "")
 
@@ -101,7 +97,7 @@ def get_auto_save_log_settings() -> tuple[bool, int]:
         else DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT
     )
     keep_count = get_int_setting(
-        settings.value(AUTO_SAVE_LOG_RETENTION_COUNT_SETTING_KEY),
+        settings.value(AUTO_SAVE_LOG_RETENTION_COUNT_KEY),
         DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT,
     )
     keep_count = max(1, min(keep_count, max_keep))
@@ -192,7 +188,6 @@ def export_full_log_to_file(
 __all__ = [
     "export_full_log_to_file",
     "finalize_session_log_persistence",
-    "flush_session_log_file",
     "get_auto_save_log_settings",
     "get_current_session_log_path",
     "prune_session_log_files",

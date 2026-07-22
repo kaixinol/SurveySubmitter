@@ -4,12 +4,12 @@ from loguru import logger
 
 from survey_submitter.core.task import ExecutionState
 from survey_submitter.integrations.ai.protocols import (
-    _RESPONSES_SUFFIX,
+    RESPONSES_SUFFIX,
     acall_chat_completions,
-    acall_responses_api,
-    _is_endpoint_mismatch_error,
-    _normalize_endpoint_url,
-    _resolve_custom_endpoint,
+    acall_responses,
+    is_endpoint_mismatch_error,
+    normalize_endpoint_url,
+    resolve_custom_endpoint,
 )
 from survey_submitter.integrations.ai.settings import (
     CUSTOM_API_PROTOCOLS,
@@ -38,7 +38,7 @@ async def agenerate_answer(
     *,
     question_type: str = "fill_blank",
     blank_count: int | None = None,
-    ctx: ExecutionState | None = None,
+    state: ExecutionState | None = None,
 ) -> str | list[str]:
 
     config = get_ai_settings()
@@ -52,21 +52,21 @@ async def agenerate_answer(
     system_prompt = str(config["system_prompt"] or "").strip() or get_default_system_prompt()
 
     api_protocol = _normalize_custom_api_protocol(config["api_protocol"])
-    resolved_protocol, request_url, has_explicit_endpoint = _resolve_custom_endpoint(
+    resolved_protocol, request_url, has_explicit_endpoint = resolve_custom_endpoint(
         base_url, api_protocol
     )
 
     if resolved_protocol == "responses":
-        return await acall_responses_api(request_url, api_key, model, question_title, system_prompt)
+        return await acall_responses(request_url, api_key, model, question_title, system_prompt)
     try:
         return await acall_chat_completions(
             request_url, api_key, model, question_title, system_prompt
         )
     except Exception as exc:
-        if has_explicit_endpoint or api_protocol != "auto" or not _is_endpoint_mismatch_error(exc):
+        if has_explicit_endpoint or api_protocol != "auto" or not is_endpoint_mismatch_error(exc):
             raise
-        fallback_url = f"{_normalize_endpoint_url(base_url)}{_RESPONSES_SUFFIX}"
-        return await acall_responses_api(
+        fallback_url = f"{normalize_endpoint_url(base_url)}{RESPONSES_SUFFIX}"
+        return await acall_responses(
             fallback_url, api_key, model, question_title, system_prompt
         )
 

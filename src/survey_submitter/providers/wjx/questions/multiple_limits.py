@@ -7,7 +7,7 @@ from collections.abc import Sequence
 
 from survey_submitter.providers.match_utils import get_element_attribute, normalize_match_text
 
-_MULTI_LIMIT_ATTRIBUTE_NAMES = (
+_MULTI_MAX_LIMIT_ATTRIBUTE_NAMES = (
     "max",
     "maxvalue",
     "maxcount",
@@ -24,7 +24,7 @@ _MULTI_LIMIT_ATTRIBUTE_NAMES = (
     "data-selectmax",
 )
 
-_MULTI_LIMIT_VALUE_KEYS = (
+_MULTI_MAX_LIMIT_VALUE_KEYS = (
     "max",
     "maxvalue",
     "maxcount",
@@ -33,7 +33,7 @@ _MULTI_LIMIT_VALUE_KEYS = (
     "selectmax",
 )
 
-_MULTI_LIMIT_VALUE_KEYSET = {name.lower() for name in _MULTI_LIMIT_VALUE_KEYS}
+_MULTI_MAX_LIMIT_VALUE_KEYSET = {name.lower() for name in _MULTI_MAX_LIMIT_VALUE_KEYS}
 
 _MULTI_MIN_LIMIT_ATTRIBUTE_NAMES = (
     "min",
@@ -124,7 +124,7 @@ def _compile_key_value_patterns(keys) -> tuple[re.Pattern[str], ...]:
 
 
 _MULTI_MIN_VALUE_PATTERNS = _compile_key_value_patterns(_MULTI_MIN_LIMIT_VALUE_KEYSET)
-_MULTI_MAX_VALUE_PATTERNS = _compile_key_value_patterns(_MULTI_LIMIT_VALUE_KEYSET)
+_MULTI_MAX_VALUE_PATTERNS = _compile_key_value_patterns(_MULTI_MAX_LIMIT_VALUE_KEYSET)
 
 
 def _safe_positive_int(value: str | int | float | None) -> int | None:
@@ -162,7 +162,7 @@ def _extract_range_from_json_obj(
                 candidate = _safe_positive_int(value)  # ty: ignore[invalid-argument-type]
                 if candidate:
                     min_limit = min_limit or candidate
-            if normalized_key in _MULTI_LIMIT_VALUE_KEYSET:
+            if normalized_key in _MULTI_MAX_LIMIT_VALUE_KEYSET:
                 candidate = _safe_positive_int(value)  # ty: ignore[invalid-argument-type]
                 if candidate:
                     max_limit = max_limit or candidate
@@ -238,7 +238,7 @@ def _extract_min_max_from_attributes(element) -> tuple[int | None, int | None]:
         if candidate:
             min_limit = candidate
             break
-    for attr in _MULTI_LIMIT_ATTRIBUTE_NAMES:
+    for attr in _MULTI_MAX_LIMIT_ATTRIBUTE_NAMES:
         raw_value = get_element_attribute(element, attr)
         candidate = _safe_positive_int(raw_value)
         if candidate:
@@ -280,8 +280,8 @@ def _extract_multi_limit_range_from_text(text: str | None) -> tuple[int | None, 
     normalized_lower = normalized.lower()
 
     # Check for language-specific keywords
-    contains_cn_keyword = any(keyword in normalized for keyword in _SELECTION_KEYWORDS_CN)
-    contains_en_keyword = any(keyword in normalized_lower for keyword in _SELECTION_KEYWORDS_EN)
+    contains_cn_hint = any(keyword in normalized for keyword in _SELECTION_KEYWORDS_CN)
+    contains_en_hint = any(keyword in normalized_lower for keyword in _SELECTION_KEYWORDS_EN)
     contains_cn_min_hint = any(keyword in normalized for keyword in ("至少", "最少", "不少于"))
     contains_cn_max_hint = any(
         keyword in normalized for keyword in ("最多", "至多", "不超过", "不超過", "限选", "限選")
@@ -295,16 +295,16 @@ def _extract_multi_limit_range_from_text(text: str | None) -> tuple[int | None, 
     max_limit: int | None = None
 
     # Step 1: Try range patterns (e.g., "选择5-10个")
-    if contains_cn_keyword:
+    if contains_cn_hint:
         min_limit, max_limit = _try_pattern_range(_CHINESE_MULTI_RANGE_PATTERNS, normalized)
-    if min_limit is None and max_limit is None and contains_en_keyword:
+    if min_limit is None and max_limit is None and contains_en_hint:
         min_limit, max_limit = _try_pattern_range(_ENGLISH_MULTI_RANGE_PATTERNS, normalized_lower)
 
     # Step 2: Try exact patterns (for non-range cases)
     if (
         min_limit is None
         and max_limit is None
-        and contains_cn_keyword
+        and contains_cn_hint
         and not contains_cn_min_hint
         and not contains_cn_max_hint
     ):
@@ -314,7 +314,7 @@ def _extract_multi_limit_range_from_text(text: str | None) -> tuple[int | None, 
     if (
         min_limit is None
         and max_limit is None
-        and contains_en_keyword
+        and contains_en_hint
         and not contains_en_min_hint
         and not contains_en_max_hint
     ):
@@ -323,15 +323,15 @@ def _extract_multi_limit_range_from_text(text: str | None) -> tuple[int | None, 
             min_limit = max_limit = exact
 
     # Step 3: Try min-only patterns
-    if min_limit is None and contains_cn_keyword:
+    if min_limit is None and contains_cn_hint:
         min_limit = _try_pattern_exact(_CHINESE_MULTI_MIN_PATTERNS, normalized)
-    if min_limit is None and contains_en_keyword:
+    if min_limit is None and contains_en_hint:
         min_limit = _try_pattern_exact(_ENGLISH_MULTI_MIN_PATTERNS, normalized_lower)
 
     # Step 4: Try max-only patterns
-    if max_limit is None and contains_cn_keyword:
+    if max_limit is None and contains_cn_hint:
         max_limit = _try_pattern_exact(_CHINESE_MULTI_LIMIT_PATTERNS, normalized)
-    if max_limit is None and contains_en_keyword:
+    if max_limit is None and contains_en_hint:
         max_limit = _try_pattern_exact(_ENGLISH_MULTI_LIMIT_PATTERNS, normalized_lower)
 
     # Ensure min <= max

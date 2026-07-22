@@ -137,7 +137,7 @@ class ProxyAreaServiceTests:
             ),
         )
 
-        areas, index = service._build_benefit_supported_data_from_online()
+        areas, index = service._fetch_online_benefit_areas()
 
         assert areas == [
             {"code": "440000", "name": "广东省", "cities": [{"code": "440300", "name": "深圳市"}]},
@@ -162,7 +162,7 @@ class ProxyAreaServiceTests:
             ),
             (
                 service,
-                "_build_benefit_supported_data_from_online",
+                "_fetch_online_benefit_areas",
                 lambda: (_ for _ in ()).throw(RuntimeError("network down")),
             ),
         )

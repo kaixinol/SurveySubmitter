@@ -12,9 +12,9 @@ from loguru import logger
 
 from survey_submitter.constants import LOG_FORMAT
 
-ORIGINAL_STDOUT = sys.stdout
-ORIGINAL_STDERR = sys.stderr
-ORIGINAL_EXCEPTHOOK = sys.excepthook
+_ORIGINAL_STDOUT = sys.stdout
+_ORIGINAL_STDERR = sys.stderr
+_ORIGINAL_EXCEPTHOOK = sys.excepthook
 
 _SUPPRESSED_RUNTIME_NOISE_PATTERNS = (
     "WJX 页面题目快照刷新",
@@ -41,16 +41,16 @@ def _should_filter_noise(message: str) -> bool:
 
 def _safe_internal_log(message: str, exc: BaseException | None = None) -> None:
     try:
-        ORIGINAL_STDERR.write(f"[LogInternal] {message}\n")
+        _ORIGINAL_STDERR.write(f"[LogInternal] {message}\n")
         if exc is not None:
-            ORIGINAL_STDERR.write(
+            _ORIGINAL_STDERR.write(
                 "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
             )
-        ORIGINAL_STDERR.flush()
+        _ORIGINAL_STDERR.flush()
     except OSError:
         try:
-            ORIGINAL_STDERR.write("[LogInternal] safe log failed\n")
-            ORIGINAL_STDERR.flush()
+            _ORIGINAL_STDERR.write("[LogInternal] safe log failed\n")
+            _ORIGINAL_STDERR.flush()
         except OSError:
             return
 
@@ -134,12 +134,12 @@ def setup_logging() -> None:
             exc_traceback: Any,
         ) -> None:
             if issubclass(exc_type, KeyboardInterrupt):
-                if ORIGINAL_EXCEPTHOOK:
-                    ORIGINAL_EXCEPTHOOK(exc_type, exc_value, exc_traceback)
+                if _ORIGINAL_EXCEPTHOOK:
+                    _ORIGINAL_EXCEPTHOOK(exc_type, exc_value, exc_traceback)
                 return
             logger.error("未处理的异常", exc=(exc_type, exc_value, exc_traceback))
-            if ORIGINAL_EXCEPTHOOK:
-                ORIGINAL_EXCEPTHOOK(exc_type, exc_value, exc_traceback)
+            if _ORIGINAL_EXCEPTHOOK:
+                _ORIGINAL_EXCEPTHOOK(exc_type, exc_value, exc_traceback)
 
         sys.excepthook = _handle_unhandled_exception
         setattr(setup_logging, "_excepthook_installed", True)

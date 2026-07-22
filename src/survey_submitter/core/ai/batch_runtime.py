@@ -278,7 +278,7 @@ def _rebuild_selected_texts(
     return tuple(rebuilt)
 
 
-def _apply_prefilled_answers_to_actions(
+def _apply_prefilled_answers(
     questions: Iterable[SurveyQuestionMeta],
     actions: Sequence[AnswerAction],
     resolved_answers: dict[int, tuple[str, ...]],
@@ -358,7 +358,7 @@ async def prefill_ai_answers_for_questions(
 
     resolved_answers = _resolved_answers_by_question_num(result, item_question_map)
     resolved_option_fill_answers = _resolved_option_fill_answers(result, item_option_fill_map)
-    actions[:] = _apply_prefilled_answers_to_actions(
+    actions[:] = _apply_prefilled_answers(
         questions,
         actions,
         resolved_answers,
@@ -372,7 +372,7 @@ async def prefill_ai_answers_for_questions(
     )
 
 
-def assert_no_ai_placeholders_in_actions(
+def assert_no_ai_placeholders(
     actions: Sequence[AnswerAction],
     *,
     provider_label: str = "问卷",
@@ -397,6 +397,6 @@ def assert_no_ai_placeholders_in_actions(
 
 __all__ = [
     "AIPrefillSummary",
-    "assert_no_ai_placeholders_in_actions",
+    "assert_no_ai_placeholders",
     "prefill_ai_answers_for_questions",
 ]

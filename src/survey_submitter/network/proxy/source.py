@@ -74,24 +74,24 @@ class ProxySettings(BaseConfigModel):
 
     @field_validator("source")
     @classmethod
-    def validate_source(cls, v: str) -> str:
-        if v not in _SUPPORTED_PROXY_SOURCES:
-            raise ValueError(f"不支持的代理源: {v}")
-        return v
+    def validate_source(cls, value: str) -> str:
+        if value not in _SUPPORTED_PROXY_SOURCES:
+            raise ValueError(f"不支持的代理源: {value}")
+        return value
 
     @field_validator("area_code", "default_area_code")
     @classmethod
-    def validate_area_code(cls, v: str | None) -> str | None:
-        if v is not None and not re.match(r"^\d{6}$", v):
-            raise ValueError(f"地区代码必须是6位数字: {v}")
-        return v
+    def validate_area_code(cls, value: str | None) -> str | None:
+        if value is not None and not re.match(r"^\d{6}$", value):
+            raise ValueError(f"地区代码必须是6位数字: {value}")
+        return value
 
     @field_validator("occupy_minute")
     @classmethod
-    def validate_occupy_minute(cls, v: int) -> int:
-        if v not in PROXY_MINUTE_OPTIONS:
+    def validate_occupy_minute(cls, value: int) -> int:
+        if value not in PROXY_MINUTE_OPTIONS:
             raise ValueError(f"占用分钟数必须是 {PROXY_MINUTE_OPTIONS} 之一")
-        return v
+        return value
 
 
 def normalize_proxy_source(source: str | None) -> str:
@@ -119,10 +119,6 @@ def is_custom_proxy_source(source: str | None = None) -> bool:
     return current == PROXY_SOURCE_CUSTOM
 
 
-def source_uses_custom_api_override(source: str | None = None) -> bool:
-    return is_custom_proxy_source(source)
-
-
 def _map_answer_seconds_to_proxy_minute(total_seconds: int) -> int:
     seconds = max(0, int(total_seconds))
     if seconds < 60:
@@ -138,19 +134,19 @@ def _map_answer_seconds_to_proxy_minute(total_seconds: int) -> int:
     return 30
 
 
-def get_proxy_required_seconds_by_answer_seconds(total_seconds: int) -> int:
+def get_proxy_ttl_for_answer_duration(total_seconds: int) -> int:
     return max(0, int(total_seconds)) + int(PROXY_TTL_GRACE_SECONDS)
 
 
 def get_proxy_minute_by_answer_seconds(
     total_seconds: int,
     *,
-    survey_provider: str | None = None,
+    provider: str | None = None,
 ) -> int:
-    normalized_provider = str(survey_provider or "").strip().lower()
+    normalized_provider = str(provider or "").strip().lower()
     if normalized_provider == SURVEY_PROVIDER_WJX:
         return 1
-    required_seconds = get_proxy_required_seconds_by_answer_seconds(total_seconds)
+    required_seconds = get_proxy_ttl_for_answer_duration(total_seconds)
     minute = int(_map_answer_seconds_to_proxy_minute(required_seconds))
     if minute not in PROXY_MINUTE_OPTIONS:
         return 1
@@ -160,7 +156,7 @@ def get_proxy_minute_by_answer_seconds(
 def set_proxy_occupy_minute_by_answer_duration(
     answer_duration_range_seconds: tuple[int, int] | None,
     *,
-    survey_provider: str | None = None,
+    provider: str | None = None,
 ) -> int:
     global _proxy_occupy_minute
     min_seconds = max_seconds = 0
@@ -184,9 +180,9 @@ def set_proxy_occupy_minute_by_answer_duration(
         else:
             max_seconds = min_seconds
     max_seconds = max(max_seconds, min_seconds)
-    normalized_provider = str(survey_provider or "").strip().lower()
-    minute = get_proxy_minute_by_answer_seconds(max_seconds, survey_provider=normalized_provider)
-    required_seconds = get_proxy_required_seconds_by_answer_seconds(max_seconds)
+    normalized_provider = str(provider or "").strip().lower()
+    minute = get_proxy_minute_by_answer_seconds(max_seconds, provider=normalized_provider)
+    required_seconds = get_proxy_ttl_for_answer_duration(max_seconds)
     with _config_lock:
         _proxy_occupy_minute = minute
     if normalized_provider == SURVEY_PROVIDER_WJX:
@@ -233,7 +229,7 @@ def _is_province_level_area_code(area_code: str) -> bool:
     )
 
 
-def _resolve_default_pool_by_area(area_code: str | None) -> str | None:
+def _resolve_default_pool(area_code: str | None) -> str | None:
     normalized_area = _normalize_area_code(area_code)
     if not normalized_area:
         return None
@@ -245,11 +241,6 @@ def get_default_proxy_area_code() -> str:
         return _normalize_area_code(_proxy_area_code_override) or ""
 
 
-def get_effective_proxy_api_url() -> str:
-    with _config_lock:
-        return (_proxy_api_url_override or "").strip()
-
-
 def get_custom_proxy_api_override() -> str:
     with _config_lock:
         return (_proxy_api_url_override or "").strip()
@@ -257,10 +248,6 @@ def get_custom_proxy_api_override() -> str:
 
 def has_custom_proxy_api_override() -> bool:
     return bool(get_custom_proxy_api_override())
-
-
-def is_custom_proxy_api_active() -> bool:
-    return is_custom_proxy_source()
 
 
 def get_proxy_area_code() -> str | None:
@@ -283,7 +270,7 @@ def set_proxy_api_override(api_url: str | None) -> str:
     cleaned = _validate_proxy_api_url(api_url)
     with _config_lock:
         _proxy_api_url_override = cleaned or None
-    return get_effective_proxy_api_url()
+    return get_custom_proxy_api_override()
 
 
 def get_proxy_settings() -> ProxySettings:

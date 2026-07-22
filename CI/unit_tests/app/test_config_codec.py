@@ -71,7 +71,7 @@ class ConfigCodecTests:
 
     def test_build_runtime_config_snapshot_returns_detached_copies(self) -> None:
         config = RuntimeConfig(
-            survey=SurveySection(survey_provider="wjx"),
+            survey=SurveySection(provider="wjx"),
             answer_config=AnswerConfigSection(
                 answer_rules=[{"question_num": 1, "equals": [0]}],
                 question_entries=[
@@ -122,7 +122,7 @@ class ConfigCodecTests:
 
     def test_survey_questions_roundtrip_preserves_minimal_fields(self) -> None:
         config = RuntimeConfig(
-            survey=SurveySection(survey_provider="wjx"),
+            survey=SurveySection(provider="wjx"),
             answer_config=AnswerConfigSection(
                 survey_questions=[
                     QuestionInfo(

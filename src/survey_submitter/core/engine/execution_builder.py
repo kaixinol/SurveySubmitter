@@ -66,7 +66,7 @@ class PreparedExecutionArtifacts:
     """Immutable bundle produced by :func:`prepare_execution_artifacts`."""
 
     execution_config_template: ExecutionConfig
-    survey_provider: str
+    provider: str
     question_entries: list[Any]
     questions_info: list[SurveyQuestionMeta]
     reverse_fill_spec: ReverseFillSpec | None
@@ -100,17 +100,17 @@ def _resolve_thread_limit(config: RuntimeConfig) -> int:
 
 def _resolve_survey_provider(config: RuntimeConfig) -> str:
     return normalize_survey_provider(
-        config.survey.survey_provider,
+        config.survey.provider,
         default=detect_survey_provider(config.survey.url) or SURVEY_PROVIDER_WJX,
     )
 
 
 def _resolve_survey_title(config: RuntimeConfig, fallback_title: str) -> str:
-    config_title = str(config.survey.survey_title or "")
+    config_title = str(config.survey.title or "")
     return config_title or str(fallback_title or "")
 
 
-def _resolve_proxy_answer_duration(config: RuntimeConfig) -> tuple[int, int]:
+def _extract_answer_duration_for_proxy(config: RuntimeConfig) -> tuple[int, int]:
     raw = config.execution.answer_duration_range_seconds or (0, 0)
     return (int(raw[0]), int(raw[1]))
 
@@ -119,8 +119,8 @@ def _resolve_answer_datetime_window(config: RuntimeConfig) -> tuple[str, str]:
     return normalize_answer_datetime_window(config.execution.answer_datetime_window)
 
 
-def _validate_answer_datetime_window(config: RuntimeConfig, survey_provider: str) -> None:
-    if not supports_answer_datetime_window(survey_provider):
+def _validate_datetime_window(config: RuntimeConfig, provider: str) -> None:
+    if not supports_answer_datetime_window(provider):
         return
     start_text, end_text = _resolve_answer_datetime_window(config)
     if not start_text and not end_text:
@@ -139,8 +139,8 @@ def _validate_answer_datetime_window(config: RuntimeConfig, survey_provider: str
         raise RuntimePreparationError("见数作答时间窗太窄，容不下当前最长作答时长")
 
 
-def _verify_wjx_survey_is_answerable(config: RuntimeConfig, survey_provider: str) -> None:
-    if survey_provider != SURVEY_PROVIDER_WJX:
+def _verify_wjx_survey_is_answerable(config: RuntimeConfig, provider: str) -> None:
+    if provider != SURVEY_PROVIDER_WJX:
         return
     url = str(config.survey.url or "").strip()
     if not url:
@@ -175,15 +175,15 @@ def _build_questions_metadata(
     return metadata
 
 
-def _build_provider_question_metadata(
+def _build_provider_metadata(
     questions_info: list[SurveyQuestionMeta],
     *,
-    survey_provider: str = "",
+    provider: str = "",
 ) -> dict[str, SurveyQuestionMeta]:
     metadata: dict[str, SurveyQuestionMeta] = {}
     for item in questions_info:
         provider_key = make_provider_question_key(
-            survey_provider,
+            provider,
             item.provider_page_id,
             item.provider_question_id,
         )
@@ -195,8 +195,8 @@ def _build_provider_question_metadata(
 def _build_execution_config_template(
     config: RuntimeConfig,
     *,
-    survey_title: str,
-    survey_provider: str,
+    title: str,
+    provider: str,
     reverse_fill_spec: ReverseFillSpec | None,
     questions_info: list[SurveyQuestionMeta],
 ) -> ExecutionConfig:
@@ -213,8 +213,8 @@ def _build_execution_config_template(
 
     execution_config = ExecutionConfig(
         url=str(config.survey.url or ""),
-        survey_title=survey_title,
-        survey_provider=survey_provider,
+        title=title,
+        provider=provider,
         target_num=requested_target_num,
         num_threads=max(1, min(thread_limit, requested_num_threads)),
         fail_threshold=5,
@@ -243,9 +243,9 @@ def _build_execution_config_template(
         ai_answering=bool(config.execution.ai.answering),
     )
     execution_config.questions_metadata = _build_questions_metadata(questions_info)
-    execution_config.provider_question_metadata_map = _build_provider_question_metadata(
+    execution_config.provider_question_metadata_map = _build_provider_metadata(
         questions_info,
-        survey_provider=str(config.survey.survey_provider or ""),
+        provider=str(config.survey.provider or ""),
     )
     return execution_config
 
@@ -278,10 +278,10 @@ def prepare_execution_artifacts(
             log_message="未配置任何题目，无法启动",
         )
 
-    survey_provider = _resolve_survey_provider(config)
-    _validate_answer_datetime_window(config, survey_provider)
+    provider = _resolve_survey_provider(config)
+    _validate_datetime_window(config, provider)
     try:
-        _verify_wjx_survey_is_answerable(config, survey_provider)
+        _verify_wjx_survey_is_answerable(config, provider)
     except (SurveyStoppedError, SurveyEnterpriseUnavailableError) as exc:
         raise RuntimePreparationError(
             str(exc),
@@ -321,16 +321,16 @@ def prepare_execution_artifacts(
 
     try:
         set_proxy_occupy_minute_by_answer_duration(
-            _resolve_proxy_answer_duration(config),
-            survey_provider=survey_provider,
+            _extract_answer_duration_for_proxy(config),
+            provider=provider,
         )
     except Exception:
         logger.opt(exception=True).debug("同步随机IP占用时长失败")
 
     execution_config = _build_execution_config_template(
         config,
-        survey_title=_resolve_survey_title(config, fallback_survey_title),
-        survey_provider=survey_provider,
+        title=_resolve_survey_title(config, fallback_survey_title),
+        provider=provider,
         reverse_fill_spec=reverse_fill_spec,
         questions_info=questions_info,
     )
@@ -346,7 +346,7 @@ def prepare_execution_artifacts(
 
     return PreparedExecutionArtifacts(
         execution_config_template=execution_config,
-        survey_provider=survey_provider,
+        provider=provider,
         question_entries=list(question_entries),
         questions_info=questions_info,
         reverse_fill_spec=reverse_fill_spec,

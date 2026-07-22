@@ -21,10 +21,10 @@ class AIRuntimeError(RuntimeError):
 _AI_FILL_MAX_ATTEMPTS = 4
 _AI_FILL_RETRY_BACKOFF_SECONDS = 0.4
 _AI_TEXT_PLACEHOLDER_PREFIX = "__FREE_AI_TEXT__"
-_AI_OPTION_FILL_PLACEHOLDER_PREFIX = "__FREE_AI_OPTION_FILL__"
+_AI_OPT_FILL_PREFIX = "__FREE_AI_OPTION_FILL__"
 
 
-def _is_retryable_ai_generation_error(error: Exception) -> bool:
+def _is_retryable_error(error: Exception) -> bool:
     text = str(error or "").strip().lower()
     if not text:
         return True
@@ -120,7 +120,7 @@ def build_ai_text_placeholder(question_num: int, blank_index: int) -> str:
 
 
 def build_ai_option_fill_placeholder(question_num: int, option_index: int) -> str:
-    return f"{_AI_OPTION_FILL_PLACEHOLDER_PREFIX}{int(question_num or 0)}_{int(option_index or 0)}"
+    return f"{_AI_OPT_FILL_PREFIX}{int(question_num or 0)}_{int(option_index or 0)}"
 
 
 def is_ai_text_placeholder(value: object) -> bool:
@@ -128,7 +128,7 @@ def is_ai_text_placeholder(value: object) -> bool:
 
 
 def is_ai_option_fill_placeholder(value: object) -> bool:
-    return str(value or "").startswith(_AI_OPTION_FILL_PLACEHOLDER_PREFIX)
+    return str(value or "").startswith(_AI_OPT_FILL_PREFIX)
 
 
 async def agenerate_ai_answer(
@@ -176,7 +176,7 @@ async def agenerate_ai_answer(
             return str(answer).strip()
         except Exception as exc:
             last_error = exc
-            if attempt >= _AI_FILL_MAX_ATTEMPTS or not _is_retryable_ai_generation_error(exc):
+            if attempt >= _AI_FILL_MAX_ATTEMPTS or not _is_retryable_error(exc):
                 raise AIRuntimeError(f"AI 调用失败：{exc}") from exc
             logger.warning(
                 f"AI 生成失败，准备重试 | attempt={attempt}/{_AI_FILL_MAX_ATTEMPTS} | question_type={question_type} | error={exc}"

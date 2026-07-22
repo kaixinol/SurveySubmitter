@@ -60,7 +60,7 @@ class QuestionValidationTests:
             probabilities=[0.0, 0.0, 0.0],
             option_count=3,
             question_num=2,
-            survey_provider="credamo",
+            provider="credamo",
         )
         result = validate_question_config([entry], [{"num": 2, "provider": "credamo"}])
         assert result is not None
@@ -73,7 +73,7 @@ class QuestionValidationTests:
             probabilities=[],
             option_count=3,
             question_num=2,
-            survey_provider="credamo",
+            provider="credamo",
         )
         result = validate_question_config([entry], [{"num": 2, "provider": "credamo"}])
         assert result is not None

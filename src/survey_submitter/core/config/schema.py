@@ -51,17 +51,17 @@ def _normalize_user_agent_ratios(raw_ratios: Any) -> dict[str, int]:
 
 class SurveySection(BaseConfigModel):
     url: str = ""
-    survey_title: str = ""
-    survey_provider: str = SURVEY_PROVIDER_WJX
+    title: str = ""
+    provider: str = SURVEY_PROVIDER_WJX
 
     @model_validator(mode="after")
     def auto_detect_provider(self) -> SurveySection:
         normalized = normalize_survey_provider(
-            self.survey_provider,
+            self.provider,
             default=detect_survey_provider(self.url),
         )
-        if normalized != self.survey_provider:
-            object.__setattr__(self, "survey_provider", normalized)
+        if normalized != self.provider:
+            object.__setattr__(self, "provider", normalized)
         return self
 
 
@@ -89,7 +89,7 @@ class ReverseFillSection(BaseConfigModel):
 
     @field_validator("start_row", "threads", mode="before")
     @classmethod
-    def coerce_positive_int(cls, v: Any) -> int:
+    def coerce_non_negative_int(cls, v: Any) -> int:
         try:
             value = int(v)
             return max(1, value)
@@ -123,7 +123,7 @@ class ExecutionSection(BaseConfigModel):
 
     @field_validator("target_num", "num_threads", mode="before")
     @classmethod
-    def coerce_positive_int(cls, v: Any) -> int:
+    def coerce_non_negative_int(cls, v: Any) -> int:
         try:
             value = int(v)
             return max(1, value)

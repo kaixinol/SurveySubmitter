@@ -241,7 +241,7 @@ def _parse_benefit_area_text(content: str) -> dict[str, set[str]]:
     return {key: value for key, value in provinces.items() if value}
 
 
-def _build_benefit_supported_data_from_online() -> tuple[list[dict[str, object]], dict[str, str]]:
+def _fetch_online_benefit_areas() -> tuple[list[dict[str, object]], dict[str, str]]:
     _, province_lookup = _build_local_area_lookup()
     online_supported = _parse_benefit_area_text(_download_benefit_area_text())
     filtered_provinces: list[dict[str, object]] = []
@@ -263,7 +263,7 @@ def _build_benefit_supported_data_from_online() -> tuple[list[dict[str, object]]
     return filtered_provinces, city_code_index
 
 
-def _build_benefit_supported_data_from_local_fallback() -> tuple[
+def _build_local_benefit_fallback() -> tuple[
     list[dict[str, object]], dict[str, str]
 ]:
     supported_codes, _ = load_supported_area_codes()
@@ -296,7 +296,7 @@ def _ensure_benefit_cache(force_refresh: bool = False) -> None:
         ):
             return
         try:
-            supported_areas, city_code_index = _build_benefit_supported_data_from_online()
+            supported_areas, city_code_index = _fetch_online_benefit_areas()
             if not supported_areas or not city_code_index:
                 raise RuntimeError("benefit 在线地区列表为空")
             logger.info(
@@ -304,7 +304,7 @@ def _ensure_benefit_cache(force_refresh: bool = False) -> None:
             )
         except Exception as exc:
             logger.warning(f"benefit 在线地区查询失败，回退本地地区交集：{exc}")
-            supported_areas, city_code_index = _build_benefit_supported_data_from_local_fallback()
+            supported_areas, city_code_index = _build_local_benefit_fallback()
         _BENEFIT_SUPPORTED_AREAS_CACHE = supported_areas
         _BENEFIT_CITY_CODE_INDEX_CACHE = city_code_index
 

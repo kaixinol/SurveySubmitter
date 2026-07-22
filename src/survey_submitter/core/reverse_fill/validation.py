@@ -193,7 +193,7 @@ def _build_global_issue(*, target_num: int, available_samples: int) -> ReverseFi
     )
 
 
-def _append_question_issue_and_plan(
+def _add_issue_and_plan(
     *,
     issues: list[ReverseFillIssue],
     question_plans: list[ReverseFillQuestionPlan],
@@ -368,7 +368,7 @@ def _check_column_mapping(
         and question_type != QuestionType.MULTI_TEXT
         and len(columns) != 1
     ):
-        _append_question_issue_and_plan(
+        _add_issue_and_plan(
             issues=issues,
             question_plans=question_plans,
             question_num=question_num,
@@ -387,7 +387,7 @@ def _check_column_mapping(
     if question_type == QuestionType.MATRIX:
         row_texts = list(getattr(info, "row_texts", None) or [])
         if row_texts and len(columns) != len(row_texts):
-            _append_question_issue_and_plan(
+            _add_issue_and_plan(
                 issues=issues,
                 question_plans=question_plans,
                 question_num=question_num,
@@ -407,7 +407,7 @@ def _check_column_mapping(
     if question_type == QuestionType.MULTI_TEXT:
         blank_labels = list(getattr(info, "text_input_labels", None) or [])
         if blank_labels and len(columns) != len(blank_labels):
-            _append_question_issue_and_plan(
+            _add_issue_and_plan(
                 issues=issues,
                 question_plans=question_plans,
                 question_num=question_num,
@@ -493,7 +493,7 @@ def _validate_and_collect_question(
         info=info, question_num=question_num, title=title
     )
     if prereq_error:
-        _append_question_issue_and_plan(
+        _add_issue_and_plan(
             issues=issues,
             question_plans=question_plans,
             question_num=question_num,
@@ -516,7 +516,7 @@ def _validate_and_collect_question(
         export=export,
     )
     if type_error:
-        _append_question_issue_and_plan(
+        _add_issue_and_plan(
             issues=issues,
             question_plans=question_plans,
             question_num=question_num,
@@ -535,7 +535,7 @@ def _validate_and_collect_question(
 
     # Validation step 3: Column mapping
     if not columns:
-        _append_question_issue_and_plan(
+        _add_issue_and_plan(
             issues=issues,
             question_plans=question_plans,
             question_num=question_num,
@@ -630,7 +630,7 @@ def _handle_parse_errors(
     else:
         reason = "这道题在样本中出现了 V1 无法稳定回放的值"
 
-    _append_question_issue_and_plan(
+    _add_issue_and_plan(
         issues=issues,
         question_plans=question_plans,
         question_num=question_num,
@@ -653,14 +653,14 @@ def _handle_parse_errors(
 def build_reverse_fill_spec(
     *,
     source_path: str,
-    survey_provider: str,
+    provider: str,
     questions_info: Sequence[SurveyQuestionMeta | dict[str, object]],
     question_entries: list[QuestionEntry],
     selected_format: str = REVERSE_FILL_FORMAT_AUTO,
     start_row: int = 1,
     target_num: int = 0,
 ) -> ReverseFillSpec:
-    provider = normalize_survey_provider(survey_provider, default=SURVEY_PROVIDER_WJX)
+    provider = normalize_survey_provider(provider, default=SURVEY_PROVIDER_WJX)
     if provider != SURVEY_PROVIDER_WJX:
         raise ValueError("反填 V1 目前只支持问卷星")
     if not questions_info:
@@ -742,7 +742,7 @@ def build_reverse_fill_spec(
     )
 
 
-def format_reverse_fill_blocking_message(spec: ReverseFillSpec) -> str:
+def format_blocking_message(spec: ReverseFillSpec) -> str:
     blocking = list(spec.blocking_issues)
     if not blocking:
         return ""
@@ -772,7 +772,7 @@ def build_enabled_reverse_fill_spec(
         return None
     spec = build_reverse_fill_spec(
         source_path=source_path,
-        survey_provider=str(config.survey.survey_provider or SURVEY_PROVIDER_WJX),
+        provider=str(config.survey.provider or SURVEY_PROVIDER_WJX),
         questions_info=list(questions_info or []),
         question_entries=list(question_entries or []),
         selected_format=str(rf.format or REVERSE_FILL_FORMAT_AUTO),
@@ -780,5 +780,5 @@ def build_enabled_reverse_fill_spec(
         target_num=max(0, int(config.execution.target_num or 0)),
     )
     if spec.blocking_issue_count > 0:
-        raise ValueError(format_reverse_fill_blocking_message(spec))
+        raise ValueError(format_blocking_message(spec))
     return spec

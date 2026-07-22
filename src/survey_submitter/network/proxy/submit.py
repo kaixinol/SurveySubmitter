@@ -41,7 +41,7 @@ def _active_proxy_addresses_locked(
     return ctx.active_proxy_addresses_locked(exclude_thread_name=exclude_thread_name)
 
 
-def _blocked_proxy_addresses_locked(
+def _excluded_proxy_addresses_locked(
     ctx: ExecutionState, *, exclude_thread_name: str = ""
 ) -> set[str]:
     blocked = _active_proxy_addresses_locked(ctx, exclude_thread_name=exclude_thread_name)
@@ -53,7 +53,7 @@ def _required_proxy_ttl_seconds(ctx: ExecutionState) -> int:
     return int(
         get_proxy_required_ttl_seconds(
             ctx.config.answer_duration_range_seconds,
-            survey_provider=ctx.config.survey_provider,
+            provider=ctx.config.provider,
         )
     )
 
@@ -78,7 +78,7 @@ def _cooldown_proxy_addresses_locked(ctx: ExecutionState) -> set[str]:
     ctx._purge_expired_proxy_cooldowns_locked()
     return {
         str(address or "").strip()
-        for address, cooldown_until in ctx.proxy_cooldown_until_by_address.items()
+        for address, cooldown_until in ctx.proxy_cooldowns_by_address.items()
         if str(address or "").strip() and float(cooldown_until or 0.0) > 0.0
     }
 
@@ -135,7 +135,7 @@ def _purge_unusable_proxy_pool_locked(
 
 def _pop_available_proxy_lease_locked(ctx: ExecutionState) -> ProxyLease | None:
     required_ttl = _required_proxy_ttl_seconds(ctx)
-    blocked_addresses = _blocked_proxy_addresses_locked(ctx)
+    blocked_addresses = _excluded_proxy_addresses_locked(ctx)
     _purge_unusable_proxy_pool_locked(
         ctx,
         required_ttl=required_ttl,
@@ -172,7 +172,7 @@ def _merge_fetched_proxy_leases_locked(
     select_first: bool,
 ) -> ProxyLease | None:
     required_ttl = _required_proxy_ttl_seconds(ctx)
-    blocked_addresses = _blocked_proxy_addresses_locked(ctx)
+    blocked_addresses = _excluded_proxy_addresses_locked(ctx)
     existing = _purge_unusable_proxy_pool_locked(
         ctx,
         required_ttl=required_ttl,

@@ -18,7 +18,7 @@ from survey_submitter.core.questions.consistency import (
     get_multiple_rule_constraint,
 )
 from survey_submitter.core.questions.distribution import (
-    resolve_distribution_probabilities,
+    resolve_probabilities,
 )
 from survey_submitter.core.questions.text_values import (
     resolve_option_fill_text_from_config,
@@ -28,12 +28,12 @@ from survey_submitter.core.questions.strict_ratio import (
     enforce_reference_rank_order,
     is_strict_ratio_question,
     stochastic_round,
-    weighted_sample_without_replacement,
+    weighted_sample_no_replacement,
 )
 from survey_submitter.core.questions.tendency import get_tendency_index
 from survey_submitter.core.questions.types import QuestionType, TEXT_TYPES
 from survey_submitter.core.questions.utils import (
-    normalize_droplist_probs,
+    normalize_dropdown_probs,
     weighted_index,
 )
 from survey_submitter.core.reverse_fill.runtime import resolve_current_reverse_fill_answer
@@ -47,7 +47,7 @@ from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.providers.answering import AnswerAction
 from survey_submitter.providers.answering.option_fill import default_missing_option_fill
 from survey_submitter.providers.answering.selection import (
-    coerce_positive_int as _coerce_positive_int,
+    coerce_non_negative_int,
     valid_forced_choice_index as _valid_forced_choice_index,
 )
 from survey_submitter.providers.contracts import SurveyQuestionMeta
@@ -112,8 +112,8 @@ async def _select_choice_index(
     if forced_index is not None:
         return forced_index, False, False
 
-    _apply_consistency = entry_type == QuestionType.SINGLE
-    _use_dimension_gate = entry_type == QuestionType.SINGLE
+    _apply_consistency_gate = entry_type == QuestionType.SINGLE
+    _apply_dimension_gate = entry_type == QuestionType.SINGLE
 
     dimension = config.question_dimension_map.get(current)
     has_reliability_dimension = isinstance(dimension, str) and bool(str(dimension).strip())
@@ -123,18 +123,18 @@ async def _select_choice_index(
         if config_index < len(getattr(config, prob_config_key))
         else -1
     )
-    probabilities = normalize_droplist_probs(prob_list, option_count)
+    probabilities = normalize_dropdown_probs(prob_list, option_count)
     strict_ratio = is_strict_ratio_question(ctx, current)
     if not strict_ratio:
         probabilities = apply_persona_boost(option_texts, probabilities)
-    if _apply_consistency and not has_reliability_dimension:
+    if _apply_consistency_gate and not has_reliability_dimension:
         probabilities = apply_single_like_consistency(probabilities, current)
     distribution_trigger = (
-        (strict_ratio or has_reliability_dimension) if _use_dimension_gate else strict_ratio
+        (strict_ratio or has_reliability_dimension) if _apply_dimension_gate else strict_ratio
     )
-    if strict_ratio or (_use_dimension_gate and has_reliability_dimension):
+    if strict_ratio or (_apply_dimension_gate and has_reliability_dimension):
         strict_reference = list(probabilities)
-        probabilities = resolve_distribution_probabilities(
+        probabilities = resolve_probabilities(
             probabilities,
             option_count,
             ctx,
@@ -145,7 +145,7 @@ async def _select_choice_index(
         elif strict_ratio:
             probabilities = enforce_reference_rank_order(probabilities, strict_reference)
     elif distribution_trigger:
-        probabilities = resolve_distribution_probabilities(
+        probabilities = resolve_probabilities(
             probabilities,
             option_count,
             ctx,
@@ -318,8 +318,8 @@ async def _build_wjx_dropdown_action(
         ctx=ctx,
         thread_name=thread_name,
         entry_type=QuestionType.DROPDOWN,
-        prob_config_key="droplist_prob",
-        fill_config_key="droplist_option_fill_texts",
+        prob_config_key="dropdown_prob",
+        fill_config_key="dropdown_option_fill_texts",
         kind="select",
         record_type="dropdown",
         allow_ai_placeholder=allow_ai_placeholder,
@@ -450,9 +450,9 @@ async def _build_wjx_score_like_action(
         probabilities = (
             config.scale_prob[config_index] if config_index < len(config.scale_prob) else -1
         )
-        probs = normalize_droplist_probs(probabilities, option_count)
+        probs = normalize_dropdown_probs(probabilities, option_count)
         probs = apply_single_like_consistency(probs, current)
-        probs = resolve_distribution_probabilities(
+        probs = resolve_probabilities(
             probs,
             option_count,
             ctx,
@@ -494,9 +494,9 @@ def _resolve_multiple_selection_bounds(
     multi_max_limit = (
         question.multi_max_limit if isinstance(question, MultipleChoiceQuestionMeta) else None
     )
-    min_required = max(1, min(_coerce_positive_int(multi_min_limit, 1), option_count))
+    min_required = max(1, min(coerce_non_negative_int(multi_min_limit, 1), option_count))
     max_allowed = max(
-        1, min(_coerce_positive_int(multi_max_limit, option_count) or option_count, option_count)
+        1, min(coerce_non_negative_int(multi_max_limit, option_count) or option_count, option_count)
     )
     if min_required > max_allowed:
         min_required = max_allowed
@@ -655,7 +655,7 @@ def _select_multiple_strict_ratio(
     total_target = len(required_selected) + stochastic_round(expected_optional)
     total_target = max(min_total, min(max_total, total_target))
     optional_target = max(0, total_target - len(required_selected))
-    sampled_optional = weighted_sample_without_replacement(
+    sampled_optional = weighted_sample_no_replacement(
         positive_optional,
         [sanitized_probabilities[idx] for idx in positive_optional],
         optional_target,
@@ -852,7 +852,7 @@ async def _build_wjx_matrix_action(
                 strict_reference = list(probs)
                 probs = apply_matrix_row_consistency(probs, current, row_index)
                 if any(prob > 0 for prob in probs):
-                    row_probabilities = resolve_distribution_probabilities(
+                    row_probabilities = resolve_probabilities(
                         probs,
                         option_count,
                         ctx,
@@ -864,7 +864,7 @@ async def _build_wjx_matrix_action(
                     [1.0] * option_count, current, row_index
                 )
                 if any(prob > 0 for prob in uniform_probs):
-                    row_probabilities = resolve_distribution_probabilities(
+                    row_probabilities = resolve_probabilities(
                         uniform_probs,
                         option_count,
                         ctx,

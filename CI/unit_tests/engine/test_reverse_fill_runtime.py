@@ -42,52 +42,52 @@ class ReverseFillRuntimeStateTests:
         )
         config = ExecutionConfig(reverse_fill_spec=spec, target_num=2)
         state = ExecutionState(config=config)
-        state.initialize_reverse_fill_runtime()
+        state.initialize_runtime()
         return state
 
     def test_acquire_commit_and_requeue_reverse_fill_rows(self) -> None:
         state = self._build_state()
-        first = state.acquire_reverse_fill_sample("Worker-1")
-        second = state.acquire_reverse_fill_sample("Worker-2")
+        first = state.acquire_sample("Worker-1")
+        second = state.acquire_sample("Worker-2")
         assert first.status == "acquired"
         assert second.status == "acquired"
         assert first.sample is not None
         assert first.sample.data_row_number == 1
         assert second.sample is not None
         assert second.sample.data_row_number == 2
-        state.commit_reverse_fill_sample("Worker-1")
-        failed_row, discarded = state.mark_reverse_fill_submission_failed("Worker-2", max_retries=1)
+        state.commit_sample("Worker-1")
+        failed_row, discarded = state.mark_submission_failed("Worker-2", max_retries=1)
         assert failed_row == 2
         assert not discarded
-        retried = state.acquire_reverse_fill_sample("Worker-2")
+        retried = state.acquire_sample("Worker-2")
         assert retried.status == "acquired"
         assert retried.sample is not None
         assert retried.sample.data_row_number == 2
 
     def test_discarded_row_can_make_target_unreachable(self) -> None:
         state = self._build_state()
-        state.acquire_reverse_fill_sample("Worker-1")
-        state.commit_reverse_fill_sample("Worker-1")
-        state.acquire_reverse_fill_sample("Worker-2")
-        state.mark_reverse_fill_submission_failed("Worker-2", max_retries=1)
-        state.acquire_reverse_fill_sample("Worker-2")
-        failed_row, discarded = state.mark_reverse_fill_submission_failed("Worker-2", max_retries=1)
+        state.acquire_sample("Worker-1")
+        state.commit_sample("Worker-1")
+        state.acquire_sample("Worker-2")
+        state.mark_submission_failed("Worker-2", max_retries=1)
+        state.acquire_sample("Worker-2")
+        failed_row, discarded = state.mark_submission_failed("Worker-2", max_retries=1)
         assert failed_row == 2
         assert discarded
-        assert state.is_reverse_fill_target_unreachable()
+        assert state.is_target_unreachable()
 
     def test_acquire_returns_disabled_when_runtime_not_initialized(self) -> None:
         state = ExecutionState(config=ExecutionConfig())
-        result = state.acquire_reverse_fill_sample("Worker-1")
+        result = state.acquire_sample("Worker-1")
         assert result.status == "disabled"
         assert result.message == "reverse_fill_disabled"
 
     def test_release_without_requeue_drops_reserved_row_from_queue(self) -> None:
         state = self._build_state()
-        first = state.acquire_reverse_fill_sample("Worker-1")
-        released_row = state.release_reverse_fill_sample("Worker-1", requeue=False)
-        second = state.acquire_reverse_fill_sample("Worker-2")
-        exhausted = state.acquire_reverse_fill_sample("Worker-3")
+        first = state.acquire_sample("Worker-1")
+        released_row = state.release_sample("Worker-1", requeue=False)
+        second = state.acquire_sample("Worker-2")
+        exhausted = state.acquire_sample("Worker-3")
         assert first.sample is not None
         assert first.sample.data_row_number == 1
         assert released_row == 1
@@ -97,26 +97,26 @@ class ReverseFillRuntimeStateTests:
 
     def test_get_reverse_fill_answer_uses_thread_reserved_sample(self) -> None:
         state = self._build_state()
-        state.acquire_reverse_fill_sample("Worker-1")
-        state.acquire_reverse_fill_sample("Worker-2")
-        answer = state.get_reverse_fill_answer(1, "Worker-2")
+        state.acquire_sample("Worker-1")
+        state.acquire_sample("Worker-2")
+        answer = state.get_answer(1, "Worker-2")
         assert answer is not None
         assert answer.choice_index == 1
-        assert state.get_reverse_fill_answer(1, "Worker-3") is None
+        assert state.get_answer(1, "Worker-3") is None
 
     def test_resolve_current_reverse_fill_answer_filters_invalid_contexts(self) -> None:
         expected = ReverseFillAnswer(question_num=1, kind=REVERSE_FILL_KIND_CHOICE, choice_index=0)
 
         class _ValidCtx:
-            def get_reverse_fill_answer(self, _question_num: int) -> ReverseFillAnswer:
+            def get_answer(self, _question_num: int) -> ReverseFillAnswer:
                 return expected
 
         class _BadValueCtx:
-            def get_reverse_fill_answer(self, _question_num: int) -> str:
+            def get_answer(self, _question_num: int) -> str:
                 return "not-an-answer"
 
         class _ErrorCtx:
-            def get_reverse_fill_answer(self, _question_num: int) -> ReverseFillAnswer:
+            def get_answer(self, _question_num: int) -> ReverseFillAnswer:
                 raise RuntimeError("boom")
 
         assert resolve_current_reverse_fill_answer(_ValidCtx(), 1) is expected
@@ -130,7 +130,7 @@ class ReverseFillRuntimeStateTests:
         calls: list[tuple[int, str]] = []
 
         class _Ctx:
-            def get_reverse_fill_answer(
+            def get_answer(
                 self, question_num: int, thread_name: str
             ) -> ReverseFillAnswer:
                 calls.append((question_num, thread_name))

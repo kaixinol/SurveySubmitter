@@ -12,7 +12,7 @@ from survey_submitter.constants import DIMENSION_UNGROUPED
 
 _thread_local = threading.local()
 
-_SMALL_SCALE_STATIC_MAX_OPTIONS = 3
+_FIXED_SELECT_MAX_OPTIONS = 3
 
 
 def reset_tendency() -> None:
@@ -58,7 +58,7 @@ def _random_by_probabilities(option_count: int, probabilities: list[float] | int
     return random.randrange(option_count)
 
 
-def _normalize_probabilities_for_zero_guard(
+def _normalize_for_zero_guard(
     option_count: int,
     probabilities: list[float] | int | None,
 ) -> list[float] | None:
@@ -90,7 +90,7 @@ def _enforce_zero_weight_guard(
         return 0
 
     selected = max(0, min(option_count - 1, int(selected_index)))
-    normalized = _normalize_probabilities_for_zero_guard(option_count, probabilities)
+    normalized = _normalize_for_zero_guard(option_count, probabilities)
     if not normalized:
         return selected
 
@@ -163,11 +163,11 @@ def get_tendency_index(
     base = int(round(base_ratio * (option_count - 1)))
     base = max(0, min(option_count - 1, base))
 
-    selected = _apply_consistency(base, option_count, probabilities)
+    selected = _apply_consistency_gate(base, option_count, probabilities)
     return _finalize_choice(selected, anchor=base)
 
 
-def _apply_consistency(
+def _apply_consistency_gate(
     base: int,
     option_count: int,
     probabilities: list[float] | int | None,
@@ -216,7 +216,7 @@ def _apply_consistency(
 
 def _resolve_fluctuation_window(option_count: int) -> int:
 
-    if option_count <= _SMALL_SCALE_STATIC_MAX_OPTIONS:
+    if option_count <= _FIXED_SELECT_MAX_OPTIONS:
         return 0
 
     profile = get_reliability_profile()

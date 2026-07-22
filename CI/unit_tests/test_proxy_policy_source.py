@@ -21,17 +21,17 @@ class ProxyPolicySourceTests:
 
     def test_proxy_source_mode_helpers(self) -> None:
         assert proxy_source.is_custom_proxy_source(proxy_source.PROXY_SOURCE_CUSTOM)
-        assert proxy_source.source_uses_custom_api_override(proxy_source.PROXY_SOURCE_CUSTOM)
+        assert proxy_source.is_custom_proxy_source(proxy_source.PROXY_SOURCE_CUSTOM)
 
     def test_answer_duration_mapping(self) -> None:
         assert (
-            proxy_source.get_proxy_required_seconds_by_answer_seconds(100)
+            proxy_source.get_proxy_ttl_for_answer_duration(100)
             == 100 + proxy_source.PROXY_TTL_GRACE_SECONDS
         )
         assert proxy_source.get_proxy_minute_by_answer_seconds(10) == 1
         assert (
             proxy_source.get_proxy_minute_by_answer_seconds(
-                250, survey_provider=SURVEY_PROVIDER_WJX
+                250, provider=SURVEY_PROVIDER_WJX
             )
             == 1
         )
@@ -41,7 +41,7 @@ class ProxyPolicySourceTests:
         try:
             minute = proxy_source.set_proxy_occupy_minute_by_answer_duration(
                 (30, 280),
-                survey_provider=SURVEY_PROVIDER_WJX,
+                provider=SURVEY_PROVIDER_WJX,
             )
             assert minute == 1
             assert proxy_source.get_proxy_occupy_minute() == 1
@@ -57,9 +57,9 @@ class ProxyPolicySourceTests:
                 proxy_source.set_proxy_api_override("https://proxy.example/api")
                 == "https://proxy.example/api"
             )
-            assert proxy_source.get_effective_proxy_api_url() == "https://proxy.example/api"
+            assert proxy_source.get_custom_proxy_api_override() == "https://proxy.example/api"
             assert proxy_source.has_custom_proxy_api_override()
-            assert proxy_source.is_custom_proxy_api_active()
+            assert proxy_source.is_custom_proxy_source()
         finally:
             proxy_source.set_proxy_source(original_source)
             proxy_source.set_proxy_api_override(original_override)
@@ -79,11 +79,11 @@ class ProxyPolicySourceTests:
             assert proxy_source.get_default_proxy_area_code() == "110000"
             assert proxy_source.get_proxy_area_code() == "110000"
             assert (
-                proxy_source._resolve_default_pool_by_area("110000")
+                proxy_source._resolve_default_pool("110000")
                 == proxy_source.PROXY_POOL_QUALITY
             )
             assert (
-                proxy_source._resolve_default_pool_by_area("110100")
+                proxy_source._resolve_default_pool("110100")
                 == proxy_source.PROXY_POOL_QUALITY
             )
             assert proxy_source.set_proxy_area_code(None) is None

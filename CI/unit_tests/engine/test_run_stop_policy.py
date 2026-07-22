@@ -19,12 +19,12 @@ class RunStopPolicyTests:
             samples=[ReverseFillSampleRow(data_row_number=1, worksheet_row_number=2, answers={})],
         )
         state = ExecutionState(config=ExecutionConfig(reverse_fill_spec=spec, target_num=1))
-        state.initialize_reverse_fill_runtime()
+        state.initialize_runtime()
         return state
 
     def test_record_failure_stops_after_reaching_threshold(self, make_callable_mock) -> None:
         config = ExecutionConfig(fail_threshold=2, stop_on_fail=True)
-        state = ExecutionState(config=config, cur_fail=1)
+        state = ExecutionState(config=config, consecutive_fail_count=1)
         increment_thread_fail = state.increment_thread_fail
         state.increment_thread_fail = make_callable_mock(side_effect=increment_thread_fail)
         policy = RunStopPolicy(config, state)
@@ -37,7 +37,7 @@ class RunStopPolicyTests:
         )
         assert stopped
         assert stop_signal.is_set()
-        assert state.cur_fail == 2
+        assert state.consecutive_fail_count == 2
         assert state.get_terminal_stop_snapshot()[0] == "fail_threshold"
         assert state.get_terminal_stop_snapshot()[1] == FailureReason.FILL_FAILED.value
         state.increment_thread_fail.assert_called_once()
@@ -45,7 +45,7 @@ class RunStopPolicyTests:
     def test_record_failure_requeues_reverse_fill_row_on_first_failure(self) -> None:
         state = self._build_reverse_fill_state()
         config = state.config
-        state.acquire_reverse_fill_sample("Worker-1")
+        state.acquire_sample("Worker-1")
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
         stopped = policy.record_failure(
@@ -59,7 +59,7 @@ class RunStopPolicyTests:
     def test_record_failure_requeues_reverse_fill_row_without_consuming_attempt(self) -> None:
         state = self._build_reverse_fill_state()
         config = state.config
-        state.acquire_reverse_fill_sample("Worker-1")
+        state.acquire_sample("Worker-1")
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
         stopped = policy.record_failure(
@@ -77,7 +77,7 @@ class RunStopPolicyTests:
 
     def test_proxy_unavailable_threshold_scales_with_random_proxy_concurrency(self) -> None:
         config = ExecutionConfig(fail_threshold=5, num_threads=32, random_proxy_ip=True)
-        state = ExecutionState(config=config, cur_fail=4)
+        state = ExecutionState(config=config, consecutive_fail_count=4)
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
         stopped = policy.record_failure(
@@ -90,13 +90,13 @@ class RunStopPolicyTests:
         )
         assert not stopped
         assert not stop_signal.is_set()
-        assert state.cur_fail == 4
+        assert state.consecutive_fail_count == 4
         assert state.proxy_unavailable_fail_count == 1
         assert state.get_terminal_stop_snapshot()[0] == ""
 
     def test_failure_threshold_uses_half_concurrency_when_threads_above_ten(self) -> None:
         config = ExecutionConfig(fail_threshold=5, num_threads=32, stop_on_fail=True)
-        state = ExecutionState(config=config, cur_fail=15)
+        state = ExecutionState(config=config, consecutive_fail_count=15)
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
         stopped = policy.record_failure(
@@ -104,12 +104,12 @@ class RunStopPolicyTests:
         )
         assert stopped
         assert stop_signal.is_set()
-        assert state.cur_fail == 16
+        assert state.consecutive_fail_count == 16
         assert state.get_terminal_stop_snapshot()[0] == "fail_threshold"
 
     def test_failure_threshold_keeps_config_value_when_threads_not_above_ten(self) -> None:
         config = ExecutionConfig(fail_threshold=5, num_threads=10, stop_on_fail=True)
-        state = ExecutionState(config=config, cur_fail=4)
+        state = ExecutionState(config=config, consecutive_fail_count=4)
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
         stopped = policy.record_failure(
@@ -117,12 +117,12 @@ class RunStopPolicyTests:
         )
         assert stopped
         assert stop_signal.is_set()
-        assert state.cur_fail == 5
+        assert state.consecutive_fail_count == 5
         assert state.get_terminal_stop_snapshot()[0] == "fail_threshold"
 
     def test_proxy_unavailable_uses_independent_counter(self) -> None:
         config = ExecutionConfig(fail_threshold=5, num_threads=8, random_proxy_ip=True)
-        state = ExecutionState(config=config, cur_fail=3, proxy_unavailable_fail_count=7)
+        state = ExecutionState(config=config, consecutive_fail_count=3, proxy_unavailable_fail_count=7)
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
         stopped = policy.record_failure(
@@ -135,20 +135,20 @@ class RunStopPolicyTests:
         )
         assert stopped
         assert stop_signal.is_set()
-        assert state.cur_fail == 3
+        assert state.consecutive_fail_count == 3
         assert state.proxy_unavailable_fail_count == 8
         assert state.get_terminal_stop_snapshot()[0] == "proxy_unavailable_threshold"
 
     def test_record_success_commits_progress_and_triggers_target_stop(self) -> None:
         config = ExecutionConfig(target_num=1, random_proxy_ip=True)
-        state = ExecutionState(config=config, cur_fail=2)
-        state.distribution_pending_by_thread["Worker-1"] = [("q:1", 1, 3)]
+        state = ExecutionState(config=config, consecutive_fail_count=2)
+        state.pending_by_thread["Worker-1"] = [("q:1", 1, 3)]
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
         should_stop = policy.record_success(stop_signal, thread_name="Worker-1")
         assert should_stop
-        assert state.cur_num == 1
-        assert state.cur_fail == 0
+        assert state.success_count == 1
+        assert state.consecutive_fail_count == 0
         assert state.proxy_unavailable_fail_count == 0
         assert state.distribution_runtime_stats["q:1"]["total"] == 1
         assert stop_signal.is_set()
@@ -157,7 +157,7 @@ class RunStopPolicyTests:
     def test_record_success_commits_reverse_fill_row(self) -> None:
         state = self._build_reverse_fill_state()
         config = state.config
-        state.acquire_reverse_fill_sample("Worker-1")
+        state.acquire_sample("Worker-1")
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
         should_stop = policy.record_success(stop_signal, thread_name="Worker-1")
@@ -180,12 +180,12 @@ class RunStopPolicyTests:
             ],
         )
         state = ExecutionState(
-            config=ExecutionConfig(reverse_fill_spec=spec, target_num=2), cur_num=1
+            config=ExecutionConfig(reverse_fill_spec=spec, target_num=2), success_count=1
         )
-        state.initialize_reverse_fill_runtime()
-        state.acquire_reverse_fill_sample("Worker-9")
-        state.commit_reverse_fill_sample("Worker-9")
-        state.acquire_reverse_fill_sample("Worker-1")
+        state.initialize_runtime()
+        state.acquire_sample("Worker-9")
+        state.commit_sample("Worker-9")
+        state.acquire_sample("Worker-1")
         policy = RunStopPolicy(state.config, state)
         stop_signal = threading.Event()
         first_stopped = policy.record_failure(
@@ -193,7 +193,7 @@ class RunStopPolicyTests:
         )
         assert not first_stopped
         assert not stop_signal.is_set()
-        state.acquire_reverse_fill_sample("Worker-1")
+        state.acquire_sample("Worker-1")
         second_stopped = policy.record_failure(
             stop_signal, thread_name="Worker-1", failure_reason=FailureReason.FILL_FAILED
         )

@@ -55,8 +55,8 @@ class ProxyPoolTests:
         assert pool.get_proxy_required_ttl_seconds(None) == pool.PROXY_TTL_GRACE_SECONDS
         assert pool.get_proxy_required_ttl_seconds((10, 20)) == 20 + pool.PROXY_TTL_GRACE_SECONDS
         assert (
-            pool.get_proxy_required_ttl_seconds((250, 250), survey_provider=SURVEY_PROVIDER_WJX)
-            == pool.HTTP_PROXY_MIN_REMAINING_TTL_SECONDS
+            pool.get_proxy_required_ttl_seconds((250, 250), provider=SURVEY_PROVIDER_WJX)
+            == pool.MIN_PROXY_TTL_SECONDS
         )
         assert pool.proxy_lease_has_sufficient_ttl(None, required_ttl_seconds=1) is False
         assert (
@@ -126,6 +126,6 @@ class ProxyPoolTests:
         }
 
     def test_parse_expire_at_handles_naive_aware_and_bad_values(self) -> None:
-        assert pool._parse_expire_at_to_ts("") == 0.0
-        assert pool._parse_expire_at_to_ts("bad") == 0.0
-        assert pool._parse_expire_at_to_ts("2099-01-01T00:00:00+00:00") > time.time()
+        assert pool._parse_expire_at_timestamp("") == 0.0
+        assert pool._parse_expire_at_timestamp("bad") == 0.0
+        assert pool._parse_expire_at_timestamp("2099-01-01T00:00:00+00:00") > time.time()
