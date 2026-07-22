@@ -39,7 +39,7 @@ def _get_proxy_fetch_async_lock(ctx: ExecutionState) -> asyncio.Lock:
     return current_lock
 
 
-def is_proxy_fetch_in_progress(ctx: ExecutionState) -> bool:
+def is_proxy_fetch_locked(ctx: ExecutionState) -> bool:
     current_lock = getattr(ctx, "_proxy_fetch_async_lock", None)
     return isinstance(current_lock, asyncio.Lock) and current_lock.locked()
 
@@ -67,7 +67,7 @@ def _resolve_proxy_request_num_locked(ctx: ExecutionState) -> int:
     waiting_count = max(1, int(ctx.proxy_waiting_threads or 0))
     active_count = len(ctx.proxy_in_use_by_thread)
     remaining_to_start = max(
-        0, int(ctx.config.target_num or 0) - int(ctx.cur_num or 0) - active_count
+        0, int(ctx.config.target_num or 0) - int(ctx.success_count or 0) - active_count
     )
     if remaining_to_start <= 0:
         return 0
@@ -95,7 +95,7 @@ def resolve_proxy_prefetch_request_count(ctx: ExecutionState) -> int:
     with ctx.lock:
         active_count = len(ctx.proxy_in_use_by_thread)
         remaining_to_start = max(
-            0, int(ctx.config.target_num or 0) - int(ctx.cur_num or 0) - active_count
+            0, int(ctx.config.target_num or 0) - int(ctx.success_count or 0) - active_count
         )
         if remaining_to_start <= 0:
             return 0
@@ -118,7 +118,7 @@ def should_continue_proxy_prefetch(ctx: ExecutionState) -> bool:
     with ctx.lock:
         active_count = len(ctx.proxy_in_use_by_thread)
         remaining_to_start = max(
-            0, int(ctx.config.target_num or 0) - int(ctx.cur_num or 0) - active_count
+            0, int(ctx.config.target_num or 0) - int(ctx.success_count or 0) - active_count
         )
     return remaining_to_start > 0
 
@@ -203,7 +203,7 @@ async def _select_proxy_for_session_async(
                 selected = _pop_available_proxy_lease_locked(ctx)
             if selected is not None:
                 return _mark_proxy_in_use(ctx, thread_name, selected)
-            if is_proxy_fetch_in_progress(ctx):
+            if is_proxy_fetch_locked(ctx):
                 if await _wait_for_next_proxy_cycle_async(ctx, stop_signal):
                     return None
                 continue

@@ -47,7 +47,7 @@ class _FakeStopPolicy:
     def record_success(self, stop_signal, **kwargs):
         self.success_calls.append({"stop_signal": stop_signal, **kwargs})
         if self.state is not None:
-            self.state.cur_num += 1
+            self.state.success_count += 1
         return False
 
     def trigger_target_reached_stop(self, stop_signal):
@@ -68,7 +68,7 @@ def _build_runner(
     config = config or ExecutionConfig(
         target_num=3,
         submit_interval_range_seconds=[1, 3],
-        survey_provider="wjx",
+        provider="wjx",
         url="https://www.wjx.cn/vm/demo.aspx",
     )
     state = state or ExecutionState(config=config)
@@ -104,8 +104,8 @@ class AsyncRuntimeLoopLargeTests:
 
     @pytest.mark.asyncio
     async def test_should_stop_loop_honors_target_num(self) -> None:
-        config = ExecutionConfig(target_num=2, survey_provider="wjx")
-        state = ExecutionState(config=config, cur_num=2)
+        config = ExecutionConfig(target_num=2, provider="wjx")
+        state = ExecutionState(config=config, success_count=2)
         runner, _state, _ctx, _scheduler = _build_runner(config=config, state=state)
 
         assert await runner._should_stop_loop() is True
@@ -121,7 +121,7 @@ class AsyncRuntimeLoopLargeTests:
     async def test_resolve_dispatch_delay_seconds_covers_zero_fixed_and_random(
         self, monkeypatch
     ) -> None:
-        config = ExecutionConfig(submit_interval_range_seconds=[0, 0], survey_provider="wjx")
+        config = ExecutionConfig(submit_interval_range_seconds=[0, 0], provider="wjx")
         runner, _state, _ctx, _scheduler = _build_runner(config=config)
         assert runner._resolve_dispatch_delay_seconds() == 0.0
 
@@ -136,7 +136,7 @@ class AsyncRuntimeLoopLargeTests:
     async def test_select_session_proxy_and_ua_does_not_pre_acquire_proxy(
         self, monkeypatch
     ) -> None:
-        config = ExecutionConfig(random_proxy_ip=True, survey_provider="wjx")
+        config = ExecutionConfig(random_proxy_ip=True, provider="wjx")
         state = ExecutionState(config=config)
         calls: list[str] = []
 
@@ -167,10 +167,10 @@ class AsyncRuntimeLoopLargeTests:
     async def test_prepare_round_context_marks_terminal_stop_when_reverse_fill_exhausted(
         self, monkeypatch
     ) -> None:
-        config = ExecutionConfig(target_num=2, survey_provider="wjx")
+        config = ExecutionConfig(target_num=2, provider="wjx")
         state = ExecutionState(config=config)
         state.reset_pending_distribution = lambda *_args, **_kwargs: None  # ty:ignore[invalid-assignment]
-        state.acquire_reverse_fill_sample = lambda *_args, **_kwargs: SimpleNamespace(  # ty:ignore[invalid-assignment]
+        state.acquire_sample = lambda *_args, **_kwargs: SimpleNamespace(  # ty:ignore[invalid-assignment]
             status="exhausted", sample=None
         )
         terminal: list[tuple[str, str, str]] = []
@@ -185,7 +185,7 @@ class AsyncRuntimeLoopLargeTests:
 
     @pytest.mark.asyncio
     async def test_uses_http_runtime_respects_logic_parse_status(self) -> None:
-        config = ExecutionConfig(url="https://www.wjx.cn/vm/demo.aspx", survey_provider="wjx")
+        config = ExecutionConfig(url="https://www.wjx.cn/vm/demo.aspx", provider="wjx")
         config.questions_metadata = {
             1: _QuestionMetaBase(
                 num=1,
@@ -215,7 +215,7 @@ class AsyncRuntimeLoopLargeTests:
 
     @pytest.mark.asyncio
     async def test_run_blocks_unsupported_http_logic_without_fallback(self) -> None:
-        config = ExecutionConfig(url="https://www.wjx.cn/vm/demo.aspx", survey_provider="wjx")
+        config = ExecutionConfig(url="https://www.wjx.cn/vm/demo.aspx", provider="wjx")
         config.questions_metadata = {
             1: _QuestionMetaBase(
                 num=1,
@@ -238,7 +238,7 @@ class AsyncRuntimeLoopLargeTests:
     @pytest.mark.asyncio
     async def test_run_uses_http_runtime_for_credamo(self, monkeypatch) -> None:
         config = ExecutionConfig(
-            url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo"
+            url="https://www.credamo.com/answer.html#/s/demo", provider="credamo"
         )
         runner, _state, _ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [6, None]
@@ -261,7 +261,7 @@ class AsyncRuntimeLoopLargeTests:
     ) -> None:
         config = ExecutionConfig(
             url="https://www.wjx.cn/vm/demo.aspx",
-            survey_provider="wjx",
+            provider="wjx",
             random_proxy_ip=True,
         )
         config.proxy_ip_pool.append(ProxyLease(address="http://1.1.1.1:80", source="unit"))
@@ -298,7 +298,7 @@ class AsyncRuntimeLoopLargeTests:
     async def test_run_random_proxy_enabled_never_submits_without_proxy(self, monkeypatch) -> None:
         config = ExecutionConfig(
             url="https://www.wjx.cn/vm/demo.aspx",
-            survey_provider="wjx",
+            provider="wjx",
             random_proxy_ip=True,
         )
         runner, _state, _ctx, scheduler = _build_runner(config=config)
@@ -342,7 +342,7 @@ class AsyncRuntimeLoopLargeTests:
     @pytest.mark.asyncio
     async def test_run_http_runtime_reports_fixed_submit_steps(self, monkeypatch) -> None:
         config = ExecutionConfig(
-            url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo"
+            url="https://www.credamo.com/answer.html#/s/demo", provider="credamo"
         )
         runner, state, _ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [6, None]
@@ -369,7 +369,7 @@ class AsyncRuntimeLoopLargeTests:
     @pytest.mark.asyncio
     async def test_run_airuntime_error_releases_resources_and_requeues(self, monkeypatch) -> None:
         config = ExecutionConfig(
-            url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo"
+            url="https://www.credamo.com/answer.html#/s/demo", provider="credamo"
         )
         runner, _state, _ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [5, None]
@@ -401,7 +401,7 @@ class AsyncRuntimeLoopLargeTests:
     async def test_run_submission_verification_error_stops_without_requeue(
         self, monkeypatch
     ) -> None:
-        config = ExecutionConfig(url="https://www.wjx.cn/vm/demo.aspx", survey_provider="wjx")
+        config = ExecutionConfig(url="https://www.wjx.cn/vm/demo.aspx", provider="wjx")
         runner, state, ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [8]
         monkeypatch.setattr(
@@ -433,7 +433,7 @@ class AsyncRuntimeLoopLargeTests:
     ) -> None:
         config = ExecutionConfig(
             url="https://www.wjx.cn/vm/demo.aspx",
-            survey_provider="wjx",
+            provider="wjx",
             random_proxy_ip=True,
             stop_on_fail=True,
             fail_threshold=3,
@@ -469,7 +469,7 @@ class AsyncRuntimeLoopLargeTests:
 
     @pytest.mark.asyncio
     async def test_run_provider_unavailable_error_stops_without_requeue(self, monkeypatch) -> None:
-        config = ExecutionConfig(url="https://www.wjx.cn/vm/demo.aspx", survey_provider="wjx")
+        config = ExecutionConfig(url="https://www.wjx.cn/vm/demo.aspx", provider="wjx")
         runner, state, ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [10]
         monkeypatch.setattr(
@@ -499,7 +499,7 @@ class AsyncRuntimeLoopLargeTests:
         self, monkeypatch
     ) -> None:
         config = ExecutionConfig(
-            url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo"
+            url="https://www.credamo.com/answer.html#/s/demo", provider="credamo"
         )
         runner, _state, _ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [9]
@@ -526,7 +526,7 @@ class AsyncRuntimeLoopLargeTests:
     async def test_http_transport_error_discards_proxy_without_cooldown(self) -> None:
         config = ExecutionConfig(
             url="https://www.wjx.cn/vm/demo.aspx",
-            survey_provider="wjx",
+            provider="wjx",
             random_proxy_ip=True,
         )
         runner, state, _ctx, _scheduler = _build_runner(config=config)
@@ -546,7 +546,7 @@ class AsyncRuntimeLoopLargeTests:
     @pytest.mark.asyncio
     async def test_run_remote_protocol_error_uses_transport_handler(self, monkeypatch) -> None:
         config = ExecutionConfig(
-            url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo"
+            url="https://www.credamo.com/answer.html#/s/demo", provider="credamo"
         )
         runner, _state, _ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [10, None]
@@ -587,7 +587,7 @@ class AsyncRuntimeLoopLargeTests:
     @pytest.mark.asyncio
     async def test_run_generic_exception_records_failure_and_requeues(self, monkeypatch) -> None:
         config = ExecutionConfig(
-            url="https://www.credamo.com/answer.html#/s/demo", survey_provider="credamo"
+            url="https://www.credamo.com/answer.html#/s/demo", provider="credamo"
         )
         runner, _state, _ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [11, None]

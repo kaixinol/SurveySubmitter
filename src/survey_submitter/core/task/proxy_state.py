@@ -112,7 +112,7 @@ if TYPE_CHECKING:
         proxy_waiting_threads: int
         proxy_in_use_by_thread: dict[str, ProxyLease]
         successful_proxy_addresses: set[str]
-        proxy_cooldown_until_by_address: dict[str, float]
+        proxy_cooldowns_by_address: dict[str, float]
         _runtime_condition: threading.Condition
         _runtime_async_event: asyncio.Event | None
         _runtime_async_event_loop: asyncio.AbstractEventLoop | None
@@ -227,7 +227,7 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
         *,
         now_ts: float | None = None,
     ) -> None:
-        _purge_expired_proxy_cooldowns(self.proxy_cooldown_until_by_address, now_ts=now_ts)
+        _purge_expired_proxy_cooldowns(self.proxy_cooldowns_by_address, now_ts=now_ts)
 
     def purge_expired_proxy_cooldowns(
         self: "_ProxyRuntimeHost", *, now_ts: float | None = None
@@ -242,7 +242,7 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
         now_ts: float | None = None,
     ) -> bool:
         return _is_proxy_in_cooldown(
-            self.proxy_cooldown_until_by_address,
+            self.proxy_cooldowns_by_address,
             proxy_address,
             now_ts=now_ts,
         )
@@ -266,7 +266,7 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
     ) -> None:
         with self.lock:
             changed = _mark_proxy_in_cooldown(
-                self.proxy_cooldown_until_by_address,
+                self.proxy_cooldowns_by_address,
                 proxy_address,
                 cooldown_seconds,
             )
@@ -294,11 +294,11 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
         with self.lock:
             return self.active_proxy_addresses_locked(exclude_thread_name=exclude_thread_name)
 
-    def snapshot_successful_proxy_addresses(self: "_ProxyRuntimeHost") -> set[str]:
+    def snapshot_successful_proxies(self: "_ProxyRuntimeHost") -> set[str]:
         with self.lock:
             return self.successful_proxy_addresses_locked()
 
-    def snapshot_blocked_proxy_addresses(
+    def snapshot_blocked_proxies(
         self: "_ProxyRuntimeHost",
         *,
         exclude_thread_name: str = "",

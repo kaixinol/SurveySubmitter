@@ -69,8 +69,8 @@ def _build_live_test_config(url: str) -> tuple[RuntimeConfig, list[SurveyQuestio
     config = RuntimeConfig(
         survey=SurveySection(
             url=normalized_url,
-            survey_title=definition.title or "",
-            survey_provider=definition.provider,
+            title=definition.title or "",
+            provider=definition.provider,
         ),
         execution=ExecutionSection(
             target_num=1,
@@ -103,7 +103,7 @@ def main() -> int:
 
         prepared = prepare_execution_artifacts(
             config,
-            fallback_survey_title=config.survey.survey_title,
+            fallback_survey_title=config.survey.title,
             questions_info=list(questions_info),
         )
         execution_config = prepared.execution_config_template
@@ -114,7 +114,7 @@ def main() -> int:
         execution_config.random_proxy_ip = False
         execution_config.random_user_agent = False
         state = ExecutionState(config=execution_config)
-        state.initialize_reverse_fill_runtime()
+        state.initialize_runtime()
 
         engine = AsyncRuntimeEngine()
         try:
@@ -128,10 +128,10 @@ def main() -> int:
         return 1
 
     print(
-        f"provider={execution_config.survey_provider} cur_num={state.cur_num} "
-        f"cur_fail={state.cur_fail} terminal={state.get_terminal_stop_snapshot()}"
+        f"provider={execution_config.provider} success_count={state.success_count} "
+        f"consecutive_fail_count={state.consecutive_fail_count} terminal={state.get_terminal_stop_snapshot()}"
     )
-    return 0 if int(state.cur_num or 0) >= 1 else 2
+    return 0 if int(state.success_count or 0) >= 1 else 2
 
 
 if __name__ == "__main__":

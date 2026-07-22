@@ -20,7 +20,7 @@ if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
 _FAULT_HANDLER_STREAM: Optional[io.IOBase] = None
-_ORIG_STDOUT: Optional[io.TextIOBase] = None
+_ORIGINAL_STDOUT: Optional[io.TextIOBase] = None
 
 _TYPE_LABELS = {
     "single": "单选",
@@ -94,7 +94,7 @@ def shutdown() -> None:
 
 
 def _out() -> io.TextIOBase:
-    return cast("io.TextIOBase", _ORIG_STDOUT or sys.stdout)
+    return cast("io.TextIOBase", _ORIGINAL_STDOUT or sys.stdout)
 
 
 def _type_label(type_code: str) -> str:
@@ -126,35 +126,35 @@ def _print_survey(definition: object) -> None:
     out.write(f"题目数量: {len(defn.questions)}\n")
     out.write("-" * 60 + "\n")
 
-    for q in defn.questions:
-        label = _question_type_label(q)
-        required_mark = " *" if q.required else ""
-        out.write(f"\n第{q.num}题 [{label}]{required_mark}\n")
-        out.write(f"  {q.title}\n")
+    for question in defn.questions:
+        label = _question_type_label(question)
+        required_mark = " *" if question.required else ""
+        out.write(f"\n第{question.num}题 [{label}]{required_mark}\n")
+        out.write(f"  {question.title}\n")
 
-        if q.has_jump:
-            rules = q.jump_rules or []
+        if question.has_jump:
+            rules = question.jump_rules or []
             for rule in rules:
                 target = rule.get("jumpto", "?") if isinstance(rule, dict) else "?"
                 out.write(f"  → 跳题: 跳到第{target}题\n")
 
-        if q.has_display_condition:
-            conditions = q.display_conditions or []
-            for cond in conditions:
-                if isinstance(cond, dict):
-                    src = cond.get("condition_question_num", "?")
-                    mode = cond.get("condition_mode", "selected")
-                    opts = cond.get("condition_option_indices", [])
-                    out.write(f"  → 显隐条件: 第{src}题 {mode} 选项{opts}\n")
+        if question.has_display_condition:
+            conditions = question.display_conditions or []
+            for condition in conditions:
+                if isinstance(condition, dict):
+                    source_question_num = condition.get("condition_question_num", "?")
+                    mode = condition.get("condition_mode", "selected")
+                    options = condition.get("condition_option_indices", [])
+                    out.write(f"  → 显隐条件: 第{source_question_num}题 {mode} 选项{options}\n")
 
-        if isinstance(q, ChoiceQuestionMeta) and q.option_texts:
-            fillable = set(q.fillable_options or [])
-            for i, text in enumerate(q.option_texts):
+        if isinstance(question, ChoiceQuestionMeta) and question.option_texts:
+            fillable = set(question.fillable_options or [])
+            for i, text in enumerate(question.option_texts):
                 fill_tag = " [可填空]" if i in fillable else ""
                 out.write(f"  {i + 1}. {text}{fill_tag}\n")
 
-        if q.unsupported:
-            reason = q.unsupported_reason or "不支持"
+        if question.unsupported:
+            reason = question.unsupported_reason or "不支持"
             out.write(f"  ⚠ {reason}\n")
 
 
@@ -179,8 +179,8 @@ def _cmd_dry_run(config_path: str) -> None:
         raise ValueError("配置文件中未指定问卷 URL")
 
     definition = asyncio.run(parse_survey(config.survey.url))
-    config.survey.survey_title = config.survey.survey_title or definition.title
-    config.survey.survey_provider = definition.provider
+    config.survey.title = config.survey.title or definition.title
+    config.survey.provider = definition.provider
     config.answer_config.survey_questions = survey_questions_from_definition(definition.questions)
 
     if not config.answer_config.question_entries:
@@ -248,8 +248,8 @@ def main() -> None:
         datefmt="%H:%M:%S",
     )
 
-    global _ORIG_STDOUT
-    _ORIG_STDOUT = cast("io.TextIOBase", sys.stdout)
+    global _ORIGINAL_STDOUT
+    _ORIGINAL_STDOUT = cast("io.TextIOBase", sys.stdout)
 
     bootstrap()
 

@@ -23,7 +23,7 @@ def _resolve_provider(*, provider: str | None = None, ctx: Any = None) -> str:
         return normalize_survey_provider(provider, default=SURVEY_PROVIDER_WJX)
     if ctx is not None:
         return normalize_survey_provider(
-            getattr(getattr(ctx, "config", ctx), "survey_provider", None),
+            getattr(getattr(ctx, "config", ctx), "provider", None),
             default=SURVEY_PROVIDER_WJX,
         )
     return SURVEY_PROVIDER_WJX
@@ -31,7 +31,7 @@ def _resolve_provider(*, provider: str | None = None, ctx: Any = None) -> str:
 
 _WJX_PARSE: HookTarget = ("survey_submitter.providers.wjx.parser", "parse_wjx_survey")
 
-_WJX_FILL_HTTP: HookTarget = ("survey_submitter.providers.wjx.http_runtime", "brush_wjx_http")
+_WJX_FILL_HTTP: HookTarget = ("survey_submitter.providers.wjx.http_runtime", "fill_wjx_http")
 
 
 _PROVIDER_REGISTRY = {

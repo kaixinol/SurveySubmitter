@@ -217,11 +217,11 @@ def _extract_jump_rules_from_html(
         except (ValueError, TypeError):
             return None
 
-    def _jump_target_terminates(jumpto_num: int, option_text: str | None) -> bool:
+    def _jump_target_terminates(jump_to_num: int, option_text: str | None) -> bool:
         if option_text and any(keyword in option_text for keyword in terminate_keywords):
             return True
 
-        return int(jumpto_num or 0) in {1, -1}
+        return int(jump_to_num or 0) in {1, -1}
 
     selectable_nodes = []
     for input_el in question_div.find_all("input"):
@@ -239,19 +239,19 @@ def _extract_jump_rules_from_html(
 
     option_idx = 0
     for selectable_node in selectable_nodes:
-        jumpto_raw = selectable_node.get("jumpto") or selectable_node.get("data-jumpto")
-        if not jumpto_raw:
+        jump_to_raw = selectable_node.get("jumpto") or selectable_node.get("data-jumpto")
+        if not jump_to_raw:
             option_idx += 1
             continue
-        jumpto_num = _parse_jump_target(jumpto_raw)
-        if jumpto_num:
+        jump_to_num = _parse_jump_target(jump_to_raw)
+        if jump_to_num:
             option_text = option_texts[option_idx] if option_idx < len(option_texts) else None
             jump_rules.append(
                 {
                     "option_index": option_idx,
-                    "jumpto": jumpto_num,
+                    "jumpto": jump_to_num,
                     "option_text": option_text,
-                    "terminates_survey": _jump_target_terminates(jumpto_num, option_text),
+                    "terminates_survey": _jump_target_terminates(jump_to_num, option_text),
                 }
             )
         option_idx += 1

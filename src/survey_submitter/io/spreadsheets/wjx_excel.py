@@ -35,15 +35,15 @@ def _normalize_cell_value(value: Any) -> Any:
     return value
 
 
-def _iter_question_values(
+def _collect_question_values(
     raw_rows: Iterable[ReverseFillRawRow], question_columns: dict[int, list[ReverseFillColumn]]
 ) -> Iterable[Any]:
     column_indexes: list[int] = []
     for columns in question_columns.values():
         for column in columns:
             column_indexes.append(int(column.column_index))
-    seen = set(column_indexes)
-    if not seen:
+    column_index_set = set(column_indexes)
+    if not column_index_set:
         return []
     collected: list[Any] = []
     for row in raw_rows:
@@ -65,7 +65,7 @@ def _detect_wjx_export_format(
     has_numeric_type = False
     has_numeric_string = False
     has_string_marker = False
-    for value in _iter_question_values(raw_rows[:5], question_columns):
+    for value in _collect_question_values(raw_rows[:5], question_columns):
         if value is None:
             continue
         if isinstance(value, bool):

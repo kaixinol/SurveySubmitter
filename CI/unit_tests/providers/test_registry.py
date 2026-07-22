@@ -23,7 +23,7 @@ async def test_parse_survey_routes_detected_provider_directly() -> None:
 
 
 async def test_fill_survey_http_routes_wjx_adapter() -> None:
-    state = ExecutionState(config=ExecutionConfig(survey_provider=SURVEY_PROVIDER_WJX))
+    state = ExecutionState(config=ExecutionConfig(provider=SURVEY_PROVIDER_WJX))
     adapter = registry._PROVIDER_REGISTRY[SURVEY_PROVIDER_WJX]
 
     @contextmanager
@@ -37,7 +37,7 @@ async def test_fill_survey_http_routes_wjx_adapter() -> None:
         patch.object(registry, "provider_run_context", fake_provider_run_context),
     ):
         result = await registry.fill_survey_http(
-            ExecutionConfig(survey_provider=SURVEY_PROVIDER_WJX),
+            ExecutionConfig(provider=SURVEY_PROVIDER_WJX),
             state,
             stop_signal="stop",
             thread_name="Worker-1",

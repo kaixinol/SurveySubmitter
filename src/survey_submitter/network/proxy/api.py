@@ -17,7 +17,7 @@ from loguru import logger
 
 
 from survey_submitter.network.proxy.source import (
-    get_effective_proxy_api_url,
+    get_custom_proxy_api_override,
     get_proxy_occupy_minute,
     has_custom_proxy_api_override,
 )
@@ -28,7 +28,7 @@ from survey_submitter.network.proxy.pool import (
     _mask_proxy_for_log,
 )
 
-_IP_PORT_RE = re.compile(
+_PROXY_ADDRESS_PATTERN = re.compile(
     r"(?:https?://)?"
     r"(?:([^\s:@/,]+):([^\s:@/,]+)@)?"
     r"((?:\d{1,3}\.){3}\d{1,3})"
@@ -61,11 +61,11 @@ def _normalize_expected_proxy_count(expected_count: Any) -> int:
 def _extract_proxy_from_string(s: str) -> str | None:
     if not isinstance(s, str):
         return None
-    m = _IP_PORT_RE.search(s.strip())
+    m = _PROXY_ADDRESS_PATTERN.search(s.strip())
     if not m:
         return None
-    user, pwd, ip, port = m.group(1), m.group(2), m.group(3), m.group(4)
-    return f"{user}:{pwd}@{ip}:{port}" if user and pwd else f"{ip}:{port}"
+    user, password, ip, port = m.group(1), m.group(2), m.group(3), m.group(4)
+    return f"{user}:{password}@{ip}:{port}" if user and password else f"{ip}:{port}"
 
 
 def _extract_proxy_from_dict(obj: dict) -> str | None:
@@ -145,13 +145,13 @@ def _extract_custom_api_error(data: Any) -> str | None:
 
 
 def _proxy_api_candidates(proxy_url: str | None) -> list[str]:
-    url = proxy_url or get_effective_proxy_api_url()
+    url = proxy_url or get_custom_proxy_api_override()
     if not url:
         raise RuntimeError("自定义代理API地址不能为空，请先在设置中填写API地址")
     return [url]
 
 
-def _warn_custom_api_returned_large_batch(returned_count: int, requested_count: int) -> None:
+def _warn_oversized_proxy_batch(returned_count: int, requested_count: int) -> None:
     requested = max(1, int(requested_count or 1))
     returned = max(0, int(returned_count or 0))
     if returned <= int(requested * 1.2):
@@ -232,7 +232,7 @@ async def fetch_proxy_batch_async(
 
     if not has_custom_proxy_api_override():
         raise RuntimeError("自定义代理API地址未配置，请在设置中填写API地址")
-    url = proxy_url or get_effective_proxy_api_url()
+    url = proxy_url or get_custom_proxy_api_override()
     if not url:
         raise RuntimeError("自定义代理API地址未配置，请在设置中填写API地址")
     logger.info(f"使用自定义代理API: {url}")
@@ -287,7 +287,7 @@ async def fetch_proxy_batch_async(
             break
     if not normalized:
         raise RuntimeError("随机IP接口返回为空")
-    _warn_custom_api_returned_large_batch(len(normalized), expected_count)
+    _warn_oversized_proxy_batch(len(normalized), expected_count)
     return normalized
 
 

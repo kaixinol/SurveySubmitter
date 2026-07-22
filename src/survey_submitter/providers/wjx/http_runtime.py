@@ -15,14 +15,14 @@ from urllib.parse import urlparse
 import survey_submitter.network.http as http_client
 from survey_submitter.constants import DEFAULT_HTTP_HEADERS, DEFAULT_USER_AGENT, USER_AGENT_PRESETS
 from survey_submitter.core.ai.batch_runtime import (
-    assert_no_ai_placeholders_in_actions,
+    assert_no_ai_placeholders,
     prefill_ai_answers_for_questions,
 )
 from survey_submitter.core.config.codec import UserAgentProfile
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.modes.duration_control import sample_answer_duration_seconds
 from survey_submitter.core.persona.context import record_answer
-from survey_submitter.core.questions.distribution import record_pending_distribution_choice
+from survey_submitter.core.questions.distribution import record_pending_choice
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.network.proxy.pool import mask_proxy_for_log
 from survey_submitter.network.session_policy import (
@@ -101,7 +101,7 @@ def _proxy_arg(proxy_address: str | None) -> dict[str, str] | str:
     return proxy if proxy else {}
 
 
-def _shortid_from_url(url: str) -> str:
+def _short_id_from_url(url: str) -> str:
     parsed = urlparse(url.strip())
     path = parsed.path or ""
     last = path.rstrip("/").rsplit("/", 1)[-1]
@@ -118,7 +118,7 @@ def _submit_domain(url: str) -> str:
     return "v.wjx.cn"
 
 
-def _format_wjx_starttime(timestamp_seconds: int) -> str:
+def _format_wjx_start_time(timestamp_seconds: int) -> str:
     dt = datetime.fromtimestamp(int(timestamp_seconds))
     return f"{dt.year}/{dt.month}/{dt.day} {dt.hour}:{dt.minute}:{dt.second}"
 
@@ -238,7 +238,7 @@ def _format_selected_indices(
     return "|".join(parts)
 
 
-def _submitdata_answer(action: AnswerAction) -> str:
+def _submit_data_answer(action: AnswerAction) -> str:
     if action.kind in {"choice", "select"}:
         return _format_selected_indices(
             tuple(int(item) for item in action.selected_indices),
@@ -259,7 +259,7 @@ def _submitdata_answer(action: AnswerAction) -> str:
     return ""
 
 
-def _skipped_submitdata_answer(question: SurveyQuestionMeta) -> str:
+def _skipped_submit_data_answer(question: SurveyQuestionMeta) -> str:
     from survey_submitter.providers.contracts import ChoiceQuestionMeta, MatrixQuestionMeta
 
     type_code = question.type_code
@@ -295,7 +295,7 @@ def _skipped_submitdata_answer(question: SurveyQuestionMeta) -> str:
             return "-3"
 
 
-def _submitdata_from_actions(
+def _submit_data_from_actions(
     actions: list[AnswerAction],
     *,
     questions: list[SurveyQuestionMeta] | None = None,
@@ -317,10 +317,10 @@ def _submitdata_from_actions(
     for question_num in ordered_nums:
         action = action_by_num.get(question_num)
         if action is not None:
-            answer = _submitdata_answer(action)
+            answer = _submit_data_answer(action)
         else:
             question = question_by_num.get(question_num)
-            answer = _skipped_submitdata_answer(question) if question is not None else "-3"
+            answer = _skipped_submit_data_answer(question) if question is not None else "-3"
         if question_num <= 0 or not answer:
             continue
         answer = answer.replace("，", ",")
@@ -335,7 +335,7 @@ def _record_action(ctx: ExecutionState, action: AnswerAction) -> None:
         ctx,
         action,
         record_answer_fn=record_answer,
-        record_pending_distribution_choice_fn=record_pending_distribution_choice,
+        record_pending_distribution_choice_fn=record_pending_choice,
         default_fill_text="",
     )
 
@@ -496,7 +496,7 @@ def _sample_ktimes(config: ExecutionConfig) -> int:
     try:
         sampled = sample_answer_duration_seconds(
             config.answer_duration_range_seconds,
-            survey_provider="wjx",
+            provider="wjx",
             default_unconfigured_seconds=default_seconds,
         )
     except (ValueError, TypeError, KeyError, AttributeError):
@@ -524,10 +524,10 @@ async def _build_and_record_actions(
     actions = list(plan.actions)
     if not actions:
         return actions, plan, ""
-    assert_no_ai_placeholders_in_actions(actions, provider_label="问卷星")
+    assert_no_ai_placeholders(actions, provider_label="问卷星")
     for action in actions:
         _record_action(ctx, action)
-    submitdata = _submitdata_from_actions(
+    submitdata = _submit_data_from_actions(
         actions,
         questions=_question_items(config),
         skipped_question_nums=plan.skipped_question_nums,
@@ -553,11 +553,11 @@ def _build_wjx_submit_params(
     scene_id = _extract_wjx_scene_id(page_html)
     jqnonce = str(uuid.uuid4())
     domain = _submit_domain(config.url)
-    shortid = _shortid_from_url(config.url)
+    shortid = _short_id_from_url(config.url)
     channel_profile = _resolve_wjx_channel_profile(user_agent_value, user_agent_profile)
     params = {
         "shortid": shortid,
-        "starttime": _format_wjx_starttime(start_seconds),
+        "starttime": _format_wjx_start_time(start_seconds),
         "cst": str(start_seconds * 1000),
         "source": channel_profile.source,
         "submittype": "1",
@@ -641,7 +641,7 @@ def _process_wjx_submit_response(
     mark_submit_proxy_success(ctx, submit_proxy_address)
 
 
-async def brush_wjx_http(
+async def fill_wjx_http(
     config: ExecutionConfig,
     ctx: ExecutionState,
     *,
@@ -705,7 +705,7 @@ async def brush_wjx_http(
 __all__ = [
     "WJX_SUBMISSION_VERIFICATION_MESSAGE",
     "WjxSubmitResult",
-    "brush_wjx_http",
+    "fill_wjx_http",
     "classify_wjx_submit_response",
     "is_wjx_submission_verification_response",
 ]

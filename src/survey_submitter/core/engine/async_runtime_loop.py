@@ -34,8 +34,8 @@ import survey_submitter.network.http as http_client
 _T = TypeVar("_T")
 
 AI_FILL_FAIL_THRESHOLD = 5
-_SUBMISSION_VERIFICATION_STOP_CATEGORY = "submission_verification"
-_SURVEY_PROVIDER_UNAVAILABLE_STOP_CATEGORY = "survey_provider_unavailable"
+_VERIFICATION_STOP_CATEGORY = "submission_verification"
+_PROVIDER_UNAVAILABLE_STOP_CATEGORY = "survey_provider_unavailable"
 
 
 @dataclass(frozen=True)
@@ -63,7 +63,7 @@ def _get_session_proxy_address(session: object) -> str | None:
         return None
 
 
-def _handle_ai_runtime_error_standalone(
+def _handle_ai_runtime_error(
     exc: AIRuntimeError,
     stop_signal: StopSignalLike,
     *,
@@ -93,7 +93,7 @@ def _handle_ai_runtime_error_standalone(
         log_message=log_message,
         threshold_override=AI_FILL_FAIL_THRESHOLD,
         terminal_stop_category="ai_unstable",
-        force_stop_when_threshold_reached=True,
+        force_stop=True,
         submission_failed=False,
     )
     if stopped:
@@ -101,7 +101,7 @@ def _handle_ai_runtime_error_standalone(
     return bool(stopped)
 
 
-def _handle_submission_verification_standalone(
+def _handle_verification_error(
     exc: SubmissionVerificationRequiredError,
     stop_signal: StopSignalLike,
     *,
@@ -121,7 +121,7 @@ def _handle_submission_verification_standalone(
     )
 
     state.mark_terminal_stop(
-        _SUBMISSION_VERIFICATION_STOP_CATEGORY,
+        _VERIFICATION_STOP_CATEGORY,
         failure_reason=FailureReason.SUBMISSION_VERIFICATION_REQUIRED.value,
         message=message,
     )
@@ -129,7 +129,7 @@ def _handle_submission_verification_standalone(
     return True
 
 
-def _handle_survey_provider_unavailable_standalone(
+def _handle_provider_unavailable(
     exc: SurveyProviderUnavailableAtRuntimeError,
     stop_signal: StopSignalLike,
     *,
@@ -149,7 +149,7 @@ def _handle_survey_provider_unavailable_standalone(
     )
 
     state.mark_terminal_stop(
-        _SURVEY_PROVIDER_UNAVAILABLE_STOP_CATEGORY,
+        _PROVIDER_UNAVAILABLE_STOP_CATEGORY,
         failure_reason=FailureReason.SURVEY_PROVIDER_UNAVAILABLE.value,
         message=message,
     )
@@ -189,7 +189,7 @@ class _AsyncRoundResources:
             if await self.should_stop_loop():
                 return False
 
-            reverse_fill_sample = self.state.acquire_reverse_fill_sample(self.slot_label)
+            reverse_fill_sample = self.state.acquire_sample(self.slot_label)
 
             if reverse_fill_sample.status == "waiting":
                 self.update_status("等待反填样本")
@@ -294,7 +294,7 @@ class AsyncSlotRunner:
             return True
         with self.state.lock:
             target_reached = bool(
-                self.config.target_num > 0 and self.state.cur_num >= self.config.target_num
+                self.config.target_num > 0 and self.state.success_count >= self.config.target_num
             )
         if target_reached:
             self.stop_policy.trigger_target_reached_stop(self.stop_proxy)
@@ -378,7 +378,7 @@ class AsyncSlotRunner:
         return False
 
     async def _handle_ai_runtime_error(self, exc: AIRuntimeError) -> bool:
-        return _handle_ai_runtime_error_standalone(
+        return _handle_ai_runtime_error(
             exc,
             self.stop_proxy,
             thread_name=self.slot_label,
@@ -401,13 +401,13 @@ class AsyncSlotRunner:
                 status_text="触发验证，换IP",
                 log_message=f"当前随机 IP 触发问卷星智能验证，本轮丢弃并更换 IP：{exc}",
                 terminal_stop_category="submission_verification_threshold",
-                force_stop_when_threshold_reached=True,
+                force_stop=True,
                 submission_failed=False,
             )
             if stopped:
                 self.run_context.stop_event.set()
             return bool(stopped)
-        return _handle_submission_verification_standalone(
+        return _handle_verification_error(
             exc,
             self.stop_proxy,
             thread_name=self.slot_label,
@@ -417,7 +417,7 @@ class AsyncSlotRunner:
     async def _handle_survey_provider_unavailable_error(
         self, exc: SurveyProviderUnavailableAtRuntimeError
     ) -> bool:
-        return _handle_survey_provider_unavailable_standalone(
+        return _handle_provider_unavailable(
             exc,
             self.stop_proxy,
             thread_name=self.slot_label,
@@ -456,7 +456,7 @@ class AsyncSlotRunner:
             status_text="纯 HTTP 不支持",
             log_message=message,
             terminal_stop_category="http_runtime_only",
-            force_stop_when_threshold_reached=True,
+            force_stop=True,
             submission_failed=False,
         )
         self.state.mark_terminal_stop(

@@ -4,8 +4,8 @@ from survey_submitter.core.questions.meta_helpers import (
     find_all_zero_attached_selects,
     find_all_zero_matrix_rows,
     infer_question_entry_type,
-    normalize_attached_option_selects,
-    normalize_fillable_option_indices,
+    normalize_attached_selects,
+    normalize_fillable_indices,
 )
 from survey_submitter.providers.contracts import (
     LOGIC_PARSE_STATUS_COMPLETE,
@@ -29,14 +29,14 @@ class QuestionMetaHelperTests:
         meta = ensure_survey_question_meta({"num": 3, "title": "地区", "type_code": "2"})
         assert infer_question_entry_type(meta) == "location"
 
-    def test_normalize_fillable_option_indices_deduplicates_and_clamps(self) -> None:
-        result = normalize_fillable_option_indices([0, 2, 2, -1, 5], 3)
+    def test_normalize_fillable_indices_deduplicates_and_clamps(self) -> None:
+        result = normalize_fillable_indices([0, 2, 2, -1, 5], 3)
         assert result == [0, 2]
 
-    def test_normalize_attached_option_selects_reuses_existing_positive_weights(self) -> None:
+    def test_normalize_attached_selects_reuses_existing_positive_weights(self) -> None:
         parsed = [{"option_index": 0, "option_text": "其他", "select_options": ["A", "B"]}]
         existing = [{"option_index": 0, "weights": [20, 80]}]
-        result = normalize_attached_option_selects(parsed, existing)
+        result = normalize_attached_selects(parsed, existing)
         assert result[0]["weights"] == [20.0, 80.0]
 
     def test_count_positive_weights_and_zero_detectors(self) -> None:

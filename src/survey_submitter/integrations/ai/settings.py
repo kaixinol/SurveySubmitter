@@ -120,11 +120,11 @@ def _load_ai_settings_from_store() -> AISettings:
 
 def _persist_ai_settings(settings: AISettings) -> None:
     store = app_settings()
-    store.setValue(f"{_AI_SETTINGS_KEY_PREFIX}api_key", settings.api_key)
-    store.setValue(f"{_AI_SETTINGS_KEY_PREFIX}base_url", settings.base_url)
-    store.setValue(f"{_AI_SETTINGS_KEY_PREFIX}api_protocol", settings.api_protocol)
-    store.setValue(f"{_AI_SETTINGS_KEY_PREFIX}model", settings.model)
-    store.setValue(f"{_AI_SETTINGS_KEY_PREFIX}system_prompt", settings.system_prompt)
+    store.set_value(f"{_AI_SETTINGS_KEY_PREFIX}api_key", settings.api_key)
+    store.set_value(f"{_AI_SETTINGS_KEY_PREFIX}base_url", settings.base_url)
+    store.set_value(f"{_AI_SETTINGS_KEY_PREFIX}api_protocol", settings.api_protocol)
+    store.set_value(f"{_AI_SETTINGS_KEY_PREFIX}model", settings.model)
+    store.set_value(f"{_AI_SETTINGS_KEY_PREFIX}system_prompt", settings.system_prompt)
     store.sync()
 
 

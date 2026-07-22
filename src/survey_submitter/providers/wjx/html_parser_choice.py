@@ -18,8 +18,6 @@ from .regexes import (
     WJX_FORCE_SELECT_SENTENCE_SPLIT_RE,
 )
 
-_TEXT_INPUT_ALLOWED_TYPES = {"", "text", "search", "tel", "number"}
-
 
 def _normalize_force_select_text(value: str | None) -> str:
     text = normalize_match_text(value)
@@ -385,7 +383,7 @@ def _verify_text_indicates_location(value: str | None) -> bool:
     )
 
 
-def _soup_question_is_location(question_div) -> bool:
+def _question_div_is_location(question_div) -> bool:
     if question_div is None:
         return False
     if question_div.find(class_="get_Local"):

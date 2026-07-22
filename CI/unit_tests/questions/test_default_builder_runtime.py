@@ -101,7 +101,7 @@ class DefaultBuilderRuntimeTests:
             option_count=2,
             question_num=99,
             question_title="旧标题",
-            survey_provider="wjx",
+            provider="wjx",
             provider_question_id="provider-1",
             distribution_mode="custom",
             custom_weights=[0, 1],

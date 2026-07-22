@@ -139,7 +139,7 @@ class AsyncRuntimeEngineLargeTests:
 
     def test_start_run_stop_pause_resume_and_parse(self, monkeypatch) -> None:
         engine = _build_engine()
-        config = ExecutionConfig(num_threads=2, survey_provider="wjx")
+        config = ExecutionConfig(num_threads=2, provider="wjx")
         state = ExecutionState(config=config)
         submitted: list[object] = []
         run_future = _DoneFuture(done=False)
@@ -198,7 +198,7 @@ class AsyncRuntimeEngineLargeTests:
         self, monkeypatch
     ) -> None:
         engine = _build_engine()
-        config = ExecutionConfig(num_threads=2, target_num=5, survey_provider="wjx")
+        config = ExecutionConfig(num_threads=2, target_num=5, provider="wjx")
         state = ExecutionState(config=config)
         bus_events: list[dict[str, object]] = []
         engine._status_bus = SimpleNamespace(emit=lambda event: bus_events.append(event))  # ty:ignore[invalid-assignment]
@@ -257,7 +257,7 @@ class AsyncRuntimeEngineLargeTests:
             num_threads=2,
             target_num=5,
             random_proxy_ip=True,
-            survey_provider="wjx",
+            provider="wjx",
         )
         state = ExecutionState(config=config)
         events: list[str] = []
@@ -304,7 +304,7 @@ class AsyncRuntimeEngineLargeTests:
             num_threads=2,
             target_num=5,
             random_proxy_ip=True,
-            survey_provider="wjx",
+            provider="wjx",
         )
         state = ExecutionState(config=config)
         fetch_counts: list[int] = []
@@ -326,7 +326,7 @@ class AsyncRuntimeEngineLargeTests:
                         with state.lock:
                             if state.config.proxy_ip_pool:
                                 state.config.proxy_ip_pool.popleft()
-                                state.cur_num += 1
+                                state.success_count += 1
                         state.notify_runtime_change()
                         await asyncio.sleep(0)
                     finally:
@@ -360,7 +360,7 @@ class AsyncRuntimeEngineLargeTests:
         await engine._run(config=config, state=state)
 
         assert len(fetch_counts) >= 2
-        assert state.cur_num == 4
+        assert state.success_count == 4
 
     @pytest.mark.asyncio
     async def test_run_async_proxy_prefetch_does_not_write_after_stop(self, monkeypatch) -> None:
@@ -369,7 +369,7 @@ class AsyncRuntimeEngineLargeTests:
             num_threads=1,
             target_num=3,
             random_proxy_ip=True,
-            survey_provider="wjx",
+            provider="wjx",
         )
         state = ExecutionState(config=config)
 
@@ -406,7 +406,7 @@ class AsyncRuntimeEngineLargeTests:
             num_threads=1,
             target_num=1,
             random_proxy_ip=True,
-            survey_provider="wjx",
+            provider="wjx",
         )
         state = ExecutionState(config=config)
         fetch_counts: list[int] = []
@@ -426,7 +426,7 @@ class AsyncRuntimeEngineLargeTests:
                     with state.lock:
                         if state.config.proxy_ip_pool:
                             state.config.proxy_ip_pool.popleft()
-                            state.cur_num = 1
+                            state.success_count = 1
                     state.notify_runtime_change()
                 finally:
                     state.unregister_proxy_waiter()

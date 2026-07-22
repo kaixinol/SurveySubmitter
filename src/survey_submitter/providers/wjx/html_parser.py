@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from typing import cast
 
 from survey_submitter.core.questions.types import TypeCode, convert_wire_type_code
-from survey_submitter.core.questions.utils import _should_treat_question_as_text_like
+from survey_submitter.core.questions.utils import _is_text_like_question
 from survey_submitter.providers.contracts import (
     LOGIC_PARSE_STATUS_COMPLETE,
     LOGIC_PARSE_STATUS_NONE,
@@ -21,7 +21,7 @@ from .html_parser_choice import (
     _extract_force_select_option,
     _extract_location_verify_type,
     _extract_rating_option_texts,
-    _soup_question_is_location,
+    _question_div_is_location,
     _text_looks_meaningful,
 )
 from .html_parser_common import (
@@ -33,10 +33,10 @@ from .html_parser_common import (
     _extract_text_input_labels,
     _normalize_html_text,
     _should_mark_as_multi_text,
-    _soup_question_is_required,
-    _soup_question_looks_like_description,
-    _soup_question_looks_like_rating,
-    _soup_question_looks_like_reorder,
+    _question_div_is_required,
+    _question_div_looks_like_description,
+    _question_div_looks_like_rating,
+    _question_div_looks_like_reorder,
     extract_survey_title_from_html,
 )
 from .html_parser_matrix import _extract_slider_range, _question_div_looks_like_slider_matrix
@@ -190,18 +190,18 @@ def _question_div_has_question_ancestor(question_div, fieldset) -> bool:
 def _resolve_question_type(question_div, raw_type_code: str) -> dict[str, object]:
     """Determine the effective question type and related flags from the HTML div."""
     type_code = convert_wire_type_code(raw_type_code)
-    if type_code != TypeCode.ORDER and _soup_question_looks_like_reorder(question_div):
+    if type_code != TypeCode.ORDER and _question_div_looks_like_reorder(question_div):
         type_code = TypeCode.ORDER
-    is_description = _soup_question_looks_like_description(question_div, type_code)
-    is_required = _soup_question_is_required(question_div)
+    is_description = _question_div_looks_like_description(question_div, type_code)
+    is_required = _question_div_is_required(question_div)
     is_rating = False
     rating_max = 0
     if type_code == TypeCode.SCORE:
-        is_rating = _soup_question_looks_like_rating(question_div)
+        is_rating = _question_div_looks_like_rating(question_div)
         if is_rating:
             rating_max = _extract_rating_option_count(question_div)
             type_code = TypeCode.SCALE
-    is_location = type_code in {TypeCode.TEXT, TypeCode.LOCATION} and _soup_question_is_location(
+    is_location = type_code in {TypeCode.TEXT, TypeCode.LOCATION} and _question_div_is_location(
         question_div
     )
     if is_location:
@@ -294,7 +294,7 @@ def _extract_question_features(
     text_input_count = _count_text_inputs_in_soup(question_div)
     text_input_labels = _extract_text_input_labels(question_div) if text_input_count > 1 else []
     has_gapfill = (question_div.get("gapfill") or "") == "1"
-    is_text_like_question = _should_treat_question_as_text_like(
+    is_text_like_question = _is_text_like_question(
         type_code,
         option_count,
         text_input_count,

@@ -36,8 +36,8 @@ class RuntimePreparationTests:
         config = RuntimeConfig(
             survey=SurveySection(
                 url="https://wj.qq.com/s2/demo",
-                survey_title="测试问卷",
-                survey_provider="qq",
+                title="测试问卷",
+                provider="qq",
             ),
             execution=ExecutionSection(
                 target_num=5,
@@ -57,7 +57,7 @@ class RuntimePreparationTests:
                         probabilities=[100.0, 0.0],
                         option_count=2,
                         question_num=1,
-                        survey_provider="wjx",
+                        provider="wjx",
                         provider_question_id="q1",
                         provider_page_id="p1",
                     )
@@ -88,7 +88,7 @@ class RuntimePreparationTests:
     def test_prepare_execution_artifacts_blocks_stopped_wjx_before_runtime(self) -> None:
         config = self._build_config()
         config.survey.url = "https://v.wjx.cn/vm/demo.aspx"
-        config.survey.survey_provider = "wjx"
+        config.survey.provider = "wjx"
         config.answer_config.question_entries[0].survey_provider = "wjx"
         html = (
             "<html><body><div id='divWorkError'>此问卷处于停止状态，无法作答！</div></body></html>"
@@ -114,7 +114,7 @@ class RuntimePreparationTests:
     ) -> None:
         config = self._build_config()
         config.survey.url = "https://v.wjx.cn/vm/demo.aspx"
-        config.survey.survey_provider = "wjx"
+        config.survey.provider = "wjx"
         config.answer_config.question_entries[0].survey_provider = "wjx"
         html = """
         <html><body>
@@ -176,8 +176,8 @@ class RuntimePreparationTests:
                 questions_info=self._SAMPLE_QUESTIONS_INFO,
             )
         assert isinstance(artifacts, PreparedExecutionArtifacts)
-        assert artifacts.survey_provider == "wjx"
-        assert artifacts.execution_config_template.survey_title == "测试问卷"
+        assert artifacts.provider == "wjx"
+        assert artifacts.execution_config_template.title == "测试问卷"
         assert artifacts.execution_config_template.target_num == 5
         assert artifacts.execution_config_template.num_threads == 3
         assert artifacts.execution_config_template.question_config_index_map == {1: ("single", 0)}
@@ -188,11 +188,11 @@ class RuntimePreparationTests:
         assert artifacts.execution_config_template.answer_rules == [{"num": 1, "equals": [1]}]
         assert artifacts.execution_config_template.answer_datetime_window_ms == (0, 0)
         assert artifacts.execution_config_template.proxy_ip_pool == []
-        sync_proxy_duration.assert_called_once_with((12, 20), survey_provider="wjx")
+        sync_proxy_duration.assert_called_once_with((12, 20), provider="wjx")
 
     def test_prepare_execution_artifacts_uses_fallback_title_when_config_title_blank(self) -> None:
         config = self._build_config()
-        config.survey.survey_title = ""
+        config.survey.title = ""
         with (
             patch(
                 "survey_submitter.core.engine.execution_builder._verify_wjx_survey_is_answerable",
@@ -212,8 +212,8 @@ class RuntimePreparationTests:
                 fallback_survey_title="解析得到的标题",
                 questions_info=self._SAMPLE_QUESTIONS_INFO,
             )
-        assert artifacts.execution_config_template.survey_title == "解析得到的标题"
-        assert artifacts.survey_provider == "wjx"
+        assert artifacts.execution_config_template.title == "解析得到的标题"
+        assert artifacts.provider == "wjx"
         assert len(artifacts.questions_info) == 1
         assert artifacts.questions_info[0].title == "Q1"
 

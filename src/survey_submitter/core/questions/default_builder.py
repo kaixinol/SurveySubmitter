@@ -8,8 +8,8 @@ from typing import Any, Callable, cast
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.questions.meta_helpers import (
     infer_question_entry_type,
-    normalize_attached_option_selects,
-    normalize_fillable_option_indices,
+    normalize_attached_selects,
+    normalize_fillable_indices,
 )
 from survey_submitter.core.questions.schema import (
     ChoiceQuestionEntry,
@@ -296,7 +296,7 @@ def _extract_question_attrs(
     )
 
 
-def _find_matching_existing_config(
+def _find_matching_config(
     attrs: _QuestionAttrs,
     existing_by_provider: dict[tuple[str, str], QuestionEntry],
     existing_by_num: dict[int, QuestionEntry],
@@ -502,7 +502,7 @@ def _assemble_question_entry(
     option_count = config.option_count
 
     fillable_option_indices = (
-        normalize_fillable_option_indices(
+        normalize_fillable_indices(
             q.fillable_options if isinstance(q, ChoiceQuestionMeta) else None,
             option_count,
             config.fillable_indices,
@@ -541,7 +541,7 @@ def _assemble_question_entry(
         kwargs["option_fill_texts"] = option_fill_texts
         kwargs["fillable_option_indices"] = fillable_option_indices
         kwargs["attached_option_selects"] = (
-            normalize_attached_option_selects(
+            normalize_attached_selects(
                 attrs.attached_option_selects,
                 config.attached_selects
                 if attrs.q_type in (QuestionType.SINGLE, QuestionType.MULTIPLE)
@@ -592,7 +592,7 @@ def build_default_question_entries(
 
         attrs = _extract_question_attrs(q, detected_provider)
 
-        existing_config = _find_matching_existing_config(
+        existing_config = _find_matching_config(
             attrs,
             existing_by_provider,
             existing_by_num,

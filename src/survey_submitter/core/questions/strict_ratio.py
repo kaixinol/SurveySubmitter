@@ -69,7 +69,7 @@ def stochastic_round(value: float) -> int:
     return lower + 1 if random.random() < fraction else lower
 
 
-def weighted_sample_without_replacement(
+def weighted_sample_no_replacement(
     indices: Sequence[int],
     weights: Sequence[float],
     count: int,

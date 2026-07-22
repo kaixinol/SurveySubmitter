@@ -19,7 +19,7 @@ class RuntimeErrorHandlerTests:
 
         stopped = False
         for _ in range(async_runtime_loop.AI_FILL_FAIL_THRESHOLD - 1):
-            stopped = async_runtime_loop._handle_ai_runtime_error_standalone(
+            stopped = async_runtime_loop._handle_ai_runtime_error(
                 AIRuntimeError("AI 调用失败：临时故障"),
                 stop_signal,
                 thread_name="Worker-1",
@@ -29,18 +29,18 @@ class RuntimeErrorHandlerTests:
 
         assert not stopped
         assert not stop_signal.is_set()
-        assert state.cur_fail == async_runtime_loop.AI_FILL_FAIL_THRESHOLD - 1
+        assert state.consecutive_fail_count == async_runtime_loop.AI_FILL_FAIL_THRESHOLD - 1
         assert state.get_terminal_stop_snapshot()[0] == ""
 
     def test_ai_runtime_error_stops_on_fifth_failure(self) -> None:
         config = ExecutionConfig(fail_threshold=5, stop_on_fail=True)
         state = ExecutionState(
-            config=config, cur_fail=async_runtime_loop.AI_FILL_FAIL_THRESHOLD - 1
+            config=config, consecutive_fail_count=async_runtime_loop.AI_FILL_FAIL_THRESHOLD - 1
         )
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
 
-        stopped = async_runtime_loop._handle_ai_runtime_error_standalone(
+        stopped = async_runtime_loop._handle_ai_runtime_error(
             AIRuntimeError("AI 调用失败：临时故障"),
             stop_signal,
             thread_name="Worker-1",
@@ -58,7 +58,7 @@ class RuntimeErrorHandlerTests:
         state = ExecutionState(config=config)
         stop_signal = threading.Event()
 
-        stopped = async_runtime_loop._handle_submission_verification_standalone(
+        stopped = async_runtime_loop._handle_verification_error(
             SubmissionVerificationRequiredError(
                 "问卷星触发智能验证，当前链路已停止。请启用随机 IP 后再提交。"
             ),

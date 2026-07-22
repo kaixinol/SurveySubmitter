@@ -84,7 +84,7 @@ class WjxReverseFillTests:
         ]
         spec = build_reverse_fill_spec(
             source_path=workbook_path,
-            survey_provider="wjx",
+            provider="wjx",
             questions_info=questions_info,
             question_entries=[],
             selected_format=REVERSE_FILL_FORMAT_WJX_SEQUENCE,
@@ -106,7 +106,7 @@ class WjxReverseFillTests:
         ]
         spec = build_reverse_fill_spec(
             source_path=workbook_path,
-            survey_provider="wjx",
+            provider="wjx",
             questions_info=questions_info,
             question_entries=[],
             selected_format=REVERSE_FILL_FORMAT_WJX_TEXT,
@@ -125,7 +125,7 @@ class WjxReverseFillTests:
         )
         spec = build_reverse_fill_spec(
             source_path=workbook_path,
-            survey_provider="wjx",
+            provider="wjx",
             questions_info=[
                 {"num": 1, "title": "单选题", "type_code": "3", "option_texts": ["选项1", "选项2"]}
             ],
@@ -141,7 +141,7 @@ class WjxReverseFillTests:
         workbook_path = self._track(_write_workbook([["序号", "1、单选题"], [1, 1]]))
         spec = build_reverse_fill_spec(
             source_path=workbook_path,
-            survey_provider="wjx",
+            provider="wjx",
             questions_info=[
                 {"num": 1, "title": "单选题", "type_code": "3", "option_texts": ["选项1", "选项2"]}
             ],
@@ -159,7 +159,7 @@ class WjxReverseFillTests:
         )
         spec = build_reverse_fill_spec(
             source_path=workbook_path,
-            survey_provider="wjx",
+            provider="wjx",
             questions_info=[{"num": 1, "title": "姓名", "type_code": "1"}],
             question_entries=[
                 make_question_entry(
@@ -184,7 +184,7 @@ class WjxReverseFillTests:
         )
         spec = build_reverse_fill_spec(
             source_path=workbook_path,
-            survey_provider="wjx",
+            provider="wjx",
             questions_info=[{"num": 1, "title": "姓名", "type_code": "1"}],
             question_entries=[
                 make_question_entry(
@@ -207,7 +207,7 @@ class WjxReverseFillTests:
         workbook_path = self._track(_write_workbook([["序号", "1、排序题"], [1, "1→2→3"]]))
         spec = build_reverse_fill_spec(
             source_path=workbook_path,
-            survey_provider="wjx",
+            provider="wjx",
             questions_info=[
                 {"num": 1, "title": "排序题", "type_code": "11", "option_texts": ["A", "B", "C"]}
             ],
@@ -225,7 +225,7 @@ class WjxReverseFillTests:
     def test_build_enabled_reverse_fill_spec_raises_human_readable_blocking_message(self) -> None:
         workbook_path = self._track(_write_workbook([["序号", "1、单选题"], [1, "其他〖无〗"]]))
         config = RuntimeConfig(
-            survey=SurveySection(survey_provider="wjx"),
+            survey=SurveySection(provider="wjx"),
             execution=ExecutionSection(
                 reverse_fill=ReverseFillSection(
                     enabled=True,
@@ -255,7 +255,7 @@ class WjxReverseFillTests:
         workbook_path = self._track(_write_workbook([["序号", "1、所在地区"], [1, "上海"]]))
         spec = build_enabled_reverse_fill_spec(
             RuntimeConfig(
-                survey=SurveySection(survey_provider="wjx"),
+                survey=SurveySection(provider="wjx"),
                 execution=ExecutionSection(
                     reverse_fill=ReverseFillSection(
                         enabled=True,
@@ -290,7 +290,7 @@ class WjxReverseFillTests:
         )
         spec = build_enabled_reverse_fill_spec(
             RuntimeConfig(
-                survey=SurveySection(survey_provider="wjx"),
+                survey=SurveySection(provider="wjx"),
                 execution=ExecutionSection(
                     target_num=2,
                     reverse_fill=ReverseFillSection(
@@ -314,7 +314,7 @@ class WjxReverseFillTests:
         )
         spec = build_enabled_reverse_fill_spec(
             RuntimeConfig(
-                survey=SurveySection(survey_provider="wjx"),
+                survey=SurveySection(provider="wjx"),
                 execution=ExecutionSection(
                     target_num=2,
                     reverse_fill=ReverseFillSection(

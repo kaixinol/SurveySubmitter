@@ -13,7 +13,7 @@ def _is_frozen() -> bool:
     return bool(getattr(sys, "frozen", False))
 
 
-def _get_meipass() -> str | None:
+def _get_bundle_extraction_dir() -> str | None:
     """Get the PyInstaller temporary extraction directory path."""
     return getattr(sys, "_MEIPASS", None)
 
@@ -31,7 +31,7 @@ def get_runtime_directory() -> str:
 def get_bundle_resource_root() -> str:
 
     if _is_frozen():
-        meipass = _get_meipass()
+        meipass = _get_bundle_extraction_dir()
         if meipass:
             return str(Path(meipass))
         return str(Path(sys.executable).parent)

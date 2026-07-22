@@ -18,11 +18,11 @@ from survey_submitter.providers.contracts import SurveyQuestionMeta
 
 class ExecutionConfig(BaseConfigModel):
     url: str = ""
-    survey_title: str = ""
-    survey_provider: str = "wjx"
+    title: str = ""
+    provider: str = "wjx"
 
     single_prob: list[list[float] | int | float | None] = []
-    droplist_prob: list[list[float] | int | float | None] = []
+    dropdown_prob: list[list[float] | int | float | None] = []
     multiple_prob: list[list[float]] = []
     matrix_prob: list[list[float] | int | float | None] = []
     scale_prob: list[list[float] | int | float | None] = []
@@ -38,13 +38,13 @@ class ExecutionConfig(BaseConfigModel):
     multi_text_blank_int_ranges: list[list[list[int]]] = []
     single_option_fill_texts: list[list[str | None] | None] = []
     single_attached_option_selects: list[list[dict[str, Any]]] = []
-    droplist_option_fill_texts: list[list[str | None] | None] = []
+    dropdown_option_fill_texts: list[list[str | None] | None] = []
     multiple_option_fill_texts: list[list[str | None] | None] = []
     answer_rules: list[dict[str, Any]] = []
     reverse_fill_spec: ReverseFillSpec | None = None
 
     question_config_index_map: dict[int, tuple[str, int]] = {}
-    provider_question_config_index_map: dict[str, tuple[str, int]] = {}
+    provider_question_idx_map: dict[str, tuple[str, int]] = {}
     question_dimension_map: dict[int, str | None] = {}
     question_strict_ratio_map: dict[int, bool] = {}
     questions_metadata: dict[int, SurveyQuestionMeta] = {}
@@ -79,22 +79,22 @@ class ExecutionState(
 ):
     config: ExecutionConfig = field(default_factory=ExecutionConfig)
 
-    cur_num: int = 0
-    cur_fail: int = 0
+    success_count: int = 0
+    consecutive_fail_count: int = 0
     proxy_unavailable_fail_count: int = 0
     terminal_stop_category: str = ""
     terminal_failure_reason: str = ""
     terminal_stop_message: str = ""
     thread_progress: dict[str, ThreadProgressState] = field(default_factory=dict)
     distribution_runtime_stats: dict[str, dict[str, Any]] = field(default_factory=dict)
-    distribution_pending_by_thread: dict[str, list[tuple[str, int, int]]] = field(
+    pending_by_thread: dict[str, list[tuple[str, int, int]]] = field(
         default_factory=dict
     )
 
     proxy_waiting_threads: int = 0
     proxy_in_use_by_thread: dict[str, ProxyLease] = field(default_factory=dict)
     successful_proxy_addresses: set[str] = field(default_factory=set)
-    proxy_cooldown_until_by_address: dict[str, float] = field(default_factory=dict)
+    proxy_cooldowns_by_address: dict[str, float] = field(default_factory=dict)
     reverse_fill_runtime: ReverseFillRuntimeState | None = None
 
     stop_event: threading.Event = field(default_factory=threading.Event)

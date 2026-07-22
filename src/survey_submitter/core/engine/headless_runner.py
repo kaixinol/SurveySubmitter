@@ -68,8 +68,8 @@ class HeadlessRunner:
 
         definition = await self._parse_survey(config.survey.url)
 
-        config.survey.survey_title = config.survey.survey_title or definition.title
-        config.survey.survey_provider = definition.provider
+        config.survey.title = config.survey.title or definition.title
+        config.survey.provider = definition.provider
         config.answer_config.survey_questions = survey_questions_from_definition(definition.questions)
 
         if not config.answer_config.question_entries:
@@ -108,8 +108,8 @@ class HeadlessRunner:
 
             while not future.done():
                 await asyncio.sleep(5)
-                success = state.cur_num
-                fail = state.cur_fail
+                success = state.success_count
+                fail = state.consecutive_fail_count
                 target = exec_config.target_num
                 logger.info(f"进度: {success}/{target} 成功, {fail} 失败")
 
@@ -123,7 +123,7 @@ class HeadlessRunner:
                     logger.error(f"运行出错: {exc}")
                 else:
                     logger.info(
-                        f"运行完成: {state.cur_num}/{exec_config.target_num} 成功, {state.cur_fail} 失败"
+                        f"运行完成: {state.success_count}/{exec_config.target_num} 成功, {state.consecutive_fail_count} 失败"
                     )
         finally:
             self._engine.shutdown()

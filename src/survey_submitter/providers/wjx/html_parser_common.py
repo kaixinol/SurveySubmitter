@@ -15,7 +15,7 @@ from survey_submitter.providers.match_utils import normalize_match_text
 from .regexes import WJX_MODLEN_CLASS_RE, WJX_QUESTION_PREFIX_RE, WJX_TITLE_SUFFIX_RE
 
 _TEXT_INPUT_ALLOWED_TYPES = {"text", "tel", "email", "number", "search", "url", "password"}
-_KNOWN_NON_TEXT_QUESTION_TYPES = {
+_NON_TEXT_TYPES = {
     TypeCode.SINGLE,
     TypeCode.MULTIPLE,
     TypeCode.SCORE,
@@ -103,7 +103,7 @@ def _input_looks_like_location(input_element) -> bool:
     return "opencitybox" in onclick_value
 
 
-def _soup_question_is_required(question_div) -> bool:
+def _question_div_is_required(question_div) -> bool:
     if question_div is None:
         return False
     if (question_div.get("req") or "") in {"1", "true", "True"}:
@@ -374,7 +374,7 @@ def _extract_text_input_labels(question_div) -> list[str]:
     return labels
 
 
-def _soup_question_looks_like_description(question_div, type_code: str) -> bool:
+def _question_div_looks_like_description(question_div, type_code: str) -> bool:
 
     if question_div is None:
         return False
@@ -383,7 +383,7 @@ def _soup_question_looks_like_description(question_div, type_code: str) -> bool:
     is_unreachable_placeholder = (
         relation == "-1"
         and "display:none" in style_text.replace(" ", "")
-        and not _soup_question_is_required(question_div)
+        and not _question_div_is_required(question_div)
     )
     if is_unreachable_placeholder:
         return True
@@ -408,7 +408,7 @@ def _soup_question_looks_like_description(question_div, type_code: str) -> bool:
     return True
 
 
-def _soup_question_looks_like_reorder(question_div) -> bool:
+def _question_div_looks_like_reorder(question_div) -> bool:
 
     if question_div is None:
         return False
@@ -423,7 +423,7 @@ def _soup_question_looks_like_reorder(question_div) -> bool:
     return has_sort_signature
 
 
-def _soup_question_looks_like_numeric_scale(question_div) -> bool:
+def _question_div_looks_like_numeric_scale(question_div) -> bool:
 
     if question_div is None:
         return False
@@ -446,7 +446,7 @@ def _soup_question_looks_like_numeric_scale(question_div) -> bool:
             texts.append(text)
     if not texts:
         return False
-    numeric_count = sum(1 for t in texts if re.fullmatch(r"\d{1,2}", t))
+    numeric_count = sum(1 for text in texts if re.fullmatch(r"\d{1,2}", text))
     has_scale_title = bool(
         question_div.select_one(
             ".scaleTitle, .scaleTitle_frist, .scaleTitle_last, .scaleTitleFirst, .scaleTitleLast"
@@ -458,12 +458,12 @@ def _soup_question_looks_like_numeric_scale(question_div) -> bool:
     )
 
 
-def _soup_question_looks_like_rating(question_div) -> bool:
+def _question_div_looks_like_rating(question_div) -> bool:
 
     if question_div is None:
         return False
 
-    if _soup_question_looks_like_numeric_scale(question_div):
+    if _question_div_looks_like_numeric_scale(question_div):
         return False
     has_rate_icon = bool(question_div.select_one("a.rate-off, a.rate-on, .rate-off, .rate-on"))
     has_tag_wrap = bool(question_div.find(class_="evaluateTagWrap"))
@@ -518,7 +518,7 @@ def _should_mark_as_multi_text(
         return False
     if normalized in {TypeCode.TEXT, TypeCode.LOCATION, TypeCode.MATRIX}:
         return True
-    if normalized in _KNOWN_NON_TEXT_QUESTION_TYPES:
+    if normalized in _NON_TEXT_TYPES:
         return False
     if (option_count or 0) == 0:
         return True

@@ -15,7 +15,7 @@ class SessionPolicyTests:
 
     def test_resolve_proxy_request_num_caps_by_waiters_remaining_and_worker_count(self) -> None:
         ctx = ExecutionState(config=ExecutionConfig(target_num=200, num_threads=32))
-        ctx.cur_num = 10
+        ctx.success_count = 10
         ctx.proxy_waiting_threads = 120
         ctx.proxy_in_use_by_thread = {
             "Worker-1": ProxyLease(address="http://1.1.1.1:8000"),
@@ -27,7 +27,7 @@ class SessionPolicyTests:
 
     def test_resolve_proxy_request_num_follows_waiting_slots_without_prefill_burst(self) -> None:
         ctx = ExecutionState(config=ExecutionConfig(target_num=64, num_threads=32))
-        ctx.cur_num = 0
+        ctx.success_count = 0
         ctx.proxy_waiting_threads = 1
         assert session_policy._resolve_proxy_request_num_locked(ctx) == 1
 
@@ -59,7 +59,7 @@ class SessionPolicyTests:
         ctx.config.proxy_ip_pool = [ProxyLease(address="http://1.1.1.9:8000")]
         assert session_policy.resolve_proxy_prefetch_request_count(ctx) == 1
 
-        ctx.cur_num = 50
+        ctx.success_count = 50
         assert session_policy.resolve_proxy_prefetch_request_count(ctx) == 0
 
     def test_purge_unusable_proxy_pool_removes_invalid_duplicate_unpoolable_and_expiring_items(
@@ -178,7 +178,7 @@ class SessionPolicyTests:
 
     def test_select_proxy_for_session_fetches_one_and_pools_extra_leases(self) -> None:
         ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip=True, target_num=3))
-        ctx.cur_num = 0
+        ctx.success_count = 0
         ctx.proxy_waiting_threads = 2
         fetched = [
             ProxyLease(address="http://1.1.1.1:8000", source="api"),
@@ -343,7 +343,7 @@ class SessionPolicyTests:
         ctx = ExecutionState(config=ExecutionConfig())
         lease = ProxyLease(address="http://1.1.1.1:8000")
         ctx.config.proxy_ip_pool = [lease]
-        ctx.proxy_cooldown_until_by_address[lease.address] = time.time() - 1.0
+        ctx.proxy_cooldowns_by_address[lease.address] = time.time() - 1.0
         with (
             patch.object(submit_pool, "get_proxy_required_ttl_seconds", return_value=0),
             patch.object(submit_pool, "proxy_lease_has_sufficient_ttl", return_value=True),
@@ -373,7 +373,7 @@ class SessionPolicyTests:
 
     def test_merge_prefetched_proxy_leases_discards_proxy_below_http_ttl_floor(self) -> None:
         ctx = ExecutionState(
-            config=ExecutionConfig(random_proxy_ip=True, survey_provider="wjx")
+            config=ExecutionConfig(random_proxy_ip=True, provider="wjx")
         )
         fetched = [
             ProxyLease(address="http://1.1.1.1:8000", expire_ts=time.time() + 10),

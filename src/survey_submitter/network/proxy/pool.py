@@ -20,7 +20,7 @@ from survey_submitter.providers.common import (
     SURVEY_PROVIDER_WJX,
 )
 
-HTTP_PROXY_MIN_REMAINING_TTL_SECONDS = 50
+MIN_PROXY_TTL_SECONDS = 50
 
 
 def _normalize_proxy_address(proxy_address: str | None) -> str | None:
@@ -67,7 +67,7 @@ def _mask_proxy_for_log(proxy_address: str | None) -> str:
     return raw
 
 
-def _parse_expire_at_to_ts(expire_at: str | None) -> float:
+def _parse_expire_at_timestamp(expire_at: str | None) -> float:
     text = str(expire_at or "").strip()
     if not text:
         return 0.0
@@ -95,7 +95,7 @@ def _build_proxy_lease(
     return ProxyLease(
         address=normalized,
         expire_at=expire_text,
-        expire_ts=_parse_expire_at_to_ts(expire_text),
+        expire_ts=_parse_expire_at_timestamp(expire_text),
         poolable=bool(poolable),
         source=str(source or "").strip(),
     )
@@ -133,7 +133,7 @@ def _coerce_proxy_lease(item: Any, *, source: str = "") -> ProxyLease | None:
 def get_proxy_required_ttl_seconds(
     answer_duration_range_seconds: tuple[int, int] | None,
     *,
-    survey_provider: str | None = None,
+    provider: str | None = None,
 ) -> int:
     max_seconds = 0
     if isinstance(answer_duration_range_seconds, (list, tuple)):
@@ -151,13 +151,13 @@ def get_proxy_required_ttl_seconds(
                     max_seconds = max(0, int(float(first)))
                 except (ValueError, TypeError, OverflowError):
                     max_seconds = 0
-    normalized_provider = str(survey_provider or "").strip().lower()
+    normalized_provider = str(provider or "").strip().lower()
     if normalized_provider == SURVEY_PROVIDER_WJX:
-        return HTTP_PROXY_MIN_REMAINING_TTL_SECONDS
+        return MIN_PROXY_TTL_SECONDS
     if normalized_provider:
         minute = get_proxy_minute_by_answer_seconds(
             max_seconds,
-            survey_provider=normalized_provider,
+            provider=normalized_provider,
         )
         if minute > 0:
             return int(minute) * 60

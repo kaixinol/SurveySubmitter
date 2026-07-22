@@ -53,7 +53,7 @@ def has_configured_answer_duration(answer_duration_range_seconds: tuple[int, int
 def sample_answer_duration_seconds(
     answer_duration_range_seconds: tuple[int, int] = (0, 0),
     *,
-    survey_provider: str | None = None,
+    provider: str | None = None,
     default_unconfigured_seconds: int = 0,
 ) -> float:
     try:
@@ -103,12 +103,12 @@ async def simulate_answer_duration_delay(
     stop_signal: StopSignalLike | None = None,
     answer_duration_range_seconds: tuple[int, int] = (0, 0),
     *,
-    survey_provider: str | None = None,
+    provider: str | None = None,
 ) -> bool:
 
     wait_seconds = sample_answer_duration_seconds(
         answer_duration_range_seconds,
-        survey_provider=survey_provider,
+        provider=provider,
     )
     return await wait_answer_duration_seconds(stop_signal, wait_seconds)
 
@@ -131,13 +131,13 @@ async def is_survey_completion_page(driver: _DriverLike, provider: str | None = 
 
     detected = False
     try:
-        divdsc = None
+        completion_div = None
         try:
-            divdsc = await driver.find_element("id", "divdsc")
+            completion_div = await driver.find_element("id", "completion_div")
         except Exception:
-            divdsc = None
-        if divdsc and await divdsc.is_displayed():
-            text = await divdsc.text() or ""
+            completion_div = None
+        if completion_div and await completion_div.is_displayed():
+            text = await completion_div.text() or ""
             if any(marker in text for marker in _COMPLETION_MARKERS):
                 detected = True
     except Exception as exc:

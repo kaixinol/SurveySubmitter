@@ -15,24 +15,24 @@ if TYPE_CHECKING:
     class _ReverseFillRuntimeHost(Protocol):
         lock: threading.Lock
         config: Any
-        cur_num: int
+        success_count: int
         reverse_fill_runtime: ReverseFillRuntimeState | None
 
-        def _reverse_fill_thread_key(self, thread_name: str | None = None) -> str: ...
-        def _reverse_fill_possible_total_locked(self) -> int: ...
-        def acquire_reverse_fill_sample(
+        def _thread_key(self, thread_name: str | None = None) -> str: ...
+        def _possible_total_locked(self) -> int: ...
+        def acquire_sample(
             self, thread_name: str | None = None
         ) -> ReverseFillAcquireResult: ...
-        def commit_reverse_fill_sample(
+        def commit_sample(
             self, thread_name: str | None = None
         ) -> int | None: ...
-        def release_reverse_fill_sample(
+        def release_sample(
             self, thread_name: str | None = None, *, requeue: bool = False
         ) -> int | None: ...
-        def mark_reverse_fill_submission_failed(
+        def mark_submission_failed(
             self, thread_name: str | None = None, *, max_retries: int = 1
         ) -> tuple[int | None, bool]: ...
-        def is_reverse_fill_target_unreachable(self) -> bool: ...
+        def is_target_unreachable(self) -> bool: ...
 
         def notify_runtime_change(self) -> None: ...
         def wait_for_runtime_change(
@@ -44,32 +44,32 @@ if TYPE_CHECKING:
 
 
 class ReverseFillRuntimeMixin:
-    def initialize_reverse_fill_runtime(self: "_ReverseFillRuntimeHost") -> None:
+    def initialize_runtime(self: "_ReverseFillRuntimeHost") -> None:
         with self.lock:
             self.reverse_fill_runtime = create_reverse_fill_runtime_state(
                 self.config.reverse_fill_spec
             )
         self.notify_runtime_change()
 
-    def _reverse_fill_thread_key(self, thread_name: str | None = None) -> str:
+    def _thread_key(self, thread_name: str | None = None) -> str:
         key = str(thread_name or threading.current_thread().name or "Worker-?").strip()
         return key or "Worker-?"
 
-    def _reverse_fill_possible_total_locked(self: "_ReverseFillRuntimeHost") -> int:
+    def _possible_total_locked(self: "_ReverseFillRuntimeHost") -> int:
         runtime = self.reverse_fill_runtime
         if runtime is None:
-            return max(0, int(self.cur_num or 0))
+            return max(0, int(self.success_count or 0))
         return (
-            max(0, int(self.cur_num or 0))
+            max(0, int(self.success_count or 0))
             + len(runtime.queued_row_numbers)
             + len(runtime.reserved_row_by_thread)
         )
 
-    def acquire_reverse_fill_sample(
+    def acquire_sample(
         self: "_ReverseFillRuntimeHost",
         thread_name: str | None = None,
     ) -> ReverseFillAcquireResult:
-        key = self._reverse_fill_thread_key(thread_name)
+        key = self._thread_key(thread_name)
         with self.lock:
             runtime = self.reverse_fill_runtime
             if runtime is None:
@@ -92,19 +92,19 @@ class ReverseFillRuntimeMixin:
                     status="acquired", sample=sample, message="reserved"
                 )
             target_num = max(0, int(self.config.target_num or 0))
-            if target_num > 0 and self._reverse_fill_possible_total_locked() < target_num:
+            if target_num > 0 and self._possible_total_locked() < target_num:
                 return ReverseFillAcquireResult(
                     status="exhausted", message="reverse_fill_target_unreachable"
                 )
             return ReverseFillAcquireResult(status="waiting", message="reverse_fill_waiting")
 
-    def release_reverse_fill_sample(
+    def release_sample(
         self: "_ReverseFillRuntimeHost",
         thread_name: str | None = None,
         *,
         requeue: bool = True,
     ) -> int | None:
-        key = self._reverse_fill_thread_key(thread_name)
+        key = self._thread_key(thread_name)
         with self.lock:
             runtime = self.reverse_fill_runtime
             if runtime is None:
@@ -122,11 +122,11 @@ class ReverseFillRuntimeMixin:
         self.notify_runtime_change()
         return normalized_row
 
-    def commit_reverse_fill_sample(
+    def commit_sample(
         self: "_ReverseFillRuntimeHost",
         thread_name: str | None = None,
     ) -> int | None:
-        key = self._reverse_fill_thread_key(thread_name)
+        key = self._thread_key(thread_name)
         with self.lock:
             runtime = self.reverse_fill_runtime
             if runtime is None:
@@ -140,13 +140,13 @@ class ReverseFillRuntimeMixin:
         self.notify_runtime_change()
         return normalized_row
 
-    def mark_reverse_fill_submission_failed(
+    def mark_submission_failed(
         self: "_ReverseFillRuntimeHost",
         thread_name: str | None = None,
         *,
         max_retries: int = 1,
     ) -> tuple[int | None, bool]:
-        key = self._reverse_fill_thread_key(thread_name)
+        key = self._thread_key(thread_name)
         with self.lock:
             runtime = self.reverse_fill_runtime
             if runtime is None:
@@ -165,7 +165,7 @@ class ReverseFillRuntimeMixin:
         self.notify_runtime_change()
         return normalized_row, True
 
-    def wait_for_reverse_fill_sample(
+    def wait_for_sample(
         self: "_ReverseFillRuntimeHost",
         *,
         thread_name: str | None = None,
@@ -173,7 +173,7 @@ class ReverseFillRuntimeMixin:
         timeout_seconds: float = 0.5,
     ) -> ReverseFillAcquireResult:
         while True:
-            result = self.acquire_reverse_fill_sample(thread_name)
+            result = self.acquire_sample(thread_name)
             if result.status != "waiting":
                 return result
             if stop_signal is not None and stop_signal.is_set():
@@ -181,12 +181,12 @@ class ReverseFillRuntimeMixin:
             if self.wait_for_runtime_change(stop_signal=stop_signal, timeout=timeout_seconds):
                 return ReverseFillAcquireResult(status="waiting", message="stopped")
 
-    def get_reverse_fill_answer(
+    def get_answer(
         self: "_ReverseFillRuntimeHost",
         question_num: int,
         thread_name: str | None = None,
     ) -> ReverseFillAnswer | None:
-        key = self._reverse_fill_thread_key(thread_name)
+        key = self._thread_key(thread_name)
         normalized_question_num = int(question_num)
         with self.lock:
             runtime = self.reverse_fill_runtime
@@ -200,7 +200,7 @@ class ReverseFillRuntimeMixin:
                 return None
             return (sample.answers or {}).get(normalized_question_num)
 
-    def is_reverse_fill_target_unreachable(self: "_ReverseFillRuntimeHost") -> bool:
+    def is_target_unreachable(self: "_ReverseFillRuntimeHost") -> bool:
         with self.lock:
             runtime = self.reverse_fill_runtime
             if runtime is None:
@@ -208,10 +208,10 @@ class ReverseFillRuntimeMixin:
             target_num = max(0, int(self.config.target_num or 0))
             if target_num <= 0:
                 return False
-            return self._reverse_fill_possible_total_locked() < target_num
+            return self._possible_total_locked() < target_num
 
     def complete_round(self: "_ReverseFillRuntimeHost", thread_name: str | None = None) -> int | None:
-        return self.commit_reverse_fill_sample(thread_name)
+        return self.commit_sample(thread_name)
 
     def end_round(
         self: "_ReverseFillRuntimeHost",
@@ -221,11 +221,8 @@ class ReverseFillRuntimeMixin:
         max_retries: int = 1,
     ) -> int | None:
         if submission_failed:
-            row_number, _discarded = self.mark_reverse_fill_submission_failed(
+            row_number, _discarded = self.mark_submission_failed(
                 thread_name, max_retries=max_retries
             )
             return row_number
-        return self.release_reverse_fill_sample(thread_name, requeue=True)
-
-    def is_round_target_unreachable(self: "_ReverseFillRuntimeHost") -> bool:
-        return self.is_reverse_fill_target_unreachable()
+        return self.release_sample(thread_name, requeue=True)

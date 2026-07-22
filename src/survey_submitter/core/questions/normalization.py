@@ -96,7 +96,7 @@ def _raise_if_all_zero_attached_selects(entry: QuestionEntry, question_num: int)
 
 def _init_target_collections(target: "ExecutionConfig") -> None:
     target.single_prob = []
-    target.droplist_prob = []
+    target.dropdown_prob = []
     target.multiple_prob = []
     target.matrix_prob = []
     target.scale_prob = []
@@ -112,10 +112,10 @@ def _init_target_collections(target: "ExecutionConfig") -> None:
     target.multi_text_blank_int_ranges = []
     target.single_option_fill_texts = []
     target.single_attached_option_selects = []
-    target.droplist_option_fill_texts = []
+    target.dropdown_option_fill_texts = []
     target.multiple_option_fill_texts = []
     target.question_config_index_map = {}
-    target.provider_question_config_index_map = {}
+    target.provider_question_idx_map = {}
     target.question_dimension_map = {}
     target.question_strict_ratio_map = {}
 
@@ -136,7 +136,7 @@ def _remember_provider_mapping(
         entry.provider_question_id,
     )
     if provider_key:
-        target.provider_question_config_index_map[provider_key] = mapped_value
+        target.provider_question_idx_map[provider_key] = mapped_value
 
 
 # ---------------------------------------------------------------------------
@@ -358,8 +358,8 @@ def _handle_dropdown(
     )
     reliability_candidates.append((question_num, strict_ratio, entry.question_type))
     idx += 1
-    target.droplist_prob.append(_normalize_single_like_prob_config(cast(Any, probs), entry.option_count))
-    target.droplist_option_fill_texts.append(
+    target.dropdown_prob.append(_normalize_single_like_prob_config(cast(Any, probs), entry.option_count))
+    target.dropdown_option_fill_texts.append(
         _normalize_option_fill_texts(entry.option_fill_texts, entry.option_count)
     )
     return idx

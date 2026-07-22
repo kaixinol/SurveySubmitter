@@ -8,11 +8,11 @@ if TYPE_CHECKING:
     class _DistributionRuntimeHost(Protocol):
         lock: threading.Lock
         distribution_runtime_stats: dict[str, dict[str, Any]]
-        distribution_pending_by_thread: dict[str, list[tuple[str, int, int]]]
+        pending_by_thread: dict[str, list[tuple[str, int, int]]]
 
         @staticmethod
-        def _normalize_distribution_counts(raw_counts: Any, option_count: int) -> list[int]: ...
-        def release_reverse_fill_sample(
+        def _normalize_counts(raw_counts: Any, option_count: int) -> list[int]: ...
+        def release_sample(
             self, thread_name: str | None = None, *, requeue: bool = True
         ) -> int | None: ...
 
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 class DistributionRuntimeMixin:
     @staticmethod
-    def _normalize_distribution_counts(raw_counts: Any, option_count: int) -> list[int]:
+    def _normalize_counts(raw_counts: Any, option_count: int) -> list[int]:
         count = max(0, int(option_count or 0))
         normalized = [0] * count
         if not isinstance(raw_counts, list):
@@ -47,7 +47,7 @@ class DistributionRuntimeMixin:
         with self.lock:
             bucket = self.distribution_runtime_stats.get(str(stat_key or "")) or {}
             total = max(0, int(bucket.get("total") or 0)) if isinstance(bucket, dict) else 0
-            counts = self._normalize_distribution_counts(
+            counts = self._normalize_counts(
                 bucket.get("counts") if isinstance(bucket, dict) else None,
                 option_count,
             )
@@ -60,7 +60,7 @@ class DistributionRuntimeMixin:
             str(thread_name or threading.current_thread().name or "Worker-?").strip() or "Worker-?"
         )
         with self.lock:
-            self.distribution_pending_by_thread[key] = []
+            self.pending_by_thread[key] = []
 
     def append_pending_distribution_choice(
         self: "_DistributionRuntimeHost",
@@ -80,7 +80,7 @@ class DistributionRuntimeMixin:
             return
         item = (str(stat_key or ""), normalized_option_index, normalized_option_count)
         with self.lock:
-            pending = self.distribution_pending_by_thread.setdefault(key, [])
+            pending = self.pending_by_thread.setdefault(key, [])
             pending.append(item)
 
     def commit_pending_distribution(
@@ -91,14 +91,14 @@ class DistributionRuntimeMixin:
         )
         committed = 0
         with self.lock:
-            pending = list(self.distribution_pending_by_thread.get(key) or [])
-            self.distribution_pending_by_thread[key] = []
+            pending = list(self.pending_by_thread.get(key) or [])
+            self.pending_by_thread[key] = []
             for stat_key, option_index, option_count in pending:
                 if option_count <= 0 or option_index < 0 or option_index >= option_count:
                     continue
                 bucket = self.distribution_runtime_stats.get(stat_key) or {}
                 total = max(0, int(bucket.get("total") or 0)) if isinstance(bucket, dict) else 0
-                counts = self._normalize_distribution_counts(
+                counts = self._normalize_counts(
                     bucket.get("counts") if isinstance(bucket, dict) else None,
                     option_count,
                 )

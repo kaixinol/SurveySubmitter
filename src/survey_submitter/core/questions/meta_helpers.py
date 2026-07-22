@@ -22,8 +22,8 @@ __all__ = [
     "find_all_zero_attached_selects",
     "find_all_zero_matrix_rows",
     "infer_question_entry_type",
-    "normalize_attached_option_selects",
-    "normalize_fillable_option_indices",
+    "normalize_attached_selects",
+    "normalize_fillable_indices",
 ]
 
 
@@ -116,7 +116,7 @@ def infer_question_entry_type(question: QuestionMetaLike) -> str:
             return QuestionType.SINGLE
 
 
-def normalize_attached_option_selects(
+def normalize_attached_selects(
     parsed_configs: object,
     existing_configs: object | None = None,
 ) -> list[dict[str, object]]:
@@ -179,7 +179,7 @@ def normalize_attached_option_selects(
     return normalized
 
 
-def normalize_fillable_option_indices(
+def normalize_fillable_indices(
     parsed_indices: object,
     option_count: int,
     existing_indices: object | None = None,

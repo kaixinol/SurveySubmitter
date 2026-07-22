@@ -104,13 +104,13 @@ class ExecutionStateConcurrencyTests:
         changed = state.mark_successful_proxy_address("http://1.1.1.1:8000")
         assert changed
         assert state.is_successful_proxy_address("http://1.1.1.1:8000")
-        assert state.snapshot_successful_proxy_addresses() == {"http://1.1.1.1:8000"}
+        assert state.snapshot_successful_proxies() == {"http://1.1.1.1:8000"}
 
     def test_snapshot_blocked_proxy_addresses_merges_active_and_successful_sets(self) -> None:
         state = ExecutionState()
         state.mark_proxy_in_use("Worker-1", ProxyLease(address="http://1.1.1.1:8000"))
         state.mark_successful_proxy_address("http://2.2.2.2:8000")
-        blocked = state.snapshot_blocked_proxy_addresses()
+        blocked = state.snapshot_blocked_proxies()
         assert blocked == {"http://1.1.1.1:8000", "http://2.2.2.2:8000"}
 
     def test_mark_terminal_stop_preserves_first_value_until_explicit_overwrite(self) -> None:

@@ -22,14 +22,14 @@ class AsyncHttpSubmitter:
         self.slot_label = slot_label
 
     def uses_http_runtime(self) -> bool:
-        provider = normalize_survey_provider(self.config.survey_provider)
-        if not bool(str(self.config.url or "").strip()) or provider not in HTTP_RUNTIME_PROVIDERS:
+        provider = normalize_survey_provider(self.config.provider)
+        if not str(self.config.url or "").strip() or provider not in HTTP_RUNTIME_PROVIDERS:
             return False
         questions = list((self.config.questions_metadata or {}).values())
         return not bool(get_http_logic_fallback_reason(questions))
 
     def resolve_block_reason(self) -> str:
-        provider = normalize_survey_provider(self.config.survey_provider)
+        provider = normalize_survey_provider(self.config.provider)
         if provider not in HTTP_RUNTIME_PROVIDERS:
             return ""
         url = str(self.config.url or "").strip()
@@ -56,7 +56,7 @@ class AsyncHttpSubmitter:
                 self.state,
                 stop_signal=stop_signal,
                 thread_name=self.slot_label,
-                provider=self.config.survey_provider,
+                provider=self.config.provider,
                 proxy_address=proxy_address,
                 user_agent=user_agent,
                 user_agent_profile=user_agent_profile,
