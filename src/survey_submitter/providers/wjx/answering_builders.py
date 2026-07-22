@@ -933,6 +933,7 @@ async def _build_wjx_order_action(
 
 async def _build_wjx_location_action(
     question: SurveyQuestionMeta,
+    ctx: ExecutionState,
 ) -> AnswerAction | None:
     """Build an answer action for location-type questions (省市区 or 高校).
 
@@ -947,6 +948,20 @@ async def _build_wjx_location_action(
         sample_university_name,
     )
 
+    current = int(question.num or 0)
+    
+    # Check for random_value_pool first
+    random_value_pool = ctx.config.location_random_value_pools.get(current)
+    if random_value_pool:
+        text_value = random.choice(random_value_pool)
+        return AnswerAction(
+            question_num=current,
+            kind="text",
+            text_values=(text_value,),
+            record_type="location",
+        )
+    
+    # Fall back to default behavior
     verify_type = ""
     if isinstance(question, TextQuestionMeta):
         verify_type = question.location_verify_type
@@ -956,7 +971,6 @@ async def _build_wjx_location_action(
     else:
         text_value = sample_location_text()
 
-    current = int(question.num or 0)
     return AnswerAction(
         question_num=current,
         kind="text",
@@ -1009,7 +1023,7 @@ async def build_answer_action(
             allow_ai_placeholder=allow_ai_placeholder,
         )
     if entry_type == QuestionType.LOCATION:
-        return await _build_wjx_location_action(question)
+        return await _build_wjx_location_action(question, ctx)
     if entry_type == QuestionType.MATRIX:
         return await _build_wjx_matrix_action(
             question,

@@ -10,8 +10,8 @@ from survey_submitter.core.questions.schema import (
     ChoiceQuestionAnswerConfig,
     LocationQuestionAnswerConfig,
     MultiTextQuestionAnswerConfig,
-    QuestionAnswerConfig,
     TextQuestionAnswerConfig,
+    UniversityQuestionAnswerConfig,
     _TEXT_RANDOM_ID_CARD,
     _TEXT_RANDOM_ID_CARD_TOKEN,
     _TEXT_RANDOM_INTEGER,
@@ -108,6 +108,7 @@ def _init_target_collections(target: "ExecutionConfig") -> None:
     target.text_ai_flags = []
     target.text_titles = []
     target.location_parts = {}
+    target.location_random_value_pools = {}
     target.multi_text_blank_modes = []
     target.multi_text_blank_ai_flags = []
     target.multi_text_blank_int_ranges = []
@@ -598,13 +599,21 @@ def _handle_location(
     target: "ExecutionConfig",
     survey_provider: str,
 ) -> None:
-    assert isinstance(qi.details.answer_config, LocationQuestionAnswerConfig)
+    assert isinstance(
+        qi.details.answer_config, (LocationQuestionAnswerConfig, UniversityQuestionAnswerConfig)
+    )
     mapped_value = ("location", -1)
     target.question_config_index_map[question_num] = mapped_value
     _remember_provider_mapping(target, qi, mapped_value, survey_provider)
-    target.location_parts[question_num] = [
-        str(item or "").strip() for item in list(qi.details.answer_config.location_parts or [])[:3]
-    ]
+    if isinstance(qi.details.answer_config, LocationQuestionAnswerConfig):
+        target.location_parts[question_num] = [
+            str(item or "").strip()
+            for item in list(qi.details.answer_config.location_parts or [])[:3]
+        ]
+    if qi.details.answer_config.random_value_pool:
+        target.location_random_value_pools[question_num] = list(
+            qi.details.answer_config.random_value_pool
+        )
 
 
 def _handle_text(
@@ -616,7 +625,9 @@ def _handle_text(
     survey_provider: str,
 ) -> int:
     """Returns the new text index."""
-    is_location = isinstance(qi.details.answer_config, LocationQuestionAnswerConfig)
+    is_location = isinstance(
+        qi.details.answer_config, (LocationQuestionAnswerConfig, UniversityQuestionAnswerConfig)
+    )
     if not is_location:
         mapped_value = ("text", idx_text)
         target.question_config_index_map[question_num] = mapped_value
@@ -626,10 +637,15 @@ def _handle_text(
         mapped_value = ("location", -1)
         target.question_config_index_map[question_num] = mapped_value
         _remember_provider_mapping(target, qi, mapped_value, survey_provider)
-        target.location_parts[question_num] = [
-            str(item or "").strip()
-            for item in list(qi.details.answer_config.location_parts or [])[:3]
-        ]
+        if isinstance(qi.details.answer_config, LocationQuestionAnswerConfig):
+            target.location_parts[question_num] = [
+                str(item or "").strip()
+                for item in list(qi.details.answer_config.location_parts or [])[:3]
+            ]
+        if qi.details.answer_config.random_value_pool:
+            target.location_random_value_pools[question_num] = list(
+                qi.details.answer_config.random_value_pool
+            )
 
     text_random_mode = (
         str(qi.details.answer_config.text_random_mode or _TEXT_RANDOM_NONE).strip().lower()

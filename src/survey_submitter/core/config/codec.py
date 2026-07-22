@@ -15,6 +15,7 @@ from survey_submitter.core.questions.schema import (
     QuestionAnswerConfig,
     QuestionDetail,
     TextQuestionAnswerConfig,
+    UniversityQuestionAnswerConfig,
     answer_config_type_for_question_type,
 )
 from survey_submitter.core.questions.types import QuestionType
@@ -92,6 +93,8 @@ _ANSWER_CONFIG_FIELDS = {
     "multi_text_blank_ai_flags",
     "multi_text_blank_int_ranges",
     "location_parts",
+    "random_value_pool",
+    "option_random_pools",
 }
 
 _SURVEY_SECTION_FIELDS = frozenset(SurveySection.model_fields.keys())
@@ -290,6 +293,10 @@ def serialize_question_detail(qi: QuestionInfo) -> dict[str, object]:
             ac_dict["fillable_option_indices"] = ac.fillable_option_indices
         if ac.attached_option_selects:
             ac_dict["attached_option_selects"] = list(ac.attached_option_selects)
+        if ac.random_value_pool:
+            ac_dict["random_value_pool"] = list(ac.random_value_pool)
+        if ac.option_random_pools:
+            ac_dict["option_random_pools"] = ac.option_random_pools
     elif isinstance(ac, TextQuestionAnswerConfig):
         ac_dict = {
             "ai_enabled": bool(ac.ai_enabled),
@@ -311,6 +318,13 @@ def serialize_question_detail(qi: QuestionInfo) -> dict[str, object]:
         ac_dict = {
             "ai_enabled": bool(ac.ai_enabled),
             "location_parts": list(ac.location_parts or []),
+            "random_value_pool": list(ac.random_value_pool or []),
+        }
+    elif isinstance(ac, UniversityQuestionAnswerConfig):
+        ac_dict = {
+            "ai_enabled": bool(ac.ai_enabled),
+            "is_university": True,
+            "random_value_pool": list(ac.random_value_pool or []),
         }
     else:
         ac_dict = {"ai_enabled": bool(ac.ai_enabled)}
@@ -385,8 +399,9 @@ def deserialize_question_detail(data: dict[str, object]) -> QuestionInfo:
         if isinstance(ac_location_parts, list)
         else [str(p) for p in _as_list(detail_raw.get("location_parts"))]
     )
+    is_university = _as_bool(ac_raw.get("is_university"))
     ac_cls = answer_config_type_for_question_type(
-        question_type, location_parts=location_parts or None
+        question_type, location_parts=location_parts or None, is_university=is_university
     )
 
     ac_fields = dict(ac_raw)
@@ -399,6 +414,10 @@ def deserialize_question_detail(data: dict[str, object]) -> QuestionInfo:
             ),
             attached_option_selects=cast(
                 "list[dict[str, object]]", _as_list(ac_fields.get("attached_option_selects"))
+            ),
+            random_value_pool=cast("list[str] | None", ac_fields.get("random_value_pool")),
+            option_random_pools=cast(
+                "list[list[str] | None] | None", ac_fields.get("option_random_pools")
             ),
         )
     elif ac_cls is TextQuestionAnswerConfig:
@@ -426,6 +445,12 @@ def deserialize_question_detail(data: dict[str, object]) -> QuestionInfo:
         answer_config = LocationQuestionAnswerConfig(
             ai_enabled=_as_bool(ac_fields.get("ai_enabled")),
             location_parts=cast("list[str]", _as_list(ac_fields.get("location_parts"))),
+            random_value_pool=cast("list[str] | None", ac_fields.get("random_value_pool")),
+        )
+    elif ac_cls is UniversityQuestionAnswerConfig:
+        answer_config = UniversityQuestionAnswerConfig(
+            ai_enabled=_as_bool(ac_fields.get("ai_enabled")),
+            random_value_pool=cast("list[str] | None", ac_fields.get("random_value_pool")),
         )
     else:
         answer_config = QuestionAnswerConfig(ai_enabled=_as_bool(ac_fields.get("ai_enabled")))

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 from pydantic import Field
 
@@ -34,6 +33,7 @@ __all__ = [
     "TextQuestionAnswerConfig",
     "MultiTextQuestionAnswerConfig",
     "LocationQuestionAnswerConfig",
+    "UniversityQuestionAnswerConfig",
     "TextRandomConfig",
     "_TEXT_RANDOM_ID_CARD",
     "_TEXT_RANDOM_ID_CARD_TOKEN",
@@ -164,6 +164,8 @@ class ChoiceQuestionAnswerConfig(QuestionAnswerConfig):
     option_fill_texts: list[str | None] | None = None
     fillable_option_indices: list[int] | None = None
     attached_option_selects: list[dict] = Field(default_factory=list)
+    random_value_pool: list[str] | None = None
+    option_random_pools: list[list[str] | None] | None = None
 
 
 class TextQuestionAnswerConfig(QuestionAnswerConfig):
@@ -185,6 +187,13 @@ class LocationQuestionAnswerConfig(QuestionAnswerConfig):
     """Location questions."""
 
     location_parts: list[str] = Field(default_factory=list)
+    random_value_pool: list[str] | None = None
+
+
+class UniversityQuestionAnswerConfig(QuestionAnswerConfig):
+    """University questions."""
+
+    random_value_pool: list[str] | None = None
 
 
 # Mapping from question_type string to the appropriate AnswerConfig subclass.
@@ -203,14 +212,18 @@ def answer_config_type_for_question_type(
     question_type: str | QuestionType,
     *,
     location_parts: list[str] | None = None,
+    is_university: bool = False,
 ) -> type[QuestionAnswerConfig]:
     """Return the concrete QuestionAnswerConfig subclass for a question type.
 
     When *location_parts* is non-empty, returns
-    :class:`LocationQuestionAnswerConfig` regardless of the question type,
+    :class:`LocationQuestionAnswerConfig` or
+    :class:`UniversityQuestionAnswerConfig` regardless of the question type,
     because a text-typed question with location parts behaves as a location
-    question.
+    or university question.
     """
+    if is_university:
+        return UniversityQuestionAnswerConfig
     if location_parts:
         return LocationQuestionAnswerConfig
     try:
