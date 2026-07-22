@@ -426,3 +426,103 @@ class ConfigCodecTests:
         assert abs(counts["wechat"] / 10000 - 0.55) < 0.02
         assert abs(counts["mobile"] / 10000 - 0.34) < 0.02
         assert abs(counts["pc"] / 10000 - 0.11) < 0.02
+
+    def test_university_question_answer_config_serialization(self) -> None:
+        from survey_submitter.core.questions.schema import UniversityQuestionAnswerConfig
+
+        qi = _make_question_info(
+            question_type="text",
+            answer_config=UniversityQuestionAnswerConfig(
+                random_value_pool=["清华大学", "北京大学", "浙江大学"],
+            ),
+        )
+        payload = serialize_question_detail(qi)
+        ac = payload["details"]["answer_config"]
+        assert ac["random_value_pool"] == ["清华大学", "北京大学", "浙江大学"]
+
+        deserialized = deserialize_question_detail(payload)
+        assert isinstance(deserialized.details.answer_config, UniversityQuestionAnswerConfig)
+        assert deserialized.details.answer_config.random_value_pool == [
+            "清华大学",
+            "北京大学",
+            "浙江大学",
+        ]
+
+    def test_choice_random_value_pool_serialization(self) -> None:
+        from survey_submitter.core.questions.schema import ChoiceQuestionAnswerConfig
+
+        qi = _make_question_info(
+            question_type="single",
+            answer_config=ChoiceQuestionAnswerConfig(
+                random_value_pool=["选项A", "选项B", "选项C"],
+                option_random_pools=[["子选项1", "子选项2"], None, None],
+            ),
+        )
+        payload = serialize_question_detail(qi)
+        ac = payload["details"]["answer_config"]
+        assert ac["random_value_pool"] == ["选项A", "选项B", "选项C"]
+        assert ac["option_random_pools"] == [["子选项1", "子选项2"], None, None]
+
+        deserialized = deserialize_question_detail(payload)
+        assert isinstance(deserialized.details.answer_config, ChoiceQuestionAnswerConfig)
+        assert deserialized.details.answer_config.random_value_pool == [
+            "选项A",
+            "选项B",
+            "选项C",
+        ]
+        assert deserialized.details.answer_config.option_random_pools == [
+            ["子选项1", "子选项2"],
+            None,
+            None,
+        ]
+
+    def test_location_random_value_pool_serialization(self) -> None:
+        qi = _make_question_info(
+            question_type="text",
+            answer_config=LocationQuestionAnswerConfig(
+                location_parts=["新疆", "乌鲁木齐市", "新市区"],
+                random_value_pool=[
+                    "新疆-乌鲁木齐市-新市区",
+                    "北京-北京市-海淀区",
+                    "上海-上海市-浦东新区",
+                ],
+            ),
+        )
+        payload = serialize_question_detail(qi)
+        ac = payload["details"]["answer_config"]
+        assert ac["location_parts"] == ["新疆", "乌鲁木齐市", "新市区"]
+        assert ac["random_value_pool"] == [
+            "新疆-乌鲁木齐市-新市区",
+            "北京-北京市-海淀区",
+            "上海-上海市-浦东新区",
+        ]
+
+        deserialized = deserialize_question_detail(payload)
+        assert isinstance(deserialized.details.answer_config, LocationQuestionAnswerConfig)
+        assert deserialized.details.answer_config.location_parts == [
+            "新疆",
+            "乌鲁木齐市",
+            "新市区",
+        ]
+        assert deserialized.details.answer_config.random_value_pool == [
+            "新疆-乌鲁木齐市-新市区",
+            "北京-北京市-海淀区",
+            "上海-上海市-浦东新区",
+        ]
+
+    def test_answer_config_type_for_question_type_university(self) -> None:
+        from survey_submitter.core.questions.schema import (
+            answer_config_type_for_question_type,
+            UniversityQuestionAnswerConfig,
+            LocationQuestionAnswerConfig,
+        )
+
+        result = answer_config_type_for_question_type(
+            "text", location_parts=["北京"], is_university=True
+        )
+        assert result is UniversityQuestionAnswerConfig
+
+        result = answer_config_type_for_question_type(
+            "text", location_parts=["北京"], is_university=False
+        )
+        assert result is LocationQuestionAnswerConfig

@@ -33,6 +33,7 @@ class ExecutionConfig(BaseConfigModel):
     text_ai_flags: list[bool] = []
     text_titles: list[str] = []
     location_parts: dict[int, list[str]] = {}
+    location_random_value_pools: dict[int, list[str]] = {}
     multi_text_blank_modes: list[list[str]] = []
     multi_text_blank_ai_flags: list[list[bool]] = []
     multi_text_blank_int_ranges: list[list[list[int]]] = []
