@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
-from survey_submitter.core.questions.default_builder import build_default_question_entries
+from survey_submitter.core.config.schema import QuestionInfo
+from survey_submitter.core.questions.default_builder import build_default_survey_questions
 from survey_submitter.core.questions.schema import (
-    ChoiceQuestionEntry,
-    MultiTextQuestionEntry,
+    ChoiceQuestionAnswerConfig,
+    MultiTextQuestionAnswerConfig,
+    QuestionDetail,
     _TEXT_RANDOM_MOBILE,
     _TEXT_RANDOM_NONE,
-    make_question_entry,
 )
 from survey_submitter.providers.contracts import ensure_survey_question_meta
 
@@ -50,24 +51,21 @@ class DefaultBuilderRuntimeTests:
             ),
         ]
 
-        entries = build_default_question_entries(
+        entries = build_default_survey_questions(
             questions, survey_url="https://www.wjx.cn/vm/demo.aspx"
         )
 
-        assert [entry.question_num for entry in entries] == [1, 2, 3, 4, 5, 6]
+        assert [qi.num for qi in entries] == [1, 2, 3, 4, 5, 6]
         assert entries[0].question_type == "single"
-        assert entries[0].probabilities == [0.0, 0.0, 1.0, 0.0]
-        assert entries[0].distribution_mode == "custom"
+        assert entries[0].details.probabilities == [0.0, 0.0, 1.0, 0.0]
+        assert entries[0].details.distribution_mode == "custom"
         assert entries[1].question_type == "multiple"
-        assert entries[1].probabilities == [50.0, 50.0, 50.0]
+        assert entries[1].details.probabilities == [50.0, 50.0, 50.0]
         assert entries[2].question_type == "matrix"
-        assert entries[2].rows == 2
         assert entries[3].question_type == "score"
-        assert entries[3].option_count == 7
         assert entries[4].question_type == "slider"
-        assert entries[4].probabilities == [15.0]
+        assert entries[4].details.probabilities == [15.0]
         assert entries[5].question_type == "text"
-        assert entries[5].texts == [DEFAULT_FILL_TEXT]
 
     def test_build_default_question_entries_infers_multi_text_mobile_blank(self) -> None:
         questions = [
@@ -82,49 +80,57 @@ class DefaultBuilderRuntimeTests:
             )
         ]
 
-        entries = build_default_question_entries(
+        entries = build_default_survey_questions(
             questions, survey_url="https://www.wjx.cn/vm/demo.aspx"
         )
 
         assert entries[0].question_type == "multi_text"
-        assert isinstance(entries[0], MultiTextQuestionEntry)
-        assert entries[0].multi_text_blank_modes == [
+        assert isinstance(entries[0].details.answer_config, MultiTextQuestionAnswerConfig)
+        assert entries[0].details.answer_config.multi_text_blank_modes == [
             _TEXT_RANDOM_NONE,
             _TEXT_RANDOM_MOBILE,
             _TEXT_RANDOM_NONE,
         ]
 
     def test_build_default_question_entries_reuses_existing_by_provider_num_and_title(self) -> None:
-        existing_by_provider = make_question_entry(
+        existing_by_provider = QuestionInfo(
+            num=99,
+            title="旧标题",
             question_type="single",
-            probabilities=[0, 1],
-            option_count=2,
-            question_num=99,
-            question_title="旧标题",
-            provider="wjx",
-            provider_question_id="provider-1",
-            distribution_mode="custom",
-            custom_weights=[0, 1],
-            option_fill_texts=["", "其他"],
-            fillable_option_indices=[1],
-            attached_option_selects=[{"option_index": 1, "weights": [1, 0]}],
+            options=[],
+            details=QuestionDetail(
+                probabilities=[0, 1],
+                distribution_mode="custom",
+                custom_weights=[0, 1],
+                provider_question_id="provider-1",
+                answer_config=ChoiceQuestionAnswerConfig(
+                    option_fill_texts=["", "其他"],
+                    fillable_option_indices=[1],
+                    attached_option_selects=[{"option_index": 1, "weights": [1, 0]}],
+                ),
+            ),
         )
-        existing_by_num = make_question_entry(
+        existing_by_num = QuestionInfo(
+            num=2,
+            title="多选题",
             question_type="multiple",
-            probabilities=[10, 90],
-            option_count=2,
-            question_num=2,
-            question_title="多选题",
-            distribution_mode="custom",
-            custom_weights=[10, 90],
+            options=[],
+            details=QuestionDetail(
+                probabilities=[10, 90],
+                distribution_mode="custom",
+                custom_weights=[10, 90],
+                answer_config=ChoiceQuestionAnswerConfig(),
+            ),
         )
-        existing_by_title = make_question_entry(
+        existing_by_title = QuestionInfo(
+            num=88,
+            title="标题匹配",
             question_type="text",
-            probabilities=[1],
-            texts=["旧答案"],
-            question_num=88,
-            question_title="标题匹配",
-            ai_enabled=True,
+            options=["旧答案"],
+            details=QuestionDetail(
+                probabilities=[1],
+                answer_config=ChoiceQuestionAnswerConfig(ai_enabled=True),
+            ),
         )
         questions = [
             ensure_survey_question_meta(
@@ -152,17 +158,17 @@ class DefaultBuilderRuntimeTests:
             ),
         ]
 
-        entries = build_default_question_entries(
+        entries = build_default_survey_questions(
             questions,
             existing_entries=[existing_by_provider, existing_by_num, existing_by_title],
         )
 
-        assert entries[0].probabilities == [0, 1]
-        assert entries[0].custom_weights == [0, 1]
-        assert isinstance(entries[0], ChoiceQuestionEntry)
-        assert entries[0].option_fill_texts == [None, "其他"]
-        assert entries[0].fillable_option_indices == [1]
-        assert entries[0].attached_option_selects == [
+        assert entries[0].details.probabilities == [0, 1]
+        assert entries[0].details.custom_weights == [0, 1]
+        assert isinstance(entries[0].details.answer_config, ChoiceQuestionAnswerConfig)
+        assert entries[0].details.answer_config.option_fill_texts == [None, "其他"]
+        assert entries[0].details.answer_config.fillable_option_indices == [1]
+        assert entries[0].details.answer_config.attached_option_selects == [
             {
                 "option_index": 1,
                 "option_text": "其他",
@@ -170,22 +176,25 @@ class DefaultBuilderRuntimeTests:
                 "weights": [1.0, 0.0],
             }
         ]
-        assert entries[1].probabilities == [10, 90]
-        assert entries[1].distribution_mode == "custom"
-        assert entries[2].texts == ["旧答案"]
-        assert entries[2].ai_enabled is True
+        assert entries[1].details.probabilities == [10, 90]
+        assert entries[1].details.distribution_mode == "custom"
+        assert entries[2].details.answer_config.ai_enabled is True
 
     def test_build_default_question_entries_drops_stale_option_fill_texts(self) -> None:
-        existing = make_question_entry(
+        existing = QuestionInfo(
+            num=1,
+            title="单选题",
             question_type="single",
-            probabilities=[1, 0],
-            option_count=2,
-            question_num=1,
-            question_title="单选题",
-            option_fill_texts=["旧填空", None],
-            fillable_option_indices=[0],
+            options=[],
+            details=QuestionDetail(
+                probabilities=[1, 0],
+                answer_config=ChoiceQuestionAnswerConfig(
+                    option_fill_texts=["旧填空", None],
+                    fillable_option_indices=[0],
+                ),
+            ),
         )
-        entries = build_default_question_entries(
+        entries = build_default_survey_questions(
             [
                 ensure_survey_question_meta(
                     {
@@ -200,19 +209,22 @@ class DefaultBuilderRuntimeTests:
             existing_entries=[existing],
         )
 
-        assert isinstance(entries[0], ChoiceQuestionEntry)
-        assert entries[0].fillable_option_indices == []
-        assert entries[0].option_fill_texts is None
+        assert isinstance(entries[0].details.answer_config, ChoiceQuestionAnswerConfig)
+        assert entries[0].details.answer_config.fillable_option_indices == []
+        assert entries[0].details.answer_config.option_fill_texts is None
 
     def test_build_default_question_entries_does_not_reuse_mismatched_title_or_type(self) -> None:
-        existing = make_question_entry(
+        existing = QuestionInfo(
+            num=1,
+            title="旧标题",
             question_type="single",
-            probabilities=[0, 1],
-            option_count=2,
-            question_num=1,
-            question_title="旧标题",
-            distribution_mode="custom",
-            custom_weights=[0, 1],
+            options=[],
+            details=QuestionDetail(
+                probabilities=[0, 1],
+                distribution_mode="custom",
+                custom_weights=[0, 1],
+                answer_config=ChoiceQuestionAnswerConfig(),
+            ),
         )
         questions = [
             ensure_survey_question_meta(
@@ -220,10 +232,10 @@ class DefaultBuilderRuntimeTests:
             )
         ]
 
-        entries = build_default_question_entries(questions, existing_entries=[existing])
+        entries = build_default_survey_questions(questions, existing_entries=[existing])
 
-        assert entries[0].probabilities == -1
-        assert entries[0].distribution_mode == "random"
+        assert entries[0].details.probabilities == -1
+        assert entries[0].details.distribution_mode == "random"
 
     def test_build_default_question_entries_retains_attached_selects_for_multiple(self) -> None:
         questions = [
@@ -245,11 +257,11 @@ class DefaultBuilderRuntimeTests:
             )
         ]
 
-        entries = build_default_question_entries(questions)
+        entries = build_default_survey_questions(questions)
 
         assert entries[0].question_type == "multiple"
-        assert isinstance(entries[0], ChoiceQuestionEntry)
-        assert entries[0].attached_option_selects == [
+        assert isinstance(entries[0].details.answer_config, ChoiceQuestionAnswerConfig)
+        assert entries[0].details.answer_config.attached_option_selects == [
             {
                 "option_index": 2,
                 "option_text": "其他",

@@ -5,10 +5,15 @@ from types import SimpleNamespace
 
 import pytest
 
+from survey_submitter.core.config.schema import QuestionInfo
 from survey_submitter.core.questions.normalization import configure_probabilities
 from survey_submitter.core.questions.schema import (
     GLOBAL_RELIABILITY_DIMENSION,
-    QuestionEntry,
+    ChoiceQuestionAnswerConfig,
+    LocationQuestionAnswerConfig,
+    MultiTextQuestionAnswerConfig,
+    QuestionDetail,
+    TextQuestionAnswerConfig,
     _TEXT_RANDOM_ID_CARD,
     _TEXT_RANDOM_ID_CARD_TOKEN,
     _TEXT_RANDOM_INTEGER,
@@ -16,7 +21,6 @@ from survey_submitter.core.questions.schema import (
     _TEXT_RANDOM_MOBILE_TOKEN,
     _TEXT_RANDOM_NAME,
     _TEXT_RANDOM_NAME_TOKEN,
-    make_question_entry,
 )
 from survey_submitter.providers.contracts import ensure_survey_question_meta
 
@@ -25,85 +29,132 @@ class NormalizationRuntimeTests:
     def test_configure_probabilities_maps_all_supported_question_types(self) -> None:
         ctx = SimpleNamespace()
         entries = [
-            make_question_entry(
+            QuestionInfo(
+                num=1,
                 question_type="single",
-                probabilities=[0, 3, 0],
-                option_count=3,
-                question_num=1,
-                option_fill_texts=["", "补充", None],
-                attached_option_selects=[{"option_index": 1, "weights": [1, 0]}],
+                options=["", "", ""],
+                details=QuestionDetail(
+                    probabilities=[0, 3, 0],
+                    answer_config=ChoiceQuestionAnswerConfig(
+                        option_fill_texts=["", "补充", None],
+                        attached_option_selects=[{"option_index": 1, "weights": [1, 0]}],
+                    ),
+                ),
             ),
-            make_question_entry(
+            QuestionInfo(
+                num=2,
                 question_type="dropdown",
-                probabilities=[1, 1],
-                option_count=2,
-                question_num=2,
-                dimension="满意度",
+                options=["A", "B"],
+                details=QuestionDetail(
+                    probabilities=[1, 1],
+                    dimension="满意度",
+                    answer_config=ChoiceQuestionAnswerConfig(),
+                ),
             ),
-            make_question_entry(
+            QuestionInfo(
+                num=3,
                 question_type="multiple",
-                probabilities=[25, 75],
-                option_count=2,
-                question_num=3,
-                option_fill_texts=["A", "B"],
+                options=["A", "B"],
+                details=QuestionDetail(
+                    probabilities=[25, 75],
+                    answer_config=ChoiceQuestionAnswerConfig(
+                        option_fill_texts=["A", "B"],
+                    ),
+                ),
             ),
-            make_question_entry(
+            QuestionInfo(
+                num=4,
                 question_type="matrix",
-                probabilities=[[1, 0, 0], [0, 2, 0]],
-                rows=3,
-                option_count=3,
-                question_num=4,
-                dimension="态度",
+                options=["A", "B", "C"],
+                details=QuestionDetail(
+                    probabilities=[[1, 0, 0], [0, 2, 0]],
+                    dimension="态度",
+                    answer_config=ChoiceQuestionAnswerConfig(),
+                ),
             ),
-            make_question_entry(
+            QuestionInfo(
+                num=5,
                 question_type="scale",
-                probabilities=[1, 3],
-                option_count=2,
-                question_num=5,
+                options=["A", "B"],
+                details=QuestionDetail(
+                    probabilities=[1, 3],
+                    answer_config=ChoiceQuestionAnswerConfig(),
+                ),
             ),
-            make_question_entry(
-                question_type="score", probabilities=[2, 2], option_count=2, question_num=6
+            QuestionInfo(
+                num=6,
+                question_type="score",
+                options=["A", "B"],
+                details=QuestionDetail(
+                    probabilities=[2, 2],
+                    answer_config=ChoiceQuestionAnswerConfig(),
+                ),
             ),
-            make_question_entry(
+            QuestionInfo(
+                num=7,
                 question_type="slider",
-                probabilities=[75],
-                option_count=1,
-                question_num=7,
-                distribution_mode="custom",
+                options=["A"],
+                details=QuestionDetail(
+                    probabilities=[75],
+                    distribution_mode="custom",
+                    answer_config=ChoiceQuestionAnswerConfig(),
+                ),
             ),
-            make_question_entry(
+            QuestionInfo(
+                num=8,
                 question_type="slider",
-                probabilities=-1,
-                option_count=1,
-                question_num=8,
-                distribution_mode="random",
+                options=["A"],
+                details=QuestionDetail(
+                    probabilities=-1,
+                    distribution_mode="random",
+                    answer_config=ChoiceQuestionAnswerConfig(),
+                ),
             ),
-            make_question_entry(question_type="order", probabilities=-1, question_num=9),
-            make_question_entry(
+            QuestionInfo(
+                num=9,
+                question_type="order",
+                options=[],
+                details=QuestionDetail(
+                    probabilities=-1,
+                    answer_config=ChoiceQuestionAnswerConfig(),
+                ),
+            ),
+            QuestionInfo(
+                num=10,
                 question_type="text",
-                probabilities=[1, 3],
-                texts=["甲", "乙"],
-                question_num=10,
-                ai_enabled=True,
-                question_title="填空",
+                options=["甲", "乙"],
+                title="填空",
+                details=QuestionDetail(
+                    probabilities=[1, 3],
+                    answer_config=TextQuestionAnswerConfig(
+                        ai_enabled=True,
+                    ),
+                ),
             ),
-            make_question_entry(
+            QuestionInfo(
+                num=11,
                 question_type="multi_text",
-                probabilities=-1,
-                texts=[],
-                question_num=11,
-                ai_enabled=False,
-                multi_text_blank_modes=[_TEXT_RANDOM_INTEGER, "none"],
-                multi_text_blank_ai_flags=[True, True],
-                multi_text_blank_int_ranges=[[9, 3], []],
+                options=[],
+                details=QuestionDetail(
+                    probabilities=-1,
+                    answer_config=MultiTextQuestionAnswerConfig(
+                        ai_enabled=False,
+                        multi_text_blank_modes=[_TEXT_RANDOM_INTEGER, "none"],
+                        multi_text_blank_ai_flags=[True, True],
+                        multi_text_blank_int_ranges=[[9, 3], []],
+                    ),
+                ),
             ),
-            make_question_entry(
+            QuestionInfo(
+                num=12,
                 question_type="text",
-                probabilities=-1,
-                texts=["位置"],
-                question_num=12,
-                is_location=True,
-                location_parts=["北京", "北京", "东城区"],
+                options=["位置"],
+                details=QuestionDetail(
+                    probabilities=-1,
+                    answer_config=LocationQuestionAnswerConfig(
+                        location_parts=["北京", "北京", "东城区"],
+                    ),
+                ),
             ),
         ]
 
@@ -117,7 +168,7 @@ class NormalizationRuntimeTests:
         assert ctx.question_dimension_map[2] == "满意度"
         assert ctx.multiple_prob == [[25.0, 75.0]]
         assert ctx.multiple_option_fill_texts == [["A", "B"]]
-        assert ctx.matrix_prob == [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 1.0, 0.0]]
+        assert ctx.matrix_prob == [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
         assert ctx.question_dimension_map[4] == "态度"
         assert ctx.scale_prob == [[0.25, 0.75], [0.5, 0.5]]
         assert ctx.slider_targets[0] == 75.0
@@ -136,23 +187,27 @@ class NormalizationRuntimeTests:
     def test_configure_probabilities_builds_provider_question_mapping(self) -> None:
         ctx = SimpleNamespace()
         entries = [
-            make_question_entry(
+            QuestionInfo(
+                num=2,
                 question_type="scale",
-                probabilities=[1, 2, 3],
-                option_count=3,
-                question_num=2,
-                provider="wjx",
-                provider_page_id="4",
-                provider_question_id="question-1",
+                options=["A", "B", "C"],
+                details=QuestionDetail(
+                    probabilities=[1, 2, 3],
+                    provider_page_id="4",
+                    provider_question_id="question-1",
+                    answer_config=ChoiceQuestionAnswerConfig(),
+                ),
             ),
-            make_question_entry(
+            QuestionInfo(
+                num=2,
                 question_type="scale",
-                probabilities=[3, 2, 1],
-                option_count=3,
-                question_num=2,
-                provider="wjx",
-                provider_page_id="5",
-                provider_question_id="question-1",
+                options=["A", "B", "C"],
+                details=QuestionDetail(
+                    probabilities=[3, 2, 1],
+                    provider_page_id="5",
+                    provider_question_id="question-1",
+                    answer_config=ChoiceQuestionAnswerConfig(),
+                ),
             ),
         ]
 
@@ -169,11 +224,23 @@ class NormalizationRuntimeTests:
     ) -> None:
         ctx = SimpleNamespace()
         entries = [
-            make_question_entry(
-                question_type="dropdown", probabilities=[1, 1], option_count=2, question_num=1
+            QuestionInfo(
+                num=1,
+                question_type="dropdown",
+                options=["A", "B"],
+                details=QuestionDetail(
+                    probabilities=[1, 1],
+                    answer_config=ChoiceQuestionAnswerConfig(),
+                ),
             ),
-            make_question_entry(
-                question_type="scale", probabilities=[1, 1], option_count=2, question_num=2
+            QuestionInfo(
+                num=2,
+                question_type="scale",
+                options=["A", "B"],
+                details=QuestionDetail(
+                    probabilities=[1, 1],
+                    answer_config=ChoiceQuestionAnswerConfig(),
+                ),
             ),
         ]
 
@@ -201,14 +268,23 @@ class NormalizationRuntimeTests:
             }
         )
         entries = [
-            make_question_entry(
+            QuestionInfo(
+                num=1,
                 question_type="single",
-                probabilities=[1, 1, 1, 1, 1],
-                option_count=5,
-                question_num=1,
+                options=["非常满意", "满意", "一般", "不满意", "非常不满意"],
+                details=QuestionDetail(
+                    probabilities=[1, 1, 1, 1, 1],
+                    answer_config=ChoiceQuestionAnswerConfig(),
+                ),
             ),
-            make_question_entry(
-                question_type="single", probabilities=[1, 1], option_count=2, question_num=2
+            QuestionInfo(
+                num=2,
+                question_type="single",
+                options=["男", "女"],
+                details=QuestionDetail(
+                    probabilities=[1, 1],
+                    answer_config=ChoiceQuestionAnswerConfig(),
+                ),
             ),
         ]
 
@@ -236,11 +312,20 @@ class NormalizationRuntimeTests:
             }
         )
         entries = [
-            make_question_entry(
+            QuestionInfo(
+                num=4,
                 question_type="single",
-                probabilities=[1, 1, 1, 1, 1],
-                option_count=5,
-                question_num=4,
+                options=[
+                    "非常不同意",
+                    "比较不同意",
+                    "没意见",
+                    "比较同意",
+                    "非常同意",
+                ],
+                details=QuestionDetail(
+                    probabilities=[1, 1, 1, 1, 1],
+                    answer_config=ChoiceQuestionAnswerConfig(),
+                ),
             ),
         ]
 
@@ -252,83 +337,125 @@ class NormalizationRuntimeTests:
         ("entry", "message"),
         [
             (
-                make_question_entry(
-                    question_type="single", probabilities=[0, 0], option_count=2, question_num=1
+                QuestionInfo(
+                    num=1,
+                    question_type="single",
+                    options=["A", "B"],
+                    details=QuestionDetail(
+                        probabilities=[0, 0],
+                        answer_config=ChoiceQuestionAnswerConfig(),
+                    ),
                 ),
                 "所有选项配比均为 0",
             ),
             (
-                make_question_entry(
-                    question_type="dropdown", probabilities=[0, 0], option_count=2, question_num=2
+                QuestionInfo(
+                    num=2,
+                    question_type="dropdown",
+                    options=["A", "B"],
+                    details=QuestionDetail(
+                        probabilities=[0, 0],
+                        answer_config=ChoiceQuestionAnswerConfig(),
+                    ),
                 ),
                 "所有选项配比均为 0",
             ),
             (
-                make_question_entry(
+                QuestionInfo(
+                    num=3,
                     question_type="matrix",
-                    probabilities=[[1, 0], [0, 0]],
-                    rows=2,
-                    option_count=2,
-                    question_num=3,
+                    options=["A", "B"],
+                    details=QuestionDetail(
+                        probabilities=[[1, 0], [0, 0]],
+                        answer_config=ChoiceQuestionAnswerConfig(),
+                    ),
                 ),
                 "第 2 行配比全部为 0",
             ),
             (
-                make_question_entry(
+                QuestionInfo(
+                    num=4,
                     question_type="matrix",
-                    probabilities=[0, 0],
-                    rows=1,
-                    option_count=2,
-                    question_num=4,
+                    options=["A", "B"],
+                    details=QuestionDetail(
+                        probabilities=[0, 0],
+                        answer_config=ChoiceQuestionAnswerConfig(),
+                    ),
                 ),
                 "矩阵题",
             ),
             (
-                make_question_entry(
-                    question_type="multiple", probabilities=-1, option_count=2, question_num=5
+                QuestionInfo(
+                    num=5,
+                    question_type="multiple",
+                    options=["A", "B"],
+                    details=QuestionDetail(
+                        probabilities=-1,
+                        answer_config=ChoiceQuestionAnswerConfig(),
+                    ),
                 ),
                 "多选题必须提供概率列表",
             ),
             (
-                make_question_entry(question_type="text", probabilities=-1, texts=[], question_num=6),
+                QuestionInfo(
+                    num=6,
+                    question_type="text",
+                    options=[],
+                    details=QuestionDetail(
+                        probabilities=-1,
+                        answer_config=TextQuestionAnswerConfig(),
+                    ),
+                ),
                 "填空题至少需要一个候选答案",
             ),
             (
-                make_question_entry(
+                QuestionInfo(
+                    num=7,
                     question_type="text",
-                    probabilities=-1,
-                    texts=[],
-                    question_num=7,
-                    text_random_mode=_TEXT_RANDOM_INTEGER,
-                    text_random_int_range=[],
+                    options=[],
+                    details=QuestionDetail(
+                        probabilities=-1,
+                        answer_config=TextQuestionAnswerConfig(
+                            text_random_mode=_TEXT_RANDOM_INTEGER,
+                            text_random_int_range=[],
+                        ),
+                    ),
                 ),
                 "随机整数范围未设置完整",
             ),
             (
-                make_question_entry(
+                QuestionInfo(
+                    num=8,
                     question_type="multi_text",
-                    probabilities=-1,
-                    texts=["x"],
-                    question_num=8,
-                    multi_text_blank_modes=[_TEXT_RANDOM_INTEGER],
-                    multi_text_blank_int_ranges=[[]],
+                    options=["x"],
+                    details=QuestionDetail(
+                        probabilities=-1,
+                        answer_config=MultiTextQuestionAnswerConfig(
+                            multi_text_blank_modes=[_TEXT_RANDOM_INTEGER],
+                            multi_text_blank_int_ranges=[[]],
+                        ),
+                    ),
                 ),
                 "多项填空题第1个空位",
             ),
             (
-                make_question_entry(
+                QuestionInfo(
+                    num=9,
                     question_type="single",
-                    probabilities=[1, 1],
-                    option_count=2,
-                    question_num=9,
-                    attached_option_selects=[{"option_text": "A", "weights": [0, 0]}],
+                    options=["A", "B"],
+                    details=QuestionDetail(
+                        probabilities=[1, 1],
+                        answer_config=ChoiceQuestionAnswerConfig(
+                            attached_option_selects=[{"option_text": "A", "weights": [0, 0]}],
+                        ),
+                    ),
                 ),
                 "嵌入式下拉",
             ),
         ],
     )
     def test_configure_probabilities_rejects_invalid_configs(
-        self, entry: QuestionEntry, message: str
+        self, entry: QuestionInfo, message: str
     ) -> None:
         with pytest.raises(ValueError, match=message):
             configure_probabilities([entry], SimpleNamespace())  # ty:ignore[invalid-argument-type]
@@ -347,13 +474,17 @@ class NormalizationRuntimeTests:
         ctx = SimpleNamespace()
         configure_probabilities(
             [
-                make_question_entry(
+                QuestionInfo(
+                    num=1,
                     question_type="text",
-                    probabilities=-1,
-                    texts=["原值"],
-                    question_num=1,
-                    ai_enabled=True,
-                    text_random_mode=mode,
+                    options=["原值"],
+                    details=QuestionDetail(
+                        probabilities=-1,
+                        answer_config=TextQuestionAnswerConfig(
+                            ai_enabled=True,
+                            text_random_mode=mode,
+                        ),
+                    ),
                 )
             ],
             ctx,  # ty:ignore[invalid-argument-type]
@@ -367,13 +498,17 @@ class NormalizationRuntimeTests:
 
         configure_probabilities(
             [
-                make_question_entry(
+                QuestionInfo(
+                    num=1,
                     question_type="text",
-                    probabilities=-1,
-                    texts=["原值"],
-                    question_num=1,
-                    text_random_mode=_TEXT_RANDOM_INTEGER,
-                    text_random_int_range=[9, 3],
+                    options=["原值"],
+                    details=QuestionDetail(
+                        probabilities=-1,
+                        answer_config=TextQuestionAnswerConfig(
+                            text_random_mode=_TEXT_RANDOM_INTEGER,
+                            text_random_int_range=[9, 3],
+                        ),
+                    ),
                 )
             ],
             ctx,  # ty:ignore[invalid-argument-type]

@@ -6,18 +6,20 @@ from loguru import logger
 from typing import Any, Callable, cast
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
+from survey_submitter.core.config.schema import QuestionInfo
 from survey_submitter.core.questions.meta_helpers import (
     infer_question_entry_type,
     normalize_attached_selects,
     normalize_fillable_indices,
 )
 from survey_submitter.core.questions.schema import (
-    ChoiceQuestionEntry,
-    LocationQuestionEntry,
-    MultiTextQuestionEntry,
-    QuestionEntry,
-    TextQuestionEntry,
-    entry_type_for_question_type,
+    ChoiceQuestionAnswerConfig,
+    LocationQuestionAnswerConfig,
+    MultiTextQuestionAnswerConfig,
+    QuestionAnswerConfig,
+    QuestionDetail,
+    TextQuestionAnswerConfig,
+    answer_config_type_for_question_type,
 )
 from survey_submitter.core.questions.schema import (
     _TEXT_RANDOM_ID_CARD,
@@ -46,7 +48,7 @@ from survey_submitter.providers.common import (
     normalize_survey_provider,
 )
 
-__all__ = ["build_default_question_entries"]
+__all__ = ["build_default_survey_questions"]
 
 DEFAULT_MULTIPLE_PROBABILITY = 50.0
 DEFAULT_SLIDER_MAX = 100.0
@@ -171,7 +173,6 @@ class _QuestionAttrs:
     num: object
     option_count: int
     rows: int
-    is_location: bool
     text_inputs: int
     slider_min: object
     slider_max: object
@@ -179,7 +180,6 @@ class _QuestionAttrs:
     forced_option_text: str
     forced_option_index: int | None
     attached_option_selects: list[object]
-    survey_provider: str
     provider_question_id: str
     provider_page_id: str
     q_type: QuestionType
@@ -188,12 +188,11 @@ class _QuestionAttrs:
 
 @dataclasses.dataclass
 class _ResolvedConfig:
-    """Fully-resolved configuration values ready for *QuestionEntry* construction."""
+    """Fully-resolved configuration values ready for *QuestionInfo* construction."""
 
     probabilities: object
     distribution: str
     custom_weights: object
-    texts: object
     option_count: int
     ai_enabled: bool
     text_random_mode: str
@@ -204,48 +203,47 @@ class _ResolvedConfig:
     option_fill_texts: object
     fillable_indices: object
     attached_selects: list[object]
+    location_parts: list[str]
 
 
 # ---------------------------------------------------------------------------
-# Helper functions extracted from build_default_question_entries
+# Helper functions extracted from build_default_survey_questions
 # ---------------------------------------------------------------------------
 
 
 def _build_existing_entry_maps(
-    existing_entries: list[QuestionEntry] | None,
+    existing_entries: list[QuestionInfo] | None,
 ) -> tuple[
-    dict[int, QuestionEntry], dict[str, QuestionEntry], dict[tuple[str, str], QuestionEntry]
+    dict[int, QuestionInfo], dict[str, QuestionInfo], dict[tuple[str, str], QuestionInfo]
 ]:
     """Build lookup dicts for existing entries keyed by number, title, and provider."""
-    existing_by_num: dict[int, QuestionEntry] = {}
-    existing_by_title: dict[str, QuestionEntry] = {}
-    existing_by_provider: dict[tuple[str, str], QuestionEntry] = {}
+    existing_by_num: dict[int, QuestionInfo] = {}
+    existing_by_title: dict[str, QuestionInfo] = {}
+    existing_by_provider: dict[tuple[str, str], QuestionInfo] = {}
     if existing_entries:
-        for entry in existing_entries:
-            q_num = _normalize_question_num(entry.question_num)
+        for qi in existing_entries:
+            q_num = _normalize_question_num(qi.num)
             if q_num is not None and q_num not in existing_by_num:
-                existing_by_num[q_num] = entry
-            title_key = _normalize_title(entry.question_title)
+                existing_by_num[q_num] = qi
+            title_key = _normalize_title(qi.title)
             if title_key and title_key not in existing_by_title:
-                existing_by_title[title_key] = entry
+                existing_by_title[title_key] = qi
             provider_key = _normalize_provider_key(
-                entry.survey_provider,
-                entry.provider_question_id,
+                qi.details.provider_question_id or "wjx",
+                qi.details.provider_question_id,
             )
             if provider_key and provider_key not in existing_by_provider:
-                existing_by_provider[provider_key] = entry
+                existing_by_provider[provider_key] = qi
     return existing_by_num, existing_by_title, existing_by_provider
 
 
 def _extract_question_attrs(
     q: SurveyQuestionMeta,
-    detected_provider: str,
 ) -> _QuestionAttrs:
     """Pull all relevant attributes out of a *SurveyQuestionMeta*."""
     option_texts = q.option_texts if isinstance(q, ChoiceQuestionMeta) and q.option_texts else []
     option_count = len(option_texts)
     rows = q.rows if isinstance(q, MatrixQuestionMeta) else 1
-    is_location = q.is_location if isinstance(q, TextQuestionMeta) else False
     text_inputs = q.text_inputs if isinstance(q, TextQuestionMeta) else 0
     slider_min = q.slider_min if isinstance(q, SliderQuestionMeta) else None
     slider_max = q.slider_max if isinstance(q, SliderQuestionMeta) else None
@@ -280,7 +278,6 @@ def _extract_question_attrs(
         num=q.num,
         option_count=option_count,
         rows=rows,
-        is_location=is_location,
         text_inputs=text_inputs,
         slider_min=slider_min,
         slider_max=slider_max,
@@ -288,7 +285,6 @@ def _extract_question_attrs(
         forced_option_text=forced_option_text,
         forced_option_index=forced_option_index,
         attached_option_selects=list(attached_option_selects),
-        survey_provider=detected_provider,
         provider_question_id=provider_question_id,
         provider_page_id=provider_page_id,
         q_type=QuestionType(q_type) if isinstance(q_type, str) else q_type,
@@ -298,22 +294,24 @@ def _extract_question_attrs(
 
 def _find_matching_config(
     attrs: _QuestionAttrs,
-    existing_by_provider: dict[tuple[str, str], QuestionEntry],
-    existing_by_num: dict[int, QuestionEntry],
-    existing_by_title: dict[str, QuestionEntry],
-) -> QuestionEntry | None:
+    existing_by_provider: dict[tuple[str, str], QuestionInfo],
+    existing_by_num: dict[int, QuestionInfo],
+    existing_by_title: dict[str, QuestionInfo],
+) -> QuestionInfo | None:
     """Locate the best matching existing entry (by provider key, question num, or title)."""
-    existing_config: QuestionEntry | None = None
-    provider_key = _normalize_provider_key(attrs.survey_provider, attrs.provider_question_id)
+    existing_config: QuestionInfo | None = None
+    provider_key = _normalize_provider_key(
+        attrs.provider_question_id or "wjx", attrs.provider_question_id
+    )
     if provider_key:
         candidate = existing_by_provider.get(provider_key)
-        if candidate and candidate.question_type == attrs.q_type:
+        if candidate and candidate.question_type == str(attrs.q_type):
             existing_config = candidate
     parsed_question_num = _normalize_question_num(attrs.num)
     if existing_config is None and parsed_question_num is not None:
         candidate = existing_by_num.get(parsed_question_num)
-        if candidate and candidate.question_type == attrs.q_type:
-            candidate_title_key = _normalize_title(candidate.question_title)
+        if candidate and candidate.question_type == str(attrs.q_type):
+            candidate_title_key = _normalize_title(candidate.title)
             if (
                 attrs.parsed_title_key
                 and candidate_title_key
@@ -324,84 +322,84 @@ def _find_matching_config(
                 existing_config = candidate
     if existing_config is None and attrs.parsed_title_key:
         candidate = existing_by_title.get(attrs.parsed_title_key)
-        if candidate and candidate.question_type == attrs.q_type:
+        if candidate and candidate.question_type == str(attrs.q_type):
             existing_config = candidate
     return existing_config
 
 
 def _resolve_config_from_existing(
-    existing_config: QuestionEntry,
+    existing_config: QuestionInfo,
     q_type: QuestionType,
 ) -> _ResolvedConfig:
-    """Deep-copy configuration values from an existing *QuestionEntry*."""
-    assert isinstance(existing_config, entry_type_for_question_type(q_type))
-    text_entry = existing_config if isinstance(existing_config, TextQuestionEntry) else None
-    multi_entry = existing_config if isinstance(existing_config, MultiTextQuestionEntry) else None
-    choice_entry = existing_config if isinstance(existing_config, ChoiceQuestionEntry) else None
+    """Deep-copy configuration values from an existing *QuestionInfo*."""
+    detail = existing_config.details
+    answer_cfg = detail.answer_config
+    text_cfg = answer_cfg if isinstance(answer_cfg, TextQuestionAnswerConfig) else None
+    multi_cfg = answer_cfg if isinstance(answer_cfg, MultiTextQuestionAnswerConfig) else None
+    choice_cfg = answer_cfg if isinstance(answer_cfg, ChoiceQuestionAnswerConfig) else None
+    location_cfg = answer_cfg if isinstance(answer_cfg, LocationQuestionAnswerConfig) else None
     return _ResolvedConfig(
-        probabilities=copy.deepcopy(existing_config.probabilities),
-        distribution=existing_config.distribution_mode or "random",
-        custom_weights=copy.deepcopy(existing_config.custom_weights),
-        texts=copy.deepcopy(existing_config.texts),
+        probabilities=copy.deepcopy(detail.probabilities),
+        distribution=detail.distribution_mode or "random",
+        custom_weights=copy.deepcopy(detail.custom_weights),
         option_count=0,  # caller fills in from attrs
-        ai_enabled=existing_config.ai_enabled if q_type in TEXT_TYPES else False,
+        ai_enabled=answer_cfg.ai_enabled if q_type in TEXT_TYPES else False,
         text_random_mode=(
-            str(text_entry.text_random_mode or "none")
-            if text_entry is not None
-            else "none"
+            str(text_cfg.text_random_mode or "none") if text_cfg is not None else "none"
         ),
         text_random_int_range=cast(
             list[object],
-            copy.deepcopy(text_entry.text_random_int_range) if text_entry is not None else [],
+            copy.deepcopy(text_cfg.text_random_int_range) if text_cfg is not None else [],
         ),
         multi_text_blank_modes=(
-            copy.deepcopy(multi_entry.multi_text_blank_modes) if multi_entry is not None else []
+            copy.deepcopy(multi_cfg.multi_text_blank_modes) if multi_cfg is not None else []
         ),
         multi_text_blank_ai_flags=(
-            copy.deepcopy(multi_entry.multi_text_blank_ai_flags) if multi_entry is not None else []
+            copy.deepcopy(multi_cfg.multi_text_blank_ai_flags) if multi_cfg is not None else []
         ),
         multi_text_blank_int_ranges=(
-            copy.deepcopy(multi_entry.multi_text_blank_int_ranges) if multi_entry is not None else []
+            copy.deepcopy(multi_cfg.multi_text_blank_int_ranges) if multi_cfg is not None else []
         ),
         option_fill_texts=(
-            copy.deepcopy(choice_entry.option_fill_texts) if choice_entry is not None else None
+            copy.deepcopy(choice_cfg.option_fill_texts) if choice_cfg is not None else None
         ),
         fillable_indices=(
-            copy.deepcopy(choice_entry.fillable_option_indices) if choice_entry is not None else None
+            copy.deepcopy(choice_cfg.fillable_option_indices) if choice_cfg is not None else None
         ),
         attached_selects=cast(
             list[object],
-            copy.deepcopy(choice_entry.attached_option_selects or []) if choice_entry is not None else [],
+            copy.deepcopy(choice_cfg.attached_option_selects or []) if choice_cfg is not None else [],
+        ),
+        location_parts=(
+            list(location_cfg.location_parts) if location_cfg is not None else []
         ),
     )
 
 
 # Maps each question type to a resolver returning
-# (probabilities, distribution, custom_weights, texts, option_count).
-_DefaultConfigTuple = tuple[object, str, object, object, int]
+# (probabilities, distribution, custom_weights, option_count).
+_DefaultConfigTuple = tuple[object, str, object, int]
 _DefaultConfigResolver = Callable[["_QuestionAttrs", int], _DefaultConfigTuple]
 
 _DEFAULT_CONFIG_DISPATCH: dict[QuestionType, _DefaultConfigResolver] = {
-    QuestionType.SINGLE: lambda _attrs, option_count: (-1, "random", None, None, option_count),
-    QuestionType.DROPDOWN: lambda _attrs, option_count: (-1, "random", None, None, option_count),
-    QuestionType.SCALE: lambda _attrs, option_count: (-1, "random", None, None, option_count),
+    QuestionType.SINGLE: lambda _attrs, option_count: (-1, "random", None, option_count),
+    QuestionType.DROPDOWN: lambda _attrs, option_count: (-1, "random", None, option_count),
+    QuestionType.SCALE: lambda _attrs, option_count: (-1, "random", None, option_count),
     QuestionType.MULTIPLE: (
         lambda _attrs, option_count: (
             [DEFAULT_MULTIPLE_PROBABILITY] * option_count,
             "random",
             None,
-            None,
             option_count,
         )
     ),
-    QuestionType.MATRIX: lambda _attrs, option_count: (-1, "random", None, None, option_count),
-    QuestionType.ORDER: lambda _attrs, option_count: (-1, "random", None, None, option_count),
+    QuestionType.MATRIX: lambda _attrs, option_count: (-1, "random", None, option_count),
+    QuestionType.ORDER: lambda _attrs, option_count: (-1, "random", None, option_count),
     QuestionType.SCORE: (
         lambda _attrs, option_count: (
             list(weights := _build_mid_bias_weights(max(option_count, 2))),
             "custom",
             list(weights),
-            None,
             max(option_count, 2),
         )
     ),
@@ -414,7 +412,7 @@ _DEFAULT_CONFIG_DISPATCH: dict[QuestionType, _DefaultConfigResolver] = {
 def _resolve_fallback_default_config(
     attrs: "_QuestionAttrs", option_count: int
 ) -> _DefaultConfigTuple:
-    return ([1.0], "random", None, [DEFAULT_FILL_TEXT], option_count)
+    return ([1.0], "random", None, option_count)
 
 
 _DEFAULT_CONFIG_DISPATCH_FALLBACK: _DefaultConfigResolver = _resolve_fallback_default_config
@@ -430,7 +428,7 @@ def _resolve_slider_default_config(attrs: "_QuestionAttrs") -> _DefaultConfigTup
     if max_val <= min_val:
         max_val = min_val + DEFAULT_SLIDER_MAX
     midpoint = min_val + (max_val - min_val) / 2.0
-    return ([midpoint], "custom", [midpoint], None, 1)
+    return ([midpoint], "custom", [midpoint], 1)
 
 
 def _resolve_default_config(
@@ -441,7 +439,7 @@ def _resolve_default_config(
     q_type = attrs.q_type
     option_count = attrs.option_count
 
-    probabilities, distribution, custom_weights, texts, option_count = _DEFAULT_CONFIG_DISPATCH.get(
+    probabilities, distribution, custom_weights, option_count = _DEFAULT_CONFIG_DISPATCH.get(
         q_type, _DEFAULT_CONFIG_DISPATCH_FALLBACK
     )(attrs, option_count)
 
@@ -455,7 +453,6 @@ def _resolve_default_config(
         probabilities=probabilities,
         distribution=distribution,
         custom_weights=custom_weights,
-        texts=texts,
         option_count=option_count,
         ai_enabled=False,
         text_random_mode="none",
@@ -466,6 +463,7 @@ def _resolve_default_config(
         option_fill_texts=None,
         fillable_indices=None,
         attached_selects=[],
+        location_parts=[],
     )
 
 
@@ -492,13 +490,13 @@ def _apply_forced_option_overrides(
     )
 
 
-def _assemble_question_entry(
+def _assemble_question_info(
     q: SurveyQuestionMeta,
     attrs: _QuestionAttrs,
     config: _ResolvedConfig,
-    existing_config: QuestionEntry | None,
-) -> QuestionEntry:
-    """Build fillable-option data and construct the final *QuestionEntry*."""
+    existing_config: QuestionInfo | None,
+) -> QuestionInfo:
+    """Build fillable-option data and construct the final *QuestionInfo*."""
     option_count = config.option_count
 
     fillable_option_indices = (
@@ -520,27 +518,17 @@ def _assemble_question_entry(
         else None
     )
 
-    entry_cls = entry_type_for_question_type(attrs.q_type)
-    kwargs: dict[str, Any] = dict(
-        question_type=attrs.q_type,
-        probabilities=cast(Any, config.probabilities),
-        texts=cast(Any, config.texts),
-        rows=attrs.rows,
-        option_count=option_count,
-        distribution_mode=config.distribution,
-        custom_weights=cast(Any, config.custom_weights),
-        question_num=q.num,
-        question_title=attrs.title_text or None,
-        survey_provider=attrs.survey_provider,
-        provider_question_id=attrs.provider_question_id or None,
-        provider_page_id=attrs.provider_page_id or None,
-        ai_enabled=config.ai_enabled if attrs.q_type in TEXT_TYPES else False,
+    answer_config_cls = answer_config_type_for_question_type(
+        attrs.q_type,
+        location_parts=config.location_parts if config.location_parts else None,
     )
 
-    if entry_cls is ChoiceQuestionEntry:
-        kwargs["option_fill_texts"] = option_fill_texts
-        kwargs["fillable_option_indices"] = fillable_option_indices
-        kwargs["attached_option_selects"] = (
+    answer_config_kwargs: dict[str, Any] = dict(ai_enabled=config.ai_enabled)
+
+    if answer_config_cls is ChoiceQuestionAnswerConfig:
+        answer_config_kwargs["option_fill_texts"] = option_fill_texts
+        answer_config_kwargs["fillable_option_indices"] = fillable_option_indices
+        answer_config_kwargs["attached_option_selects"] = (
             normalize_attached_selects(
                 attrs.attached_option_selects,
                 config.attached_selects
@@ -550,22 +538,44 @@ def _assemble_question_entry(
             if attrs.q_type in (QuestionType.SINGLE, QuestionType.MULTIPLE)
             else []
         )
-    elif entry_cls is TextQuestionEntry:
-        kwargs["text_random_mode"] = (
+    elif answer_config_cls is TextQuestionAnswerConfig:
+        answer_config_kwargs["text_random_mode"] = (
             config.text_random_mode if attrs.q_type == QuestionType.TEXT else "none"
         )
-        kwargs["text_random_int_range"] = cast(Any, config.text_random_int_range)
-    elif entry_cls is MultiTextQuestionEntry:
-        kwargs["multi_text_blank_modes"] = config.multi_text_blank_modes
-        kwargs["multi_text_blank_ai_flags"] = config.multi_text_blank_ai_flags
-        kwargs["multi_text_blank_int_ranges"] = config.multi_text_blank_int_ranges
-    elif entry_cls is LocationQuestionEntry:
-        kwargs["is_location"] = attrs.is_location
-        kwargs["location_parts"] = (
-            list(existing_config.location_parts or []) if existing_config else []
+        answer_config_kwargs["text_random_int_range"] = cast(
+            Any, config.text_random_int_range
+        )
+    elif answer_config_cls is MultiTextQuestionAnswerConfig:
+        answer_config_kwargs["multi_text_blank_modes"] = config.multi_text_blank_modes
+        answer_config_kwargs["multi_text_blank_ai_flags"] = config.multi_text_blank_ai_flags
+        answer_config_kwargs["multi_text_blank_int_ranges"] = config.multi_text_blank_int_ranges
+    elif answer_config_cls is LocationQuestionAnswerConfig:
+        answer_config_kwargs["location_parts"] = (
+            list(existing_config.details.answer_config.location_parts)  # type: ignore[union-attr]
+            if existing_config
+            and isinstance(existing_config.details.answer_config, LocationQuestionAnswerConfig)
+            else []
         )
 
-    return entry_cls(**kwargs)
+    answer_config = answer_config_cls(**answer_config_kwargs)
+
+    detail = QuestionDetail(
+        provider_question_id=attrs.provider_question_id or None,
+        provider_page_id=attrs.provider_page_id or None,
+        probabilities=cast(Any, config.probabilities),
+        distribution_mode=config.distribution,
+        custom_weights=cast(Any, config.custom_weights),
+        answer_config=answer_config,
+    )
+
+    return QuestionInfo(
+        num=q.num,
+        title=attrs.title_text or "",
+        question_type=str(attrs.q_type),
+        options=cast(list[str], q.option_texts if isinstance(q, ChoiceQuestionMeta) and q.option_texts else []),
+        required=getattr(q, "required", False),
+        details=detail,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -573,24 +583,23 @@ def _assemble_question_entry(
 # ---------------------------------------------------------------------------
 
 
-def build_default_question_entries(
+def build_default_survey_questions(
     questions_info: list[SurveyQuestionMeta],
     *,
     survey_url: str = "",
-    existing_entries: list[QuestionEntry] | None = None,
-) -> list[QuestionEntry]:
+    existing_entries: list[QuestionInfo] | None = None,
+) -> list[QuestionInfo]:
 
     existing_by_num, existing_by_title, existing_by_provider = _build_existing_entry_maps(
         existing_entries
     )
 
-    detected_provider = detect_survey_provider(survey_url)
-    entries: list[QuestionEntry] = []
+    entries: list[QuestionInfo] = []
     for q in questions_info:
         if q.type_code == TypeCode.DESCRIPTION or q.unsupported:
             continue
 
-        attrs = _extract_question_attrs(q, detected_provider)
+        attrs = _extract_question_attrs(q)
 
         existing_config = _find_matching_config(
             attrs,
@@ -607,5 +616,5 @@ def build_default_question_entries(
 
         _apply_forced_option_overrides(q, attrs, config)
 
-        entries.append(_assemble_question_entry(q, attrs, config, existing_config))
+        entries.append(_assemble_question_info(q, attrs, config, existing_config))
     return entries

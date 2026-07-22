@@ -3,16 +3,16 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from survey_submitter.core.config.schema import QuestionInfo
 from survey_submitter.core.questions.meta_helpers import (
     count_positive_weights,
     find_all_zero_attached_selects,
     find_all_zero_matrix_rows,
 )
 from survey_submitter.core.questions.schema import (
-    ChoiceQuestionEntry,
-    MultiTextQuestionEntry,
-    QuestionEntry,
-    TextQuestionEntry,
+    ChoiceQuestionAnswerConfig,
+    MultiTextQuestionAnswerConfig,
+    TextQuestionAnswerConfig,
 )
 from survey_submitter.core.questions.types import QuestionType, CHOICE_TYPES, TEXT_TYPES
 from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_survey_question_meta
@@ -41,25 +41,18 @@ def _extract_text_min_length(*fragments: Any) -> int | None:
     return max(limits) if limits else None
 
 
-def _is_text_ai_enabled(entry: QuestionEntry) -> bool:
-    question_type = str(entry.question_type or "").strip()
+def _is_text_ai_enabled(qi: QuestionInfo) -> bool:
+    question_type = str(qi.question_type or "").strip()
     if question_type == QuestionType.TEXT:
-        return bool(entry.ai_enabled)
-    if question_type == QuestionType.MULTI_TEXT and isinstance(entry, MultiTextQuestionEntry):
-        blank_flags = entry.multi_text_blank_ai_flags or []
-        return bool(entry.ai_enabled) or (
+        return bool(qi.details.answer_config.ai_enabled)
+    if question_type == QuestionType.MULTI_TEXT and isinstance(
+        qi.details.answer_config, MultiTextQuestionAnswerConfig
+    ):
+        blank_flags = qi.details.answer_config.multi_text_blank_ai_flags or []
+        return bool(qi.details.answer_config.ai_enabled) or (
             bool(blank_flags) and all(bool(flag) for flag in blank_flags)
         )
     return False
-
-
-def _text_answer_too_short_indexes(entry: QuestionEntry, min_length: int) -> list[tuple[int, int]]:
-    issues: list[tuple[int, int]] = []
-    for answer_index, raw_answer in enumerate(list(entry.texts or []), start=1):
-        answer = str(raw_answer or "").strip()
-        if len(answer) < min_length:
-            issues.append((answer_index, len(answer)))
-    return issues
 
 
 def _text_random_mode_label(raw_mode: Any) -> str:
@@ -80,10 +73,10 @@ def _display_question_num(raw_num: Any, question_info: SurveyQuestionMeta | None
     return raw_num
 
 
-def _pick_config_weights(entry: QuestionEntry) -> Any:
-    distribution_mode = str(entry.distribution_mode or "").strip().lower()
-    custom_weights = entry.custom_weights
-    probabilities = entry.probabilities
+def _pick_config_weights(qi: QuestionInfo) -> Any:
+    distribution_mode = str(qi.details.distribution_mode or "").strip().lower()
+    custom_weights = qi.details.custom_weights
+    probabilities = qi.details.probabilities
     return (
         custom_weights
         if distribution_mode == "custom" and custom_weights not in (None, [])
@@ -123,7 +116,7 @@ def _format_unsupported_error(unsupported_questions: list[SurveyQuestionMeta]) -
 
 
 def _validate_multiple_choice(
-    entry: QuestionEntry,
+    qi: QuestionInfo,
     display_question_num: Any,
     question_info: SurveyQuestionMeta | None,
     errors: list[str],
@@ -133,7 +126,7 @@ def _validate_multiple_choice(
     if question_info:
         multi_min_limit = getattr(question_info, "multi_min_limit", None)
 
-    probs = entry.custom_weights or entry.probabilities
+    probs = qi.details.custom_weights or qi.details.probabilities
     if isinstance(probs, list):
         positive_count = count_positive_weights(probs)
         if positive_count <= 0:
@@ -154,20 +147,20 @@ def _validate_multiple_choice(
 
 
 def _validate_text_entry(
-    entry: QuestionEntry,
+    qi: QuestionInfo,
     display_question_num: Any,
     question_type: str,
     question_info: SurveyQuestionMeta | None,
     errors: list[str],
 ) -> None:
-    if question_info is None or _is_text_ai_enabled(entry):
+    if question_info is None or _is_text_ai_enabled(qi):
         return
     min_text_length = _extract_text_min_length(question_info.title, question_info.description)
     if min_text_length is None or min_text_length <= 0:
         return
     text_random_mode = (
-        str(entry.text_random_mode or "").strip().lower()
-        if isinstance(entry, TextQuestionEntry)
+        str(qi.details.answer_config.text_random_mode or "").strip().lower()
+        if isinstance(qi.details.answer_config, TextQuestionAnswerConfig)
         else ""
     )
     if question_type == QuestionType.TEXT and text_random_mode not in ("", "none"):
@@ -177,21 +170,12 @@ def _validate_text_entry(
             f"  - 当前选择的是{_text_random_mode_label(text_random_mode)}，无法保证达到字数要求\n"
             "  - 请改用足够长的答案列表，或启用 AI 作答"
         )
-    else:
-        short_indexes = _text_answer_too_short_indexes(entry, min_text_length)
-        if short_indexes:
-            detail = "、".join(
-                f"第 {answer_index} 个答案 {actual_length} 字"
-                for answer_index, actual_length in short_indexes[:5]
-            )
-            if len(short_indexes) > 5:
-                detail += f" 等 {len(short_indexes)} 个答案"
-            errors.append(
-                f"第 {display_question_num} 题（填空题）配置冲突：\n"
-                f"  - 题目要求答案最少 {min_text_length} 字\n"
-                f"  - 但答案列表里 {detail}，达不到要求\n"
-                "  - 请改长答案，或启用 AI 作答"
-            )
+    elif question_type == QuestionType.TEXT:
+        errors.append(
+            f"第 {display_question_num} 题（填空题）配置冲突：\n"
+            f"  - 题目要求答案最少 {min_text_length} 字\n"
+            "  - 启用 AI 作答或选择随机模式以满足字数要求"
+        )
 
 
 def _validate_choice_weights(
@@ -234,13 +218,15 @@ def _validate_matrix_entry(
 
 
 def _validate_attached_selects(
-    entry: QuestionEntry,
+    qi: QuestionInfo,
     display_question_num: Any,
     errors: list[str],
 ) -> None:
-    if not isinstance(entry, ChoiceQuestionEntry):
+    if not isinstance(qi.details.answer_config, ChoiceQuestionAnswerConfig):
         return
-    for cfg_idx, option_text in find_all_zero_attached_selects(entry.attached_option_selects or []):
+    for cfg_idx, option_text in find_all_zero_attached_selects(
+        qi.details.answer_config.attached_option_selects or []
+    ):
         errors.append(
             f"第 {display_question_num} 题（嵌入式下拉）配置无效：\n"
             f"  - 第 {cfg_idx} 组（{option_text or '未命名选项'}）所有配比都小于等于 0\n"
@@ -249,11 +235,11 @@ def _validate_attached_selects(
 
 
 def validate_question_config(
-    entries: list[QuestionEntry],
+    questions: list[QuestionInfo],
     questions_info: list[SurveyQuestionMeta | dict[str, Any]] | None = None,
 ) -> str | None:
 
-    if not entries:
+    if not questions:
         return "未配置任何题目"
 
     errors: list[str] = []
@@ -262,9 +248,9 @@ def validate_question_config(
     if unsupported_questions:
         return _format_unsupported_error(unsupported_questions)
 
-    for idx, entry in enumerate(entries):
-        question_num = entry.question_num if entry.question_num is not None else idx + 1
-        question_type = entry.question_type
+    for idx, qi in enumerate(questions):
+        question_num = qi.num if qi.num is not None else idx + 1
+        question_type = qi.question_type
         try:
             normalized_question_num = int(question_num)
         except (ValueError, TypeError):
@@ -274,13 +260,13 @@ def validate_question_config(
         display_question_num = _display_question_num(question_num, question_info)
 
         if question_type == QuestionType.MULTIPLE:
-            if _validate_multiple_choice(entry, display_question_num, question_info, errors):
+            if _validate_multiple_choice(qi, display_question_num, question_info, errors):
                 continue
 
         if question_type in TEXT_TYPES:
-            _validate_text_entry(entry, display_question_num, question_type, question_info, errors)
+            _validate_text_entry(qi, display_question_num, question_type, question_info, errors)
 
-        configured_weights = _pick_config_weights(entry)
+        configured_weights = _pick_config_weights(qi)
         if question_type in CHOICE_TYPES:
             _validate_choice_weights(
                 display_question_num, question_type, configured_weights, errors
@@ -289,7 +275,7 @@ def validate_question_config(
         if question_type == QuestionType.MATRIX:
             _validate_matrix_entry(display_question_num, configured_weights, errors)
 
-        _validate_attached_selects(entry, display_question_num, errors)
+        _validate_attached_selects(qi, display_question_num, errors)
 
     if errors:
         return "\n\n".join(errors)

@@ -183,10 +183,10 @@ def _cmd_dry_run(config_path: str) -> None:
     config.survey.provider = definition.provider
     config.answer_config.survey_questions = survey_questions_from_definition(definition.questions)
 
-    if not config.answer_config.question_entries:
-        from survey_submitter.core.questions.config import build_default_question_entries
+    if not config.answer_config.survey_questions:
+        from survey_submitter.core.questions.config import build_default_survey_questions
 
-        config.answer_config.question_entries = build_default_question_entries(
+        config.answer_config.survey_questions = build_default_survey_questions(
             definition.questions,
             survey_url=config.survey.url,
         )

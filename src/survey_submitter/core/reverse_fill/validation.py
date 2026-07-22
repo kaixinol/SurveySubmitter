@@ -5,14 +5,15 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Callable, cast
 
-from survey_submitter.core.config.schema import RuntimeConfig
-from survey_submitter.core.questions.default_builder import build_default_question_entries
+from survey_submitter.core.config.schema import QuestionInfo, RuntimeConfig
+from survey_submitter.core.questions.default_builder import build_default_survey_questions
 from survey_submitter.core.questions.schema import (
-    QuestionEntry,
-    _infer_option_count,
+    ChoiceQuestionAnswerConfig,
+    LocationQuestionAnswerConfig,
+    MultiTextQuestionAnswerConfig,
+    TextQuestionAnswerConfig,
 )
 from survey_submitter.core.questions.types import CHOICE_TYPES, TEXT_TYPES, QuestionType, TypeCode
-from survey_submitter.core.questions.validation import validate_question_config
 from survey_submitter.core.reverse_fill.parser import (
     infer_reverse_fill_question_type,
     parse_choice_answer,
@@ -52,24 +53,19 @@ def _detail_from_columns(columns: list[object]) -> str:
 
 
 def _regular_config_ready(
-    entry: QuestionEntry | None, info: SurveyQuestionMeta | dict[str, object], expected_type: str
+    qi: QuestionInfo | None, info: SurveyQuestionMeta | dict[str, object], expected_type: str
 ) -> bool:
-    if entry is None:
+    if qi is None:
         return False
-    entry_type = str(entry.question_type or "").strip()
+    entry_type = str(qi.question_type or "").strip()
     normalized_expected = str(expected_type or "").strip()
     if entry_type != normalized_expected:
-        if (
-            normalized_expected == QuestionType.LOCATION
-            and entry_type == QuestionType.TEXT
-            and bool(entry.is_location)
-        ):
-            pass  # text entry with is_location is compatible with location type
-        else:
-            return False
-    copied_entry = copy.deepcopy(entry)
-    copied_info = ensure_survey_question_meta(info)
-    return validate_question_config([copied_entry], [copied_info]) is None
+        # Location questions may have a different type_code in questions_info
+        from survey_submitter.core.questions.schema import LocationQuestionAnswerConfig
+        if isinstance(qi.details.answer_config, LocationQuestionAnswerConfig):
+            return True
+        return False
+    return True
 
 
 def _question_issue(
@@ -133,16 +129,45 @@ def _build_question_plan(
 
 
 def _entry_differs_from_default(
-    entry: QuestionEntry | None, default_entry: QuestionEntry | None
+    qi: QuestionInfo | None, default_qi: QuestionInfo | None
 ) -> bool:
-    if entry is None or default_entry is None:
+    if qi is None or default_qi is None:
         return False
+
+    def _qi_val(q: QuestionInfo, field: str) -> Any:
+        if field == "question_type":
+            return q.question_type
+        if field == "option_count":
+            return len(q.options or [])
+        d = q.details
+        if field in ("probabilities", "distribution_mode", "custom_weights", "dimension"):
+            return getattr(d, field)
+        ac = d.answer_config
+        if field == "ai_enabled":
+            return ac.ai_enabled
+        if isinstance(ac, TextQuestionAnswerConfig) and field in (
+            "text_random_mode",
+            "text_random_int_range",
+        ):
+            return getattr(ac, field)
+        if isinstance(ac, MultiTextQuestionAnswerConfig) and field in (
+            "multi_text_blank_modes",
+            "multi_text_blank_ai_flags",
+            "multi_text_blank_int_ranges",
+        ):
+            return getattr(ac, field)
+        if isinstance(ac, ChoiceQuestionAnswerConfig) and field in (
+            "option_fill_texts",
+            "fillable_option_indices",
+            "attached_option_selects",
+        ):
+            return getattr(ac, field)
+        return None
+
     compare_fields = (
         "question_type",
-        "probabilities",
-        "texts",
-        "rows",
         "option_count",
+        "probabilities",
         "distribution_mode",
         "custom_weights",
         "ai_enabled",
@@ -154,16 +179,12 @@ def _entry_differs_from_default(
         "option_fill_texts",
         "fillable_option_indices",
         "attached_option_selects",
-        "is_location",
         "dimension",
     )
     for field_name in compare_fields:
-        left = copy.deepcopy(getattr(entry, field_name, None))
-        right = copy.deepcopy(getattr(default_entry, field_name, None))
-        if field_name == "option_count":
-            left = int(left or _infer_option_count(entry) or 0)
-            right = int(right or _infer_option_count(default_entry) or 0)
-        elif field_name == "fillable_option_indices":
+        left = copy.deepcopy(_qi_val(qi, field_name))
+        right = copy.deepcopy(_qi_val(default_qi, field_name))
+        if field_name == "fillable_option_indices":
             left = list(left or [])
             right = list(right or [])
         if left != right:
@@ -460,8 +481,8 @@ def _parse_question_answers(
 def _validate_and_collect_question(
     *,
     info: SurveyQuestionMeta,
-    question_entries: list[QuestionEntry],
-    default_entry_by_num: dict[int, QuestionEntry],
+    survey_questions: list[QuestionInfo],
+    default_entry_by_num: dict[int, QuestionInfo],
     export: object,
     selected_rows: list[object],
     answers_by_row: dict[int, dict[int, object]],
@@ -480,7 +501,7 @@ def _validate_and_collect_question(
         return False
 
     title = str(info.title or f"第{question_num}题").strip()
-    entry = resolve_question_entry(info, question_entries)
+    entry = resolve_question_entry(info, survey_questions)
     question_type = infer_reverse_fill_question_type(info, entry)
     columns = list((getattr(export, "question_columns", None) or {}).get(question_num) or [])
     fallback_ready = _regular_config_ready(entry, info, question_type)
@@ -655,7 +676,7 @@ def build_reverse_fill_spec(
     source_path: str,
     provider: str,
     questions_info: Sequence[SurveyQuestionMeta | dict[str, object]],
-    question_entries: list[QuestionEntry],
+    survey_questions: list[QuestionInfo],
     selected_format: str = REVERSE_FILL_FORMAT_AUTO,
     start_row: int = 1,
     target_num: int = 0,
@@ -671,11 +692,11 @@ def build_reverse_fill_spec(
         for info_index, raw_info in enumerate(list(questions_info or []), start=1)
         if isinstance(raw_info, (dict, SurveyQuestionMeta))
     ]
-    default_entries = build_default_question_entries(normalized_questions_info)
+    default_entries = build_default_survey_questions(normalized_questions_info)
     default_entry_by_num = {
-        int(entry.question_num or 0): entry
+        int(entry.num or 0): entry
         for entry in list(default_entries or [])
-        if int(entry.question_num or 0) > 0
+        if int(entry.num or 0) > 0
     }
 
     export = load_wjx_excel_export(source_path, preferred_format=selected_format)
@@ -705,7 +726,7 @@ def build_reverse_fill_spec(
     for info in normalized_questions_info:
         _validate_and_collect_question(
             info=info,
-            question_entries=question_entries,
+            survey_questions=survey_questions,
             default_entry_by_num=default_entry_by_num,
             export=export,
             selected_rows=selected_rows,
@@ -762,7 +783,7 @@ def format_blocking_message(spec: ReverseFillSpec) -> str:
 def build_enabled_reverse_fill_spec(
     config: RuntimeConfig,
     questions_info: list[SurveyQuestionMeta | dict[str, object]],
-    question_entries: list[QuestionEntry],
+    survey_questions: list[QuestionInfo],
 ) -> ReverseFillSpec | None:
     rf = config.execution.reverse_fill
     if not bool(rf.enabled):
@@ -774,7 +795,7 @@ def build_enabled_reverse_fill_spec(
         source_path=source_path,
         provider=str(config.survey.provider or SURVEY_PROVIDER_WJX),
         questions_info=list(questions_info or []),
-        question_entries=list(question_entries or []),
+        survey_questions=list(survey_questions or []),
         selected_format=str(rf.format or REVERSE_FILL_FORMAT_AUTO),
         start_row=max(1, int(rf.start_row or 1)),
         target_num=max(0, int(config.execution.target_num or 0)),

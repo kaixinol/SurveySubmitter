@@ -26,14 +26,14 @@ __all__ = [
     "GLOBAL_RELIABILITY_DIMENSION",
     "DistributionConfig",
     "FillOptionsConfig",
-    "LocationInfo",
     "MultiTextBlankConfig",
     "ProviderInfo",
-    "QuestionEntry",
-    "ChoiceQuestionEntry",
-    "TextQuestionEntry",
-    "MultiTextQuestionEntry",
-    "LocationQuestionEntry",
+    "QuestionDetail",
+    "QuestionAnswerConfig",
+    "ChoiceQuestionAnswerConfig",
+    "TextQuestionAnswerConfig",
+    "MultiTextQuestionAnswerConfig",
+    "LocationQuestionAnswerConfig",
     "TextRandomConfig",
     "_TEXT_RANDOM_ID_CARD",
     "_TEXT_RANDOM_ID_CARD_TOKEN",
@@ -44,12 +44,12 @@ __all__ = [
     "_TEXT_RANDOM_NAME_TOKEN",
     "_TEXT_RANDOM_NONE",
     "_infer_option_count",
-    "entry_type_for_question_type",
+    "answer_config_type_for_question_type",
 ]
 
 
 # ---------------------------------------------------------------------------
-# Nested dataclasses – logical groupings of QuestionEntry attributes
+# Nested dataclasses – logical groupings of question attributes
 # ---------------------------------------------------------------------------
 
 
@@ -98,20 +98,20 @@ class FillOptionsConfig:
     attached_option_selects: list[dict] = field(default_factory=list)
 
 
-@dataclass
-class LocationInfo:
-    """Location-question identity and sub-part breakdown."""
-
-    is_location: bool = False
-    location_parts: list[str] = field(default_factory=list)
-
-
 # ---------------------------------------------------------------------------
 # _infer_option_count
 # ---------------------------------------------------------------------------
 
 
-def _infer_option_count(entry: "QuestionEntry") -> int:
+def _infer_option_count(
+    question_type: str,
+    *,
+    custom_weights: list[float] | list[list[float]] | None = None,
+    probabilities: list[float] | list[list[float]] | int | None = None,
+    option_count: int = 0,
+    texts: list[str] | None = None,
+) -> int:
+    """Infer the option count from available distribution metadata."""
 
     def _nested_length(raw: object) -> int | None:
         if not isinstance(raw, list):
@@ -122,51 +122,117 @@ def _infer_option_count(entry: "QuestionEntry") -> int:
                 lengths.append(len(item))
         return max(lengths) if lengths else None
 
-    if entry.question_type == QuestionType.MATRIX:
-        nested_len = _nested_length(entry.custom_weights)
+    if question_type == QuestionType.MATRIX:
+        nested_len = _nested_length(custom_weights)
         if nested_len:
             return nested_len
-        nested_len = _nested_length(entry.probabilities)
+        nested_len = _nested_length(probabilities)
         if nested_len:
             return nested_len
 
-    if entry.option_count and entry.option_count > 0:
-        return int(entry.option_count)
-    if entry.custom_weights and len(entry.custom_weights) > 0:
-        return len(entry.custom_weights)
-    if isinstance(entry.probabilities, (list, tuple)) and len(entry.probabilities) > 0:
-        return len(entry.probabilities)
-    if entry.texts and len(entry.texts) > 0:
-        return len(entry.texts)
-    if entry.question_type in (QuestionType.SCALE, QuestionType.SCORE):
+    if option_count and option_count > 0:
+        return int(option_count)
+    if custom_weights and len(custom_weights) > 0:
+        return len(custom_weights)
+    if isinstance(probabilities, (list, tuple)) and len(probabilities) > 0:
+        return len(probabilities)
+    if texts and len(texts) > 0:
+        return len(texts)
+    if question_type in (QuestionType.SCALE, QuestionType.SCORE):
         return DEFAULT_RATING_OPTION_COUNT
     return 0
 
 
 # ---------------------------------------------------------------------------
-# QuestionEntry hierarchy (discriminated on `question_type`)
+# QuestionAnswerConfig hierarchy (discriminated on `question_type`)
 # ---------------------------------------------------------------------------
 
 
-class QuestionEntry(BaseConfigModel):
-    """Configuration for a single survey question.
+class QuestionAnswerConfig(BaseConfigModel):
+    """Per-question answering behavior – base class for all question types.
 
-    Base class holds only the fields common to every question type. Type-specific
-    fields live on the narrow subclasses (see ``entry_type_for_question_type``):
-
-    * :class:`ChoiceQuestionEntry` – single / multiple / dropdown / order
-    * :class:`TextQuestionEntry` – text
-    * :class:`MultiTextQuestionEntry` – multi-text
-    * :class:`LocationQuestionEntry` – location
+    Subclasses narrow the fields to only those relevant for a specific
+    question type, ensuring serialization never emits irrelevant config.
     """
 
-    # -- Identity -----------------------------------------------------------
-    question_type: str
-    question_num: int | None = None
-    question_title: str | None = None
+    ai_enabled: bool = False
 
-    # -- Provider -----------------------------------------------------------
-    survey_provider: str = "wjx"
+
+class ChoiceQuestionAnswerConfig(QuestionAnswerConfig):
+    """Choice-style questions (single / multiple / dropdown / order)."""
+
+    option_fill_texts: list[str | None] | None = None
+    fillable_option_indices: list[int] | None = None
+    attached_option_selects: list[dict] = Field(default_factory=list)
+
+
+class TextQuestionAnswerConfig(QuestionAnswerConfig):
+    """Single-text questions."""
+
+    text_random_mode: str = _TEXT_RANDOM_NONE
+    text_random_int_range: list[int] = Field(default_factory=list)
+
+
+class MultiTextQuestionAnswerConfig(QuestionAnswerConfig):
+    """Multi-text (多项填空) questions."""
+
+    multi_text_blank_modes: list[str] = Field(default_factory=list)
+    multi_text_blank_ai_flags: list[bool] = Field(default_factory=list)
+    multi_text_blank_int_ranges: list[list[int]] = Field(default_factory=list)
+
+
+class LocationQuestionAnswerConfig(QuestionAnswerConfig):
+    """Location questions."""
+
+    location_parts: list[str] = Field(default_factory=list)
+
+
+# Mapping from question_type string to the appropriate AnswerConfig subclass.
+_ANSWER_CONFIG_BY_QUESTION_TYPE: dict[str, type[QuestionAnswerConfig]] = {
+    str(QuestionType.SINGLE): ChoiceQuestionAnswerConfig,
+    str(QuestionType.MULTIPLE): ChoiceQuestionAnswerConfig,
+    str(QuestionType.DROPDOWN): ChoiceQuestionAnswerConfig,
+    str(QuestionType.ORDER): ChoiceQuestionAnswerConfig,
+    str(QuestionType.TEXT): TextQuestionAnswerConfig,
+    str(QuestionType.MULTI_TEXT): MultiTextQuestionAnswerConfig,
+    str(QuestionType.LOCATION): LocationQuestionAnswerConfig,
+}
+
+
+def answer_config_type_for_question_type(
+    question_type: str | QuestionType,
+    *,
+    location_parts: list[str] | None = None,
+) -> type[QuestionAnswerConfig]:
+    """Return the concrete QuestionAnswerConfig subclass for a question type.
+
+    When *location_parts* is non-empty, returns
+    :class:`LocationQuestionAnswerConfig` regardless of the question type,
+    because a text-typed question with location parts behaves as a location
+    question.
+    """
+    if location_parts:
+        return LocationQuestionAnswerConfig
+    try:
+        key = str(QuestionType(str(question_type)))
+    except ValueError:
+        return QuestionAnswerConfig
+    return _ANSWER_CONFIG_BY_QUESTION_TYPE.get(key, QuestionAnswerConfig)
+
+
+# ---------------------------------------------------------------------------
+# QuestionDetail – replaces the old QuestionEntry hierarchy
+# ---------------------------------------------------------------------------
+
+
+class QuestionDetail(BaseConfigModel):
+    """Runtime details for a single survey question.
+
+    Combined from the former ``QuestionEntry`` base + subclass fields.
+    Embedded inside :class:`QuestionInfo.details`.
+    """
+
+    # -- Provider mapping (survey_provider is read from SurveySection) -----
     provider_question_id: str | None = None
     provider_page_id: str | None = None
 
@@ -176,20 +242,12 @@ class QuestionEntry(BaseConfigModel):
     custom_weights: list[float] | list[list[float]] | None = None
     dimension: str | None = None
 
-    # -- Core question structure --------------------------------------------
-    texts: list[str] | None = None
-    rows: int = 1
-    option_count: int = 0
-    ai_enabled: bool = False
-
-    # -- Location flag (orthogonal: a text-typed question may also be a location)
-    is_location: bool = False
-    location_parts: list[str] = Field(default_factory=list)
+    # -- Per-question answering behavior ------------------------------------
+    answer_config: QuestionAnswerConfig = Field(default_factory=QuestionAnswerConfig)
 
     @property
     def provider_info(self) -> ProviderInfo:
         return ProviderInfo(
-            survey_provider=self.survey_provider,
             provider_question_id=self.provider_question_id,
             provider_page_id=self.provider_page_id,
         )
@@ -202,96 +260,3 @@ class QuestionEntry(BaseConfigModel):
             custom_weights=self.custom_weights,
             dimension=self.dimension,
         )
-
-
-class ChoiceQuestionEntry(QuestionEntry):
-    """Choice-style questions (single / multiple / dropdown / order)."""
-
-    attached_option_selects: list[dict] = Field(default_factory=list)
-    fillable_option_indices: list[int] | None = None
-    option_fill_texts: list[str | None] | None = None
-
-    @property
-    def fill_options_config(self) -> FillOptionsConfig:
-        return FillOptionsConfig(
-            option_fill_texts=self.option_fill_texts,
-            fillable_option_indices=self.fillable_option_indices,
-            attached_option_selects=list(self.attached_option_selects or []),
-        )
-
-
-class TextQuestionEntry(QuestionEntry):
-    """Single-text questions."""
-
-    text_random_mode: str = _TEXT_RANDOM_NONE
-    text_random_int_range: list[int] = Field(default_factory=list)
-
-    @property
-    def text_random_config(self) -> TextRandomConfig:
-        return TextRandomConfig(
-            mode=self.text_random_mode,
-            int_range=list(self.text_random_int_range),
-        )
-
-
-class MultiTextQuestionEntry(QuestionEntry):
-    """Multi-text (多项填空) questions."""
-
-    multi_text_blank_modes: list[str] = Field(default_factory=list)
-    multi_text_blank_ai_flags: list[bool] = Field(default_factory=list)
-    multi_text_blank_int_ranges: list[list[int]] = Field(default_factory=list)
-
-    @property
-    def multi_text_blank_config(self) -> MultiTextBlankConfig:
-        return MultiTextBlankConfig(
-            modes=list(self.multi_text_blank_modes),
-            ai_flags=list(self.multi_text_blank_ai_flags),
-            int_ranges=list(self.multi_text_blank_int_ranges),
-        )
-
-
-class LocationQuestionEntry(QuestionEntry):
-    """Location questions."""
-
-    @property
-    def location_info(self) -> LocationInfo:
-        return LocationInfo(
-            is_location=self.is_location,
-            location_parts=list(self.location_parts),
-        )
-
-
-# Question types that map to each narrow subclass. Any type not listed uses the
-# base QuestionEntry directly. Keys are the string values of QuestionType.
-_ENTRY_TYPE_BY_QUESTION_TYPE: dict[str, type[QuestionEntry]] = {
-    str(QuestionType.SINGLE): ChoiceQuestionEntry,
-    str(QuestionType.MULTIPLE): ChoiceQuestionEntry,
-    str(QuestionType.DROPDOWN): ChoiceQuestionEntry,
-    str(QuestionType.ORDER): ChoiceQuestionEntry,
-    str(QuestionType.TEXT): TextQuestionEntry,
-    str(QuestionType.MULTI_TEXT): MultiTextQuestionEntry,
-    str(QuestionType.LOCATION): LocationQuestionEntry,
-}
-
-
-def entry_type_for_question_type(question_type: str | QuestionType) -> type[QuestionEntry]:
-    """Return the concrete QuestionEntry subclass for a given question type."""
-    try:
-        key = str(QuestionType(str(question_type)))
-    except ValueError:
-        return QuestionEntry
-    return _ENTRY_TYPE_BY_QUESTION_TYPE.get(key, QuestionEntry)
-
-
-def make_question_entry(**kwargs: Any) -> QuestionEntry:
-    """Construct the appropriate QuestionEntry subclass for ``question_type``.
-
-    Fields irrelevant to the resolved subclass are ignored, so callers may pass a
-    full flat field set (e.g. parsed from legacy YAML) without worrying about the
-    ``extra="forbid"`` policy of the concrete model.
-    """
-    qtype = kwargs.get("question_type")
-    cls = entry_type_for_question_type(str(qtype)) if qtype is not None else QuestionEntry
-    allowed = set(cls.model_fields.keys())
-    filtered = {key: value for key, value in kwargs.items() if key in allowed}
-    return cls(**filtered)

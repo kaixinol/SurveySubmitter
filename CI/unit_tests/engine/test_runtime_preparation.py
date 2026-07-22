@@ -1,13 +1,15 @@
 from __future__ import annotations
 import pytest
 from unittest.mock import patch
-from survey_submitter.core.questions.config import make_question_entry
 from survey_submitter.core.config.schema import (
     RuntimeConfig,
     SurveySection,
     ExecutionSection,
     AnswerConfigSection,
+    AnswerRulesConfig,
+    QuestionInfo,
 )
+from survey_submitter.core.questions.schema import QuestionDetail, ChoiceQuestionAnswerConfig
 from survey_submitter.core.reverse_fill.schema import ReverseFillSpec
 from survey_submitter.core.engine.execution_builder import (
     PreparedExecutionArtifacts,
@@ -50,16 +52,21 @@ class RuntimePreparationTests:
                 user_agent_ratios={"wechat": 20, "mobile": 30, "pc": 50},
             ),
             answer_config=AnswerConfigSection(
-                answer_rules=[{"num": 1, "equals": [1]}],
-                question_entries=[
-                    make_question_entry(
+                answer_rules=AnswerRulesConfig(
+                    constraints=[{"num": 1, "equals": [1]}],
+                ),
+                survey_questions=[
+                    QuestionInfo(
+                        num=1,
+                        title="",
                         question_type="single",
-                        probabilities=[100.0, 0.0],
-                        option_count=2,
-                        question_num=1,
-                        provider="wjx",
-                        provider_question_id="q1",
-                        provider_page_id="p1",
+                        options=["", ""],
+                        details=QuestionDetail(
+                            probabilities=[100.0, 0.0],
+                            provider_question_id="q1",
+                            provider_page_id="p1",
+                            answer_config=ChoiceQuestionAnswerConfig(),
+                        ),
                     )
                 ],
             ),
@@ -89,7 +96,6 @@ class RuntimePreparationTests:
         config = self._build_config()
         config.survey.url = "https://v.wjx.cn/vm/demo.aspx"
         config.survey.provider = "wjx"
-        config.answer_config.question_entries[0].survey_provider = "wjx"
         html = (
             "<html><body><div id='divWorkError'>此问卷处于停止状态，无法作答！</div></body></html>"
         )
@@ -115,7 +121,6 @@ class RuntimePreparationTests:
         config = self._build_config()
         config.survey.url = "https://v.wjx.cn/vm/demo.aspx"
         config.survey.provider = "wjx"
-        config.answer_config.question_entries[0].survey_provider = "wjx"
         html = """
         <html><body>
           <div>问卷发布者还未购买企业标准版或企业标准版已到期，此问卷暂时不能被填写！</div>

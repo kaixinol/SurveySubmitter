@@ -61,7 +61,7 @@ class ConsistencyRulesTests:
 
         sanitized, stats = consistency.sanitize_answer_rules(rules, questions)
 
-        assert len(sanitized) == 1
+        assert len(sanitized.constraints) == 1
         assert stats == {"invalid": 1, "unsupported": 1}
 
     def test_single_like_consistency_applies_latest_triggered_rule(self) -> None:
