@@ -300,8 +300,12 @@ def serialize_question_detail(qi: QuestionInfo) -> dict[str, object]:
         ac_dict = {
             "ai_enabled": bool(ac.ai_enabled),
             "multi_text_blank_modes": _normalize_multi_text_blank_modes(ac.multi_text_blank_modes),
-            "multi_text_blank_ai_flags": _normalize_multi_text_blank_ai_flags(ac.multi_text_blank_ai_flags),
-            "multi_text_blank_int_ranges": _normalize_multi_text_blank_int_ranges(ac.multi_text_blank_int_ranges),
+            "multi_text_blank_ai_flags": _normalize_multi_text_blank_ai_flags(
+                ac.multi_text_blank_ai_flags
+            ),
+            "multi_text_blank_int_ranges": _normalize_multi_text_blank_int_ranges(
+                ac.multi_text_blank_int_ranges
+            ),
         }
     elif isinstance(ac, LocationQuestionAnswerConfig):
         ac_dict = {
@@ -314,11 +318,20 @@ def serialize_question_detail(qi: QuestionInfo) -> dict[str, object]:
     return payload
 
 
-_QUESTION_INFO_FIELDS = frozenset({"num", "title", "question_type", "options", "required", "details"})
-_QUESTION_DETAIL_FIELDS = frozenset({
-    "provider_question_id", "provider_page_id", "probabilities",
-    "distribution_mode", "custom_weights", "dimension", "answer_config",
-})
+_QUESTION_INFO_FIELDS = frozenset(
+    {"num", "title", "question_type", "options", "required", "details"}
+)
+_QUESTION_DETAIL_FIELDS = frozenset(
+    {
+        "provider_question_id",
+        "provider_page_id",
+        "probabilities",
+        "distribution_mode",
+        "custom_weights",
+        "dimension",
+        "answer_config",
+    }
+)
 _ANSWER_CONFIG_FIELDS = frozenset({"ai_enabled"})
 
 
@@ -328,9 +341,7 @@ def deserialize_question_detail(data: dict[str, object]) -> QuestionInfo:
 
     unknown = set(data) - _QUESTION_INFO_FIELDS
     if unknown:
-        raise ValueError(
-            f"{_CONFIG_CORRUPTED_MESSAGE}：题目配置包含未知字段 {sorted(unknown)}"
-        )
+        raise ValueError(f"{_CONFIG_CORRUPTED_MESSAGE}：题目配置包含未知字段 {sorted(unknown)}")
 
     num = _coerce_int(data.get("num"), 0)
     title = str(data.get("title") or "").strip()
@@ -338,7 +349,10 @@ def deserialize_question_detail(data: dict[str, object]) -> QuestionInfo:
     options = _as_list(data.get("options")) if isinstance(data.get("options"), list) else []
     required = _as_bool(data.get("required"))
 
-    detail_raw: dict[str, object] = data.get("details") if isinstance(data.get("details"), dict) else {}  # type: ignore[assignment]
+    raw_details = data.get("details")
+    detail_raw: dict[str, object] = (
+        cast("dict[str, object]", raw_details) if isinstance(raw_details, dict) else {}
+    )
     unknown_detail = set(detail_raw) - _QUESTION_DETAIL_FIELDS
     if unknown_detail:
         raise ValueError(
@@ -346,43 +360,72 @@ def deserialize_question_detail(data: dict[str, object]) -> QuestionInfo:
         )
 
     mode_raw = str(detail_raw.get("distribution_mode") or "random").strip()
-    probabilities = detail_raw.get("probabilities")
-    custom_weights = detail_raw.get("custom_weights")
-    if mode_raw == "custom" and _prob_config_is_unset(probabilities) and _custom_weights_has_positive(custom_weights):
+    probabilities: object = detail_raw.get("probabilities")
+    custom_weights: object = detail_raw.get("custom_weights")
+    if (
+        mode_raw == "custom"
+        and _prob_config_is_unset(probabilities)
+        and _custom_weights_has_positive(custom_weights)
+    ):
         probabilities = custom_weights
-    if mode_raw == "custom" and (custom_weights is None or custom_weights == []) and isinstance(probabilities, list):
+    if (
+        mode_raw == "custom"
+        and (custom_weights is None or custom_weights == [])
+        and isinstance(probabilities, list)
+    ):
         custom_weights = list(probabilities)
 
-    ac_raw: dict[str, object] = detail_raw.get("answer_config") if isinstance(detail_raw.get("answer_config"), dict) else {}  # type: ignore[assignment]
+    raw_ac = detail_raw.get("answer_config")
+    ac_raw: dict[str, object] = (
+        cast("dict[str, object]", raw_ac) if isinstance(raw_ac, dict) else {}
+    )
     ac_location_parts = ac_raw.get("location_parts")
-    location_parts: list[str] = [str(p) for p in ac_location_parts] if isinstance(ac_location_parts, list) else [str(p) for p in _as_list(detail_raw.get("location_parts"))]
-    ac_cls = answer_config_type_for_question_type(question_type, location_parts=location_parts or None)
+    location_parts: list[str] = (
+        [str(p) for p in ac_location_parts]
+        if isinstance(ac_location_parts, list)
+        else [str(p) for p in _as_list(detail_raw.get("location_parts"))]
+    )
+    ac_cls = answer_config_type_for_question_type(
+        question_type, location_parts=location_parts or None
+    )
 
     ac_fields = dict(ac_raw)
     if ac_cls is ChoiceQuestionAnswerConfig:
         answer_config = ChoiceQuestionAnswerConfig(
             ai_enabled=_as_bool(ac_fields.get("ai_enabled")),
-            option_fill_texts=ac_fields.get("option_fill_texts"),
-            fillable_option_indices=ac_fields.get("fillable_option_indices"),
-            attached_option_selects=_as_list(ac_fields.get("attached_option_selects")),
+            option_fill_texts=cast("list[str | None] | None", ac_fields.get("option_fill_texts")),
+            fillable_option_indices=cast(
+                "list[int] | None", ac_fields.get("fillable_option_indices")
+            ),
+            attached_option_selects=cast(
+                "list[dict[str, object]]", _as_list(ac_fields.get("attached_option_selects"))
+            ),
         )
     elif ac_cls is TextQuestionAnswerConfig:
         answer_config = TextQuestionAnswerConfig(
             ai_enabled=_as_bool(ac_fields.get("ai_enabled")),
             text_random_mode=str(ac_fields.get("text_random_mode") or "none").strip(),
-            text_random_int_range=_normalize_random_int_range(ac_fields.get("text_random_int_range")),
+            text_random_int_range=_normalize_random_int_range(
+                ac_fields.get("text_random_int_range")
+            ),
         )
     elif ac_cls is MultiTextQuestionAnswerConfig:
         answer_config = MultiTextQuestionAnswerConfig(
             ai_enabled=_as_bool(ac_fields.get("ai_enabled")),
-            multi_text_blank_modes=_normalize_multi_text_blank_modes(ac_fields.get("multi_text_blank_modes")),
-            multi_text_blank_ai_flags=_normalize_multi_text_blank_ai_flags(ac_fields.get("multi_text_blank_ai_flags")),
-            multi_text_blank_int_ranges=_normalize_multi_text_blank_int_ranges(ac_fields.get("multi_text_blank_int_ranges")),
+            multi_text_blank_modes=_normalize_multi_text_blank_modes(
+                ac_fields.get("multi_text_blank_modes")
+            ),
+            multi_text_blank_ai_flags=_normalize_multi_text_blank_ai_flags(
+                ac_fields.get("multi_text_blank_ai_flags")
+            ),
+            multi_text_blank_int_ranges=_normalize_multi_text_blank_int_ranges(
+                ac_fields.get("multi_text_blank_int_ranges")
+            ),
         )
     elif ac_cls is LocationQuestionAnswerConfig:
         answer_config = LocationQuestionAnswerConfig(
             ai_enabled=_as_bool(ac_fields.get("ai_enabled")),
-            location_parts=_as_list(ac_fields.get("location_parts")),
+            location_parts=cast("list[str]", _as_list(ac_fields.get("location_parts"))),
         )
     else:
         answer_config = QuestionAnswerConfig(ai_enabled=_as_bool(ac_fields.get("ai_enabled")))
@@ -390,9 +433,9 @@ def deserialize_question_detail(data: dict[str, object]) -> QuestionInfo:
     detail = QuestionDetail(
         provider_question_id=str(detail_raw.get("provider_question_id") or "").strip() or None,
         provider_page_id=str(detail_raw.get("provider_page_id") or "").strip() or None,
-        probabilities=probabilities,
+        probabilities=cast("list[float] | list[list[float]] | int | None", probabilities),
         distribution_mode=mode_raw,
-        custom_weights=custom_weights,
+        custom_weights=cast("list[float] | list[list[float]] | None", custom_weights),
         dimension=_normalize_dimension_value(detail_raw.get("dimension")),
         answer_config=answer_config,
     )
@@ -453,12 +496,12 @@ def build_runtime_config_snapshot(
     )
     snapshot.survey.provider = default_provider
     questions_source = (
-        survey_questions if survey_questions is not None else snapshot.answer_config.survey_questions
+        survey_questions
+        if survey_questions is not None
+        else snapshot.answer_config.survey_questions
     )
     snapshot.answer_config.survey_questions = clone_question_details(questions_source)
-    snapshot.answer_config.answer_rules = copy.deepcopy(
-        snapshot.answer_config.answer_rules
-    )
+    snapshot.answer_config.answer_rules = copy.deepcopy(snapshot.answer_config.answer_rules)
     snapshot.execution.user_agent_ratios = copy.deepcopy(
         dict(snapshot.execution.user_agent_ratios or {})
     )
@@ -514,11 +557,15 @@ def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
     config = RuntimeConfig.model_validate(raw_copy)
 
     raw_survey_questions = answer_config_raw.get("survey_questions") or []
-    question_info_dicts: list[dict[str, object]] = [
-        {str(k): v for k, v in item.items()}
-        for item in raw_survey_questions
-        if isinstance(item, dict)
-    ] if isinstance(raw_survey_questions, list) else []
+    question_info_dicts: list[dict[str, object]] = (
+        [
+            {str(k): v for k, v in item.items()}
+            for item in raw_survey_questions
+            if isinstance(item, dict)
+        ]
+        if isinstance(raw_survey_questions, list)
+        else []
+    )
     config.answer_config.survey_questions = _normalize_question_details_list(
         question_info_dicts,
     )
@@ -580,8 +627,7 @@ def serialize_runtime_config(config: RuntimeConfig) -> dict[str, Any]:
     payload: dict[str, Any] = config.model_dump()
     answer_config_payload = cast("dict[str, Any]", payload["answer_config"])
     answer_config_payload["survey_questions"] = [
-        serialize_question_detail(qi)
-        for qi in list(config.answer_config.survey_questions or [])
+        serialize_question_detail(qi) for qi in list(config.answer_config.survey_questions or [])
     ]
     return payload
 

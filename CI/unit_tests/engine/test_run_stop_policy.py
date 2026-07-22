@@ -122,7 +122,9 @@ class RunStopPolicyTests:
 
     def test_proxy_unavailable_uses_independent_counter(self) -> None:
         config = ExecutionConfig(fail_threshold=5, num_threads=8, random_proxy_ip=True)
-        state = ExecutionState(config=config, consecutive_fail_count=3, proxy_unavailable_fail_count=7)
+        state = ExecutionState(
+            config=config, consecutive_fail_count=3, proxy_unavailable_fail_count=7
+        )
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
         stopped = policy.record_failure(

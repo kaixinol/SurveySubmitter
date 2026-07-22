@@ -76,7 +76,9 @@ class TendencyRuntimeTests:
 
         assert tendency._apply_consistency_gate(2, 5, [1, 1, 5, 1, 1]) == 2
 
-    def test_apply_consistency_gate_falls_back_to_distance_weighted_random(self, patch_attrs) -> None:
+    def test_apply_consistency_gate_falls_back_to_distance_weighted_random(
+        self, patch_attrs
+    ) -> None:
         patch_attrs(
             (
                 tendency,

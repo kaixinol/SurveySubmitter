@@ -94,9 +94,7 @@ def resolve_probabilities(
     if total <= 0:
         return target
 
-    use_priority_profile = _has_active_runtime_dimension(
-        ctx, question_index
-    )
+    use_priority_profile = _has_active_runtime_dimension(ctx, question_index)
     warmup_samples, gain, min_factor, max_factor, gap_limit = _resolve_correction_params(
         use_priority_profile=use_priority_profile,
     )

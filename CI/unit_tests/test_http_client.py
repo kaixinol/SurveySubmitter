@@ -178,7 +178,9 @@ class HttpClientTests:
         stream_ctx = _FakeStreamCtx(response)
         released: list[str] = []
         wrapper = http_client._StreamResponse(
-            response, stream_ctx, lambda: released.append("released")  # ty:ignore[invalid-argument-type]
+            response,
+            stream_ctx,
+            lambda: released.append("released"),  # ty:ignore[invalid-argument-type]
         )
 
         assert list(wrapper.iter_content(chunk_size=16)) == [b"a", b"b"]
@@ -276,7 +278,9 @@ class HttpClientTests:
         release_calls: list[str] = []
         stream_ctx = _FakeAsyncStreamCtx(response)
         wrapper = async_http_client._AsyncStreamResponse(
-            response, stream_ctx, lambda: asyncio.sleep(0, result=release_calls.append("released"))  # ty:ignore[invalid-argument-type]
+            response,
+            stream_ctx,
+            lambda: asyncio.sleep(0, result=release_calls.append("released")),  # ty:ignore[invalid-argument-type]
         )
 
         chunks = [chunk async for chunk in wrapper.aiter_content(chunk_size=16)]

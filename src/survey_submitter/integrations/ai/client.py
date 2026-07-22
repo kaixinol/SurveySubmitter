@@ -66,9 +66,7 @@ async def agenerate_answer(
         if has_explicit_endpoint or api_protocol != "auto" or not is_endpoint_mismatch_error(exc):
             raise
         fallback_url = f"{normalize_endpoint_url(base_url)}{RESPONSES_SUFFIX}"
-        return await acall_responses(
-            fallback_url, api_key, model, question_title, system_prompt
-        )
+        return await acall_responses(fallback_url, api_key, model, question_title, system_prompt)
 
 
 async def atest_connection() -> str:

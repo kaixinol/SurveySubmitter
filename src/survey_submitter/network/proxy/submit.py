@@ -111,22 +111,16 @@ def _purge_unusable_proxy_pool_locked(
             continue
         if ctx._is_proxy_in_cooldown_locked(lease.address):
             removed += 1
-            logger.info(
-                f"已移除本地临时屏蔽中的代理：{mask_proxy_for_log(lease.address)}"
-            )
+            logger.info(f"已移除本地临时屏蔽中的代理：{mask_proxy_for_log(lease.address)}")
             continue
         if not proxy_lease_has_sufficient_ttl(lease, required_ttl_seconds=required_ttl_seconds):
             removed += 1
-            logger.info(
-                f"已丢弃即将过期的代理：{mask_proxy_for_log(lease.address)}"
-            )
+            logger.info(f"已丢弃即将过期的代理：{mask_proxy_for_log(lease.address)}")
             continue
         seen.add(lease.address)
         kept.append(lease)
     if removed:
-        logger.info(
-            f"代理池已清理无效/重复代理 {removed} 个"
-        )
+        logger.info(f"代理池已清理无效/重复代理 {removed} 个")
     ctx.config.proxy_ip_pool = kept
     if removed:
         ctx.notify_runtime_change()
@@ -147,19 +141,13 @@ def _pop_available_proxy_lease_locked(ctx: ExecutionState) -> ProxyLease | None:
         if lease is None:
             continue
         if not proxy_lease_has_sufficient_ttl(lease, required_ttl_seconds=required_ttl):
-            logger.info(
-                f"已跳过即将过期的代理：{mask_proxy_for_log(lease.address)}"
-            )
+            logger.info(f"已跳过即将过期的代理：{mask_proxy_for_log(lease.address)}")
             continue
         if ctx._is_proxy_in_cooldown_locked(lease.address):
-            logger.info(
-                f"已跳过本地临时屏蔽中的代理：{mask_proxy_for_log(lease.address)}"
-            )
+            logger.info(f"已跳过本地临时屏蔽中的代理：{mask_proxy_for_log(lease.address)}")
             continue
         if lease.address in blocked_addresses:
-            logger.info(
-                f"已跳过已占用或已成功使用过的代理：{mask_proxy_for_log(lease.address)}"
-            )
+            logger.info(f"已跳过已占用或已成功使用过的代理：{mask_proxy_for_log(lease.address)}")
             continue
         return lease
     return None
@@ -188,19 +176,13 @@ def _merge_fetched_proxy_leases_locked(
         if lease is None:
             continue
         if not proxy_lease_has_sufficient_ttl(lease, required_ttl_seconds=required_ttl):
-            logger.info(
-                f"已丢弃即将过期的新代理：{mask_proxy_for_log(lease.address)}"
-            )
+            logger.info(f"已丢弃即将过期的新代理：{mask_proxy_for_log(lease.address)}")
             continue
         if ctx._is_proxy_in_cooldown_locked(lease.address):
-            logger.info(
-                f"已跳过本地临时屏蔽中的新代理：{mask_proxy_for_log(lease.address)}"
-            )
+            logger.info(f"已跳过本地临时屏蔽中的新代理：{mask_proxy_for_log(lease.address)}")
             continue
         if lease.address in existing:
-            logger.info(
-                f"已跳过重复或正在占用的新代理：{mask_proxy_for_log(lease.address)}"
-            )
+            logger.info(f"已跳过重复或正在占用的新代理：{mask_proxy_for_log(lease.address)}")
             continue
         if select_first and selected is None:
             selected = lease
@@ -249,7 +231,5 @@ def _discard_unresponsive_proxy(ctx: ExecutionState, proxy_address: str) -> None
             retained.append(lease)
         ctx.config.proxy_ip_pool = retained
         if removed:
-            logger.info(
-                f"已移除无响应代理：{mask_proxy_for_log(proxy_address)}"
-            )
+            logger.info(f"已移除无响应代理：{mask_proxy_for_log(proxy_address)}")
             ctx.notify_runtime_change()

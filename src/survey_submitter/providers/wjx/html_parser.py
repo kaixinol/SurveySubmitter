@@ -586,9 +586,7 @@ def _propagate_cut_field_display_conditions(
         except (TypeError, ValueError):
             continue
     max_topic = max(
-        int(str(q.get("num")))
-        for q in questions_info
-        if str(q.get("num", "")).isdigit()
+        int(str(q.get("num"))) for q in questions_info if str(q.get("num", "")).isdigit()
     )
     for i, start in enumerate(ordered):
         end = (ordered[i + 1] - 1) if i + 1 < len(ordered) else max_topic
@@ -611,4 +609,3 @@ def _propagate_cut_field_display_conditions(
                 continue
             question["has_display_condition"] = True
             question["display_conditions"] = conditions
-

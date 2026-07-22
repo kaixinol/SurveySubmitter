@@ -97,6 +97,7 @@ class LogUtilsTests:
                 path = logs_dir / name
                 path.write_text(name, encoding="utf-8")
                 import os
+
                 os.utime(str(path), (100 + index, 100 + index))
                 retained_names.append(name)
             removed_count = prune_session_log_files(str(temp_dir), 2)
@@ -115,6 +116,7 @@ class LogUtilsTests:
             Path(source_path).write_text("本次日志\n", encoding="utf-8")
             session_log._SESSION_LOG_PATH = source_path
             import os
+
             stale_paths = []
             for index in range(2):
                 stale_path = str(logs_dir / f"session_20250101_00000{index}.log")

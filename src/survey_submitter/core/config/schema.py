@@ -13,7 +13,11 @@ from survey_submitter.core.reverse_fill.schema import (
     REVERSE_FILL_FORMAT_WJX_SEQUENCE,
     REVERSE_FILL_FORMAT_WJX_TEXT,
 )
-from survey_submitter.providers.common import SURVEY_PROVIDER_WJX, detect_survey_provider, normalize_survey_provider
+from survey_submitter.providers.common import (
+    SURVEY_PROVIDER_WJX,
+    detect_survey_provider,
+    normalize_survey_provider,
+)
 
 
 # Reverse fill format constants

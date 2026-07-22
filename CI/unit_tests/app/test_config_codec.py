@@ -1,5 +1,6 @@
 from __future__ import annotations
 from collections import Counter
+from typing import cast
 import pytest
 
 from survey_submitter.constants import DEFAULT_USER_AGENT, USER_AGENT_PRESETS
@@ -86,8 +87,14 @@ class ConfigCodecTests:
         )
         payload = serialize_runtime_config(config)
         restored = deserialize_runtime_config(payload)
-        assert payload["execution"]["answer_datetime_window"] == ("2026-02-10 09:00:00", "2026-02-10 10:00:00")
-        assert restored.execution.answer_datetime_window == ("2026-02-10 09:00:00", "2026-02-10 10:00:00")
+        assert payload["execution"]["answer_datetime_window"] == (
+            "2026-02-10 09:00:00",
+            "2026-02-10 10:00:00",
+        )
+        assert restored.execution.answer_datetime_window == (
+            "2026-02-10 09:00:00",
+            "2026-02-10 10:00:00",
+        )
 
     def test_build_runtime_config_snapshot_returns_detached_copies(self) -> None:
         qi = _make_question_info(
@@ -108,25 +115,34 @@ class ConfigCodecTests:
         snapshot = build_runtime_config_snapshot(config)
         assert snapshot is not config
         assert snapshot.answer_config.survey_questions is not config.answer_config.survey_questions
-        assert snapshot.answer_config.survey_questions[0] is not config.answer_config.survey_questions[0]
+        assert (
+            snapshot.answer_config.survey_questions[0]
+            is not config.answer_config.survey_questions[0]
+        )
         snapshot.answer_config.answer_rules.constraints[0]["equals"][0] = 9
         assert config.answer_config.answer_rules.constraints[0]["equals"][0] == 0
 
     def test_unknown_fields_raise_corruption_error(self) -> None:
         with pytest.raises(ValueError, match="该配置文件损坏"):
-            normalize_runtime_config_payload({"survey": {"url": "https://example.test"}, "unknown_field": 1})
+            normalize_runtime_config_payload(
+                {"survey": {"url": "https://example.test"}, "unknown_field": 1}
+            )
         with pytest.raises(ValueError, match="该配置文件损坏"):
             normalize_runtime_config_payload(
                 {
                     "survey": {"url": "https://example.test"},
-                    "answer_config": {"survey_questions": [{"question_type": "single", "unexpected": 1}]},
+                    "answer_config": {
+                        "survey_questions": [{"question_type": "single", "unexpected": 1}]
+                    },
                 }
             )
         with pytest.raises(ValueError, match="该配置文件损坏"):
             normalize_runtime_config_payload(
                 {
                     "survey": {"url": "https://example.test"},
-                    "answer_config": {"questions_info": [{"num": 1, "title": "Q1", "unexpected": 1}]},
+                    "answer_config": {
+                        "questions_info": [{"num": 1, "title": "Q1", "unexpected": 1}]
+                    },
                 }
             )
 
@@ -184,9 +200,7 @@ class ConfigCodecTests:
                     "provider_page_id": "p1",
                 }
             ),
-            ensure_survey_question_meta(
-                {"num": 2, "title": "建议", "type_code": "text"}
-            ),
+            ensure_survey_question_meta({"num": 2, "title": "建议", "type_code": "text"}),
         ]
         infos = survey_questions_from_definition(definition)
         assert len(infos) == 2
@@ -229,9 +243,11 @@ class ConfigCodecTests:
         assert qi.details.answer_config.text_random_int_range == [5, 9]
         assert qi.details.dimension is None
 
-        payload = serialize_question_detail(qi)
-        assert payload["details"]["dimension"] is None
-        assert payload["details"]["answer_config"]["text_random_int_range"] == [5, 9]
+        payload: dict[str, object] = serialize_question_detail(qi)
+        details = cast("dict[str, object]", payload["details"])
+        assert details["dimension"] is None
+        ac = cast("dict[str, object]", details["answer_config"])
+        assert ac["text_random_int_range"] == [5, 9]
 
     def test_question_detail_location_parts_produces_location_config(self) -> None:
         qi = deserialize_question_detail(
@@ -258,8 +274,10 @@ class ConfigCodecTests:
         assert isinstance(qi.details.answer_config, LocationQuestionAnswerConfig)
         assert qi.details.answer_config.location_parts == ["北京", "北京", "东城区"]
 
-        payload = serialize_question_detail(qi)
-        assert payload["details"]["answer_config"]["location_parts"] == ["北京", "北京", "东城区"]
+        payload: dict[str, object] = serialize_question_detail(qi)
+        details = cast("dict[str, object]", payload["details"])
+        ac = cast("dict[str, object]", details["answer_config"])
+        assert ac["location_parts"] == ["北京", "北京", "东城区"]
 
     def test_question_detail_normalizes_multi_text_blank_fields(self) -> None:
         qi = deserialize_question_detail(
@@ -283,9 +301,15 @@ class ConfigCodecTests:
         assert qi.details.answer_config.multi_text_blank_modes == ["name", "none", "integer"]
         assert qi.details.answer_config.multi_text_blank_ai_flags == [True, False]
 
-        payload = serialize_question_detail(qi)
-        assert payload["details"]["answer_config"]["multi_text_blank_modes"] == ["name", "none", "integer"]
-        assert payload["details"]["answer_config"]["multi_text_blank_ai_flags"] == [True, False]
+        payload: dict[str, object] = serialize_question_detail(qi)
+        details = cast("dict[str, object]", payload["details"])
+        ac = cast("dict[str, object]", details["answer_config"])
+        assert ac["multi_text_blank_modes"] == [
+            "name",
+            "none",
+            "integer",
+        ]
+        assert ac["multi_text_blank_ai_flags"] == [True, False]
 
     def test_normalize_runtime_config_payload_covers_boundaries_and_invalid_values(self) -> None:
         cfg = normalize_runtime_config_payload(
@@ -309,7 +333,9 @@ class ConfigCodecTests:
                     },
                 },
                 "answer_config": {
-                    "survey_questions": [{"num": 1, "title": "Q1", "question_type": "single", "options": []}],
+                    "survey_questions": [
+                        {"num": 1, "title": "Q1", "question_type": "single", "options": []}
+                    ],
                 },
             }
         )
@@ -344,7 +370,12 @@ class ConfigCodecTests:
 
     def test_runtime_config_payload_defaults_proxy_source_to_default(self) -> None:
         assert normalize_runtime_config_payload({}).execution.proxy_source == "default"
-        assert normalize_runtime_config_payload({"execution": {"proxy_source": "bad"}}).execution.proxy_source == "default"
+        assert (
+            normalize_runtime_config_payload(
+                {"execution": {"proxy_source": "bad"}}
+            ).execution.proxy_source
+            == "default"
+        )
 
     def test_random_ua_ratio_normalization_ignores_unknown_keys_and_rejects_invalid_values(
         self,

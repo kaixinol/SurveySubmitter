@@ -32,7 +32,9 @@ class _AsyncClientEntry:
 
 
 class _AsyncStreamResponse:
-    def __init__(self, response: httpx.Response, stream_ctx: Any, release: Callable[[], Awaitable[object]]) -> None:
+    def __init__(
+        self, response: httpx.Response, stream_ctx: Any, release: Callable[[], Awaitable[object]]
+    ) -> None:
         self._response = response
         self._stream_ctx = stream_ctx
         self._release = release

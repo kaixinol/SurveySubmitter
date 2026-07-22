@@ -30,10 +30,7 @@ class ProxyPolicySourceTests:
         )
         assert proxy_source.get_proxy_minute_by_answer_seconds(10) == 1
         assert (
-            proxy_source.get_proxy_minute_by_answer_seconds(
-                250, provider=SURVEY_PROVIDER_WJX
-            )
-            == 1
+            proxy_source.get_proxy_minute_by_answer_seconds(250, provider=SURVEY_PROVIDER_WJX) == 1
         )
 
     def test_set_proxy_occupy_minute_by_answer_duration_uses_max_seconds(self) -> None:
@@ -78,14 +75,8 @@ class ProxyPolicySourceTests:
             assert proxy_source.set_proxy_area_code("110000") == "110000"
             assert proxy_source.get_default_proxy_area_code() == "110000"
             assert proxy_source.get_proxy_area_code() == "110000"
-            assert (
-                proxy_source._resolve_default_pool("110000")
-                == proxy_source.PROXY_POOL_QUALITY
-            )
-            assert (
-                proxy_source._resolve_default_pool("110100")
-                == proxy_source.PROXY_POOL_QUALITY
-            )
+            assert proxy_source._resolve_default_pool("110000") == proxy_source.PROXY_POOL_QUALITY
+            assert proxy_source._resolve_default_pool("110100") == proxy_source.PROXY_POOL_QUALITY
             assert proxy_source.set_proxy_area_code(None) is None
             assert proxy_source.get_proxy_area_code() is None
         finally:

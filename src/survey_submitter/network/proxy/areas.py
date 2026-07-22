@@ -258,14 +258,14 @@ def _fetch_online_benefit_areas() -> tuple[list[dict[str, object]], dict[str, st
                 matched_cities.append(dict(city_entry["raw"]))
                 city_code_index[str(city_entry["code"])] = str(city_entry["request_name"])
         if matched_cities:
-            filtered_provinces.append({**cast("dict[str, Any]", local_province["raw"]), "cities": matched_cities})
+            filtered_provinces.append(
+                {**cast("dict[str, Any]", local_province["raw"]), "cities": matched_cities}
+            )
 
     return filtered_provinces, city_code_index
 
 
-def _build_local_benefit_fallback() -> tuple[
-    list[dict[str, object]], dict[str, str]
-]:
+def _build_local_benefit_fallback() -> tuple[list[dict[str, object]], dict[str, str]]:
     supported_codes, _ = load_supported_area_codes()
     _, province_lookup = _build_local_area_lookup()
     filtered_provinces: list[dict[str, object]] = []
@@ -280,7 +280,9 @@ def _build_local_benefit_fallback() -> tuple[
             matched_cities.append(dict(city_entry["raw"]))
             city_code_index[city_code] = str(city_entry["request_name"])
         if matched_cities:
-            filtered_provinces.append({**cast("dict[str, Any]", province["raw"]), "cities": matched_cities})
+            filtered_provinces.append(
+                {**cast("dict[str, Any]", province["raw"]), "cities": matched_cities}
+            )
 
     return filtered_provinces, city_code_index
 

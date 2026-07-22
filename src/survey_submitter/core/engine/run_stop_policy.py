@@ -80,9 +80,7 @@ class RunStopPolicy:
             message = str(log_message or "").strip()
             if message:
                 logger.warning(f"{message}")
-            threshold_enabled = bool(
-                self.config.stop_on_fail or force_stop
-            )
+            threshold_enabled = bool(self.config.stop_on_fail or force_stop)
             if threshold_enabled:
                 logger.warning(
                     f"已连续失败{consecutive_failures}次，连续失败达到{stop_threshold}次将强制停止"
@@ -112,9 +110,7 @@ class RunStopPolicy:
             if stop_signal:
                 stop_signal.set()
             return True
-        threshold_enabled = bool(
-            self.config.stop_on_fail or force_stop
-        )
+        threshold_enabled = bool(self.config.stop_on_fail or force_stop)
         if threshold_enabled and consecutive_failures >= stop_threshold:
             logger.critical("连续失败次数过多，强制停止，请检查配置是否正确")
             self.state.mark_terminal_stop(
@@ -154,15 +150,16 @@ class RunStopPolicy:
                     logger.info(
                         f"提交成功，连续失败计数已清零（重置前={previous_consecutive_failures}）"
                     )
-                if self.config.target_num > 0 and self.state.success_count >= self.config.target_num:
+                if (
+                    self.config.target_num > 0
+                    and self.state.success_count >= self.config.target_num
+                ):
                     trigger_target_stop = True
             else:
                 should_break = True
 
         if record_thread_success and thread_name:
-            _safe_cleanup_call(
-                lambda: self.state.complete_round(thread_name), "核销轮次样本"
-            )
+            _safe_cleanup_call(lambda: self.state.complete_round(thread_name), "核销轮次样本")
             _safe_cleanup_call(
                 lambda: self.state.commit_pending_distribution(thread_name), "写入比例统计"
             )

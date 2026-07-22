@@ -168,8 +168,16 @@ def _resolve_runtime_dimension(
 
 _NUMERIC_RE = re.compile(r"^\s*(\d+)(?:\s*(?:分|点|级|星))?\s*$")
 _CHINESE_NUMBERS = {
-    "一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
-    "六": 6, "七": 7, "八": 8, "九": 9, "十": 10,
+    "一": 1,
+    "二": 2,
+    "三": 3,
+    "四": 4,
+    "五": 5,
+    "六": 6,
+    "七": 7,
+    "八": 8,
+    "九": 9,
+    "十": 10,
 }
 _ORDINAL_GROUPS = [
     ["非常不满意", "不满意", "一般", "满意", "非常满意"],
@@ -187,12 +195,40 @@ _ATTITUDE_NEUTRAL_TEXTS = frozenset(
 _ATTITUDE_EXTREME_MARKERS = ("非常", "很", "极其", "十分", "完全", "特别", "强烈")
 _ATTITUDE_MILD_MARKERS = ("比较", "较", "不太", "有点", "稍微", "略", "有些")
 _ATTITUDE_NEGATIVE_CORES = (
-    "不同意", "不满意", "不认可", "不支持", "不愿意", "不赞成",
-    "不太同意", "不太满意", "不太认可", "不太支持", "不太愿意", "不太赞成",
-    "不太好", "反对", "不好", "不佳", "差", "没有", "少", "较少", "很少", "从不",
+    "不同意",
+    "不满意",
+    "不认可",
+    "不支持",
+    "不愿意",
+    "不赞成",
+    "不太同意",
+    "不太满意",
+    "不太认可",
+    "不太支持",
+    "不太愿意",
+    "不太赞成",
+    "不太好",
+    "反对",
+    "不好",
+    "不佳",
+    "差",
+    "没有",
+    "少",
+    "较少",
+    "很少",
+    "从不",
 )
 _ATTITUDE_POSITIVE_CORES = (
-    "同意", "满意", "认可", "支持", "愿意", "赞成", "好", "多", "经常", "总是",
+    "同意",
+    "满意",
+    "认可",
+    "支持",
+    "愿意",
+    "赞成",
+    "好",
+    "多",
+    "经常",
+    "总是",
 )
 
 
@@ -336,7 +372,9 @@ def _handle_single(
     target.single_option_fill_texts.append(
         _normalize_option_fill_texts(qi.details.answer_config.option_fill_texts, option_count)
     )
-    target.single_attached_option_selects.append(copy.deepcopy(qi.details.answer_config.attached_option_selects or []))
+    target.single_attached_option_selects.append(
+        copy.deepcopy(qi.details.answer_config.attached_option_selects or [])
+    )
     return idx
 
 
@@ -446,19 +484,20 @@ def _handle_matrix(
     )
     reliability_candidates.append((question_num, strict_ratio, qi.question_type))
     idx += rows
-    option_count = max(1, _infer_option_count(
-        qi.question_type,
-        custom_weights=cw,
-        probabilities=prob,
-        option_count=len(qi.options),
-    ))
+    option_count = max(
+        1,
+        _infer_option_count(
+            qi.question_type,
+            custom_weights=cw,
+            probabilities=prob,
+            option_count=len(qi.options),
+        ),
+    )
 
     row_weights_source: list[object] | None = None
     if isinstance(probs, list) and any(isinstance(item, (list, tuple)) for item in probs):
         row_weights_source = cast(Any, probs)
-    elif isinstance(cw, list) and any(
-        isinstance(item, (list, tuple)) for item in cw
-    ):
+    elif isinstance(cw, list) and any(isinstance(item, (list, tuple)) for item in cw):
         row_weights_source = cast(Any, cw)
 
     if row_weights_source is not None:
@@ -588,7 +627,8 @@ def _handle_text(
         target.question_config_index_map[question_num] = mapped_value
         _remember_provider_mapping(target, qi, mapped_value, survey_provider)
         target.location_parts[question_num] = [
-            str(item or "").strip() for item in list(qi.details.answer_config.location_parts or [])[:3]
+            str(item or "").strip()
+            for item in list(qi.details.answer_config.location_parts or [])[:3]
         ]
 
     text_random_mode = (
@@ -664,7 +704,9 @@ def _handle_text(
     target.text_ai_flags.append(ai_enabled)
     target.text_titles.append(str(qi.title or ""))
     target.multi_text_blank_modes.append(
-        list(qi.details.answer_config.multi_text_blank_modes) if isinstance(qi.details.answer_config, MultiTextQuestionAnswerConfig) else []
+        list(qi.details.answer_config.multi_text_blank_modes)
+        if isinstance(qi.details.answer_config, MultiTextQuestionAnswerConfig)
+        else []
     )
     target.multi_text_blank_ai_flags.append(normalized_blank_ai_flags)
     target.multi_text_blank_int_ranges.append(normalized_blank_int_ranges)
@@ -697,43 +739,53 @@ _NormalizationHandler = Callable[
 
 _NORMALIZATION_DISPATCH: dict[QuestionType, _NormalizationHandler] = {
     QuestionType.SINGLE: (
-        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
-            "single", _handle_single(e, qn, p, sr, t, idx["single"], rel, cand, oc, sp)
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: (
+            idx.__setitem__(
+                "single", _handle_single(e, qn, p, sr, t, idx["single"], rel, cand, oc, sp)
+            )
+            or False
         )
-        or False
     ),
     QuestionType.DROPDOWN: (
-        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
-            "dropdown", _handle_dropdown(e, qn, p, sr, t, idx["dropdown"], rel, cand, oc, sp)
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: (
+            idx.__setitem__(
+                "dropdown", _handle_dropdown(e, qn, p, sr, t, idx["dropdown"], rel, cand, oc, sp)
+            )
+            or False
         )
-        or False
     ),
     QuestionType.MULTIPLE: (
-        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
-            "multiple", _handle_multiple(e, qn, p, t, idx["multiple"], oc, sp)
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: (
+            idx.__setitem__("multiple", _handle_multiple(e, qn, p, t, idx["multiple"], oc, sp))
+            or False
         )
-        or False
     ),
     QuestionType.MATRIX: (
-        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
-            "matrix", _handle_matrix(e, qn, p, sr, t, idx["matrix"], rel, cand, sp)
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: (
+            idx.__setitem__("matrix", _handle_matrix(e, qn, p, sr, t, idx["matrix"], rel, cand, sp))
+            or False
         )
-        or False
     ),
     QuestionType.SCALE: (
-        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
-            "scale", _handle_scale(e, qn, p, sr, t, idx["scale"], rel, cand, oc, sp)
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: (
+            idx.__setitem__(
+                "scale", _handle_scale(e, qn, p, sr, t, idx["scale"], rel, cand, oc, sp)
+            )
+            or False
         )
-        or False
     ),
     QuestionType.SCORE: (
-        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
-            "scale", _handle_scale(e, qn, p, sr, t, idx["scale"], rel, cand, oc, sp)
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: (
+            idx.__setitem__(
+                "scale", _handle_scale(e, qn, p, sr, t, idx["scale"], rel, cand, oc, sp)
+            )
+            or False
         )
-        or False
     ),
     QuestionType.SLIDER: (
-        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: _handle_slider(e, qn, p, t, idx["slider"], sp)[1]
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: _handle_slider(
+            e, qn, p, t, idx["slider"], sp
+        )[1]
     ),
     QuestionType.ORDER: (
         lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: _handle_order(e, qn, t, sp) or False
@@ -742,16 +794,14 @@ _NORMALIZATION_DISPATCH: dict[QuestionType, _NormalizationHandler] = {
         lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: _handle_location(e, qn, t, sp) or False
     ),
     QuestionType.TEXT: (
-        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
-            "text", _handle_text(e, qn, p, t, idx["text"], sp)
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: (
+            idx.__setitem__("text", _handle_text(e, qn, p, t, idx["text"], sp)) or False
         )
-        or False
     ),
     QuestionType.MULTI_TEXT: (
-        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: idx.__setitem__(
-            "text", _handle_text(e, qn, p, t, idx["text"], sp)
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: (
+            idx.__setitem__("text", _handle_text(e, qn, p, t, idx["text"], sp)) or False
         )
-        or False
     ),
 }
 
@@ -828,7 +878,18 @@ def configure_probabilities(
         handler = _NORMALIZATION_DISPATCH.get(QuestionType(str(qi.question_type)))
         if handler is None:
             continue
-        if handler(qi, question_num, probs, strict_ratio, target, idx, reliability_mode_enabled, reliability_candidates, option_count, survey_provider):
+        if handler(
+            qi,
+            question_num,
+            probs,
+            strict_ratio,
+            target,
+            idx,
+            reliability_mode_enabled,
+            reliability_candidates,
+            option_count,
+            survey_provider,
+        ):
             continue
 
     _apply_reliability_fallback(target, reliability_mode_enabled, reliability_candidates)

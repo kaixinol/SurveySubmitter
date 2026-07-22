@@ -9,9 +9,7 @@ _APP_NAME = "SurveyController"
 
 def _get_platform_config_root() -> str:
     if sys.platform == "win32":
-        return os.environ.get(
-            "APPDATA", str(Path("~", "AppData", "Roaming").expanduser())
-        )
+        return os.environ.get("APPDATA", str(Path("~", "AppData", "Roaming").expanduser()))
     if sys.platform == "darwin":
         return str(Path.home() / "Library" / "Application Support")
     return os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))
@@ -19,9 +17,7 @@ def _get_platform_config_root() -> str:
 
 def _get_platform_local_data_root() -> str:
     if sys.platform == "win32":
-        return os.environ.get(
-            "LOCALAPPDATA", str(Path("~", "AppData", "Local").expanduser())
-        )
+        return os.environ.get("LOCALAPPDATA", str(Path("~", "AppData", "Local").expanduser()))
     return _get_platform_config_root()
 
 

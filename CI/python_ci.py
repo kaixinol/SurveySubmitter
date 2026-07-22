@@ -120,9 +120,7 @@ def main() -> int:
 
     if total_issues == 0:
         if quick_mode:
-            print(
-                "[PASS] Quick checks passed: compile, Ruff, ty, and unit tests all succeeded."
-            )
+            print("[PASS] Quick checks passed: compile, Ruff, ty, and unit tests all succeeded.")
             print("[INFO] For module import checks, run: python CI/python_ci.py --full")
         else:
             print(

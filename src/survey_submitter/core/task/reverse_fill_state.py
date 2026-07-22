@@ -20,12 +20,8 @@ if TYPE_CHECKING:
 
         def _thread_key(self, thread_name: str | None = None) -> str: ...
         def _possible_total_locked(self) -> int: ...
-        def acquire_sample(
-            self, thread_name: str | None = None
-        ) -> ReverseFillAcquireResult: ...
-        def commit_sample(
-            self, thread_name: str | None = None
-        ) -> int | None: ...
+        def acquire_sample(self, thread_name: str | None = None) -> ReverseFillAcquireResult: ...
+        def commit_sample(self, thread_name: str | None = None) -> int | None: ...
         def release_sample(
             self, thread_name: str | None = None, *, requeue: bool = False
         ) -> int | None: ...
@@ -210,7 +206,9 @@ class ReverseFillRuntimeMixin:
                 return False
             return self._possible_total_locked() < target_num
 
-    def complete_round(self: "_ReverseFillRuntimeHost", thread_name: str | None = None) -> int | None:
+    def complete_round(
+        self: "_ReverseFillRuntimeHost", thread_name: str | None = None
+    ) -> int | None:
         return self.commit_sample(thread_name)
 
     def end_round(

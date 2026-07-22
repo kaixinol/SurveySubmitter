@@ -296,6 +296,4 @@ def mark_submit_proxy_success(ctx: ExecutionState, proxy_address: str | None) ->
     try:
         ctx.mark_successful_proxy_address(proxy_address)
     except (AttributeError, KeyError):
-        logger.opt(exception=True).info(
-            f"记录成功代理失败：{proxy_address}"
-        )
+        logger.opt(exception=True).info(f"记录成功代理失败：{proxy_address}")

@@ -90,7 +90,7 @@ def _is_select_placeholder_option(index: int, value: str | None, text: str | Non
 def _input_looks_like_location(input_element) -> bool:
     if input_element is None:
         return False
-    verify_value = (input_element.get("verify") or "")
+    verify_value = input_element.get("verify") or ""
     onclick_value = (input_element.get("onclick") or "").lower()
     if not verify_value and "opencitybox" not in onclick_value:
         return False
@@ -378,7 +378,7 @@ def _question_div_looks_like_description(question_div, type_code: str) -> bool:
 
     if question_div is None:
         return False
-    relation = (question_div.get("relation") or "")
+    relation = question_div.get("relation") or ""
     style_text = (question_div.get("style") or "").lower()
     is_unreachable_placeholder = (
         relation == "-1"
