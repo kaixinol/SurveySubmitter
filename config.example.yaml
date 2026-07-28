@@ -1,10 +1,11 @@
-# SurveyController CLI - Example Configuration
+# SurveySubmitter CLI - Example Configuration
 # Copy this file and edit to match your survey.
 #
 # Usage:
-#   python cli.py run config.yaml
-#   python cli.py run config.yaml --parse-only
-#   python cli.py run config.yaml --log-level DEBUG
+#   uv run python cli.py run config.yaml
+#   uv run python cli.py run config.yaml --dry-run
+#   uv run python cli.py --url "https://www.wjx.cn/s/your-survey-id.aspx"
+#   uv run python cli.py run config.yaml --log-level DEBUG
 
 # ---------------------------------------------------------------------------
 # Survey basics
@@ -96,7 +97,26 @@ execution:
 #     distribution_mode: "random"
 #     ...
 
+# -- Fixed answer profiles (optional) --
+# test_profiles 允许为每次提交指定固定答案，按轮次循环切换。
+# 适用于需要特定答案组合的测试场景。
+# test_profiles:
+#   - fixed_answers:
+#       1: "北京"
+#       2: "海淀区"
+#   - fixed_answers:
+#       1: "上海"
+#       2: "浦东新区"
+
 answer_config:
   survey_questions: []
   question_entries: []
   answer_rules: []
+
+# -- Random value pool (optional) --
+# 地区/高校类题目可在 question_entries 中设置 random_value_pool，
+# 指定候选值池，提交时随机从中选取。
+# question_entries:
+#   - question_num: 1
+#     question_type: "location"
+#     random_value_pool: ["北京", "上海", "广州", "深圳"]

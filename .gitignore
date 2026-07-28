@@ -8,7 +8,8 @@ __pycache__/
 .pytest_tmp/
 .coverage
 coverage.xml
-
+*.yaml
+!config.example.yaml
 # 工具缓存
 .ruff_cache/
 
