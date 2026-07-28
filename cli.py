@@ -1,4 +1,4 @@
-"""SurveyController CLI entry point."""
+"""SurveySubmitter CLI entry point."""
 
 from __future__ import annotations
 
@@ -229,7 +229,7 @@ def _cmd_run(config_path: str) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="survey", description="SurveyController CLI")
+    parser = argparse.ArgumentParser(prog="survey", description="SurveySubmitter CLI")
     parser.add_argument("config", nargs="?", help="YAML 配置文件路径")
     parser.add_argument("--url", help="直接解析问卷链接")
     parser.add_argument("--dry-run", action="store_true", help="仅解析问卷并验证配置，不提交")

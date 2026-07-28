@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>SurveyController</h1>
+  <h1>SurveySubmitter</h1>
 
   [![Python](https://img.shields.io/badge/Python-3.13.14+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
   [![License](https://img.shields.io/github/license/kaixinol/SurveySubmitter?style=flat&color=orange)](./LICENSE)
@@ -23,6 +23,9 @@
 5. **AI 主观题作答** - 通过自定义 OpenAI 兼容端点自动生成填空题内容
 6. **反向填充** - 支持从已有数据反向生成答案配置
 7. **作答时长控制** - 模拟真实作答时长分布
+8. **人格画像** - 模拟不同人格特征的作答倾向
+9. **固定答案提交** - 通过 `test_profiles` 按轮次切换固定答案，适合特定场景测试
+10. **高校/地区题支持** - 内置高校与地区题型识别，支持 `random_value_pool` 随机值池
 
 ## 开始使用
 
@@ -50,7 +53,19 @@ uv run python cli.py run config.yaml
 仅解析问卷结构（不提交）：
 
 ```bash
-uv run python cli.py run config.yaml --parse-only
+uv run python cli.py run config.yaml --dry-run
+```
+
+直接解析问卷链接：
+
+```bash
+uv run python cli.py --url "https://www.wjx.cn/s/your-survey-id.aspx"
+```
+
+指定日志级别：
+
+```bash
+uv run python cli.py run config.yaml --log-level DEBUG
 ```
 
 ## 关键配置说明
@@ -60,15 +75,20 @@ uv run python cli.py run config.yaml --parse-only
 | 配置项 | 说明 |
 |--------|------|
 | `survey.url` | 问卷星问卷链接 |
+| `survey.provider` | 平台标识（`wjx` 或 auto-detect） |
 | `execution.target_num` | 计划提交份数 |
 | `execution.num_threads` | 并发线程数 |
 | `execution.ai` | AI 填空配置（api_key / base_url / model） |
+| `execution.reliability_mode` | 可靠性模式 |
+| `execution.persona` | 人格画像模拟 |
 | `execution.random_proxy_ip` | 是否启用随机代理 IP |
 | `execution.random_user_agent` | 是否启用随机 User-Agent |
 | `execution.reverse_fill` | 反向填充配置 |
 | `answer_config.question_entries` | 各题答案权重与概率分布 |
+| `answer_config.test_profiles` | 固定答案提交配置（按轮次切换） |
+| `answer_config.answer_rules` | 全局答题规则与约束 |
 
-完整配置项参见 `config.example.yaml`。
+> 地区/高校类题目支持 `random_value_pool` 字段，可指定候选值池随机选取。完整配置项参见 `config.example.yaml`。
 
 ## 技术架构
 
