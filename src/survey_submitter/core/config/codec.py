@@ -27,6 +27,7 @@ from survey_submitter.core.config.schema import (
     RuntimeConfig,
     SurveySection,
     TestProfile,
+    TestProfilesConfig,
 )
 from survey_submitter.core.questions.consistency import normalize_rule_dict, sanitize_answer_rules
 from survey_submitter.core.questions.utils import serialize_random_int_range
@@ -590,14 +591,17 @@ def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
         raw_answer_rules = answer_config_copy.get("answer_rules")
         if isinstance(raw_answer_rules, list):
             answer_config_copy["answer_rules"] = {"constraints": raw_answer_rules}
-        # Pre-filter test_profiles to remove invalid entries
+        # Normalize test_profiles: legacy list -> object with profiles; pre-filter invalid entries
         raw_test_profiles = answer_config_copy.get("test_profiles")
         if isinstance(raw_test_profiles, list):
             filtered_profiles = []
             for item in raw_test_profiles:
                 if isinstance(item, dict) and isinstance(item.get("fixed_answers"), dict):
                     filtered_profiles.append(item)
-            answer_config_copy["test_profiles"] = filtered_profiles
+            answer_config_copy["test_profiles"] = {
+                "random": True,
+                "profiles": filtered_profiles,
+            }
         raw_copy["answer_config"] = answer_config_copy
 
     config = RuntimeConfig.model_validate(raw_copy)
@@ -672,26 +676,35 @@ def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
     return config
 
 
-def _normalize_test_profiles(raw: object) -> list[TestProfile]:
-    if not isinstance(raw, list):
-        return []
+def _normalize_test_profiles(raw: object) -> TestProfilesConfig:
+    if isinstance(raw, dict):
+        raw_profiles = raw.get("profiles")
+        random_val = raw.get("random")
+        random_bool = bool(random_val) if random_val is not None else True
+    elif isinstance(raw, list):
+        raw_profiles = raw
+        random_bool = True
+    else:
+        return TestProfilesConfig()
+
     profiles: list[TestProfile] = []
-    for item in raw:
-        if not isinstance(item, dict):
-            continue
-        fixed_answers_raw = item.get("fixed_answers")
-        if not isinstance(fixed_answers_raw, dict):
-            continue
-        fixed_answers: dict[int, str] = {}
-        for key, value in fixed_answers_raw.items():
-            try:
-                question_num = int(key)
-            except (ValueError, TypeError):
+    if isinstance(raw_profiles, list):
+        for item in raw_profiles:
+            if not isinstance(item, dict):
                 continue
-            fixed_answers[question_num] = str(value or "").strip()
-        if fixed_answers:
-            profiles.append(TestProfile(fixed_answers=fixed_answers))
-    return profiles
+            fixed_answers_raw = item.get("fixed_answers")
+            if not isinstance(fixed_answers_raw, dict):
+                continue
+            fixed_answers: dict[int, str] = {}
+            for key, value in fixed_answers_raw.items():
+                try:
+                    question_num = int(key)
+                except (ValueError, TypeError):
+                    continue
+                fixed_answers[question_num] = str(value or "").strip()
+            if fixed_answers:
+                profiles.append(TestProfile(fixed_answers=fixed_answers))
+    return TestProfilesConfig(random=random_bool, profiles=profiles)
 
 
 def _ensure_supported_config_payload(

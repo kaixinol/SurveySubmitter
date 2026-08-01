@@ -65,13 +65,6 @@ def _get_fixed_answer(config: ExecutionConfig, question_num: int) -> str | None:
     return profile.get(question_num)
 
 
-def _cycle_profile_index(config: ExecutionConfig) -> None:
-    """Advance to the next test profile after a successful submission."""
-    if not config.test_profiles:
-        return
-    config.current_profile_index = (config.current_profile_index + 1) % len(config.test_profiles)
-
-
 async def _resolve_runtime_option_texts(
     question: SurveyQuestionMeta,
 ) -> list[str]:

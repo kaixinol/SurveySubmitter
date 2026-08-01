@@ -70,6 +70,7 @@ class ExecutionConfig(BaseConfigModel):
     ai_answering: bool = True
 
     test_profiles: list[dict[int, str]] = []
+    test_profiles_random: bool = True
     current_profile_index: int = 0
 
 

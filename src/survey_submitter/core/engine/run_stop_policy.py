@@ -144,7 +144,7 @@ class RunStopPolicy:
                 self.state.proxy_unavailable_fail_count = 0
                 record_thread_success = True
 
-                if self.config.test_profiles:
+                if self.config.test_profiles and not self.config.test_profiles_random:
                     self.config.current_profile_index = (
                         self.config.current_profile_index + 1
                     ) % len(self.config.test_profiles)

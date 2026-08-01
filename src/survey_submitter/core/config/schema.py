@@ -198,10 +198,15 @@ class TestProfile(BaseConfigModel):
     fixed_answers: dict[int, str] = {}
 
 
+class TestProfilesConfig(BaseConfigModel):
+    random: bool = True
+    profiles: list[TestProfile] = []
+
+
 class AnswerConfigSection(BaseConfigModel):
     survey_questions: list[QuestionInfo] = []
     answer_rules: AnswerRulesConfig = Field(default_factory=AnswerRulesConfig)
-    test_profiles: list[TestProfile] = []
+    test_profiles: TestProfilesConfig = Field(default_factory=TestProfilesConfig)
 
 
 class RuntimeConfig(BaseConfigModel):

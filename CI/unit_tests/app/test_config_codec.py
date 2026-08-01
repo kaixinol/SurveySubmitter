@@ -528,31 +528,41 @@ class ConfigCodecTests:
         assert result is LocationQuestionAnswerConfig
 
     def test_serialize_deserialize_test_profiles(self) -> None:
-        from survey_submitter.core.config.schema import TestProfile
+        from survey_submitter.core.config.schema import TestProfile, TestProfilesConfig
 
         config = RuntimeConfig(
             answer_config=AnswerConfigSection(
-                test_profiles=[
-                    TestProfile(fixed_answers={1: "北京", 2: "海淀区"}),
-                    TestProfile(fixed_answers={1: "上海", 2: "浦东新区"}),
-                ]
+                test_profiles=TestProfilesConfig(
+                    random=True,
+                    profiles=[
+                        TestProfile(fixed_answers={1: "北京", 2: "海淀区"}),
+                        TestProfile(fixed_answers={1: "上海", 2: "浦东新区"}),
+                    ],
+                )
             )
         )
         payload = serialize_runtime_config(config)
-        assert payload["answer_config"]["test_profiles"] == [
-            {"fixed_answers": {1: "北京", 2: "海淀区"}},
-            {"fixed_answers": {1: "上海", 2: "浦东新区"}},
-        ]
+        assert payload["answer_config"]["test_profiles"] == {
+            "random": True,
+            "profiles": [
+                {"fixed_answers": {1: "北京", 2: "海淀区"}},
+                {"fixed_answers": {1: "上海", 2: "浦东新区"}},
+            ],
+        }
 
         deserialized = deserialize_runtime_config(payload)
-        assert len(deserialized.answer_config.test_profiles) == 2
-        assert deserialized.answer_config.test_profiles[0].fixed_answers == {1: "北京", 2: "海淀区"}
-        assert deserialized.answer_config.test_profiles[1].fixed_answers == {
+        assert len(deserialized.answer_config.test_profiles.profiles) == 2
+        assert deserialized.answer_config.test_profiles.random is True
+        assert deserialized.answer_config.test_profiles.profiles[0].fixed_answers == {
+            1: "北京",
+            2: "海淀区",
+        }
+        assert deserialized.answer_config.test_profiles.profiles[1].fixed_answers == {
             1: "上海",
             2: "浦东新区",
         }
 
-    def test_normalize_test_profiles_invalid(self) -> None:
+    def test_normalize_test_profiles_legacy_list(self) -> None:
         payload = {
             "answer_config": {
                 "test_profiles": [
@@ -563,27 +573,52 @@ class ConfigCodecTests:
             }
         }
         config = normalize_runtime_config_payload(payload)
-        assert len(config.answer_config.test_profiles) == 1
-        assert config.answer_config.test_profiles[0].fixed_answers == {1: "valid", 2: "valid"}
+        assert len(config.answer_config.test_profiles.profiles) == 1
+        assert config.answer_config.test_profiles.random is True
+        assert config.answer_config.test_profiles.profiles[0].fixed_answers == {
+            1: "valid",
+            2: "valid",
+        }
+
+    def test_normalize_test_profiles_object(self) -> None:
+        payload = {
+            "answer_config": {
+                "test_profiles": {
+                    "random": False,
+                    "profiles": [
+                        {"fixed_answers": {1: "A"}},
+                        {"fixed_answers": {2: "B"}},
+                    ],
+                }
+            }
+        }
+        config = normalize_runtime_config_payload(payload)
+        assert config.answer_config.test_profiles.random is False
+        assert len(config.answer_config.test_profiles.profiles) == 2
+        assert config.answer_config.test_profiles.profiles[0].fixed_answers == {1: "A"}
+        assert config.answer_config.test_profiles.profiles[1].fixed_answers == {2: "B"}
 
     def test_normalize_test_profiles_empty(self) -> None:
         payload = {"answer_config": {"test_profiles": []}}
         config = normalize_runtime_config_payload(payload)
-        assert config.answer_config.test_profiles == []
+        assert config.answer_config.test_profiles.profiles == []
+        assert config.answer_config.test_profiles.random is True
 
     def test_execution_config_test_profiles(self) -> None:
         from survey_submitter.core.task.task_context import ExecutionConfig
 
         config = ExecutionConfig(test_profiles=[{1: "北京", 2: "上海"}, {1: "广州", 2: "深圳"}])
         assert len(config.test_profiles) == 2
+        assert config.test_profiles_random is True
         assert config.current_profile_index == 0
         assert config.test_profiles[0] == {1: "北京", 2: "上海"}
 
-    def test_profile_cycling(self) -> None:
+    def test_profile_cycling_sequential(self) -> None:
         from survey_submitter.core.task.task_context import ExecutionConfig
 
         config = ExecutionConfig(
             test_profiles=[{1: "A"}, {1: "B"}, {1: "C"}],
+            test_profiles_random=False,
             target_num=5,
         )
         results = []
