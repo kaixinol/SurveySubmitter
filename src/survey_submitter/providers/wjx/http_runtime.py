@@ -21,7 +21,7 @@ from survey_submitter.core.ai.batch_runtime import (
 from survey_submitter.core.config.codec import UserAgentProfile
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.modes.duration_control import sample_answer_duration_seconds
-from survey_submitter.core.persona.context import record_answer
+from survey_submitter.core.engine.answer_context import record_answer
 from survey_submitter.core.questions.distribution import record_pending_choice
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.network.proxy.pool import mask_proxy_for_log

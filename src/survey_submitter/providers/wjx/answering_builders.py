@@ -11,7 +11,6 @@ from survey_submitter.core.ai.runtime import (
     build_ai_option_fill_placeholder,
     build_ai_text_placeholder,
 )
-from survey_submitter.core.persona.context import apply_persona_boost
 from survey_submitter.core.questions.consistency import (
     apply_matrix_row_consistency,
     apply_single_like_consistency,
@@ -140,8 +139,6 @@ async def _select_choice_index(
     )
     probabilities = normalize_dropdown_probs(prob_list, option_count)
     strict_ratio = is_strict_ratio_question(ctx, current)
-    if not strict_ratio:
-        probabilities = apply_persona_boost(option_texts, probabilities)
     if _apply_consistency_gate and not has_reliability_dimension:
         probabilities = apply_single_like_consistency(probabilities, current)
     distribution_trigger = (
@@ -626,10 +623,8 @@ def _sanitize_multiple_probabilities(
     option_count: int,
     blocked_indices: list[int],
     required_indices: list[int],
-    option_texts: list[str],
-    strict_ratio: bool,
 ) -> list[float]:
-    """Sanitize raw probabilities, apply persona boost, and zero out blocked/required indices."""
+    """Sanitize raw probabilities and zero out blocked/required indices."""
     assert isinstance(selection_probabilities, list)
     sanitized: list[float] = []
     for raw_prob in selection_probabilities:
@@ -645,9 +640,6 @@ def _sanitize_multiple_probabilities(
     elif len(sanitized) > option_count:
         sanitized = sanitized[:option_count]
 
-    if not strict_ratio:
-        boosted = apply_persona_boost(option_texts, sanitized)
-        sanitized = [min(PROBABILITY_CEILING, prob) for prob in boosted]
     for idx in blocked_indices:
         sanitized[idx] = 0.0
     for idx in required_indices:
@@ -845,8 +837,6 @@ async def _build_wjx_multiple_action(
         option_count,
         blocked_indices,
         required_indices,
-        option_texts,
-        strict_ratio,
     )
 
     # 5a. Strict-ratio weighted sampling

@@ -145,18 +145,6 @@ def generate_random_chinese_name() -> str:
     neutral_given_pool = "嘉明华建安晨泽文超洋"
 
     gender = None
-    try:
-        from survey_submitter.core.persona.generator import get_current_persona
-
-        persona = get_current_persona()
-        if persona is not None:
-            gender = persona.gender
-    except ImportError as exc:
-        log_suppressed_exception(
-            "generate_random_chinese_name: from survey_submitter.core.persona.generator import get_current_persona",
-            exc,
-            level="ERROR",
-        )
 
     surname = random.choice(surname_pool)
     given_len = 1 if random.random() < 0.65 else 2
@@ -250,30 +238,10 @@ def _load_id_card_area_codes() -> tuple[str, ...]:
     return tuple(codes or fallback_codes)
 
 
-def _resolve_current_persona() -> Any:
-    try:
-        from survey_submitter.core.persona.generator import get_current_persona
-
-        return get_current_persona()
-    except ImportError as exc:
-        log_suppressed_exception(
-            "questions.utils._resolve_current_persona import", exc, level="ERROR"
-        )
-        return None
-
-
 def _choose_random_birth_date_for_id_card() -> date:
 
     today = date.today()
-    persona = _resolve_current_persona()
-    age_range_map = {
-        "18-25": (18, 25),
-        "26-35": (26, 35),
-        "36-45": (36, 45),
-        "46-60": (46, 60),
-    }
-    min_age, max_age = age_range_map.get(getattr(persona, "age_group", ""), (18, 60))
-    age = random.randint(min_age, max_age)
+    age = random.randint(18, 60)
     birth_year = today.year - age
     start = date(birth_year, 1, 1)
     end = date(birth_year, 12, 31)
@@ -282,15 +250,8 @@ def _choose_random_birth_date_for_id_card() -> date:
 
 def _choose_id_card_sequence_tail() -> str:
 
-    persona = _resolve_current_persona()
-    gender = str(getattr(persona, "gender", "") or "").strip()
     seq_prefix = random.randint(0, 99)
-    if gender == "男":
-        gender_digit = random.choice((1, 3, 5, 7, 9))
-    elif gender == "女":
-        gender_digit = random.choice((0, 2, 4, 6, 8))
-    else:
-        gender_digit = random.randint(0, 9)
+    gender_digit = random.randint(0, 9)
     return f"{seq_prefix:02d}{gender_digit}"
 
 

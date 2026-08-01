@@ -26,18 +26,6 @@ def _generate_base_ratio(
 ) -> float:
 
     if probabilities == -1 or probabilities is None:
-        try:
-            from survey_submitter.core.persona.generator import get_current_persona
-
-            persona = get_current_persona()
-            if persona is not None:
-                raw = persona.satisfaction_tendency
-                jitter = random.gauss(0, 0.1)
-                return max(0.0, min(1.0, raw + jitter))
-        except ImportError as exc:
-            log_suppressed_exception(
-                "_generate_base_ratio: get_current_persona", exc, level="ERROR"
-            )
         return random.random()
     if isinstance(probabilities, list) and probabilities:
         idx = weighted_index(probabilities)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from survey_submitter.core.persona.context import record_answer, reset_context
+from survey_submitter.core.engine.answer_context import record_answer, reset_answer_context
 from survey_submitter.core.questions import consistency
 from survey_submitter.providers.contracts import ensure_survey_question_meta
 
@@ -65,7 +65,7 @@ class ConsistencyRulesTests:
         assert stats == {"invalid": 1, "unsupported": 1}
 
     def test_single_like_consistency_applies_latest_triggered_rule(self) -> None:
-        reset_context()
+        reset_answer_context()
         record_answer(1, "single", selected_indices=[1], selected_texts=["B"])
         consistency.reset_consistency_context(
             [
@@ -93,7 +93,7 @@ class ConsistencyRulesTests:
         assert consistency.apply_single_like_consistency([1, 1, 1], 3) == [0.0, 0.0, 1.0]
 
     def test_rule_does_not_trigger_for_future_or_unmatched_condition(self) -> None:
-        reset_context()
+        reset_answer_context()
         record_answer(3, "single", selected_indices=[1])
         consistency.reset_consistency_context(
             [
@@ -112,7 +112,7 @@ class ConsistencyRulesTests:
         assert consistency.apply_single_like_consistency([1, -2, "bad"], 2) == [1.0, 0.0, 0.0]  # ty:ignore[invalid-argument-type]
 
     def test_matrix_row_consistency_uses_row_answers_and_target_row(self) -> None:
-        reset_context()
+        reset_answer_context()
         record_answer(1, "matrix", selected_indices=[2], row_index=1)
         consistency.reset_consistency_context(
             [
@@ -134,7 +134,7 @@ class ConsistencyRulesTests:
         assert consistency.apply_matrix_row_consistency([2, 5, 3], 4, 1) == [2.0, 5.0, 3.0]
 
     def test_multiple_constraint_returns_required_or_forbidden_sets(self) -> None:
-        reset_context()
+        reset_answer_context()
         record_answer(1, "multiple", selected_indices=[0])
         consistency.reset_consistency_context(
             [
@@ -169,7 +169,7 @@ class ConsistencyRulesTests:
         assert consistency.get_multiple_rule_constraint(2, 3) == (set(), {0}, "ban")
 
     def test_invalid_target_indices_are_ignored_with_rule_id_for_multiple(self) -> None:
-        reset_context()
+        reset_answer_context()
         record_answer(1, "single", selected_indices=[0])
         consistency.reset_consistency_context(
             [

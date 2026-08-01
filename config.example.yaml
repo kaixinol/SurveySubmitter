@@ -50,7 +50,6 @@ execution:
 
   # -- Reliability --
   reliability_mode: true
-  persona: true
 
   # -- AI configuration (optional) --
   ai:

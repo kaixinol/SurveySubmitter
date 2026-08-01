@@ -3,9 +3,6 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass, field
 
-from loguru import logger
-
-from survey_submitter.core.persona.generator import get_current_persona
 from survey_submitter.core.questions.types import QuestionType
 
 
@@ -21,11 +18,8 @@ class AnsweredQuestion:
 
 _thread_local = threading.local()
 
-PERSONA_BOOST_FACTOR = 3.0
 
-
-def reset_context() -> None:
-
+def reset_answer_context() -> None:
     _thread_local.answered = {}
 
 
@@ -64,49 +58,9 @@ def get_answered() -> dict[int, AnsweredQuestion]:
     return getattr(_thread_local, "answered", {})
 
 
-def apply_persona_boost(
-    option_texts: list[str],
-    base_weights: list[float],
-) -> list[float]:
-
-    persona = get_current_persona()
-    if persona is None:
-        return list(base_weights)
-
-    keyword_map = persona.to_keyword_map()
-    if not keyword_map:
-        return list(base_weights)
-
-    all_keywords: list[str] = []
-    for keywords in keyword_map.values():
-        all_keywords.extend(keywords)
-
-    if not all_keywords:
-        return list(base_weights)
-
-    boosted = list(base_weights)
-    for i, text in enumerate(option_texts):
-        if not text or i >= len(boosted):
-            continue
-        text_lower = text.strip()
-        for keyword in all_keywords:
-            if keyword in text_lower:
-                boosted[i] *= PERSONA_BOOST_FACTOR
-                logger.info(
-                    f"画像约束：选项[{i}]「{text[:20]}」匹配关键词「{keyword}」，权重 x{PERSONA_BOOST_FACTOR:.1f}"
-                )
-                break
-    return boosted
-
-
 def build_ai_context_prompt() -> str:
 
     parts: list[str] = []
-
-    persona = get_current_persona()
-    if persona:
-        desc = persona.to_description()
-        parts.append(f"你扮演的角色是：{desc}。")
 
     answered = get_answered()
     if answered:

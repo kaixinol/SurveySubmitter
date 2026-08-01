@@ -17,22 +17,10 @@ class TendencyRuntimeTests:
         with pytest.raises(ValueError, match="所有选项权重均为 0"):
             tendency._enforce_zero_weight_guard(0, 3, [0, 0, 0])
 
-    def test_generate_base_ratio_uses_persona_when_random_probabilities(self, patch_attrs) -> None:
-        patch_attrs(
-            (tendency.random, "gauss", lambda _mu, _sigma: 0.05),
-            (
-                tendency,
-                "log_suppressed_exception",
-                lambda *_args, **_kwargs: None,
-            ),
-        )
-        import survey_submitter.core.persona.generator as generator
+    def test_generate_base_ratio_uses_random_for_random_probabilities(self, patch_attrs) -> None:
+        patch_attrs((tendency.random, "random", lambda: 0.42))
 
-        patch_attrs(
-            (generator, "get_current_persona", lambda: SimpleNamespace(satisfaction_tendency=0.8))
-        )
-
-        assert tendency._generate_base_ratio(5, -1) == 0.8500000000000001
+        assert tendency._generate_base_ratio(5, -1) == 0.42
 
     def test_get_tendency_index_uses_random_for_ungrouped_dimension(self, patch_attrs) -> None:
         patch_attrs((tendency, "weighted_index", lambda _weights: 1))

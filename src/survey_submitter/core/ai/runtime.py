@@ -81,18 +81,11 @@ def build_ai_question_prompt(
     if not title:
         return ""
 
-    try:
-        from survey_submitter.core.persona.context import build_ai_context_prompt
+    from survey_submitter.core.engine.answer_context import build_ai_context_prompt
 
-        context_prompt = build_ai_context_prompt()
-        if context_prompt:
-            return f"{context_prompt}\n\n请回答以下问卷问题：{title}"
-    except (ImportError, AttributeError) as exc:
-        log_suppressed_exception(
-            "build_ai_question_prompt: from survey_submitter.core.persona.context import build_ai_context_prompt",
-            exc,
-            level="WARNING",
-        )
+    context_prompt = build_ai_context_prompt()
+    if context_prompt:
+        return f"{context_prompt}\n\n请回答以下问卷问题：{title}"
     return title
 
 

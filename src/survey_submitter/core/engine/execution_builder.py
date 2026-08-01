@@ -242,7 +242,6 @@ def _build_execution_config_template(
         ),
         reverse_fill_spec=copy.deepcopy(reverse_fill_spec),
         ai_system_prompt=str(config.execution.ai.system_prompt or "").strip(),
-        persona=bool(config.execution.persona),
         ai_answering=bool(config.execution.ai.answering),
         test_profiles=[
             {int(k): str(v) for k, v in tp.fixed_answers.items()}

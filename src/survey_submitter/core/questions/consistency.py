@@ -7,7 +7,7 @@ from typing import Any, Sequence
 from pydantic import BaseModel, Field, field_validator
 
 from survey_submitter.core.config.schema import AnswerRulesConfig
-from survey_submitter.core.persona.context import get_answered
+from survey_submitter.core.engine.answer_context import get_answered
 from survey_submitter.core.questions.types import TypeCode
 from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_survey_question_meta
 

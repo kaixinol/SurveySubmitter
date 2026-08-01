@@ -120,7 +120,6 @@ class ExecutionSection(BaseConfigModel):
     stop_on_fail: bool = True
     pause_on_aliyun_captcha: bool = True
     reliability_mode: bool = True
-    persona: bool = True
 
     ai: AISection = Field(default_factory=AISection)
     reverse_fill: ReverseFillSection = Field(default_factory=ReverseFillSection)
