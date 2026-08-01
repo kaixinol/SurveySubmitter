@@ -5,12 +5,14 @@ import dataclasses
 from loguru import logger
 from typing import Any, Callable, cast
 
+from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.config.schema import QuestionInfo
 from survey_submitter.core.questions.meta_helpers import (
     infer_question_entry_type,
     normalize_attached_selects,
     normalize_fillable_indices,
 )
+from survey_submitter.core.questions.utils import _prob_config_is_unset
 from survey_submitter.core.questions.schema import (
     ChoiceQuestionAnswerConfig,
     LocationQuestionAnswerConfig,
@@ -612,6 +614,10 @@ def build_default_survey_questions(
         if existing_config:
             config = _resolve_config_from_existing(existing_config, attrs.q_type)
             config.option_count = attrs.option_count
+            if _prob_config_is_unset(config.probabilities):
+                default_config = _resolve_default_config(q, attrs)
+                config.probabilities = default_config.probabilities
+                config.distribution = default_config.distribution
         else:
             config = _resolve_default_config(q, attrs)
 
@@ -619,3 +625,84 @@ def build_default_survey_questions(
 
         entries.append(_assemble_question_info(q, attrs, config, existing_config))
     return entries
+
+
+def apply_per_question_overrides(
+    survey_questions: list[QuestionInfo],
+    per_question_rules: list[dict[str, Any]],
+) -> list[QuestionInfo]:
+    """Merge per-question answer overrides from ``answer_rules.per_question``.
+
+    Overrides are dicts with ``question_num`` and optionally ``options`` and/or
+    ``answer_config``. They are applied onto the regenerated ``survey_questions``
+    so that user configuration survives runtime regeneration.
+    """
+    if not per_question_rules:
+        return survey_questions
+
+    question_by_num = {
+        int(q.num): q for q in survey_questions if q.num is not None
+    }
+
+    for override in per_question_rules:
+        if not isinstance(override, dict):
+            continue
+        question_num = override.get("question_num")
+        try:
+            question_num = int(question_num)  # type: ignore[arg-type]
+        except (ValueError, TypeError):
+            continue
+        if question_num <= 0:
+            continue
+
+        question = question_by_num.get(question_num)
+        if question is None:
+            continue
+
+        raw_options = override.get("options")
+        if isinstance(raw_options, list):
+            question.options = [str(item) for item in raw_options if item is not None]
+
+        raw_answer_config = override.get("answer_config")
+        if isinstance(raw_answer_config, dict):
+            question.details.answer_config = _merge_answer_config(
+                question, raw_answer_config
+            )
+
+    return survey_questions
+
+
+def _merge_answer_config(
+    question: QuestionInfo,
+    override: dict[str, Any],
+) -> QuestionAnswerConfig:
+    """Return a new answer_config for *question* merged with *override*."""
+    existing = question.details.answer_config
+    existing_dict: dict[str, Any] = {}
+    if isinstance(existing, BaseConfigModel):
+        existing_dict = existing.model_dump(exclude_none=False)
+    elif isinstance(existing, dict):
+        existing_dict = dict(existing)
+
+    merged = {**existing_dict, **override}
+
+    # Preserve location/university config class even when location_parts is empty.
+    if isinstance(existing, (LocationQuestionAnswerConfig, UniversityQuestionAnswerConfig)):
+        config_cls = type(existing)
+    else:
+        config_cls = answer_config_type_for_question_type(
+            question.question_type,
+            location_parts=(
+                list(merged.get("location_parts") or [])
+                if "location_parts" in merged
+                else None
+            ),
+            is_university=bool(merged.get("is_university")),
+        )
+    try:
+        return config_cls(**merged)
+    except Exception:
+        logger.opt(exception=True).warning(
+            f"合并第 {question.num} 题 answer_config 失败，使用原有配置"
+        )
+        return existing

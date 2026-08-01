@@ -13,7 +13,10 @@ from loguru import logger
 from survey_submitter.core.config.yaml_loader import load_yaml_config
 from survey_submitter.core.engine.async_engine import AsyncRuntimeEngine
 from survey_submitter.core.engine.execution_builder import prepare_execution_artifacts
-from survey_submitter.core.questions.default_builder import build_default_survey_questions
+from survey_submitter.core.questions.default_builder import (
+    apply_per_question_overrides,
+    build_default_survey_questions,
+)
 from survey_submitter.core.task.task_context import ExecutionState
 from survey_submitter.providers.contracts import SurveyDefinition
 from survey_submitter.providers.registry import parse_survey
@@ -69,10 +72,15 @@ class HeadlessRunner:
         config.survey.provider = definition.provider
 
         existing_questions = config.answer_config.survey_questions
+        per_question_overrides = list(config.answer_config.answer_rules.per_question or [])
         config.answer_config.survey_questions = build_default_survey_questions(
             definition.questions,
             survey_url=config.survey.url,
             existing_entries=existing_questions or None,
+        )
+        config.answer_config.survey_questions = apply_per_question_overrides(
+            config.answer_config.survey_questions,
+            per_question_overrides,
         )
         if not existing_questions:
             logger.info("未配置题目权重，自动生成默认配置")

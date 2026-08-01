@@ -166,9 +166,12 @@ async def _cmd_parse_url(url: str) -> None:
 
 
 def _cmd_dry_run(config_path: str) -> None:
-    from survey_submitter.core.config.codec import survey_questions_from_definition
     from survey_submitter.core.config.yaml_loader import load_yaml_config
     from survey_submitter.core.engine.execution_builder import prepare_execution_artifacts
+    from survey_submitter.core.questions.default_builder import (
+        apply_per_question_overrides,
+        build_default_survey_questions,
+    )
     from survey_submitter.providers.registry import parse_survey
 
     out = _out()
@@ -181,15 +184,18 @@ def _cmd_dry_run(config_path: str) -> None:
     definition = asyncio.run(parse_survey(config.survey.url))
     config.survey.title = config.survey.title or definition.title
     config.survey.provider = definition.provider
-    config.answer_config.survey_questions = survey_questions_from_definition(definition.questions)
+    original_per_question = list(config.answer_config.answer_rules.per_question or [])
+    existing_questions = config.answer_config.survey_questions
+    config.answer_config.survey_questions = build_default_survey_questions(
+        definition.questions,
+        survey_url=config.survey.url,
+        existing_entries=existing_questions or None,
+    )
 
-    if not config.answer_config.survey_questions:
-        from survey_submitter.core.questions.config import build_default_survey_questions
-
-        config.answer_config.survey_questions = build_default_survey_questions(
-            definition.questions,
-            survey_url=config.survey.url,
-        )
+    config.answer_config.survey_questions = apply_per_question_overrides(
+        config.answer_config.survey_questions,
+        original_per_question,
+    )
 
     out.write(f"[dry-run] 问卷解析成功: {definition.title} ({len(definition.questions)} 题)\n")
 

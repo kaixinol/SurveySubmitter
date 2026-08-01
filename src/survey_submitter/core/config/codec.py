@@ -40,6 +40,18 @@ from survey_submitter.constants import USER_AGENT_PRESETS
 _TEXT_RANDOM_MODES = {"none", "name", "mobile", "id_card", "integer"}
 DEFAULT_ANSWER_DURATION_RANGE_SECONDS = (60, 120)
 MAX_ANSWER_DURATION_SECONDS = 30 * 60
+
+
+def _is_per_question_override(rule_dict: dict[str, object]) -> bool:
+    """Return True if the dict is a per-question answer config override.
+
+    Per-question overrides are kept as-is in ``answer_rules.per_question``,
+    unlike conditional answer rules which are validated as ``AnswerRule``.
+    """
+    question_num = rule_dict.get("question_num")
+    if not isinstance(question_num, int) or question_num <= 0:
+        return False
+    return "answer_config" in rule_dict or "options" in rule_dict
 _USER_AGENT_DEVICE_TO_PRESET_KEYS = {
     "wechat": ["wechat_android"],
     "mobile": ["mobile_android"],
@@ -621,9 +633,12 @@ def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
             for item in raw_per_question:
                 if isinstance(item, dict):
                     rule_dict = {str(k): v for k, v in item.items()}
-                    normalized_rule = normalize_rule_dict(rule_dict)
-                    if normalized_rule:
-                        normalized_per_question.append(normalized_rule)
+                    if _is_per_question_override(rule_dict):
+                        normalized_per_question.append(rule_dict)
+                    else:
+                        normalized_rule = normalize_rule_dict(rule_dict)
+                        if normalized_rule:
+                            normalized_per_question.append(normalized_rule)
         config.answer_config.answer_rules = AnswerRulesConfig(
             constraints=normalized_constraints,
             per_question=normalized_per_question,
@@ -634,9 +649,12 @@ def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
         for item in raw_rules:
             if isinstance(item, dict):
                 rule_dict = {str(k): v for k, v in item.items()}
-                normalized_rule = normalize_rule_dict(rule_dict)
-                if normalized_rule:
-                    normalized_constraints.append(normalized_rule)
+                if _is_per_question_override(rule_dict):
+                    normalized_per_question.append(rule_dict)
+                else:
+                    normalized_rule = normalize_rule_dict(rule_dict)
+                    if normalized_rule:
+                        normalized_constraints.append(normalized_rule)
         config.answer_config.answer_rules = AnswerRulesConfig(
             constraints=normalized_constraints,
             per_question=normalized_per_question,
