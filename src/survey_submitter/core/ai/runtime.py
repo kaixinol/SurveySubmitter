@@ -7,7 +7,6 @@ from loguru import logger
 
 from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.task import ExecutionState
-from survey_submitter.logging.log_utils import log_suppressed_exception
 
 from survey_submitter.integrations.ai.client import agenerate_answer
 
@@ -148,7 +147,7 @@ async def agenerate_ai_answer(
                 cleaned,
                 question_type=question_type,
                 blank_count=blank_count,
-                ctx=ctx,
+                state=ctx,
             )
             if question_type == QuestionType.MULTI_FILL_BLANK:
                 if not isinstance(answer, list):

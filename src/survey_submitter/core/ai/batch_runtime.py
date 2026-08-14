@@ -240,7 +240,7 @@ async def _wait_batch_result_async(
                     item.question_content,
                     question_type=item.question_type,
                     blank_count=item.blank_count,
-                    ctx=ctx,
+                    state=ctx,
                 )
                 completed[item.item_id] = _normalize_item_answers(item, raw_answer)
             except Exception as exc:
