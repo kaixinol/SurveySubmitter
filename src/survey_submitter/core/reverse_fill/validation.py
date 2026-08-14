@@ -9,7 +9,6 @@ from survey_submitter.core.config.schema import QuestionInfo, RuntimeConfig
 from survey_submitter.core.questions.default_builder import build_default_survey_questions
 from survey_submitter.core.questions.schema import (
     ChoiceQuestionAnswerConfig,
-    LocationQuestionAnswerConfig,
     MultiTextQuestionAnswerConfig,
     TextQuestionAnswerConfig,
 )

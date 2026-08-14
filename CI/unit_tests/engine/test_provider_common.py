@@ -21,7 +21,7 @@ class ProviderCommonTests:
                 "survey_submitter.core.engine.provider_common.reset_consistency_context"
             ) as reset_consistency_mock,
         ):
-            with provider_run_context(config) as resolved:
+            with provider_run_context(config):
                 pass
         reset_answer_context_mock.assert_called_once()
         reset_tendency_mock.assert_called_once()

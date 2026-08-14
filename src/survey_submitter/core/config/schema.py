@@ -6,7 +6,7 @@ from pydantic import Field, field_validator, model_validator
 
 from survey_submitter.core.config.answer_datetime_window import normalize_answer_datetime_window
 from survey_submitter.core.config.base import BaseConfigModel
-from survey_submitter.core.questions.schema import QuestionAnswerConfig, QuestionDetail
+from survey_submitter.core.questions.schema import QuestionDetail
 from survey_submitter.core.reverse_fill.schema import (
     REVERSE_FILL_FORMAT_AUTO,
     REVERSE_FILL_FORMAT_WJX_SCORE,

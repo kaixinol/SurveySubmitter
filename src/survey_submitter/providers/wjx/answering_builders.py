@@ -208,9 +208,7 @@ async def _build_choice_action_result(
         ai_answering=config.ai_answering,
     )
     fill_value = default_missing_option_fill(question, selected_index, fill_value)
-    if should_skip_optional_option_fill(
-        question, selected_index, config.optional_fill_skip_ratio
-    ):
+    if should_skip_optional_option_fill(question, selected_index, config.optional_fill_skip_ratio):
         fill_value = None
     selected_texts = [
         f"{selected_text} / {fill_value}"
@@ -603,9 +601,7 @@ async def _build_multiple_answer_action(
             ai_answering=config.ai_answering,
         )
         fill_value = default_missing_option_fill(question, option_idx, fill_value)
-        if should_skip_optional_option_fill(
-            question, option_idx, config.optional_fill_skip_ratio
-        ):
+        if should_skip_optional_option_fill(question, option_idx, config.optional_fill_skip_ratio):
             fill_value = None
         if fill_value:
             fill_texts.append((option_idx, fill_value))

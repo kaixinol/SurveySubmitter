@@ -3,7 +3,6 @@ from __future__ import annotations
 import random
 import threading
 import math
-from survey_submitter.logging.log_utils import log_suppressed_exception
 
 from survey_submitter.core.questions.reliability_mode import get_reliability_profile
 from survey_submitter.core.questions.utils import weighted_index

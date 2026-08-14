@@ -1,4 +1,5 @@
 """Generate a YAML config from a survey URL using the project's own APIs."""
+
 from __future__ import annotations
 
 import asyncio
