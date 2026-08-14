@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Callable, cast
 
+from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.config.schema import QuestionInfo, RuntimeConfig
 from survey_submitter.core.questions.default_builder import build_default_survey_questions
 from survey_submitter.core.questions.schema import (
@@ -136,6 +137,11 @@ def _entry_differs_from_default(qi: QuestionInfo | None, default_qi: QuestionInf
         if field == "question_type":
             return q.question_type
         if field == "option_count":
+            if str(q.question_type or "").strip() in TEXT_TYPES:
+                options = [str(item).strip() for item in list(q.options or []) if str(item).strip()]
+                if not options:
+                    options = [DEFAULT_FILL_TEXT]
+                return len(options)
             return len(q.options or [])
         d = q.details
         if field in ("probabilities", "distribution_mode", "custom_weights", "dimension"):

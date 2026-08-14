@@ -516,6 +516,37 @@ def _apply_forced_option_overrides(
     )
 
 
+def _text_question_needs_default_candidate(
+    q_type: QuestionType,
+    config: _ResolvedConfig,
+) -> bool:
+    """Whether a text question would be rejected by normalization without a candidate."""
+    if q_type == QuestionType.TEXT:
+        return (
+            not config.ai_enabled
+            and str(config.text_random_mode or _TEXT_RANDOM_NONE).strip().lower()
+            == _TEXT_RANDOM_NONE
+        )
+    if q_type == QuestionType.MULTI_TEXT:
+        if config.ai_enabled:
+            return False
+        blank_ai_flags = list(config.multi_text_blank_ai_flags or [])
+        return not (bool(blank_ai_flags) and all(bool(flag) for flag in blank_ai_flags))
+    return False
+
+
+def _build_question_options(
+    q: SurveyQuestionMeta,
+    attrs: _QuestionAttrs,
+    config: _ResolvedConfig,
+) -> list[str]:
+    if isinstance(q, ChoiceQuestionMeta) and q.option_texts:
+        return q.option_texts
+    if attrs.q_type in TEXT_TYPES and _text_question_needs_default_candidate(attrs.q_type, config):
+        return [DEFAULT_FILL_TEXT]
+    return []
+
+
 def _assemble_question_info(
     q: SurveyQuestionMeta,
     attrs: _QuestionAttrs,
@@ -616,10 +647,7 @@ def _assemble_question_info(
         num=q.num,
         title=attrs.title_text or "",
         question_type=str(attrs.q_type),
-        options=cast(
-            list[str],
-            q.option_texts if isinstance(q, ChoiceQuestionMeta) and q.option_texts else [],
-        ),
+        options=_build_question_options(q, attrs, config),
         required=getattr(q, "required", False),
         details=detail,
     )
