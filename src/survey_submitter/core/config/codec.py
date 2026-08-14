@@ -100,6 +100,7 @@ _ANSWER_CONFIG_FIELDS = {
     "ai_enabled",
     "option_fill_texts",
     "fillable_option_indices",
+    "required_fillable_option_indices",
     "attached_option_selects",
     "text_random_mode",
     "text_random_int_range",
@@ -316,6 +317,8 @@ def serialize_question_detail(qi: QuestionInfo) -> dict[str, object]:
             ac_dict["option_fill_texts"] = ac.option_fill_texts
         if ac.fillable_option_indices:
             ac_dict["fillable_option_indices"] = ac.fillable_option_indices
+        if ac.required_fillable_option_indices:
+            ac_dict["required_fillable_option_indices"] = ac.required_fillable_option_indices
         if ac.attached_option_selects:
             ac_dict["attached_option_selects"] = list(ac.attached_option_selects)
         if ac.random_value_pool:
@@ -436,6 +439,9 @@ def deserialize_question_detail(data: dict[str, object]) -> QuestionInfo:
             option_fill_texts=cast("list[str | None] | None", ac_fields.get("option_fill_texts")),
             fillable_option_indices=cast(
                 "list[int] | None", ac_fields.get("fillable_option_indices")
+            ),
+            required_fillable_option_indices=cast(
+                "list[int] | None", ac_fields.get("required_fillable_option_indices")
             ),
             attached_option_selects=cast(
                 "list[dict[str, object]]", _as_list(ac_fields.get("attached_option_selects"))

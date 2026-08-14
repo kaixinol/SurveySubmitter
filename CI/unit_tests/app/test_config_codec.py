@@ -476,6 +476,27 @@ class ConfigCodecTests:
             None,
         ]
 
+    def test_choice_required_fillable_option_indices_roundtrip(self) -> None:
+        from survey_submitter.core.questions.schema import ChoiceQuestionAnswerConfig
+
+        qi = _make_question_info(
+            question_type="multiple",
+            answer_config=ChoiceQuestionAnswerConfig(
+                option_fill_texts=["无", "无", "无"],
+                fillable_option_indices=[0, 1, 2],
+                required_fillable_option_indices=[2],
+            ),
+        )
+        payload = serialize_question_detail(qi)
+        ac = payload["details"]["answer_config"]
+        assert ac["fillable_option_indices"] == [0, 1, 2]
+        assert ac["required_fillable_option_indices"] == [2]
+
+        deserialized = deserialize_question_detail(payload)
+        assert isinstance(deserialized.details.answer_config, ChoiceQuestionAnswerConfig)
+        assert deserialized.details.answer_config.fillable_option_indices == [0, 1, 2]
+        assert deserialized.details.answer_config.required_fillable_option_indices == [2]
+
     def test_location_random_value_pool_serialization(self) -> None:
         qi = _make_question_info(
             question_type="text",

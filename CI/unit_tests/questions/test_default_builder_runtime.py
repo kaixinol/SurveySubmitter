@@ -216,6 +216,54 @@ class DefaultBuilderRuntimeTests:
         assert entries[0].details.answer_config.fillable_option_indices == []
         assert entries[0].details.answer_config.option_fill_texts is None
 
+    def test_build_default_question_entries_auto_generates_fill_texts_and_required_indices(
+        self,
+    ) -> None:
+        questions = [
+            ensure_survey_question_meta(
+                {
+                    "num": 1,
+                    "title": "多选",
+                    "type_code": "4",
+                    "option_texts": ["A", "B", "C"],
+                    "fillable_options": [0, 1, 2],
+                    "required_fillable_options": [2],
+                }
+            ),
+            ensure_survey_question_meta(
+                {
+                    "num": 2,
+                    "title": "单选",
+                    "type_code": "3",
+                    "option_texts": ["X", "Y", "Z"],
+                    "fillable_options": [0, 1],
+                }
+            ),
+            ensure_survey_question_meta(
+                {"num": 3, "title": "普通单选", "type_code": "3", "option_texts": ["A", "B"]}
+            ),
+        ]
+
+        entries = build_default_survey_questions(questions)
+
+        ac = entries[0].details.answer_config
+        assert isinstance(ac, ChoiceQuestionAnswerConfig)
+        assert ac.fillable_option_indices == [0, 1, 2]
+        assert ac.required_fillable_option_indices == [2]
+        assert ac.option_fill_texts == [DEFAULT_FILL_TEXT, DEFAULT_FILL_TEXT, DEFAULT_FILL_TEXT]
+
+        ac2 = entries[1].details.answer_config
+        assert isinstance(ac2, ChoiceQuestionAnswerConfig)
+        assert ac2.fillable_option_indices == [0, 1]
+        assert ac2.required_fillable_option_indices is None
+        assert ac2.option_fill_texts == [DEFAULT_FILL_TEXT, DEFAULT_FILL_TEXT, None]
+
+        ac3 = entries[2].details.answer_config
+        assert isinstance(ac3, ChoiceQuestionAnswerConfig)
+        assert ac3.fillable_option_indices == []
+        assert ac3.required_fillable_option_indices is None
+        assert ac3.option_fill_texts is None
+
     def test_build_default_question_entries_does_not_reuse_mismatched_title_or_type(self) -> None:
         existing = QuestionInfo(
             num=1,

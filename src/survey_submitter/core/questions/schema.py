@@ -163,6 +163,7 @@ class ChoiceQuestionAnswerConfig(QuestionAnswerConfig):
 
     option_fill_texts: list[str | None] | None = None
     fillable_option_indices: list[int] | None = None
+    required_fillable_option_indices: list[int] | None = None
     attached_option_selects: list[dict] = Field(default_factory=list)
     random_value_pool: list[str] | None = None
     option_random_pools: list[list[str] | None] | None = None

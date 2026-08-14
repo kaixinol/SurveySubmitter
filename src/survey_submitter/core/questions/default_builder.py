@@ -7,6 +7,7 @@ from typing import Any, Callable, cast
 
 from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.config.schema import QuestionInfo
+from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.questions.meta_helpers import (
     infer_question_entry_type,
     normalize_attached_selects,
@@ -17,6 +18,7 @@ from survey_submitter.core.questions.schema import (
     ChoiceQuestionAnswerConfig,
     LocationQuestionAnswerConfig,
     MultiTextQuestionAnswerConfig,
+    QuestionAnswerConfig,
     QuestionDetail,
     TextQuestionAnswerConfig,
     UniversityQuestionAnswerConfig,
@@ -159,6 +161,32 @@ def _filter_option_fill_texts_to_fillable(
         text = str(raw_value or "").strip()
         normalized.append(text if option_index in fillable_set and text else None)
     return normalized if any(normalized) else None
+
+
+def _default_option_fill_texts_for_fillable(
+    option_count: int,
+    fillable_indices: list[int],
+) -> list[str | None] | None:
+    """Auto-generate a default fill text for every fillable option.
+
+    Both required and optional attached-text options get a default value so
+    that a freshly generated config always carries an answering entry for each
+    attached-text fill. Users can later edit the entries to enrich answers.
+    """
+    fillable_set: set[int] = set()
+    for raw_index in fillable_indices or []:
+        try:
+            option_index = int(raw_index)
+        except (ValueError, TypeError):
+            continue
+        if 0 <= option_index < max(0, int(option_count or 0)):
+            fillable_set.add(option_index)
+    if not fillable_set:
+        return None
+    return [
+        DEFAULT_FILL_TEXT if option_index in fillable_set else None
+        for option_index in range(max(0, int(option_count or 0)))
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -507,6 +535,15 @@ def _assemble_question_info(
         if attrs.q_type in CHOICE_LIKE_TYPES
         else []
     )
+    required_fillable_option_indices = (
+        normalize_fillable_indices(
+            q.required_fillable_options if isinstance(q, ChoiceQuestionMeta) else None,
+            option_count,
+            None,
+        )
+        if attrs.q_type in CHOICE_LIKE_TYPES
+        else []
+    )
     option_fill_texts = (
         _filter_option_fill_texts_to_fillable(
             config.option_fill_texts,
@@ -516,6 +553,15 @@ def _assemble_question_info(
         if attrs.q_type in CHOICE_LIKE_TYPES
         else None
     )
+    if (
+        option_fill_texts is None
+        and attrs.q_type in CHOICE_LIKE_TYPES
+        and fillable_option_indices
+    ):
+        option_fill_texts = _default_option_fill_texts_for_fillable(
+            option_count,
+            fillable_option_indices,
+        )
 
     answer_config_cls = answer_config_type_for_question_type(
         attrs.q_type,
@@ -528,6 +574,9 @@ def _assemble_question_info(
     if answer_config_cls is ChoiceQuestionAnswerConfig:
         answer_config_kwargs["option_fill_texts"] = option_fill_texts
         answer_config_kwargs["fillable_option_indices"] = fillable_option_indices
+        answer_config_kwargs["required_fillable_option_indices"] = (
+            required_fillable_option_indices or None
+        )
         answer_config_kwargs["attached_option_selects"] = (
             normalize_attached_selects(
                 attrs.attached_option_selects,

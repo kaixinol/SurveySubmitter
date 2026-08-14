@@ -389,6 +389,7 @@ def _build_question_info_dict(
         "forced_option_index": features["forced_option_index"],
         "forced_option_text": features["forced_option_text"],
         "fillable_options": features["fillable_indices"],
+        "required_fillable_options": features["required_fillable_indices"],
         "attached_option_selects": features["attached_option_selects"],
         "has_attached_option_select": bool(features["attached_option_selects"]),
         "is_location": is_location,
@@ -459,6 +460,7 @@ def _process_question_div(
         matrix_rows,
         row_texts,
         fillable_indices,
+        required_fillable_indices,
         multi_min_limit,
         multi_max_limit,
     ) = _extract_question_metadata_from_html(soup, question_div, question_number, type_code)
@@ -484,6 +486,7 @@ def _process_question_div(
 
     # Build question info dict by separating fillable_indices
     features["fillable_indices"] = fillable_indices
+    features["required_fillable_indices"] = required_fillable_indices
     question_info = _build_question_info_dict(
         question_number=question_number,
         display_num=display_num,  # ty: ignore[invalid-argument-type]

@@ -152,6 +152,7 @@ def _extract_question_metadata_from_html(soup, question_div, question_number: in
     matrix_rows = 0
     row_texts: list[str] = []
     fillable_indices: list[int] = []
+    required_fillable_indices: list[int] = []
     multi_min_limit: int | None = None
     multi_max_limit: int | None = None
 
@@ -162,7 +163,9 @@ def _extract_question_metadata_from_html(soup, question_div, question_number: in
         TypeCode.SCALE,
         TypeCode.ORDER,
     }:
-        option_texts, fillable_indices = _collect_choice_option_texts(question_div)
+        option_texts, fillable_indices, required_fillable_indices = _collect_choice_option_texts(
+            question_div
+        )
         option_count = len(option_texts)
 
         if type_code == TypeCode.MULTIPLE:
@@ -190,6 +193,7 @@ def _extract_question_metadata_from_html(soup, question_div, question_number: in
         matrix_rows,
         row_texts,
         fillable_indices,
+        required_fillable_indices,
         multi_min_limit,
         multi_max_limit,
     )

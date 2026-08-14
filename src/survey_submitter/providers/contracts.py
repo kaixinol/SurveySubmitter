@@ -176,6 +176,7 @@ class ChoiceQuestionMeta(_QuestionMetaBase):
     forced_option_index: int | None = None
     forced_option_text: str | None = None
     fillable_options: list[int] | None = None
+    required_fillable_options: list[int] | None = None
     attached_option_selects: list[AttachedOptionSelect] | None = None
     has_attached_option_select: bool = False
 
@@ -309,6 +310,14 @@ def _build_choice_kwargs(normalized: dict[str, object]) -> dict[str, object]:
                 fillable_options.append(int(raw))  # ty:ignore[invalid-argument-type]
             except (ValueError, TypeError):
                 continue
+    required_fillable_options_raw = normalized.get("required_fillable_options")
+    required_fillable_options: list[int] = []
+    if isinstance(required_fillable_options_raw, list):
+        for raw in required_fillable_options_raw:
+            try:
+                required_fillable_options.append(int(cast("int | str", raw)))
+            except (ValueError, TypeError):
+                continue
     attached = normalized.get("attached_option_selects")
     attached_list = _normalize_dict_list(attached) if isinstance(attached, list) else []
     return {
@@ -316,6 +325,7 @@ def _build_choice_kwargs(normalized: dict[str, object]) -> dict[str, object]:
         "forced_option_index": forced_option_index,
         "forced_option_text": str(normalized.get("forced_option_text") or "").strip() or None,
         "fillable_options": fillable_options or None,
+        "required_fillable_options": required_fillable_options or None,
         "attached_option_selects": attached_list or None,
         "has_attached_option_select": bool(
             normalized.get("has_attached_option_select") or attached_list

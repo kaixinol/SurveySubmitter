@@ -264,11 +264,14 @@ class WjxHtmlParserHelperTests:
             """
         ).div
 
-        texts, fillable_indices = html_parser_choice._collect_choice_option_texts(question_div)
+        texts, fillable_indices, required_fillable_indices = (
+            html_parser_choice._collect_choice_option_texts(question_div)
+        )
         attached = html_parser_choice._extract_choice_attached_selects(question_div)
 
         assert texts == ["选项A", "其他"]
         assert fillable_indices == [1]
+        assert required_fillable_indices == []
         assert attached == [
             {
                 "option_index": 1,
@@ -291,9 +294,12 @@ class WjxHtmlParserHelperTests:
             """
         ).div
 
-        texts, fillable_indices = html_parser_choice._collect_choice_option_texts(question_div)
+        texts, fillable_indices, required_fillable_indices = (
+            html_parser_choice._collect_choice_option_texts(question_div)
+        )
         assert texts == ["选项一", "选项二"]
         assert fillable_indices == [1]
+        assert required_fillable_indices == []
 
     def test_custom_select_and_location_helpers(self) -> None:
         custom_input = _soup("<input custom='请选择, 苹果,香蕉, 苹果' />").input
@@ -439,6 +445,58 @@ class WjxHtmlParserHelperTests:
         assert metadata[0] == ["北京"]
         assert metadata[1] == 1
         assert metadata[4] == [0]
+
+    def test_choice_metadata_marks_required_fillable_option_indices(self) -> None:
+        question_div = _soup(
+            """
+            <div topic="7" type="4">
+              <div class="ui-controlgroup">
+                <div>
+                  <span class="label">选项A</span>
+                  <div class="ui-text"><input class="OtherText" type="text" /></div>
+                </div>
+                <div>
+                  <span class="label">选项B</span>
+                  <div class="ui-text"><input class="OtherText" type="text" required="required" /></div>
+                </div>
+                <div>
+                  <span class="label">选项C</span>
+                </div>
+              </div>
+            </div>
+            """
+        ).div
+        soup = _soup(str(question_div))
+
+        metadata = html_parser_rules._extract_question_metadata_from_html(
+            soup, question_div, 7, "multiple"
+        )
+
+        assert metadata[4] == [0, 1]
+        assert metadata[5] == [1]
+
+    def test_choice_metadata_marks_required_shared_other_input(self) -> None:
+        question_div = _soup(
+            """
+            <div topic="7" type="4">
+              <ul>
+                <li>选项一</li>
+                <li>选项二</li>
+              </ul>
+              <div class="ui-other">
+                <input class="OtherText" type="text" required="required" />
+              </div>
+            </div>
+            """
+        ).div
+        soup = _soup(str(question_div))
+
+        metadata = html_parser_rules._extract_question_metadata_from_html(
+            soup, question_div, 7, "multiple"
+        )
+
+        assert metadata[4] == [1]
+        assert metadata[5] == [1]
 
     def test_jump_and_display_rule_helpers_ignore_invalid_values(self) -> None:
         question_div = _soup(

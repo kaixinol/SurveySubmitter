@@ -152,6 +152,27 @@ def _element_contains_text_input(element) -> bool:
     return False
 
 
+def _text_input_is_required(input_element) -> bool:
+    if input_element is None:
+        return False
+    if input_element.name in ("input", "textarea"):
+        if input_element.has_attr("required"):
+            return True
+    return False
+
+
+def _element_has_required_text_input(element) -> bool:
+    if element is None:
+        return False
+    if _is_text_input_element(element) and _text_input_is_required(element):
+        return True
+    candidates = element.find_all(["input", "textarea"])
+    for candidate in candidates:
+        if _is_text_input_element(candidate) and _text_input_is_required(candidate):
+            return True
+    return False
+
+
 def _question_div_has_shared_text_input(question_div) -> bool:
     if question_div is None:
         return False
@@ -162,6 +183,20 @@ def _question_div_has_shared_text_input(question_div) -> bool:
         "input[id*='other'], input[name*='other'], textarea[id*='other'], textarea[name*='other']"
     )
     if any(_element_contains_text_input(element) for element in keyword_inputs):
+        return True
+    return False
+
+
+def _question_div_shared_text_input_required(question_div) -> bool:
+    if question_div is None:
+        return False
+    shared_inputs = question_div.select(".ui-other input, .ui-other textarea")
+    if any(_element_has_required_text_input(element) for element in shared_inputs):
+        return True
+    keyword_inputs = question_div.select(
+        "input[id*='other'], input[name*='other'], textarea[id*='other'], textarea[name*='other']"
+    )
+    if any(_element_has_required_text_input(element) for element in keyword_inputs):
         return True
     return False
 
@@ -244,9 +279,10 @@ def _extract_rating_option_texts(question_div) -> list[str]:
     return texts
 
 
-def _collect_choice_option_texts(question_div) -> tuple[list[str], list[int]]:
+def _collect_choice_option_texts(question_div) -> tuple[list[str], list[int], list[int]]:
     texts: list[str] = []
     fillable_indices: list[int] = []
+    required_fillable_indices: list[int] = []
     option_elements: list[Any] = []
     selectors = [".ui-controlgroup > div", "ul > li"]
     for selector in selectors:
@@ -267,6 +303,8 @@ def _collect_choice_option_texts(question_div) -> tuple[list[str], list[int]]:
             texts.append(text)
             if _element_contains_text_input(element):
                 fillable_indices.append(option_index)
+                if _element_has_required_text_input(element):
+                    required_fillable_indices.append(option_index)
     if not texts:
         seen = set()
         fallback_selectors = [".label", "li span", "li"]
@@ -284,8 +322,11 @@ def _collect_choice_option_texts(question_div) -> tuple[list[str], list[int]]:
                 break
     if not fillable_indices and texts and _question_div_has_shared_text_input(question_div):
         fillable_indices.append(len(texts) - 1)
+        if _question_div_shared_text_input_required(question_div):
+            required_fillable_indices.append(len(texts) - 1)
     fillable_indices = sorted(set(fillable_indices))
-    return texts, fillable_indices
+    required_fillable_indices = sorted(set(required_fillable_indices))
+    return texts, fillable_indices, required_fillable_indices
 
 
 def _extract_select_option_texts_from_element(select_element) -> list[str]:
