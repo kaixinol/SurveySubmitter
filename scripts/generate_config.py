@@ -10,17 +10,17 @@ _SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
-from survey_submitter.core.config.codec import survey_questions_from_definition
-from survey_submitter.core.config.schema import (
+from survey_submitter.core.config.codec import survey_questions_from_definition  # noqa: E402
+from survey_submitter.core.config.schema import (  # noqa: E402
     AnswerConfigSection,
     AnswerRulesConfig,
     ExecutionSection,
     RuntimeConfig,
     SurveySection,
 )
-from survey_submitter.core.config.yaml_loader import save_yaml_config
-from survey_submitter.core.questions.default_builder import build_default_survey_questions
-from survey_submitter.providers.registry import parse_survey
+from survey_submitter.core.config.yaml_loader import save_yaml_config  # noqa: E402
+from survey_submitter.core.questions.default_builder import build_default_survey_questions  # noqa: E402
+from survey_submitter.providers.registry import parse_survey  # noqa: E402
 
 
 async def main() -> None:
