@@ -25,6 +25,9 @@ dev = [
     "ruff>=0.15.17",
     "xlsxwriter",
 ]
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
 
 [tool.uv]
 default-groups = ["dev"]

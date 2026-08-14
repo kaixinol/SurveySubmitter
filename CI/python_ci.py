@@ -3,13 +3,8 @@ from __future__ import annotations
 import argparse
 import time
 from pathlib import Path
-import sys
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
-
-from CI.python_checks.common import (  # noqa: E402
+from CI.python_checks.common import (
     configure_console_encoding,
     ensure_target_dirs,
     iter_compile_targets,
@@ -25,6 +20,8 @@ from CI.python_checks.common import (  # noqa: E402
     run_unicode_escape_check,
     run_unit_tests,
 )
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
 
 
 def parse_args() -> argparse.Namespace:
@@ -121,7 +118,7 @@ def main() -> int:
     if total_issues == 0:
         if quick_mode:
             print("[PASS] Quick checks passed: compile, Ruff, ty, and unit tests all succeeded.")
-            print("[INFO] For module import checks, run: python CI/python_ci.py --full")
+            print("[INFO] For module import checks, run: python -m CI.python_ci --full")
         else:
             print(
                 "[PASS] Full checks passed: compile, Ruff, ty, unit tests, and module import all succeeded."

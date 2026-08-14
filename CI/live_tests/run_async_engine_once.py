@@ -4,30 +4,25 @@ import argparse
 import asyncio
 import logging
 import sys
-from pathlib import Path
 
-for _stream in (sys.stdout, sys.stderr):
-    _reconfigure = getattr(_stream, "reconfigure", None)
-    if callable(_reconfigure):
-        _reconfigure(encoding="utf-8", errors="replace")
-
-ROOT_DIR = Path(__file__).resolve().parents[2]
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
-
-from survey_submitter.core.config.schema import (  # noqa: E402
+from survey_submitter.core.config.schema import (
     RuntimeConfig,
     SurveySection,
     ExecutionSection,
     AnswerConfigSection,
     ReverseFillSection,
 )
-from survey_submitter.core.engine.async_engine import AsyncRuntimeEngine  # noqa: E402
-from survey_submitter.core.questions.default_builder import build_default_survey_questions  # noqa: E402
-from survey_submitter.providers.contracts import SurveyQuestionMeta  # noqa: E402
-from survey_submitter.core.task import ExecutionState  # noqa: E402
-from survey_submitter.providers.registry import parse_survey  # noqa: E402
-from survey_submitter.core.engine.execution_builder import prepare_execution_artifacts  # noqa: E402
+from survey_submitter.core.engine.async_engine import AsyncRuntimeEngine
+from survey_submitter.core.questions.default_builder import build_default_survey_questions
+from survey_submitter.providers.contracts import SurveyQuestionMeta
+from survey_submitter.core.task import ExecutionState
+from survey_submitter.providers.registry import parse_survey
+from survey_submitter.core.engine.execution_builder import prepare_execution_artifacts
+
+for _stream in (sys.stdout, sys.stderr):
+    _reconfigure = getattr(_stream, "reconfigure", None)
+    if callable(_reconfigure):
+        _reconfigure(encoding="utf-8", errors="replace")
 
 
 def _iter_exception_messages(exc: BaseException) -> list[str]:

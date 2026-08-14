@@ -14,11 +14,6 @@ from typing import Optional, cast
 
 import io
 
-_PROJECT_ROOT = Path(__file__).resolve().parent
-_SRC_DIR = _PROJECT_ROOT / "src"
-if str(_SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(_SRC_DIR))
-
 _FAULT_HANDLER_STREAM: Optional[io.IOBase] = None
 _ORIGINAL_STDOUT: Optional[io.TextIOBase] = None
 
