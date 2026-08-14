@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 import threading
+
 from survey_submitter.core.engine.failure_reason import FailureReason
 from survey_submitter.core.engine.run_stop_policy import RunStopPolicy
 from survey_submitter.core.reverse_fill.schema import ReverseFillSampleRow, ReverseFillSpec

@@ -1,12 +1,13 @@
 from __future__ import annotations
+
 import asyncio
-from collections import deque
 import time
+from collections import deque
 from unittest.mock import patch
+
 from survey_submitter.core.task import ExecutionConfig, ExecutionState, ProxyLease
-from survey_submitter.network import session_policy
+from survey_submitter.network import session_policy, user_agent
 from survey_submitter.network.proxy import submit as submit_pool
-from survey_submitter.network import user_agent
 
 
 class SessionPolicyTests:

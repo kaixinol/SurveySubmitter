@@ -6,11 +6,11 @@ from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.config.schema import QuestionInfo
 from survey_submitter.core.questions.default_builder import build_default_survey_questions
 from survey_submitter.core.questions.schema import (
+    _TEXT_RANDOM_MOBILE,
+    _TEXT_RANDOM_NONE,
     ChoiceQuestionAnswerConfig,
     MultiTextQuestionAnswerConfig,
     QuestionDetail,
-    _TEXT_RANDOM_MOBILE,
-    _TEXT_RANDOM_NONE,
 )
 from survey_submitter.providers.contracts import ensure_survey_question_meta
 

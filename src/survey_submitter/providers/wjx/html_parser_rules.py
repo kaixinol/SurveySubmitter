@@ -105,8 +105,8 @@ def _extract_multiple_choice_limits(
         return None, None
 
     from survey_submitter.providers.wjx.questions.multiple_limits import (
-        _extract_multi_limit_range_from_text,
         _extract_min_max_from_attributes,
+        _extract_multi_limit_range_from_text,
         _extract_range_from_possible_json,
     )
 

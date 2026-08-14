@@ -1,3 +1,18 @@
+from survey_submitter.network.http.async_client import (
+    delete as adelete,
+)
+from survey_submitter.network.http.async_client import (
+    get as aget,
+)
+from survey_submitter.network.http.async_client import (
+    post as apost,
+)
+from survey_submitter.network.http.async_client import (
+    put as aput,
+)
+from survey_submitter.network.http.async_client import (
+    request as arequest,
+)
 from survey_submitter.network.http.client import (
     ConnectionError,
     ConnectTimeout,
@@ -15,13 +30,6 @@ from survey_submitter.network.http.client import (
     prewarm,
     put,
     request,
-)
-from survey_submitter.network.http.async_client import (
-    delete as adelete,
-    get as aget,
-    post as apost,
-    put as aput,
-    request as arequest,
 )
 
 __all__ = [

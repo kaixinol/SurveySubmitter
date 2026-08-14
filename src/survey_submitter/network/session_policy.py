@@ -2,24 +2,22 @@ from __future__ import annotations
 
 import asyncio
 from typing import Iterable
+
 from loguru import logger
 
+from survey_submitter.constants import PROXY_MAX_PROXIES
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.task import ExecutionState, ProxyLease
-from survey_submitter.constants import PROXY_MAX_PROXIES
 from survey_submitter.network.proxy.api import fetch_proxy_batch_async
-
-from survey_submitter.network.proxy.submit import (
+from survey_submitter.network.proxy.submit import (  # noqa: F401  — re-exported for other modules
     SubmitProxyLease,
     SubmitProxyUnavailableError,  # noqa: F401  — re-exported for other modules
+    _discard_unresponsive_proxy,
     _ensure_proxy_pool_deque_locked,
     _mark_proxy_in_use,
+    _mark_proxy_temporarily_bad,
     _merge_fetched_proxy_leases_locked,
     _pop_available_proxy_lease_locked,
-)
-from survey_submitter.network.proxy.submit import (  # noqa: F401  — re-exported for other modules
-    _discard_unresponsive_proxy,
-    _mark_proxy_temporarily_bad,
 )
 from survey_submitter.network.user_agent import (  # noqa: F401  — re-exported for other modules
     _select_user_agent_for_session,

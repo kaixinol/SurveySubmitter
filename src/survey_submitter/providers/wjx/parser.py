@@ -1,21 +1,20 @@
 from __future__ import annotations
 
 import asyncio
-
-from loguru import logger
 from typing import Any
 
 import httpx
+from loguru import logger
 
 import survey_submitter.network.http as http_client
 from survey_submitter.constants import DEFAULT_HTTP_HEADERS
-from survey_submitter.providers.match_utils import normalize_match_text
 from survey_submitter.providers.errors import (
     SurveyEnterpriseUnavailableError,
     SurveyNotOpenError,
     SurveyPausedError,
     SurveyStoppedError,
 )
+from survey_submitter.providers.match_utils import normalize_match_text
 from survey_submitter.providers.wjx.html_parser import (
     _normalize_html_text,
     extract_survey_title_from_html,

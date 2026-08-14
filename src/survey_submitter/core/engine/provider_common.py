@@ -6,8 +6,8 @@ from typing import Iterator
 
 from survey_submitter.core.engine.answer_context import reset_answer_context
 from survey_submitter.core.questions.consistency import reset_consistency_context
-from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.core.questions.tendency import reset_tendency
+from survey_submitter.core.task import ExecutionConfig, ExecutionState
 
 
 @contextmanager

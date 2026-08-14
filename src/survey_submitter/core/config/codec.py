@@ -3,23 +3,13 @@ from __future__ import annotations
 import copy
 import random
 from collections.abc import Mapping
-from loguru import logger
 from typing import Any, cast
 
+from loguru import logger
 from pydantic import ConfigDict
 
+from survey_submitter.constants import USER_AGENT_PRESETS
 from survey_submitter.core.config.base import BaseConfigModel
-from survey_submitter.core.questions.schema import (
-    ChoiceQuestionAnswerConfig,
-    LocationQuestionAnswerConfig,
-    MultiTextQuestionAnswerConfig,
-    QuestionAnswerConfig,
-    QuestionDetail,
-    TextQuestionAnswerConfig,
-    UniversityQuestionAnswerConfig,
-    answer_config_type_for_question_type,
-)
-from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.config.schema import (
     AnswerConfigSection,
     AnswerRulesConfig,
@@ -31,13 +21,23 @@ from survey_submitter.core.config.schema import (
     TestProfilesConfig,
 )
 from survey_submitter.core.questions.consistency import normalize_rule_dict, sanitize_answer_rules
+from survey_submitter.core.questions.schema import (
+    ChoiceQuestionAnswerConfig,
+    LocationQuestionAnswerConfig,
+    MultiTextQuestionAnswerConfig,
+    QuestionAnswerConfig,
+    QuestionDetail,
+    TextQuestionAnswerConfig,
+    UniversityQuestionAnswerConfig,
+    answer_config_type_for_question_type,
+)
+from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.questions.utils import serialize_random_int_range
 from survey_submitter.providers.common import (
     detect_survey_provider,
     normalize_survey_provider,
 )
 from survey_submitter.providers.contracts import SurveyQuestionMeta
-from survey_submitter.constants import USER_AGENT_PRESETS
 
 _TEXT_RANDOM_MODES = {"none", "name", "mobile", "id_card", "integer"}
 DEFAULT_ANSWER_DURATION_RANGE_SECONDS = (60, 120)

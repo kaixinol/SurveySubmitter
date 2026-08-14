@@ -3,29 +3,26 @@ from __future__ import annotations
 import json
 import re
 import threading
-from urllib.parse import parse_qsl, urlsplit
 from typing import Any
+from urllib.parse import parse_qsl, urlsplit
+
+from loguru import logger
 
 import survey_submitter.network.http as http_client
-from survey_submitter.core.task import ProxyLease
 from survey_submitter.constants import (
     DEFAULT_HTTP_HEADERS,
     PROXY_MAX_PROXIES,
     PROXY_SOURCE_CUSTOM,
 )
-from loguru import logger
-
-
+from survey_submitter.core.task import ProxyLease
+from survey_submitter.network.proxy.pool import (
+    _build_proxy_lease,
+    _mask_proxy_for_log,
+)
 from survey_submitter.network.proxy.source import (
     get_custom_proxy_api_override,
     get_proxy_occupy_minute,
     has_custom_proxy_api_override,
-)
-
-
-from survey_submitter.network.proxy.pool import (
-    _build_proxy_lease,
-    _mask_proxy_for_log,
 )
 
 _PROXY_ADDRESS_PATTERN = re.compile(

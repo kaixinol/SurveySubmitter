@@ -7,12 +7,11 @@ from datetime import date, timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Sequence
-from survey_submitter.logging.log_utils import log_suppressed_exception
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
-from survey_submitter.system.runtime_paths import get_resource_path
-
 from survey_submitter.core.questions.types import TypeCode
+from survey_submitter.logging.log_utils import log_suppressed_exception
+from survey_submitter.system.runtime_paths import get_resource_path
 
 _NON_TEXT_TYPES = {
     TypeCode.SINGLE,

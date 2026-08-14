@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-from collections import deque
 import heapq
 import itertools
 import time
+from collections import deque
 from dataclasses import dataclass, field
 
 

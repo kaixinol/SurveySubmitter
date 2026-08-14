@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import re
-
 from collections.abc import Sequence
 
 from survey_submitter.providers.match_utils import get_element_attribute, normalize_match_text

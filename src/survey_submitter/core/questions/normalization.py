@@ -5,13 +5,12 @@ import re
 from typing import TYPE_CHECKING, Any, Callable, cast
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT, DIMENSION_UNGROUPED
+from survey_submitter.core.questions.meta_helpers import (
+    count_positive_weights,
+    find_all_zero_attached_selects,
+    find_all_zero_matrix_rows,
+)
 from survey_submitter.core.questions.schema import (
-    GLOBAL_RELIABILITY_DIMENSION,
-    ChoiceQuestionAnswerConfig,
-    LocationQuestionAnswerConfig,
-    MultiTextQuestionAnswerConfig,
-    TextQuestionAnswerConfig,
-    UniversityQuestionAnswerConfig,
     _TEXT_RANDOM_ID_CARD,
     _TEXT_RANDOM_ID_CARD_TOKEN,
     _TEXT_RANDOM_INTEGER,
@@ -20,25 +19,32 @@ from survey_submitter.core.questions.schema import (
     _TEXT_RANDOM_NAME,
     _TEXT_RANDOM_NAME_TOKEN,
     _TEXT_RANDOM_NONE,
+    GLOBAL_RELIABILITY_DIMENSION,
+    ChoiceQuestionAnswerConfig,
+    LocationQuestionAnswerConfig,
+    MultiTextQuestionAnswerConfig,
+    TextQuestionAnswerConfig,
+    UniversityQuestionAnswerConfig,
     _infer_option_count,
 )
-from survey_submitter.core.questions.meta_helpers import (
-    count_positive_weights,
-    find_all_zero_attached_selects,
-    find_all_zero_matrix_rows,
-)
 from survey_submitter.core.questions.strict_ratio import is_strict_custom_ratio_mode
+from survey_submitter.core.questions.types import (
+    QuestionType,
+)
 from survey_submitter.core.questions.utils import (
     build_random_int_token,
-    normalize_option_fill_texts as _normalize_option_fill_texts,
     normalize_probabilities,
-    normalize_single_like_prob_config as _normalize_single_like_prob_config,
-    resolve_prob_config as _resolve_prob_config,
     serialize_random_int_range,
     try_parse_random_int_range,
 )
-from survey_submitter.core.questions.types import (
-    QuestionType,
+from survey_submitter.core.questions.utils import (
+    normalize_option_fill_texts as _normalize_option_fill_texts,
+)
+from survey_submitter.core.questions.utils import (
+    normalize_single_like_prob_config as _normalize_single_like_prob_config,
+)
+from survey_submitter.core.questions.utils import (
+    resolve_prob_config as _resolve_prob_config,
 )
 from survey_submitter.providers.common import make_provider_question_key
 

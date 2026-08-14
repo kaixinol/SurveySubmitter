@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from collections import Counter
+
 import pytest
 
 from survey_submitter.constants import DEFAULT_USER_AGENT, USER_AGENT_PRESETS
@@ -16,22 +18,22 @@ from survey_submitter.core.config.codec import (
     survey_questions_from_definition,
 )
 from survey_submitter.core.config.schema import (
-    RuntimeConfig,
-    SurveySection,
-    ExecutionSection,
     AnswerConfigSection,
     AnswerRulesConfig,
-    ReverseFillSection,
+    ExecutionSection,
     QuestionInfo,
+    ReverseFillSection,
+    RuntimeConfig,
+    SurveySection,
 )
-from survey_submitter.providers.contracts import ensure_survey_question_meta
 from survey_submitter.core.questions.schema import (
-    TextQuestionAnswerConfig,
-    MultiTextQuestionAnswerConfig,
     LocationQuestionAnswerConfig,
+    MultiTextQuestionAnswerConfig,
     QuestionDetail,
+    TextQuestionAnswerConfig,
 )
 from survey_submitter.core.reverse_fill.schema import REVERSE_FILL_FORMAT_WJX_SEQUENCE
+from survey_submitter.providers.contracts import ensure_survey_question_meta
 
 
 def _make_question_info(
@@ -534,9 +536,9 @@ class ConfigCodecTests:
 
     def test_answer_config_type_for_question_type_university(self) -> None:
         from survey_submitter.core.questions.schema import (
-            answer_config_type_for_question_type,
-            UniversityQuestionAnswerConfig,
             LocationQuestionAnswerConfig,
+            UniversityQuestionAnswerConfig,
+            answer_config_type_for_question_type,
         )
 
         result = answer_config_type_for_question_type(

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from survey_submitter.providers.common import (
     SURVEY_PROVIDER_WJX,
     detect_survey_provider,

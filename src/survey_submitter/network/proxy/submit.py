@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from loguru import logger
 from collections import deque
 from dataclasses import dataclass
 from typing import Iterable
 
+from loguru import logger
+
 from survey_submitter.core.task import ExecutionState, ProxyLease
-from survey_submitter.network.proxy.pool import coerce_proxy_lease, mask_proxy_for_log
 from survey_submitter.network.proxy.pool import (
+    coerce_proxy_lease,
     get_proxy_required_ttl_seconds,
+    mask_proxy_for_log,
     proxy_lease_has_sufficient_ttl,
 )
-
 
 _BAD_PROXY_COOLDOWN_SECONDS = 180.0
 

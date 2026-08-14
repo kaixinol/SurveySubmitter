@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import threading
 import time
 from dataclasses import dataclass
-import threading
 from typing import TYPE_CHECKING, Any, Protocol
 
 

@@ -2,19 +2,23 @@ from __future__ import annotations
 
 import copy
 import dataclasses
-from loguru import logger
 from typing import Any, Callable, cast
 
+from loguru import logger
+
+from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.config.schema import QuestionInfo
-from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.questions.meta_helpers import (
     infer_question_entry_type,
     normalize_attached_selects,
     normalize_fillable_indices,
 )
-from survey_submitter.core.questions.utils import _prob_config_is_unset
 from survey_submitter.core.questions.schema import (
+    _TEXT_RANDOM_ID_CARD,
+    _TEXT_RANDOM_MOBILE,
+    _TEXT_RANDOM_NAME,
+    _TEXT_RANDOM_NONE,
     ChoiceQuestionAnswerConfig,
     LocationQuestionAnswerConfig,
     MultiTextQuestionAnswerConfig,
@@ -24,18 +28,17 @@ from survey_submitter.core.questions.schema import (
     UniversityQuestionAnswerConfig,
     answer_config_type_for_question_type,
 )
-from survey_submitter.core.questions.schema import (
-    _TEXT_RANDOM_ID_CARD,
-    _TEXT_RANDOM_MOBILE,
-    _TEXT_RANDOM_NAME,
-    _TEXT_RANDOM_NONE,
-)
 from survey_submitter.core.questions.types import (
-    QuestionType,
-    TypeCode,
+    CHOICE_LIKE_TYPES,
     CHOICE_TYPES,
     TEXT_TYPES,
-    CHOICE_LIKE_TYPES,
+    QuestionType,
+    TypeCode,
+)
+from survey_submitter.core.questions.utils import _prob_config_is_unset
+from survey_submitter.providers.common import (
+    SURVEY_PROVIDER_WJX,
+    normalize_survey_provider,
 )
 from survey_submitter.providers.contracts import (
     ChoiceQuestionMeta,
@@ -44,10 +47,6 @@ from survey_submitter.providers.contracts import (
     SliderQuestionMeta,
     SurveyQuestionMeta,
     TextQuestionMeta,
-)
-from survey_submitter.providers.common import (
-    SURVEY_PROVIDER_WJX,
-    normalize_survey_provider,
 )
 
 __all__ = ["build_default_survey_questions"]

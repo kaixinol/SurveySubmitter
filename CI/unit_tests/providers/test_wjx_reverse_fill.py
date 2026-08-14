@@ -1,19 +1,22 @@
 from __future__ import annotations
-import pytest
+
 import os
 import tempfile
+
+import pytest
 import xlsxwriter
+
 from survey_submitter.core.config.schema import (
+    ExecutionSection,
+    QuestionInfo,
+    ReverseFillSection,
     RuntimeConfig,
     SurveySection,
-    ExecutionSection,
-    ReverseFillSection,
-    QuestionInfo,
 )
 from survey_submitter.core.questions.schema import (
+    LocationQuestionAnswerConfig,
     QuestionDetail,
     TextQuestionAnswerConfig,
-    LocationQuestionAnswerConfig,
 )
 from survey_submitter.core.reverse_fill.schema import (
     REVERSE_FILL_FORMAT_WJX_SEQUENCE,

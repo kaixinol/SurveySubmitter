@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+
 from loguru import logger
 
 from survey_submitter.core.engine.stop_signal import StopSignalLike

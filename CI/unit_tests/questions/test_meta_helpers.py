@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from survey_submitter.core.questions.meta_helpers import (
     count_positive_weights,
     find_all_zero_attached_selects,

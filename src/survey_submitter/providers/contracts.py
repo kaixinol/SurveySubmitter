@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Iterable, Mapping, cast
 
 from survey_submitter.core.config.base import BaseConfigModel
-from survey_submitter.core.questions.types import TypeCode, QuestionType, convert_wire_type_code
+from survey_submitter.core.questions.types import QuestionType, TypeCode, convert_wire_type_code
 from survey_submitter.providers.common import SURVEY_PROVIDER_WJX, normalize_survey_provider
 
 type JumpRule = dict[str, str | int | bool]

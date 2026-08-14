@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import threading
-from loguru import logger
 from typing import Any, Sequence
 
+from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
 from survey_submitter.core.config.schema import AnswerRulesConfig

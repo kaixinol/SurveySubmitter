@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import random
 import html as html_lib
-
-from loguru import logger
+import random
 import time
 import uuid
 from collections.abc import Awaitable, Callable
@@ -12,6 +10,8 @@ from datetime import datetime
 from typing import Protocol
 from urllib.parse import urlparse
 
+from loguru import logger
+
 import survey_submitter.network.http as http_client
 from survey_submitter.constants import DEFAULT_HTTP_HEADERS, DEFAULT_USER_AGENT, USER_AGENT_PRESETS
 from survey_submitter.core.ai.batch_runtime import (
@@ -19,10 +19,11 @@ from survey_submitter.core.ai.batch_runtime import (
     prefill_ai_answers_for_questions,
 )
 from survey_submitter.core.config.codec import UserAgentProfile
+from survey_submitter.core.engine.answer_context import record_answer
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.modes.duration_control import sample_answer_duration_seconds
-from survey_submitter.core.engine.answer_context import record_answer
 from survey_submitter.core.questions.distribution import record_pending_choice
+from survey_submitter.core.questions.types import TypeCode
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.network.proxy.pool import mask_proxy_for_log
 from survey_submitter.network.session_policy import (
@@ -32,8 +33,6 @@ from survey_submitter.network.session_policy import (
 )
 from survey_submitter.providers.answering import AnswerAction
 from survey_submitter.providers.answering.recording import record_answer_action
-from survey_submitter.providers.http_logic import HttpLogicPlan, build_http_logic_plan
-from survey_submitter.providers.http_progress import update_http_submit_step
 from survey_submitter.providers.contracts import SurveyQuestionMeta
 from survey_submitter.providers.errors import (
     SubmissionVerificationRequiredError,
@@ -43,11 +42,11 @@ from survey_submitter.providers.errors import (
     SurveyProviderUnavailableAtRuntimeError,
     SurveyStoppedError,
 )
-from survey_submitter.core.questions.types import TypeCode
+from survey_submitter.providers.http_logic import HttpLogicPlan, build_http_logic_plan
+from survey_submitter.providers.http_progress import update_http_submit_step
 from survey_submitter.providers.wjx.answering_builders import build_answer_action
 from survey_submitter.providers.wjx.parser import _parse_wjx_html, _raise_wjx_page_state_errors
 from survey_submitter.providers.wjx.regexes import WJX_SCENE_ID_PATTERNS
-
 
 WJX_SUBMISSION_VERIFICATION_MESSAGE = "问卷星触发智能验证，当前链路已停止。请启用随机 IP 后再提交。"
 WJX_PROXY_SUBMISSION_VERIFICATION_MESSAGE = (

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Sequence, cast
 
 from loguru import logger
+
 from survey_submitter.providers.answering import AnswerAction
 from survey_submitter.providers.contracts import (
     LOGIC_PARSE_STATUS_COMPLETE,

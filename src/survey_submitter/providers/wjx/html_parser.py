@@ -32,11 +32,11 @@ from .html_parser_common import (
     _extract_rating_option_count,
     _extract_text_input_labels,
     _normalize_html_text,
-    _should_mark_as_multi_text,
     _question_div_is_required,
     _question_div_looks_like_description,
     _question_div_looks_like_rating,
     _question_div_looks_like_reorder,
+    _should_mark_as_multi_text,
     extract_survey_title_from_html,
 )
 from .html_parser_matrix import _extract_slider_range, _question_div_looks_like_slider_matrix

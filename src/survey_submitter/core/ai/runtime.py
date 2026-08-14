@@ -7,7 +7,6 @@ from loguru import logger
 
 from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.task import ExecutionState
-
 from survey_submitter.integrations.ai.client import agenerate_answer
 
 _HTML_SPACE_RE = re.compile(r"\s+")

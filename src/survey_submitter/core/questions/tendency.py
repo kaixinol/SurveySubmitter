@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+import math
 import random
 import threading
-import math
 
+from survey_submitter.constants import DIMENSION_UNGROUPED
 from survey_submitter.core.questions.reliability_mode import get_reliability_profile
 from survey_submitter.core.questions.utils import weighted_index
-from survey_submitter.constants import DIMENSION_UNGROUPED
-
 
 _thread_local = threading.local()
 

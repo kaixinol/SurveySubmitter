@@ -12,6 +12,7 @@ from survey_submitter.core.config.schema import (
     ExecutionSection,
     RuntimeConfig,
     SurveySection,
+    TestProfilesConfig,
 )
 from survey_submitter.core.config.yaml_loader import save_yaml_config
 from survey_submitter.core.questions.default_builder import build_default_survey_questions
@@ -58,7 +59,7 @@ async def main() -> None:
         answer_config=AnswerConfigSection(
             survey_questions=question_entries,
             answer_rules=AnswerRulesConfig(),
-            test_profiles=[],
+            test_profiles=TestProfilesConfig(),
         ),
     )
 

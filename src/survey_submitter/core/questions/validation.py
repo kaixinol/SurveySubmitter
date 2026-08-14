@@ -14,7 +14,7 @@ from survey_submitter.core.questions.schema import (
     MultiTextQuestionAnswerConfig,
     TextQuestionAnswerConfig,
 )
-from survey_submitter.core.questions.types import QuestionType, CHOICE_TYPES, TEXT_TYPES
+from survey_submitter.core.questions.types import CHOICE_TYPES, TEXT_TYPES, QuestionType
 from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_survey_question_meta
 
 __all__ = ["validate_question_config"]

@@ -19,10 +19,6 @@ from survey_submitter.core.questions.consistency import (
 from survey_submitter.core.questions.distribution import (
     resolve_probabilities,
 )
-from survey_submitter.core.questions.text_values import (
-    resolve_option_fill_text_from_config,
-    resolve_text_values_from_config,
-)
 from survey_submitter.core.questions.strict_ratio import (
     enforce_reference_rank_order,
     is_strict_ratio_question,
@@ -30,7 +26,11 @@ from survey_submitter.core.questions.strict_ratio import (
     weighted_sample_no_replacement,
 )
 from survey_submitter.core.questions.tendency import get_tendency_index
-from survey_submitter.core.questions.types import QuestionType, TEXT_TYPES
+from survey_submitter.core.questions.text_values import (
+    resolve_option_fill_text_from_config,
+    resolve_text_values_from_config,
+)
+from survey_submitter.core.questions.types import TEXT_TYPES, QuestionType
 from survey_submitter.core.questions.utils import (
     normalize_dropdown_probs,
     weighted_index,
@@ -50,6 +50,8 @@ from survey_submitter.providers.answering.option_fill import (
 )
 from survey_submitter.providers.answering.selection import (
     coerce_non_negative_int,
+)
+from survey_submitter.providers.answering.selection import (
     valid_forced_choice_index as _valid_forced_choice_index,
 )
 from survey_submitter.providers.contracts import SurveyQuestionMeta

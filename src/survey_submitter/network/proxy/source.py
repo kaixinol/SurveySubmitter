@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from loguru import logger
 import re
 import threading
 
+from loguru import logger
 from pydantic import ConfigDict, field_validator
 
 from survey_submitter.constants import (

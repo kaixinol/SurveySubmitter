@@ -3,11 +3,11 @@ from __future__ import annotations
 import pytest
 
 from survey_submitter.core.questions.schema import (
-    _infer_option_count,
-    answer_config_type_for_question_type,
     ChoiceQuestionAnswerConfig,
     LocationQuestionAnswerConfig,
     UniversityQuestionAnswerConfig,
+    _infer_option_count,
+    answer_config_type_for_question_type,
 )
 
 

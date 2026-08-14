@@ -19,7 +19,6 @@ from survey_submitter.providers.common import (
     normalize_survey_provider,
 )
 
-
 # Reverse fill format constants
 _REVERSE_FILL_FORMATS = {
     REVERSE_FILL_FORMAT_AUTO,

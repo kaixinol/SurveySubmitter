@@ -8,6 +8,7 @@ and polls progress until completion or stop signal.
 from __future__ import annotations
 
 import asyncio
+
 from loguru import logger
 
 from survey_submitter.core.config.yaml_loader import load_yaml_config

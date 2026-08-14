@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 import pytest
+
 from survey_submitter.core.reverse_fill.parser import (
     parse_choice_answer,
     parse_matrix_answer,

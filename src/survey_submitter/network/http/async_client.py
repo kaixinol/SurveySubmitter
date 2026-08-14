@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Literal, overload
 
 import httpx
-
 from loguru import logger
+
 from survey_submitter.network.http.client import _CLIENT_LIMITS, _normalize_timeout, _resolve_proxy
 
 _MAX_CLIENTS = 20

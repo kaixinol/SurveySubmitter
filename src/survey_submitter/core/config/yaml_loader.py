@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-
 from typing import cast
 
 from survey_submitter.core.config.codec import (

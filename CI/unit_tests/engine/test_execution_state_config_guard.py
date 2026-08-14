@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 import pytest
+
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 
 

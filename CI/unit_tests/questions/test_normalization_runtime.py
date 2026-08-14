@@ -8,12 +8,6 @@ import pytest
 from survey_submitter.core.config.schema import QuestionInfo
 from survey_submitter.core.questions.normalization import configure_probabilities
 from survey_submitter.core.questions.schema import (
-    GLOBAL_RELIABILITY_DIMENSION,
-    ChoiceQuestionAnswerConfig,
-    LocationQuestionAnswerConfig,
-    MultiTextQuestionAnswerConfig,
-    QuestionDetail,
-    TextQuestionAnswerConfig,
     _TEXT_RANDOM_ID_CARD,
     _TEXT_RANDOM_ID_CARD_TOKEN,
     _TEXT_RANDOM_INTEGER,
@@ -21,6 +15,12 @@ from survey_submitter.core.questions.schema import (
     _TEXT_RANDOM_MOBILE_TOKEN,
     _TEXT_RANDOM_NAME,
     _TEXT_RANDOM_NAME_TOKEN,
+    GLOBAL_RELIABILITY_DIMENSION,
+    ChoiceQuestionAnswerConfig,
+    LocationQuestionAnswerConfig,
+    MultiTextQuestionAnswerConfig,
+    QuestionDetail,
+    TextQuestionAnswerConfig,
 )
 from survey_submitter.providers.contracts import ensure_survey_question_meta
 

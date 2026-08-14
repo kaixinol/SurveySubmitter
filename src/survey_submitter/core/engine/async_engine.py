@@ -2,19 +2,19 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
-from loguru import logger
 import threading
+from importlib.metadata import version as pkg_version
 from typing import Any, Coroutine
 
-from importlib.metadata import version as pkg_version
+from loguru import logger
 
+import survey_submitter.network.http as http_client
 from survey_submitter.core.engine.async_events import AsyncRunContext
 from survey_submitter.core.engine.async_runtime_loop import AsyncSlotRunner
 from survey_submitter.core.engine.async_scheduler import AsyncScheduler
 from survey_submitter.core.engine.async_status_bus import AsyncStatusBus
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.network.proxy.api import fetch_proxy_batch_async
-import survey_submitter.network.http as http_client
 from survey_submitter.network.session_policy import (
     _acquire_proxy_fetch_lock_async,
     merge_prefetched_proxy_leases,

@@ -5,14 +5,13 @@ from __future__ import annotations
 import argparse
 import asyncio
 import faulthandler
+import io
 import logging
 import os
 import signal
 import sys
 from pathlib import Path
 from typing import Optional, cast
-
-import io
 
 _FAULT_HANDLER_STREAM: Optional[io.IOBase] = None
 _ORIGINAL_STDOUT: Optional[io.TextIOBase] = None
@@ -68,9 +67,9 @@ def _disable_fault_handler() -> None:
 
 
 def bootstrap() -> None:
-    from survey_submitter.system.paths import ensure_user_data_directories
     import survey_submitter.network.http as http_client
     from survey_submitter.logging.log_utils import setup_logging as _setup_logging
+    from survey_submitter.system.paths import ensure_user_data_directories
 
     ensure_user_data_directories()
     _enable_fault_handler()
@@ -110,8 +109,8 @@ def _question_type_label(question: object) -> str:
 
 def _print_survey(definition: object) -> None:
     from survey_submitter.providers.contracts import (
-        SurveyDefinition,
         ChoiceQuestionMeta,
+        SurveyDefinition,
     )
 
     out = _out()

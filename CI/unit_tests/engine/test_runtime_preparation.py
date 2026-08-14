@@ -1,21 +1,24 @@
 from __future__ import annotations
-import pytest
+
 from unittest.mock import patch
+
+import pytest
+
 from survey_submitter.core.config.schema import (
-    RuntimeConfig,
-    SurveySection,
-    ExecutionSection,
     AnswerConfigSection,
     AnswerRulesConfig,
+    ExecutionSection,
     QuestionInfo,
+    RuntimeConfig,
+    SurveySection,
 )
-from survey_submitter.core.questions.schema import QuestionDetail, ChoiceQuestionAnswerConfig
-from survey_submitter.core.reverse_fill.schema import ReverseFillSpec
 from survey_submitter.core.engine.execution_builder import (
     PreparedExecutionArtifacts,
     RuntimePreparationError,
     prepare_execution_artifacts,
 )
+from survey_submitter.core.questions.schema import ChoiceQuestionAnswerConfig, QuestionDetail
+from survey_submitter.core.reverse_fill.schema import ReverseFillSpec
 from survey_submitter.providers.contracts import ensure_survey_question_meta
 
 

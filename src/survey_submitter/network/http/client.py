@@ -8,9 +8,8 @@ from typing import Any, Callable, Iterator, Literal, TypeVar, overload
 from urllib.parse import urlsplit
 
 import httpx
-from packaging.version import InvalidVersion, Version
-
 from loguru import logger
+from packaging.version import InvalidVersion, Version
 
 T = TypeVar("T")
 

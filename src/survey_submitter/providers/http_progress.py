@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-
-from loguru import logger
 from typing import Any
 
+from loguru import logger
 
 HTTP_SUBMIT_STEPS: tuple[str, ...] = (
     "准备请求",

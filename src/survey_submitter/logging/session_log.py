@@ -7,13 +7,13 @@ from pathlib import Path
 
 from loguru import logger
 
-from survey_submitter.constants import LOG_FORMAT
 from survey_submitter.constants import (
     AUTO_SAVE_LOG_RETENTION_COUNT_KEY,
     AUTO_SAVE_LOG_RETENTION_OPTIONS,
     AUTO_SAVE_LOGS_SETTING_KEY,
     DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT,
     DEFAULT_AUTO_SAVE_LOGS,
+    LOG_FORMAT,
 )
 from survey_submitter.io.config.settings_store import (
     app_settings,

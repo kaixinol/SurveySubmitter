@@ -1,14 +1,14 @@
 from __future__ import annotations
+
+import pytest
+
 from survey_submitter.core.config.schema import QuestionInfo
 from survey_submitter.core.questions.schema import (
-    QuestionDetail,
     ChoiceQuestionAnswerConfig,
+    QuestionDetail,
     TextQuestionAnswerConfig,
 )
 from survey_submitter.core.questions.validation import validate_question_config
-
-
-import pytest
 
 
 @pytest.mark.config

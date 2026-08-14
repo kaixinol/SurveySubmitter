@@ -1,14 +1,6 @@
 from survey_submitter.core.questions.default_builder import build_default_survey_questions
 from survey_submitter.core.questions.normalization import configure_probabilities
 from survey_submitter.core.questions.schema import (
-    GLOBAL_RELIABILITY_DIMENSION,
-    DistributionConfig,
-    FillOptionsConfig,
-    MultiTextBlankConfig,
-    ProviderInfo,
-    QuestionAnswerConfig,
-    QuestionDetail,
-    TextRandomConfig,
     _TEXT_RANDOM_ID_CARD,
     _TEXT_RANDOM_ID_CARD_TOKEN,
     _TEXT_RANDOM_INTEGER,
@@ -17,6 +9,14 @@ from survey_submitter.core.questions.schema import (
     _TEXT_RANDOM_NAME,
     _TEXT_RANDOM_NAME_TOKEN,
     _TEXT_RANDOM_NONE,
+    GLOBAL_RELIABILITY_DIMENSION,
+    DistributionConfig,
+    FillOptionsConfig,
+    MultiTextBlankConfig,
+    ProviderInfo,
+    QuestionAnswerConfig,
+    QuestionDetail,
+    TextRandomConfig,
     _infer_option_count,
     answer_config_type_for_question_type,
 )

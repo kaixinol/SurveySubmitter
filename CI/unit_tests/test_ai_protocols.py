@@ -1,11 +1,12 @@
 from __future__ import annotations
+
 import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
 
-from survey_submitter.integrations.ai.client import save_ai_settings
 import survey_submitter.integrations.ai.protocols as protocols
+from survey_submitter.integrations.ai.client import save_ai_settings
 from survey_submitter.integrations.ai.protocols import (
     extract_chat_completion_text,
     extract_responses_text,
@@ -148,9 +149,8 @@ class AIProtocolTests:
 
     @pytest.mark.asyncio
     async def test_acall_wraps_openai_errors(self, monkeypatch) -> None:
-        from unittest.mock import MagicMock
-
         from types import SimpleNamespace
+        from unittest.mock import MagicMock
 
         from openai import APIError
 

@@ -8,7 +8,6 @@ from survey_submitter.core.ai.runtime import (
     agenerate_ai_answer,
     build_ai_option_fill_prompt,
 )
-from survey_submitter.core.task import ExecutionState
 from survey_submitter.core.questions.schema import (
     _TEXT_RANDOM_ID_CARD,
     _TEXT_RANDOM_ID_CARD_TOKEN,
@@ -28,6 +27,7 @@ from survey_submitter.core.questions.utils import (
     resolve_dynamic_text_token,
     weighted_index,
 )
+from survey_submitter.core.task import ExecutionState
 
 _OPTION_FILL_WEIGHT_SEP = ":"
 

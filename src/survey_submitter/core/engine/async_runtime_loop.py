@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-from loguru import logger
 import random
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Awaitable, TypeVar, cast
 
+from loguru import logger
+
+import survey_submitter.network.http as http_client
 from survey_submitter.core.ai.runtime import AIRuntimeError, is_ai_timeout_runtime_error
 from survey_submitter.core.engine.async_events import AsyncRunContext, ThreadEventProxy
 from survey_submitter.core.engine.async_http_submitter import AsyncHttpSubmitter
@@ -29,7 +31,6 @@ from survey_submitter.providers.errors import (
     SurveyProviderUnavailableAtRuntimeError,
 )
 from survey_submitter.providers.http_progress import update_http_submit_step
-import survey_submitter.network.http as http_client
 
 _T = TypeVar("_T")
 

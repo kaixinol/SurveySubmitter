@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from loguru import logger
 import math
 import time
 from typing import Callable, TypeVar
+
+from loguru import logger
 
 from survey_submitter.core.engine.failure_reason import FailureReason
 from survey_submitter.core.engine.stop_signal import StopSignalLike

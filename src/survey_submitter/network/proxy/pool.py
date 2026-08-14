@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import time
-from urllib.parse import urlsplit
+from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlsplit
+
+from loguru import logger
 
 import survey_submitter.network.http as http_client
-from survey_submitter.core.task import ProxyLease
 from survey_submitter.constants import (
     PROXY_HEALTH_CHECK_TIMEOUT,
     PROXY_HEALTH_CHECK_URL,
     PROXY_TTL_GRACE_SECONDS,
 )
-from loguru import logger
+from survey_submitter.core.task import ProxyLease
 from survey_submitter.network.proxy.source import (
     get_proxy_minute_by_answer_seconds,
 )

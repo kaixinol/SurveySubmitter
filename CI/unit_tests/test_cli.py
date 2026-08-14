@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from survey_submitter.providers.contracts import TextQuestionMeta
 from cli import _question_type_label, _type_label
+from survey_submitter.providers.contracts import TextQuestionMeta
 
 
 class CliSurveyPrintTests:

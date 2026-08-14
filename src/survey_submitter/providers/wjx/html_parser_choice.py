@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from survey_submitter.providers.match_utils import normalize_match_text
+
 from .html_parser_common import (
     _is_select_placeholder_option,
     _normalize_html_text,

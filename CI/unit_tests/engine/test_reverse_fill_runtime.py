@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from survey_submitter.core.reverse_fill.runtime import resolve_current_reverse_fill_answer
 from survey_submitter.core.reverse_fill.schema import (
     REVERSE_FILL_KIND_CHOICE,

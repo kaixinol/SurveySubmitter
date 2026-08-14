@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-import survey_submitter.core.engine.async_runtime_loop as runtime_loop
 import survey_submitter.core.engine.async_proxy_session as proxy_session
+import survey_submitter.core.engine.async_runtime_loop as runtime_loop
 from survey_submitter.core.ai.runtime import AIRuntimeError
 from survey_submitter.core.engine.async_events import AsyncRunContext
 from survey_submitter.core.engine.async_runtime_loop import AsyncSlotRunner

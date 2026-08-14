@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from unittest.mock import patch
+
 from survey_submitter.core.engine.provider_common import provider_run_context
 from survey_submitter.core.task import ExecutionConfig
 from survey_submitter.providers.contracts import SurveyQuestionMeta

@@ -11,9 +11,10 @@ from __future__ import annotations
 
 import asyncio
 import copy
-from loguru import logger
 from dataclasses import dataclass
 from typing import Any, cast
+
+from loguru import logger
 
 from survey_submitter.core.config.answer_datetime_window import (
     answer_datetime_window_to_epoch_ms,

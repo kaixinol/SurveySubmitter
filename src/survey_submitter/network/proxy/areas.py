@@ -7,9 +7,10 @@ import threading
 from importlib import resources
 from typing import Any, cast
 
+from loguru import logger
+
 import survey_submitter.network.http as http_client
 from survey_submitter.constants import DEFAULT_HTTP_HEADERS
-from loguru import logger
 
 _BENEFIT_AREA_INFO_URL = "https://www.juliangip.com/downLoadAreaInfo"
 _BENEFIT_FETCH_TIMEOUT_SECONDS = 10
