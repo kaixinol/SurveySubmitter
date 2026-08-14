@@ -553,11 +553,7 @@ def _assemble_question_info(
         if attrs.q_type in CHOICE_LIKE_TYPES
         else None
     )
-    if (
-        option_fill_texts is None
-        and attrs.q_type in CHOICE_LIKE_TYPES
-        and fillable_option_indices
-    ):
+    if option_fill_texts is None and attrs.q_type in CHOICE_LIKE_TYPES and fillable_option_indices:
         option_fill_texts = _default_option_fill_texts_for_fillable(
             option_count,
             fillable_option_indices,
@@ -689,16 +685,16 @@ def apply_per_question_overrides(
     if not per_question_rules:
         return survey_questions
 
-    question_by_num = {
-        int(q.num): q for q in survey_questions if q.num is not None
-    }
+    question_by_num = {int(q.num): q for q in survey_questions if q.num is not None}
 
     for override in per_question_rules:
         if not isinstance(override, dict):
             continue
         question_num = override.get("question_num")
+        if question_num is None:
+            continue
         try:
-            question_num = int(question_num)  # type: ignore[arg-type]
+            question_num = int(question_num)
         except (ValueError, TypeError):
             continue
         if question_num <= 0:
@@ -714,9 +710,7 @@ def apply_per_question_overrides(
 
         raw_answer_config = override.get("answer_config")
         if isinstance(raw_answer_config, dict):
-            question.details.answer_config = _merge_answer_config(
-                question, raw_answer_config
-            )
+            question.details.answer_config = _merge_answer_config(question, raw_answer_config)
 
     return survey_questions
 
@@ -742,9 +736,7 @@ def _merge_answer_config(
         config_cls = answer_config_type_for_question_type(
             question.question_type,
             location_parts=(
-                list(merged.get("location_parts") or [])
-                if "location_parts" in merged
-                else None
+                list(merged.get("location_parts") or []) if "location_parts" in merged else None
             ),
             is_university=bool(merged.get("is_university")),
         )

@@ -1,6 +1,5 @@
 from __future__ import annotations
 from collections import Counter
-from typing import cast
 import pytest
 
 from survey_submitter.constants import DEFAULT_USER_AGENT, USER_AGENT_PRESETS
@@ -251,11 +250,9 @@ class ConfigCodecTests:
         assert qi.details.answer_config.text_random_int_range == [5, 9]
         assert qi.details.dimension is None
 
-        payload: dict[str, object] = serialize_question_detail(qi)
-        details = cast("dict[str, object]", payload["details"])
-        assert details["dimension"] is None
-        ac = cast("dict[str, object]", details["answer_config"])
-        assert ac["text_random_int_range"] == [5, 9]
+        payload = serialize_question_detail(qi)
+        assert payload["details"]["dimension"] is None
+        assert payload["details"]["answer_config"]["text_random_int_range"] == [5, 9]
 
     def test_question_detail_location_parts_produces_location_config(self) -> None:
         qi = deserialize_question_detail(
@@ -282,10 +279,8 @@ class ConfigCodecTests:
         assert isinstance(qi.details.answer_config, LocationQuestionAnswerConfig)
         assert qi.details.answer_config.location_parts == ["北京", "北京", "东城区"]
 
-        payload: dict[str, object] = serialize_question_detail(qi)
-        details = cast("dict[str, object]", payload["details"])
-        ac = cast("dict[str, object]", details["answer_config"])
-        assert ac["location_parts"] == ["北京", "北京", "东城区"]
+        payload = serialize_question_detail(qi)
+        assert payload["details"]["answer_config"]["location_parts"] == ["北京", "北京", "东城区"]
 
     def test_question_detail_normalizes_multi_text_blank_fields(self) -> None:
         qi = deserialize_question_detail(
@@ -309,9 +304,8 @@ class ConfigCodecTests:
         assert qi.details.answer_config.multi_text_blank_modes == ["name", "none", "integer"]
         assert qi.details.answer_config.multi_text_blank_ai_flags == [True, False]
 
-        payload: dict[str, object] = serialize_question_detail(qi)
-        details = cast("dict[str, object]", payload["details"])
-        ac = cast("dict[str, object]", details["answer_config"])
+        payload = serialize_question_detail(qi)
+        ac = payload["details"]["answer_config"]
         assert ac["multi_text_blank_modes"] == [
             "name",
             "none",

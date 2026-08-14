@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import random
+from collections.abc import Mapping
 from loguru import logger
 from typing import Any, cast
 
@@ -53,6 +54,8 @@ def _is_per_question_override(rule_dict: dict[str, object]) -> bool:
     if not isinstance(question_num, int) or question_num <= 0:
         return False
     return "answer_config" in rule_dict or "options" in rule_dict
+
+
 _USER_AGENT_DEVICE_TO_PRESET_KEYS = {
     "wechat": ["wechat_android"],
     "mobile": ["mobile_android"],
@@ -290,7 +293,7 @@ _TYPES_WITH_OPTIONS = frozenset(
 )
 
 
-def serialize_question_detail(qi: QuestionInfo) -> dict[str, object]:
+def serialize_question_detail(qi: QuestionInfo) -> dict[str, Any]:
     detail = qi.details
     ac = detail.answer_config
     payload: dict[str, object] = {
@@ -564,7 +567,7 @@ def build_runtime_config_snapshot(
     return snapshot
 
 
-def _validate_no_unknown_keys(raw: dict[str, object]) -> None:
+def _validate_no_unknown_keys(raw: Mapping[str, object]) -> None:
     unknown_top_keys = set(raw or {}) - _SECTION_KEYS
     if unknown_top_keys:
         raise ValueError(
@@ -595,7 +598,7 @@ def _normalize_question_details_list(
     return details
 
 
-def normalize_runtime_config_payload(raw: dict[str, object]) -> RuntimeConfig:
+def normalize_runtime_config_payload(raw: Mapping[str, object]) -> RuntimeConfig:
     _validate_no_unknown_keys(raw)
 
     answer_config_raw = cast("dict[str, object]", raw.get("answer_config") or {})
@@ -714,6 +717,8 @@ def _normalize_test_profiles(raw: object) -> TestProfilesConfig:
                 continue
             fixed_answers: dict[int, str] = {}
             for key, value in fixed_answers_raw.items():
+                if not isinstance(key, (int, str)):
+                    continue
                 try:
                     question_num = int(key)
                 except (ValueError, TypeError):
@@ -740,5 +745,5 @@ def serialize_runtime_config(config: RuntimeConfig) -> dict[str, Any]:
     return payload
 
 
-def deserialize_runtime_config(payload: dict[str, object]) -> RuntimeConfig:
+def deserialize_runtime_config(payload: Mapping[str, object]) -> RuntimeConfig:
     return normalize_runtime_config_payload(payload)
