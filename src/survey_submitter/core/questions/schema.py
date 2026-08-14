@@ -197,15 +197,15 @@ class UniversityQuestionAnswerConfig(QuestionAnswerConfig):
     random_value_pool: list[str] | None = None
 
 
-# Mapping from question_type string to the appropriate AnswerConfig subclass.
-_ANSWER_CONFIG_BY_QUESTION_TYPE: dict[str, type[QuestionAnswerConfig]] = {
-    str(QuestionType.SINGLE): ChoiceQuestionAnswerConfig,
-    str(QuestionType.MULTIPLE): ChoiceQuestionAnswerConfig,
-    str(QuestionType.DROPDOWN): ChoiceQuestionAnswerConfig,
-    str(QuestionType.ORDER): ChoiceQuestionAnswerConfig,
-    str(QuestionType.TEXT): TextQuestionAnswerConfig,
-    str(QuestionType.MULTI_TEXT): MultiTextQuestionAnswerConfig,
-    str(QuestionType.LOCATION): LocationQuestionAnswerConfig,
+# Mapping from QuestionType to the appropriate AnswerConfig subclass.
+_ANSWER_CONFIG_BY_QUESTION_TYPE: dict[QuestionType, type[QuestionAnswerConfig]] = {
+    QuestionType.SINGLE: ChoiceQuestionAnswerConfig,
+    QuestionType.MULTIPLE: ChoiceQuestionAnswerConfig,
+    QuestionType.DROPDOWN: ChoiceQuestionAnswerConfig,
+    QuestionType.ORDER: ChoiceQuestionAnswerConfig,
+    QuestionType.TEXT: TextQuestionAnswerConfig,
+    QuestionType.MULTI_TEXT: MultiTextQuestionAnswerConfig,
+    QuestionType.LOCATION: LocationQuestionAnswerConfig,
 }
 
 
@@ -228,7 +228,7 @@ def answer_config_type_for_question_type(
     if location_parts:
         return LocationQuestionAnswerConfig
     try:
-        key = str(QuestionType(str(question_type)))
+        key = QuestionType(question_type)
     except ValueError:
         return QuestionAnswerConfig
     return _ANSWER_CONFIG_BY_QUESTION_TYPE.get(key, QuestionAnswerConfig)

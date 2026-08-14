@@ -86,14 +86,14 @@ def infer_reverse_fill_question_type(
     if inferred:
         return inferred
     if entry is not None:
-        return str(entry.question_type or QuestionType.SINGLE).strip() or QuestionType.SINGLE
+        return (entry.question_type or QuestionType.SINGLE).strip() or QuestionType.SINGLE
     return QuestionType.SINGLE
 
 
 def supports_reverse_fill_runtime(
     question_type: str, info: SurveyQuestionMeta | dict[str, Any]
 ) -> bool:
-    normalized = str(question_type or "").strip().lower()
+    normalized = (question_type or "").strip().lower()
     if normalized not in REVERSE_FILL_RUNTIME_SUPPORTED_TYPES:
         return False
     if isinstance(info, SurveyQuestionMeta):

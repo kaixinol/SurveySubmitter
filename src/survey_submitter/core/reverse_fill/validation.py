@@ -57,8 +57,8 @@ def _regular_config_ready(
 ) -> bool:
     if qi is None:
         return False
-    entry_type = str(qi.question_type or "").strip()
-    normalized_expected = str(expected_type or "").strip()
+    entry_type = qi.question_type.strip()
+    normalized_expected = (expected_type or "").strip()
     if entry_type != normalized_expected:
         # Location questions may have a different type_code in questions_info
         from survey_submitter.core.questions.schema import LocationQuestionAnswerConfig
@@ -137,7 +137,7 @@ def _entry_differs_from_default(qi: QuestionInfo | None, default_qi: QuestionInf
         if field == "question_type":
             return q.question_type
         if field == "option_count":
-            if str(q.question_type or "").strip() in TEXT_TYPES:
+            if q.question_type in TEXT_TYPES:
                 options = [str(item).strip() for item in list(q.options or []) if str(item).strip()]
                 if not options:
                     options = [DEFAULT_FILL_TEXT]
@@ -295,7 +295,7 @@ def _parse_answer_for_row(
     values_by_column = typed_row.values_by_column or {}
     first_column_value = values_by_column.get(int(getattr(ordered_columns[0], "column_index")))
 
-    qtype = QuestionType(str(question_type))
+    qtype = QuestionType(question_type)
     parse_dispatch: dict[QuestionType, Callable[[], object]] = {
         QuestionType.SINGLE: lambda: parse_choice_answer(
             question_num=question_num,

@@ -42,7 +42,7 @@ def _extract_text_min_length(*fragments: Any) -> int | None:
 
 
 def _is_text_ai_enabled(qi: QuestionInfo) -> bool:
-    question_type = str(qi.question_type or "").strip()
+    question_type = qi.question_type.strip()
     if question_type == QuestionType.TEXT:
         return bool(qi.details.answer_config.ai_enabled)
     if question_type == QuestionType.MULTI_TEXT and isinstance(

@@ -141,7 +141,7 @@ def resolve_text_values_from_config(
 
     selected_raw = candidates[weighted_index(normalized)]
     resolved_blank_count = max(1, int(blank_count or 1))
-    if str(entry_type or "").strip() == QuestionType.MULTI_TEXT:
+    if (entry_type or "").strip() == QuestionType.MULTI_TEXT:
         text_values = [
             resolve_dynamic_text_token(part) for part in selected_raw.split(MULTI_TEXT_DELIMITER)
         ]

@@ -897,7 +897,7 @@ def configure_probabilities(
         )
         target.question_strict_ratio_map[question_num] = strict_ratio
 
-        handler = _NORMALIZATION_DISPATCH.get(QuestionType(str(qi.question_type)))
+        handler = _NORMALIZATION_DISPATCH.get(QuestionType(qi.question_type))
         if handler is None:
             continue
         if handler(

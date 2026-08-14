@@ -133,9 +133,9 @@ def _coerce_int(value: object, default: int = 0) -> int:
 def _normalize_question_type(value: object) -> str:
     raw = str(value or "").strip() or QuestionType.UNKNOWN
     try:
-        return str(QuestionType(raw))
+        return QuestionType(raw).value
     except ValueError:
-        return str(QuestionType.UNKNOWN)
+        return QuestionType.UNKNOWN.value
 
 
 def _as_str(value: object, default: str = "") -> str:
@@ -285,10 +285,10 @@ def _normalize_dimension_value(raw: object) -> str | None:
 
 _TYPES_WITH_OPTIONS = frozenset(
     {
-        str(QuestionType.SINGLE),
-        str(QuestionType.MULTIPLE),
-        str(QuestionType.DROPDOWN),
-        str(QuestionType.ORDER),
+        QuestionType.SINGLE,
+        QuestionType.MULTIPLE,
+        QuestionType.DROPDOWN,
+        QuestionType.ORDER,
     }
 )
 
