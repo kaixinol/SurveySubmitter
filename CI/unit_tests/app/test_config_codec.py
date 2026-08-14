@@ -173,7 +173,7 @@ class ConfigCodecTests:
         assert "survey_questions" in payload["answer_config"]
         assert payload["answer_config"]["survey_questions"][0]["question_type"] == "single"
         assert payload["answer_config"]["survey_questions"][0]["options"] == ["男", "女"]
-        assert payload["answer_config"]["survey_questions"][1]["options"] == []
+        assert "options" not in payload["answer_config"]["survey_questions"][1]
         restored = deserialize_runtime_config(payload)
         assert len(restored.answer_config.survey_questions) == 2
         assert restored.answer_config.survey_questions[0].title == "性别"

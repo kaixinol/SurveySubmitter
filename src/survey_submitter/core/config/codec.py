@@ -279,6 +279,16 @@ def _normalize_dimension_value(raw: object) -> str | None:
     return text
 
 
+_TYPES_WITH_OPTIONS = frozenset(
+    {
+        str(QuestionType.SINGLE),
+        str(QuestionType.MULTIPLE),
+        str(QuestionType.DROPDOWN),
+        str(QuestionType.ORDER),
+    }
+)
+
+
 def serialize_question_detail(qi: QuestionInfo) -> dict[str, object]:
     detail = qi.details
     ac = detail.answer_config
@@ -286,17 +296,18 @@ def serialize_question_detail(qi: QuestionInfo) -> dict[str, object]:
         "num": qi.num,
         "title": qi.title,
         "question_type": qi.question_type,
-        "options": list(qi.options),
-        "required": qi.required,
-        "details": {
-            "provider_question_id": str(detail.provider_question_id or ""),
-            "provider_page_id": str(detail.provider_page_id or ""),
-            "probabilities": detail.probabilities,
-            "distribution_mode": detail.distribution_mode,
-            "custom_weights": detail.custom_weights,
-            "dimension": _normalize_dimension_value(detail.dimension),
-            "answer_config": {},
-        },
+    }
+    if qi.question_type in _TYPES_WITH_OPTIONS or qi.options:
+        payload["options"] = list(qi.options)
+    payload["required"] = qi.required
+    payload["details"] = {
+        "provider_question_id": str(detail.provider_question_id or ""),
+        "provider_page_id": str(detail.provider_page_id or ""),
+        "probabilities": detail.probabilities,
+        "distribution_mode": detail.distribution_mode,
+        "custom_weights": detail.custom_weights,
+        "dimension": _normalize_dimension_value(detail.dimension),
+        "answer_config": {},
     }
     ac_dict: dict[str, object] = {}
     if isinstance(ac, ChoiceQuestionAnswerConfig):
