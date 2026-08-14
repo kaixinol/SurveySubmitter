@@ -111,6 +111,9 @@ answer_config:
   survey_questions: []
   question_entries: []
   answer_rules: []
+  # optional_fill_skip_ratio: 0.0
+  # 选填附加文本按概率留空跳过（0~1），必填附加文本不受影响。
+  # 默认 0.0 表示所有附加文本都按配置填写；例如 0.3 表示约 30% 的选填填空跳过。
 
 # -- Random value pool (optional) --
 # 地区/高校类题目可在 question_entries 中设置 random_value_pool，

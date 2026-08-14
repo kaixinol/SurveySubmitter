@@ -240,6 +240,10 @@ def _build_execution_config_template(
             list(config.answer_config.answer_rules.constraints or [])
             + list(config.answer_config.answer_rules.per_question or [])
         ),
+        optional_fill_skip_ratio=min(
+            1.0,
+            max(0.0, float(config.answer_config.optional_fill_skip_ratio or 0.0)),
+        ),
         reverse_fill_spec=copy.deepcopy(reverse_fill_spec),
         ai_system_prompt=str(config.execution.ai.system_prompt or "").strip(),
         ai_answering=bool(config.execution.ai.answering),

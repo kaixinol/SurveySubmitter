@@ -207,6 +207,7 @@ class AnswerConfigSection(BaseConfigModel):
     survey_questions: list[QuestionInfo] = []
     answer_rules: AnswerRulesConfig = Field(default_factory=AnswerRulesConfig)
     test_profiles: TestProfilesConfig = Field(default_factory=TestProfilesConfig)
+    optional_fill_skip_ratio: float = 0.0
 
 
 class RuntimeConfig(BaseConfigModel):

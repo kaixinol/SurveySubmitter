@@ -233,6 +233,42 @@ class RuntimePreparationTests:
             )
         assert artifacts.execution_config_template.num_threads == 64
 
+    def test_prepare_execution_artifacts_plumbs_optional_fill_skip_ratio(self) -> None:
+        config = self._build_config()
+        config.answer_config.optional_fill_skip_ratio = 0.4
+        with (
+            patch(
+                "survey_submitter.core.engine.execution_builder.build_enabled_reverse_fill_spec",
+                return_value=None,
+            ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.configure_probabilities",
+                return_value=None,
+            ),
+        ):
+            artifacts = prepare_execution_artifacts(
+                config, questions_info=self._SAMPLE_QUESTIONS_INFO
+            )
+        assert artifacts.execution_config_template.optional_fill_skip_ratio == 0.4
+
+    def test_prepare_execution_artifacts_clamps_optional_fill_skip_ratio(self) -> None:
+        config = self._build_config()
+        config.answer_config.optional_fill_skip_ratio = 1.7
+        with (
+            patch(
+                "survey_submitter.core.engine.execution_builder.build_enabled_reverse_fill_spec",
+                return_value=None,
+            ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.configure_probabilities",
+                return_value=None,
+            ),
+        ):
+            artifacts = prepare_execution_artifacts(
+                config, questions_info=self._SAMPLE_QUESTIONS_INFO
+            )
+        assert artifacts.execution_config_template.optional_fill_skip_ratio == 1.0
+
     def test_prepare_execution_artifacts_uses_reverse_fill_sample_count_and_threads(self) -> None:
         config = self._build_config()
         config.execution.target_num = 2

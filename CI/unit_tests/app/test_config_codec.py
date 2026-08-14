@@ -97,6 +97,13 @@ class ConfigCodecTests:
             "2026-02-10 10:00:00",
         )
 
+    def test_runtime_config_roundtrip_keeps_optional_fill_skip_ratio(self) -> None:
+        config = RuntimeConfig(answer_config=AnswerConfigSection(optional_fill_skip_ratio=0.3))
+        payload = serialize_runtime_config(config)
+        restored = deserialize_runtime_config(payload)
+        assert payload["answer_config"]["optional_fill_skip_ratio"] == 0.3
+        assert restored.answer_config.optional_fill_skip_ratio == 0.3
+
     def test_build_runtime_config_snapshot_returns_detached_copies(self) -> None:
         qi = _make_question_info(
             question_type="single",

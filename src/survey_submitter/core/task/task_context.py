@@ -41,6 +41,7 @@ class ExecutionConfig(BaseConfigModel):
     single_attached_option_selects: list[list[dict[str, Any]]] = []
     dropdown_option_fill_texts: list[list[str | None] | None] = []
     multiple_option_fill_texts: list[list[str | None] | None] = []
+    optional_fill_skip_ratio: float = 0.0
     answer_rules: list[dict[str, Any]] = []
     reverse_fill_spec: ReverseFillSpec | None = None
 
