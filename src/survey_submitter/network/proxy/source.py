@@ -10,6 +10,7 @@ from survey_submitter.constants import (
     PROXY_MINUTE_OPTIONS,
     PROXY_POOL_QUALITY,
     PROXY_SOURCE_CUSTOM,
+    PROXY_SOURCE_LOCAL,
     PROXY_TTL_GRACE_SECONDS,
 )
 from survey_submitter.core.config.base import BaseConfigModel
@@ -17,7 +18,7 @@ from survey_submitter.providers.common import (
     SURVEY_PROVIDER_WJX,
 )
 
-_SUPPORTED_PROXY_SOURCES = frozenset({PROXY_SOURCE_CUSTOM})
+_SUPPORTED_PROXY_SOURCES = frozenset({PROXY_SOURCE_CUSTOM, PROXY_SOURCE_LOCAL})
 
 _config_lock = threading.Lock()
 _proxy_api_url_override: str | None = None

@@ -325,9 +325,11 @@ class ConfigCodecTests:
                     "submit_interval_range_seconds": ["1", "3"],
                     "answer_duration_range_seconds": ["bad"],
                     "answer_datetime_window": ["2026-02-10 09:00:00", "bad"],
-                    "random_proxy_ip": "yes",
-                    "proxy_source": "bad",
-                    "custom_proxy_api": "https://proxy.example",
+                    "proxy": {
+                        "enabled": "yes",
+                        "source": "bad",
+                        "custom_api_url": "https://proxy.example",
+                    },
                     "random_user_agent": "false",
                     "user_agent_ratios": {"wechat": 20, "mobile": 20, "pc": 20},
                     "reverse_fill": {
@@ -349,8 +351,8 @@ class ConfigCodecTests:
         assert cfg.execution.submit_interval_range_seconds == (1, 3)
         assert cfg.execution.answer_duration_range_seconds == (60, 120)
         assert cfg.execution.answer_datetime_window == ("2026-02-10 09:00:00", "")
-        assert cfg.execution.random_proxy_ip is True
-        assert cfg.execution.proxy_source == "default"
+        assert cfg.execution.proxy.enabled is True
+        assert cfg.execution.proxy.source == "custom"
         assert cfg.execution.random_user_agent is False
         assert cfg.execution.user_agent_ratios == {"wechat": 33, "mobile": 33, "pc": 34}
         assert cfg.execution.reverse_fill.format == "auto"
@@ -358,28 +360,54 @@ class ConfigCodecTests:
         assert cfg.execution.reverse_fill.threads == 1
         assert len(cfg.answer_config.survey_questions) == 1
 
-    def test_random_ip_enabled_survives_official_proxy_sources(self) -> None:
-        for source in ("default", "benefit", "custom"):
+    def test_proxy_enabled_survives_custom_and_local_sources(self) -> None:
+        for source in ("custom", "local"):
             cfg = normalize_runtime_config_payload(
                 {
                     "execution": {
-                        "random_proxy_ip": True,
-                        "proxy_source": source,
+                        "proxy": {
+                            "enabled": True,
+                            "source": source,
+                        }
                     }
                 }
             )
 
-            assert cfg.execution.random_proxy_ip is True
-            assert cfg.execution.proxy_source == source
+            assert cfg.execution.proxy.enabled is True
+            assert cfg.execution.proxy.source == source
 
-    def test_runtime_config_payload_defaults_proxy_source_to_default(self) -> None:
-        assert normalize_runtime_config_payload({}).execution.proxy_source == "default"
+    def test_runtime_config_payload_defaults_proxy_source_to_custom(self) -> None:
+        assert normalize_runtime_config_payload({}).execution.proxy.source == "custom"
         assert (
             normalize_runtime_config_payload(
-                {"execution": {"proxy_source": "bad"}}
-            ).execution.proxy_source
-            == "default"
+                {"execution": {"proxy": {"source": "bad"}}}
+            ).execution.proxy.source
+            == "custom"
         )
+
+    def test_random_proxy_legacy_keys_raise(self) -> None:
+        with pytest.raises(ValueError, match="该配置文件损坏"):
+            normalize_runtime_config_payload(
+                {
+                    "execution": {
+                        "random_proxy_ip": True,
+                        "proxy_source": "custom",
+                    }
+                }
+            )
+
+    def test_proxy_section_rejects_unknown_keys(self) -> None:
+        with pytest.raises(ValueError):
+            normalize_runtime_config_payload(
+                {
+                    "execution": {
+                        "proxy": {
+                            "enabled": True,
+                            "bogus": 1,
+                        }
+                    }
+                }
+            )
 
     def test_random_ua_ratio_normalization_ignores_unknown_keys_and_rejects_invalid_values(
         self,

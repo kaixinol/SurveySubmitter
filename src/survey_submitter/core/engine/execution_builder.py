@@ -30,7 +30,7 @@ from survey_submitter.core.reverse_fill import ReverseFillSpec
 from survey_submitter.core.reverse_fill.validation import (
     build_enabled_reverse_fill_spec,
 )
-from survey_submitter.core.task import ExecutionConfig
+from survey_submitter.core.task import ExecutionConfig, ProxyRuntimeConfig
 from survey_submitter.network.proxy import (
     get_custom_proxy_api_override,
     set_proxy_api_override,
@@ -200,22 +200,32 @@ def _build_provider_metadata(
 
 
 def _sync_and_validate_random_proxy_config(config: RuntimeConfig) -> None:
-    if not bool(config.execution.random_proxy_ip):
+    proxy = config.execution.proxy
+    if not bool(proxy.enabled):
+        return
+    source = str(proxy.source or "custom").strip().lower()
+    if source == "local":
+        set_proxy_api_override(None)
+        if not list(proxy.ip_list or []):
+            raise RuntimePreparationError(
+                "已启用本地代理，但未配置静态代理列表，请先在设置中填写代理IP列表",
+                log_message="proxy.enabled 已开启且 source=local 但未配置 proxy.ip_list",
+            )
         return
     try:
-        if str(config.execution.custom_proxy_api or "").strip():
-            set_proxy_api_override(config.execution.custom_proxy_api)
-        if str(config.execution.proxy_area_code or "").strip():
-            set_proxy_area_code(config.execution.proxy_area_code)
+        if str(proxy.custom_api_url or "").strip():
+            set_proxy_api_override(proxy.custom_api_url)
+        if str(proxy.area_code or "").strip():
+            set_proxy_area_code(proxy.area_code)
     except ValueError as exc:
         raise RuntimePreparationError(
             str(exc),
             log_message=f"代理API地址校验失败：{exc}",
         ) from exc
-    if not get_custom_proxy_api_override() and not config.execution.proxy_ip_list:
+    if not get_custom_proxy_api_override():
         raise RuntimePreparationError(
             "已开启随机IP，但未配置代理API地址，请先在设置中填写API地址",
-            log_message="random_proxy_ip 已开启但未配置自定义代理API地址",
+            log_message="proxy.enabled 已开启但未配置自定义代理API地址",
         )
 
 
@@ -256,11 +266,13 @@ def _build_execution_config_template(
         answer_datetime_window_ms=answer_datetime_window_to_epoch_ms(
             config.execution.answer_datetime_window
         ),
-        random_proxy_ip=bool(config.execution.random_proxy_ip),
-        proxy_source=str(config.execution.proxy_source or "custom").strip().lower(),
+        proxy=ProxyRuntimeConfig(
+            enabled=bool(config.execution.proxy.enabled),
+            source=str(config.execution.proxy.source or "custom").strip().lower(),
+        ),
         proxy_ip_pool=[
             lease
-            for address in list(config.execution.proxy_ip_list or [])
+            for address in list(config.execution.proxy.ip_list or [])
             if (lease := coerce_proxy_lease(address, source="custom")) is not None
         ],
         random_user_agent=bool(config.execution.random_user_agent),

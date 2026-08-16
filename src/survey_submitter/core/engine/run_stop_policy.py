@@ -50,7 +50,7 @@ class RunStopPolicy:
 
     def proxy_unavailable_threshold(self) -> int:
         base_threshold = self.failure_threshold()
-        if not bool(self.config.random_proxy_ip):
+        if not bool(self.config.proxy.enabled):
             return base_threshold
         return max(base_threshold, int(self.config.num_threads or 1))
 

@@ -100,6 +100,20 @@ class ReverseFillSection(BaseConfigModel):
             return 1
 
 
+class ProxySection(BaseConfigModel):
+    enabled: bool = False
+    source: str = "custom"
+    custom_api_url: str = ""
+    ip_list: list[str] = []
+    area_code: str | None = None
+
+    @field_validator("source", mode="before")
+    @classmethod
+    def validate_proxy_source(cls, v: Any) -> str:
+        v = str(v or "custom").lower().strip()
+        return v if v in ("custom", "local") else "custom"
+
+
 class ExecutionSection(BaseConfigModel):
     target_num: int = Field(default=1, ge=1)
     num_threads: int = Field(default=1, ge=1, le=100)
@@ -108,11 +122,7 @@ class ExecutionSection(BaseConfigModel):
     answer_duration_range_seconds: tuple[int, int] = (60, 120)
     answer_datetime_window: tuple[str, str] = ("", "")
 
-    random_proxy_ip: bool = False
-    proxy_source: str = "default"
-    custom_proxy_api: str = ""
-    proxy_ip_list: list[str] = []
-    proxy_area_code: str | None = None
+    proxy: ProxySection = Field(default_factory=ProxySection)
 
     random_user_agent: bool = False
     user_agent_ratios: dict[str, int] = {"wechat": 33, "mobile": 33, "pc": 34}
@@ -159,12 +169,6 @@ class ExecutionSection(BaseConfigModel):
         if isinstance(v, (list, tuple)):
             return normalize_answer_datetime_window([str(x) for x in v])
         return ("", "")
-
-    @field_validator("proxy_source", mode="before")
-    @classmethod
-    def validate_proxy_source(cls, v: Any) -> str:
-        v = str(v or "default").lower().strip()
-        return v if v in ("default", "benefit", "custom") else "default"
 
     @field_validator("user_agent_ratios", mode="before")
     @classmethod

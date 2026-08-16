@@ -5,7 +5,7 @@ import threading
 from survey_submitter.core.engine.failure_reason import FailureReason
 from survey_submitter.core.engine.run_stop_policy import RunStopPolicy
 from survey_submitter.core.reverse_fill.schema import ReverseFillSampleRow, ReverseFillSpec
-from survey_submitter.core.task import ExecutionConfig, ExecutionState
+from survey_submitter.core.task import ExecutionConfig, ExecutionState, ProxyRuntimeConfig
 
 
 class RunStopPolicyTests:
@@ -78,7 +78,7 @@ class RunStopPolicyTests:
         assert state.reverse_fill_runtime.discarded_row_numbers == set()
 
     def test_proxy_unavailable_threshold_scales_with_random_proxy_concurrency(self) -> None:
-        config = ExecutionConfig(fail_threshold=5, num_threads=32, random_proxy_ip=True)
+        config = ExecutionConfig(fail_threshold=5, num_threads=32, proxy=ProxyRuntimeConfig(enabled=True))
         state = ExecutionState(config=config, consecutive_fail_count=4)
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
@@ -123,7 +123,7 @@ class RunStopPolicyTests:
         assert state.get_terminal_stop_snapshot()[0] == "fail_threshold"
 
     def test_proxy_unavailable_uses_independent_counter(self) -> None:
-        config = ExecutionConfig(fail_threshold=5, num_threads=8, random_proxy_ip=True)
+        config = ExecutionConfig(fail_threshold=5, num_threads=8, proxy=ProxyRuntimeConfig(enabled=True))
         state = ExecutionState(
             config=config, consecutive_fail_count=3, proxy_unavailable_fail_count=7
         )
@@ -144,7 +144,7 @@ class RunStopPolicyTests:
         assert state.get_terminal_stop_snapshot()[0] == "proxy_unavailable_threshold"
 
     def test_record_success_commits_progress_and_triggers_target_stop(self) -> None:
-        config = ExecutionConfig(target_num=1, random_proxy_ip=True)
+        config = ExecutionConfig(target_num=1, proxy=ProxyRuntimeConfig(enabled=True))
         state = ExecutionState(config=config, consecutive_fail_count=2)
         state.pending_by_thread["Worker-1"] = [("q:1", 1, 3)]
         policy = RunStopPolicy(config, state)

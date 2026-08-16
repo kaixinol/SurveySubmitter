@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from survey_submitter.constants import PROXY_SOURCE_CUSTOM
+from survey_submitter.constants import PROXY_SOURCE_CUSTOM, PROXY_SOURCE_LOCAL
 from survey_submitter.network.proxy.api import (
     ProxyApiFatalError,
     test_custom_proxy_api,
@@ -35,6 +35,7 @@ from survey_submitter.network.proxy.source import (
 __all__ = [
     "MIN_PROXY_TTL_SECONDS",
     "PROXY_SOURCE_CUSTOM",
+    "PROXY_SOURCE_LOCAL",
     "ProxyApiFatalError",
     "ProxySettings",
     "apply_custom_proxy_api",

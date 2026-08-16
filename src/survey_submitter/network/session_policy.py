@@ -32,6 +32,7 @@ from survey_submitter.network.user_agent import (  # noqa: F401  — re-exported
 
 _PROXY_WAIT_POLL_SECONDS = 0.3
 _PROXY_FETCH_FAILED_DEDUP_KEY = "random_proxy_fetch_failed"
+_LOCAL_PROXY_EXHAUSTED_MESSAGE = "本地静态代理池已耗尽，无法获取可用代理"
 
 
 def _stop_run_for_proxy_api_not_configured(ctx: ExecutionState, exc: BaseException) -> None:
@@ -43,6 +44,28 @@ def _stop_run_for_proxy_api_not_configured(ctx: ExecutionState, exc: BaseExcepti
         message=message,
     )
     ctx.stop_event.set()
+
+
+def _stop_run_for_local_proxy_pool_exhausted(ctx: ExecutionState) -> None:
+    log_deduped_message(
+        _PROXY_FETCH_FAILED_DEDUP_KEY,
+        f"获取随机代理失败：{_LOCAL_PROXY_EXHAUSTED_MESSAGE}",
+        level="WARNING",
+    )
+    ctx.mark_terminal_stop(
+        "proxy_pool_exhausted",
+        failure_reason="proxy_unavailable",
+        message=_LOCAL_PROXY_EXHAUSTED_MESSAGE,
+    )
+    ctx.stop_event.set()
+
+
+def _is_local_proxy_source(ctx: ExecutionState) -> bool:
+    return str(ctx.config.proxy.source or "").strip().lower() == "local"
+
+
+def _proxy_fetching_enabled(ctx: ExecutionState) -> bool:
+    return bool(ctx.config.proxy.enabled) and not _is_local_proxy_source(ctx)
 
 
 def _get_proxy_fetch_async_lock(ctx: ExecutionState) -> asyncio.Lock:
@@ -108,7 +131,7 @@ def merge_prefetched_proxy_leases(ctx: ExecutionState, fetched: Iterable[object]
 
 def resolve_proxy_prefetch_request_count(ctx: ExecutionState) -> int:
 
-    if not bool(ctx.config.random_proxy_ip):
+    if not _proxy_fetching_enabled(ctx):
         return 0
     with ctx.lock:
         active_count = len(ctx.proxy_in_use_by_thread)
@@ -129,7 +152,7 @@ def resolve_proxy_prefetch_request_count(ctx: ExecutionState) -> int:
 
 def should_continue_proxy_prefetch(ctx: ExecutionState) -> bool:
 
-    if not bool(ctx.config.random_proxy_ip):
+    if not _proxy_fetching_enabled(ctx):
         return False
     if _should_stop_proxy_wait(ctx, ctx.stop_event):
         return False
@@ -204,13 +227,19 @@ async def _select_proxy_for_session_async(
     stop_signal: StopSignalLike | None = None,
     wait: bool = False,
 ) -> str | None:
-    if not ctx.config.random_proxy_ip:
+    if not ctx.config.proxy.enabled:
         return None
     selected: ProxyLease | None = None
     with ctx.lock:
         selected = _pop_available_proxy_lease_locked(ctx)
     if selected is not None:
         return _mark_proxy_in_use(ctx, thread_name, selected)
+
+    if _is_local_proxy_source(ctx):
+        if not wait:
+            return None
+        _stop_run_for_local_proxy_pool_exhausted(ctx)
+        raise SubmitProxyUnavailableError(_LOCAL_PROXY_EXHAUSTED_MESSAGE)
 
     ctx.register_proxy_waiter()
     try:
@@ -221,6 +250,11 @@ async def _select_proxy_for_session_async(
                 selected = _pop_available_proxy_lease_locked(ctx)
             if selected is not None:
                 return _mark_proxy_in_use(ctx, thread_name, selected)
+            if _is_local_proxy_source(ctx):
+                if not wait:
+                    return None
+                _stop_run_for_local_proxy_pool_exhausted(ctx)
+                raise SubmitProxyUnavailableError(_LOCAL_PROXY_EXHAUSTED_MESSAGE)
             if is_proxy_fetch_locked(ctx):
                 if await _wait_for_next_proxy_cycle_async(ctx, stop_signal):
                     return None

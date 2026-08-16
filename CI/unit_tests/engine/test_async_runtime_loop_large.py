@@ -11,7 +11,12 @@ from survey_submitter.core.ai.runtime import AIRuntimeError
 from survey_submitter.core.engine.async_events import AsyncRunContext
 from survey_submitter.core.engine.async_runtime_loop import AsyncSlotRunner
 from survey_submitter.core.engine.failure_reason import FailureReason
-from survey_submitter.core.task import ExecutionConfig, ExecutionState, ProxyLease
+from survey_submitter.core.task import (
+    ExecutionConfig,
+    ExecutionState,
+    ProxyLease,
+    ProxyRuntimeConfig,
+)
 from survey_submitter.providers.contracts import SurveyQuestionMeta, _QuestionMetaBase
 from survey_submitter.providers.errors import (
     SubmissionVerificationRequiredError,
@@ -136,7 +141,7 @@ class AsyncRuntimeLoopLargeTests:
     async def test_select_session_proxy_and_ua_does_not_pre_acquire_proxy(
         self, monkeypatch
     ) -> None:
-        config = ExecutionConfig(random_proxy_ip=True, provider="wjx")
+        config = ExecutionConfig(proxy=ProxyRuntimeConfig(enabled=True), provider="wjx")
         state = ExecutionState(config=config)
         calls: list[str] = []
 
@@ -262,7 +267,7 @@ class AsyncRuntimeLoopLargeTests:
         config = ExecutionConfig(
             url="https://www.wjx.cn/vm/demo.aspx",
             provider="wjx",
-            random_proxy_ip=True,
+            proxy=ProxyRuntimeConfig(enabled=True),
         )
         config.proxy_ip_pool.append(ProxyLease(address="http://1.1.1.1:80", source="unit"))
         runner, state, _ctx, scheduler = _build_runner(config=config)
@@ -299,7 +304,7 @@ class AsyncRuntimeLoopLargeTests:
         config = ExecutionConfig(
             url="https://www.wjx.cn/vm/demo.aspx",
             provider="wjx",
-            random_proxy_ip=True,
+            proxy=ProxyRuntimeConfig(enabled=True),
         )
         runner, _state, _ctx, scheduler = _build_runner(config=config)
         scheduler.acquire_values = [6, None]
@@ -434,7 +439,7 @@ class AsyncRuntimeLoopLargeTests:
         config = ExecutionConfig(
             url="https://www.wjx.cn/vm/demo.aspx",
             provider="wjx",
-            random_proxy_ip=True,
+            proxy=ProxyRuntimeConfig(enabled=True),
             stop_on_fail=True,
             fail_threshold=3,
         )
@@ -527,7 +532,7 @@ class AsyncRuntimeLoopLargeTests:
         config = ExecutionConfig(
             url="https://www.wjx.cn/vm/demo.aspx",
             provider="wjx",
-            random_proxy_ip=True,
+            proxy=ProxyRuntimeConfig(enabled=True),
         )
         runner, state, _ctx, _scheduler = _build_runner(config=config)
         proxy_address = "http://1.1.1.1:80"

@@ -5,7 +5,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.reverse_fill import ReverseFillRuntimeState, ReverseFillSpec
@@ -14,6 +14,17 @@ from survey_submitter.core.task.progress_state import ThreadProgressMixin, Threa
 from survey_submitter.core.task.proxy_state import ProxyLease, ProxyRuntimeMixin
 from survey_submitter.core.task.reverse_fill_state import ReverseFillRuntimeMixin
 from survey_submitter.providers.contracts import SurveyQuestionMeta
+
+
+class ProxyRuntimeConfig(BaseConfigModel):
+    enabled: bool = False
+    source: str = "custom"
+
+    @field_validator("source", mode="before")
+    @classmethod
+    def validate_proxy_source(cls, v: Any) -> str:
+        text = str(v or "custom").lower().strip()
+        return text if text in ("custom", "local") else "custom"
 
 
 class ExecutionConfig(BaseConfigModel):
@@ -61,8 +72,7 @@ class ExecutionConfig(BaseConfigModel):
     answer_duration_range_seconds: tuple[int, int] = (0, 0)
     answer_datetime_window_ms: tuple[int, int] = (0, 0)
 
-    random_proxy_ip: bool = False
-    proxy_source: str = "default"
+    proxy: ProxyRuntimeConfig = Field(default_factory=ProxyRuntimeConfig)
     proxy_ip_pool: Any = Field(default_factory=deque)
     random_user_agent: bool = False
     user_agent_ratios: dict[str, int] = {"wechat": 33, "mobile": 33, "pc": 34}

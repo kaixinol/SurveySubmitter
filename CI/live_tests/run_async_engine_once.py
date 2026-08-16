@@ -8,6 +8,7 @@ import sys
 from survey_submitter.core.config.schema import (
     AnswerConfigSection,
     ExecutionSection,
+    ProxySection,
     ReverseFillSection,
     RuntimeConfig,
     SurveySection,
@@ -73,7 +74,7 @@ def _build_live_test_config(url: str) -> tuple[RuntimeConfig, list[SurveyQuestio
             num_threads=1,
             submit_interval_range_seconds=(0, 0),
             answer_duration_range_seconds=(0, 0),
-            random_proxy_ip=False,
+            proxy=ProxySection(),
             random_user_agent=False,
             stop_on_fail=True,
             reliability_mode=True,
@@ -106,7 +107,7 @@ def main() -> int:
         execution_config.num_threads = 1
         execution_config.submit_interval_range_seconds = (0, 0)
         execution_config.answer_duration_range_seconds = (0, 0)
-        execution_config.random_proxy_ip = False
+        execution_config.proxy.enabled = False
         execution_config.random_user_agent = False
         state = ExecutionState(config=execution_config)
         state.initialize_runtime()

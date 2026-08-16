@@ -7,7 +7,12 @@ import pytest
 
 import survey_submitter.core.engine.async_engine as async_engine
 from survey_submitter.core.engine.async_engine import AsyncRuntimeEngine
-from survey_submitter.core.task import ExecutionConfig, ExecutionState, ProxyLease
+from survey_submitter.core.task import (
+    ExecutionConfig,
+    ExecutionState,
+    ProxyLease,
+    ProxyRuntimeConfig,
+)
 
 
 class _FakeLoop:
@@ -256,7 +261,7 @@ class AsyncRuntimeEngineLargeTests:
         config = ExecutionConfig(
             num_threads=2,
             target_num=5,
-            random_proxy_ip=True,
+            proxy=ProxyRuntimeConfig(enabled=True),
             provider="wjx",
         )
         state = ExecutionState(config=config)
@@ -303,7 +308,7 @@ class AsyncRuntimeEngineLargeTests:
         config = ExecutionConfig(
             num_threads=2,
             target_num=5,
-            random_proxy_ip=True,
+            proxy=ProxyRuntimeConfig(enabled=True),
             provider="wjx",
         )
         state = ExecutionState(config=config)
@@ -368,7 +373,7 @@ class AsyncRuntimeEngineLargeTests:
         config = ExecutionConfig(
             num_threads=1,
             target_num=3,
-            random_proxy_ip=True,
+            proxy=ProxyRuntimeConfig(enabled=True),
             provider="wjx",
         )
         state = ExecutionState(config=config)
@@ -405,7 +410,7 @@ class AsyncRuntimeEngineLargeTests:
         config = ExecutionConfig(
             num_threads=1,
             target_num=1,
-            random_proxy_ip=True,
+            proxy=ProxyRuntimeConfig(enabled=True),
             provider="wjx",
         )
         state = ExecutionState(config=config)

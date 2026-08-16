@@ -11,6 +11,12 @@ class ProxyPolicySourceTests:
         assert proxy_source.normalize_proxy_source("bad-source") == proxy_source.PROXY_SOURCE_CUSTOM
         assert proxy_source.normalize_proxy_source(None) == proxy_source.PROXY_SOURCE_CUSTOM
 
+    def test_normalize_proxy_source_accepts_custom_and_local(self) -> None:
+        assert proxy_source.normalize_proxy_source("custom") == proxy_source.PROXY_SOURCE_CUSTOM
+        assert proxy_source.normalize_proxy_source("local") == proxy_source.PROXY_SOURCE_LOCAL
+        assert not proxy_source.is_custom_proxy_source("local")
+        assert proxy_source.is_custom_proxy_source("custom")
+
     def test_set_and_get_proxy_source_round_trip(self) -> None:
         original = proxy_source.get_proxy_source()
         try:
