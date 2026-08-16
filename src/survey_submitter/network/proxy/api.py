@@ -47,6 +47,10 @@ class ProxyApiFatalError(RuntimeError):
     pass
 
 
+class ProxyApiNotConfiguredError(RuntimeError):
+    pass
+
+
 def _normalize_expected_proxy_count(expected_count: Any) -> int:
     try:
         parsed = int(expected_count)
@@ -144,7 +148,7 @@ def _extract_custom_api_error(data: Any) -> str | None:
 def _proxy_api_candidates(proxy_url: str | None) -> list[str]:
     url = proxy_url or get_custom_proxy_api_override()
     if not url:
-        raise RuntimeError("自定义代理API地址不能为空，请先在设置中填写API地址")
+        raise ProxyApiNotConfiguredError("自定义代理API地址未配置，请在设置中填写API地址")
     return [url]
 
 
@@ -228,10 +232,10 @@ async def fetch_proxy_batch_async(
     expected_count = _normalize_expected_proxy_count(expected_count)
 
     if not has_custom_proxy_api_override():
-        raise RuntimeError("自定义代理API地址未配置，请在设置中填写API地址")
+        raise ProxyApiNotConfiguredError("自定义代理API地址未配置，请在设置中填写API地址")
     url = proxy_url or get_custom_proxy_api_override()
     if not url:
-        raise RuntimeError("自定义代理API地址未配置，请在设置中填写API地址")
+        raise ProxyApiNotConfiguredError("自定义代理API地址未配置，请在设置中填写API地址")
     logger.info(f"使用自定义代理API: {url}")
 
     candidates: list[str] = []
@@ -290,6 +294,7 @@ async def fetch_proxy_batch_async(
 
 __all__ = [
     "ProxyApiFatalError",
+    "ProxyApiNotConfiguredError",
     "fetch_proxy_batch_async",
     "test_custom_proxy_api",
 ]

@@ -14,9 +14,15 @@ from survey_submitter.core.engine.async_runtime_loop import AsyncSlotRunner
 from survey_submitter.core.engine.async_scheduler import AsyncScheduler
 from survey_submitter.core.engine.async_status_bus import AsyncStatusBus
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
-from survey_submitter.network.proxy.api import fetch_proxy_batch_async
+from survey_submitter.logging.log_utils import log_deduped_message
+from survey_submitter.network.proxy.api import (
+    ProxyApiNotConfiguredError,
+    fetch_proxy_batch_async,
+)
 from survey_submitter.network.session_policy import (
+    _PROXY_FETCH_FAILED_DEDUP_KEY,
     _acquire_proxy_fetch_lock_async,
+    _stop_run_for_proxy_api_not_configured,
     merge_prefetched_proxy_leases,
     release_proxy_fetch_lock,
     resolve_proxy_prefetch_request_count,
@@ -62,13 +68,25 @@ async def _run_proxy_prefetch(
             request_count = resolve_proxy_prefetch_request_count(state)
             if request_count <= 0:
                 continue
-            fetched = await fetch_proxy_batch_async(
-                expected_count=request_count,
-                stop_signal=state.stop_event,
-            )
+            try:
+                fetched = await fetch_proxy_batch_async(
+                    expected_count=request_count,
+                    stop_signal=state.stop_event,
+                )
+            except ProxyApiNotConfiguredError as exc:
+                _stop_run_for_proxy_api_not_configured(state, exc)
+                return
+            except (http_client.TransportError, OSError, TimeoutError, RuntimeError) as exc:
+                log_deduped_message(
+                    _PROXY_FETCH_FAILED_DEDUP_KEY,
+                    f"获取随机代理失败：{exc}",
+                    level="WARNING",
+                )
+                fetched = None
             if state.stop_event.is_set() or stop_event.is_set():
                 return
-            merge_prefetched_proxy_leases(state, fetched)
+            if fetched:
+                merge_prefetched_proxy_leases(state, fetched)
         except (http_client.TransportError, OSError, TimeoutError):
             logger.opt(exception=True).debug("随机IP异步预热失败")
         finally:

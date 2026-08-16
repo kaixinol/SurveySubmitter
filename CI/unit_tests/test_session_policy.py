@@ -5,6 +5,8 @@ import time
 from collections import deque
 from unittest.mock import patch
 
+import pytest
+
 from survey_submitter.core.task import ExecutionConfig, ExecutionState, ProxyLease
 from survey_submitter.network import session_policy, user_agent
 from survey_submitter.network.proxy import submit as submit_pool
@@ -297,6 +299,50 @@ class SessionPolicyTests:
             )
         assert selected == "http://9.9.9.9:8000"
         assert ctx.proxy_in_use_by_thread["Worker-1"].address == "http://9.9.9.9:8000"
+
+    def test_select_proxy_for_session_stops_run_when_proxy_api_not_configured(self) -> None:
+        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip=True, target_num=1))
+
+        async def fake_fetch_proxy_batch_async(**_kwargs):
+            raise session_policy.ProxyApiNotConfiguredError("自定义代理API地址未配置")
+
+        with patch.object(
+            session_policy, "fetch_proxy_batch_async", side_effect=fake_fetch_proxy_batch_async
+        ):
+            with pytest.raises(session_policy.SubmitProxyUnavailableError):
+                asyncio.run(
+                    session_policy._select_proxy_for_session_async(
+                        ctx, "Worker-1", stop_signal=ctx.stop_event, wait=True
+                    )
+                )
+        assert ctx.stop_event.is_set()
+        assert ctx.terminal_stop_category == "proxy_api_not_configured"
+
+    def test_select_proxy_for_session_dedupes_transient_fetch_failure_warning(self) -> None:
+        ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip=True, target_num=1))
+
+        async def fake_fetch_proxy_batch_async(**_kwargs):
+            raise RuntimeError("网络错误")
+
+        with (
+            patch.object(
+                session_policy, "fetch_proxy_batch_async", side_effect=fake_fetch_proxy_batch_async
+            ),
+            patch.object(
+                session_policy,
+                "log_deduped_message",
+                return_value=True,
+            ) as log_deduped,
+        ):
+            selected = asyncio.run(
+                session_policy._select_proxy_for_session_async(ctx, "Worker-1", wait=False)
+            )
+        assert selected is None
+        log_deduped.assert_called_once_with(
+            session_policy._PROXY_FETCH_FAILED_DEDUP_KEY,
+            "获取随机代理失败：网络错误",
+            level="WARNING",
+        )
 
     def test_async_proxy_fetch_lock_wait_does_not_block_event_loop(self) -> None:
         ctx = ExecutionState(config=ExecutionConfig(random_proxy_ip=True, target_num=1))

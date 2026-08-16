@@ -38,6 +38,16 @@ class RuntimePreparationTests:
         )
     ]
 
+    def setup_method(self, _method) -> None:
+        from survey_submitter.network import proxy as proxy_runtime
+
+        self._original_override = proxy_runtime.get_custom_proxy_api_override()
+
+    def teardown_method(self, _method) -> None:
+        from survey_submitter.network import proxy as proxy_runtime
+
+        proxy_runtime.set_proxy_api_override(self._original_override)
+
     def _build_config(self) -> RuntimeConfig:
         config = RuntimeConfig(
             survey=SurveySection(
@@ -52,6 +62,7 @@ class RuntimePreparationTests:
                 answer_datetime_window=("", ""),
                 submit_interval_range_seconds=(1, 2),
                 random_proxy_ip=True,
+                custom_proxy_api="https://proxy.example/api",
                 random_user_agent=True,
                 user_agent_ratios={"wechat": 20, "mobile": 30, "pc": 50},
             ),
@@ -190,6 +201,75 @@ class RuntimePreparationTests:
         assert artifacts.execution_config_template.answer_datetime_window_ms == (0, 0)
         assert artifacts.execution_config_template.proxy_ip_pool == []
         sync_proxy_duration.assert_called_once_with((12, 20), provider="wjx")
+
+    def test_prepare_execution_artifacts_seeds_proxy_ip_list_into_pool(self) -> None:
+        config = self._build_config()
+        config.execution.random_proxy_ip = True
+        config.execution.proxy_ip_list = ["1.2.3.4:8080", "5.6.7.8:3128"]
+        with (
+            patch(
+                "survey_submitter.core.engine.execution_builder._verify_wjx_survey_is_answerable",
+                return_value=None,
+            ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.build_enabled_reverse_fill_spec",
+                return_value=None,
+            ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.configure_probabilities",
+                return_value=None,
+            ),
+        ):
+            artifacts = prepare_execution_artifacts(
+                config, questions_info=self._SAMPLE_QUESTIONS_INFO
+            )
+        pool = list(artifacts.execution_config_template.proxy_ip_pool)
+        assert [lease.address for lease in pool] == ["http://1.2.3.4:8080", "http://5.6.7.8:3128"]
+        assert all(lease.source == "custom" for lease in pool)
+
+    def test_prepare_execution_artifacts_blocks_random_proxy_without_api_or_static_pool(
+        self,
+    ) -> None:
+        config = self._build_config()
+        config.execution.custom_proxy_api = ""
+        config.execution.proxy_ip_list = []
+        with pytest.raises(RuntimePreparationError) as cm:
+            prepare_execution_artifacts(config, questions_info=self._SAMPLE_QUESTIONS_INFO)
+        assert "未配置代理API地址" in cm.value.user_message
+
+    def test_prepare_execution_artifacts_syncs_config_custom_proxy_api_into_runtime(
+        self,
+    ) -> None:
+        from survey_submitter.network import proxy as proxy_runtime
+
+        config = self._build_config()
+        config.execution.custom_proxy_api = "https://proxy.example/api?num=3"
+        with (
+            patch(
+                "survey_submitter.core.engine.execution_builder._verify_wjx_survey_is_answerable",
+                return_value=None,
+            ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.build_enabled_reverse_fill_spec",
+                return_value=None,
+            ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.configure_probabilities",
+                return_value=None,
+            ),
+        ):
+            prepare_execution_artifacts(config, questions_info=self._SAMPLE_QUESTIONS_INFO)
+        assert (
+            proxy_runtime.get_custom_proxy_api_override()
+            == "https://proxy.example/api?num=3"
+        )
+
+    def test_prepare_execution_artifacts_rejects_invalid_proxy_api_scheme(self) -> None:
+        config = self._build_config()
+        config.execution.custom_proxy_api = "ftp://proxy.example/api"
+        with pytest.raises(RuntimePreparationError) as cm:
+            prepare_execution_artifacts(config, questions_info=self._SAMPLE_QUESTIONS_INFO)
+        assert "http:// 或 https://" in cm.value.user_message
 
     def test_prepare_execution_artifacts_uses_fallback_title_when_config_title_blank(self) -> None:
         config = self._build_config()

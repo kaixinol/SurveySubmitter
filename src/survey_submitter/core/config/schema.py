@@ -111,6 +111,7 @@ class ExecutionSection(BaseConfigModel):
     random_proxy_ip: bool = False
     proxy_source: str = "default"
     custom_proxy_api: str = ""
+    proxy_ip_list: list[str] = []
     proxy_area_code: str | None = None
 
     random_user_agent: bool = False

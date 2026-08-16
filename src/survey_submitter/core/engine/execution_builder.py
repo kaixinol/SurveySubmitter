@@ -31,7 +31,13 @@ from survey_submitter.core.reverse_fill.validation import (
     build_enabled_reverse_fill_spec,
 )
 from survey_submitter.core.task import ExecutionConfig
-from survey_submitter.network.proxy import set_proxy_occupy_minute_by_answer_duration
+from survey_submitter.network.proxy import (
+    get_custom_proxy_api_override,
+    set_proxy_api_override,
+    set_proxy_area_code,
+    set_proxy_occupy_minute_by_answer_duration,
+)
+from survey_submitter.network.proxy.pool import coerce_proxy_lease
 from survey_submitter.providers.common import (
     SURVEY_PROVIDER_WJX,
     detect_survey_provider,
@@ -193,6 +199,26 @@ def _build_provider_metadata(
     return metadata
 
 
+def _sync_and_validate_random_proxy_config(config: RuntimeConfig) -> None:
+    if not bool(config.execution.random_proxy_ip):
+        return
+    try:
+        if str(config.execution.custom_proxy_api or "").strip():
+            set_proxy_api_override(config.execution.custom_proxy_api)
+        if str(config.execution.proxy_area_code or "").strip():
+            set_proxy_area_code(config.execution.proxy_area_code)
+    except ValueError as exc:
+        raise RuntimePreparationError(
+            str(exc),
+            log_message=f"代理API地址校验失败：{exc}",
+        ) from exc
+    if not get_custom_proxy_api_override() and not config.execution.proxy_ip_list:
+        raise RuntimePreparationError(
+            "已开启随机IP，但未配置代理API地址，请先在设置中填写API地址",
+            log_message="random_proxy_ip 已开启但未配置自定义代理API地址",
+        )
+
+
 def _build_execution_config_template(
     config: RuntimeConfig,
     *,
@@ -232,7 +258,11 @@ def _build_execution_config_template(
         ),
         random_proxy_ip=bool(config.execution.random_proxy_ip),
         proxy_source=str(config.execution.proxy_source or "custom").strip().lower(),
-        proxy_ip_pool=[],
+        proxy_ip_pool=[
+            lease
+            for address in list(config.execution.proxy_ip_list or [])
+            if (lease := coerce_proxy_lease(address, source="custom")) is not None
+        ],
         random_user_agent=bool(config.execution.random_user_agent),
         user_agent_ratios=copy.deepcopy(dict(config.execution.user_agent_ratios or {})),
         pause_on_aliyun_captcha=bool(config.execution.pause_on_aliyun_captcha),
@@ -292,6 +322,7 @@ def prepare_execution_artifacts(
 
     provider = _resolve_survey_provider(config)
     _validate_datetime_window(config, provider)
+    _sync_and_validate_random_proxy_config(config)
     try:
         _verify_wjx_survey_is_answerable(config, provider)
     except (SurveyStoppedError, SurveyEnterpriseUnavailableError) as exc:

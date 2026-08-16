@@ -49,6 +49,7 @@ async def main() -> None:
             random_proxy_ip=False,
             proxy_source="default",
             custom_proxy_api="",
+            proxy_ip_list=[],
             proxy_area_code=None,
             random_user_agent=False,
             user_agent_ratios={"wechat": 33, "mobile": 33, "pc": 34},

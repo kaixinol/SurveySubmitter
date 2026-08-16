@@ -192,6 +192,15 @@ class ProxyApiProviderTests:
             proxy_source.set_proxy_source(original_source)
             proxy_source.set_proxy_api_override(original_override)
 
+    def test_fetch_custom_proxy_batch_raises_not_configured_when_override_missing(self) -> None:
+        original_override = proxy_source.get_custom_proxy_api_override()
+        try:
+            proxy_source.set_proxy_api_override(None)
+            with pytest.raises(provider.ProxyApiNotConfiguredError, match="未配置"):
+                asyncio.run(provider.fetch_proxy_batch_async(expected_count=1))
+        finally:
+            proxy_source.set_proxy_api_override(original_override)
+
     def test_fetch_custom_proxy_batch_sets_stop_signal_on_fatal_error(
         self, patch_attrs, loguru_sink
     ) -> None:

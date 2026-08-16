@@ -35,6 +35,8 @@ execution:
   random_proxy_ip: false
   proxy_source: "default"               # "default", "benefit", or "custom"
   custom_proxy_api: ""
+  proxy_ip_list: []                     # 静态代理列表，格式 "ip:port"，如 ["1.2.3.4:8080"]；
+                                        # 与 random_proxy_ip: true 配合使用，池子耗尽后不再额外拉取
   proxy_area_code: null                  # e.g. "110000" for Beijing, or null
 
   # -- Random User-Agent --

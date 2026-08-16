@@ -8,7 +8,14 @@ from loguru import logger
 from survey_submitter.constants import PROXY_MAX_PROXIES
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.task import ExecutionState, ProxyLease
-from survey_submitter.network.proxy.api import fetch_proxy_batch_async
+from survey_submitter.logging.log_utils import (
+    log_deduped_message,
+    reset_deduped_log_message,
+)
+from survey_submitter.network.proxy.api import (
+    ProxyApiNotConfiguredError,
+    fetch_proxy_batch_async,
+)
 from survey_submitter.network.proxy.submit import (  # noqa: F401  — re-exported for other modules
     SubmitProxyLease,
     SubmitProxyUnavailableError,  # noqa: F401  — re-exported for other modules
@@ -24,6 +31,18 @@ from survey_submitter.network.user_agent import (  # noqa: F401  — re-exported
 )
 
 _PROXY_WAIT_POLL_SECONDS = 0.3
+_PROXY_FETCH_FAILED_DEDUP_KEY = "random_proxy_fetch_failed"
+
+
+def _stop_run_for_proxy_api_not_configured(ctx: ExecutionState, exc: BaseException) -> None:
+    message = str(exc or "").strip() or "自定义代理API地址未配置，请在设置中填写API地址"
+    log_deduped_message(_PROXY_FETCH_FAILED_DEDUP_KEY, f"获取随机代理失败：{message}", level="WARNING")
+    ctx.mark_terminal_stop(
+        "proxy_api_not_configured",
+        failure_reason="proxy_unavailable",
+        message=message,
+    )
+    ctx.stop_event.set()
 
 
 def _get_proxy_fetch_async_lock(ctx: ExecutionState) -> asyncio.Lock:
@@ -82,6 +101,7 @@ def merge_prefetched_proxy_leases(ctx: ExecutionState, fetched: Iterable[object]
         _merge_fetched_proxy_leases_locked(ctx, fetched, select_first=False)
         merged_count = max(0, len(_ensure_proxy_pool_deque_locked(ctx)) - before)
     if merged_count:
+        reset_deduped_log_message(_PROXY_FETCH_FAILED_DEDUP_KEY)
         ctx.notify_runtime_change()
     return merged_count
 
@@ -225,9 +245,14 @@ async def _select_proxy_for_session_async(
                             expected_count=request_num,
                             stop_signal=ctx.stop_event,
                         )
+                    except ProxyApiNotConfiguredError as exc:
+                        _stop_run_for_proxy_api_not_configured(ctx, exc)
+                        raise SubmitProxyUnavailableError(str(exc)) from exc
                     except (RuntimeError, OSError) as exc:
-                        logger.warning(
-                            f"\u83b7\u53d6\u968f\u673a\u4ee3\u7406\u5931\u8d25\uff1a{exc}"
+                        log_deduped_message(
+                            _PROXY_FETCH_FAILED_DEDUP_KEY,
+                            f"获取随机代理失败：{exc}",
+                            level="WARNING",
                         )
                         fetched = None
                     if fetched:
@@ -236,6 +261,7 @@ async def _select_proxy_for_session_async(
                                 ctx, fetched, select_first=True
                             )
                         if selected is not None:
+                            reset_deduped_log_message(_PROXY_FETCH_FAILED_DEDUP_KEY)
                             return _mark_proxy_in_use(ctx, thread_name, selected)
             finally:
                 release_proxy_fetch_lock(ctx)
