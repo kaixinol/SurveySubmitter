@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import math
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -37,7 +39,11 @@ from survey_submitter.network.proxy import (
     set_proxy_area_code,
     set_proxy_occupy_minute_by_answer_duration,
 )
-from survey_submitter.network.proxy.pool import coerce_proxy_lease
+from survey_submitter.network.proxy.local_source import resolve_local_proxy_addresses
+from survey_submitter.network.proxy.pool import (
+    coerce_proxy_lease,
+    is_proxy_responsive,
+)
 from survey_submitter.providers.common import (
     SURVEY_PROVIDER_WJX,
     detect_survey_provider,
@@ -206,11 +212,52 @@ def _sync_and_validate_random_proxy_config(config: RuntimeConfig) -> None:
     source = str(proxy.source or "custom").strip().lower()
     if source == "local":
         set_proxy_api_override(None)
-        if not list(proxy.ip_list or []):
+        try:
+            resolved = resolve_local_proxy_addresses(proxy.ip_list)
+        except RuntimeError as exc:
             raise RuntimePreparationError(
-                "已启用本地代理，但未配置静态代理列表，请先在设置中填写代理IP列表",
+                str(exc),
+                log_message=f"本地代理列表解析失败：{exc}",
+            ) from exc
+        if not resolved:
+            raise RuntimePreparationError(
+                "已启用本地代理，但未配置静态代理列表，请先在设置中填写代理IP列表"
+                "（支持本地文件路径或 http(s) 链接）",
                 log_message="proxy.enabled 已开启且 source=local 但未配置 proxy.ip_list",
             )
+        target_num = max(1, int(config.execution.target_num or 1))
+        max_proxies = max(1, math.ceil(target_num * 1.5))
+        num_threads = max(1, int(config.execution.num_threads or 1))
+        # 并发探测数与提交并发数挂钩，设下限避免大列表时过慢
+        max_workers = max(1, min(len(resolved), max(num_threads, 8)))
+        passing: dict[str, None] = {}
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_address = {
+                executor.submit(is_proxy_responsive, address): address
+                for address in resolved
+            }
+            for future in as_completed(future_to_address):
+                if len(passing) >= max_proxies:
+                    for pending in future_to_address:
+                        pending.cancel()
+                    break
+                address = future_to_address[future]
+                if bool(future.result()):
+                    passing[address] = None
+                else:
+                    logger.warning(f"本地代理未通过 wjx.cn 连通性测试，已丢弃：{address}")
+        responsive = [address for address in resolved if address in passing][:max_proxies]
+        if not responsive:
+            raise RuntimePreparationError(
+                "本地代理列表中的代理均无法连接 wjx.cn，请检查代理地址或网络连接",
+                log_message="source=local 的静态代理列表全部未通过 wjx.cn 连通性测试",
+            )
+        if len(resolved) > max_proxies:
+            logger.info(
+                f"本地代理列表共解析 {len(resolved)} 个，已取通过连通性测试的"
+                f" {len(responsive)} 个（上限 target_num*1.5={max_proxies}）"
+            )
+        proxy.ip_list = responsive
         return
     try:
         if str(proxy.custom_api_url or "").strip():
@@ -269,6 +316,7 @@ def _build_execution_config_template(
         proxy=ProxyRuntimeConfig(
             enabled=bool(config.execution.proxy.enabled),
             source=str(config.execution.proxy.source or "custom").strip().lower(),
+            reuse=bool(config.execution.proxy.reuse),
         ),
         proxy_ip_pool=[
             lease

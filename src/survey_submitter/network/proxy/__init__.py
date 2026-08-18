@@ -5,6 +5,7 @@ from survey_submitter.network.proxy.api import (
     ProxyApiFatalError,
     test_custom_proxy_api,
 )
+from survey_submitter.network.proxy.local_source import resolve_local_proxy_addresses
 from survey_submitter.network.proxy.pool import (
     MIN_PROXY_TTL_SECONDS,
     get_proxy_required_ttl_seconds,
@@ -54,6 +55,7 @@ __all__ = [
     "is_custom_proxy_source",
     "normalize_proxy_source",
     "proxy_lease_has_sufficient_ttl",
+    "resolve_local_proxy_addresses",
     "set_proxy_api_override",
     "set_proxy_area_code",
     "set_proxy_occupy_minute_by_answer_duration",

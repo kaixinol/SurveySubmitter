@@ -376,6 +376,14 @@ class ConfigCodecTests:
             assert cfg.execution.proxy.enabled is True
             assert cfg.execution.proxy.source == source
 
+    def test_proxy_reuse_round_trips_and_defaults_false(self) -> None:
+        assert normalize_runtime_config_payload({}).execution.proxy.reuse is False
+        cfg = normalize_runtime_config_payload(
+            {"execution": {"proxy": {"enabled": True, "source": "local", "reuse": True}}}
+        )
+        assert cfg.execution.proxy.reuse is True
+        assert cfg.execution.proxy.source == "local"
+
     def test_runtime_config_payload_defaults_proxy_source_to_custom(self) -> None:
         assert normalize_runtime_config_payload({}).execution.proxy.source == "custom"
         assert (

@@ -46,8 +46,25 @@ def _excluded_proxy_addresses_locked(
     ctx: ExecutionState, *, exclude_thread_name: str = ""
 ) -> set[str]:
     blocked = _active_proxy_addresses_locked(ctx, exclude_thread_name=exclude_thread_name)
-    blocked.update(ctx.successful_proxy_addresses_locked())
+    if not ctx.config.proxy.reuse:
+        blocked.update(ctx.successful_proxy_addresses_locked())
     return blocked
+
+
+def _return_proxy_lease_to_pool(ctx: ExecutionState, lease: ProxyLease | None) -> bool:
+    if lease is None or not str(lease.address or "").strip():
+        return False
+    if not lease.poolable:
+        return False
+    with ctx.lock:
+        pool = _ensure_proxy_pool_deque_locked(ctx)
+        for existing in pool:
+            existing_lease = coerce_proxy_lease(existing)
+            if existing_lease is not None and existing_lease.address == lease.address:
+                return False
+        pool.append(lease)
+        ctx.notify_runtime_change()
+    return True
 
 
 def _required_proxy_ttl_seconds(ctx: ExecutionState) -> int:

@@ -288,6 +288,7 @@ class RuntimePreparationTests:
         config = self._build_config()
         config.execution.proxy.source = "local"
         config.execution.proxy.custom_api_url = ""
+        config.execution.proxy.reuse = True
         config.execution.proxy.ip_list = ["1.2.3.4:8080"]
         with (
             patch(
@@ -302,6 +303,10 @@ class RuntimePreparationTests:
                 "survey_submitter.core.engine.execution_builder.configure_probabilities",
                 return_value=None,
             ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.is_proxy_responsive",
+                return_value=True,
+            ),
         ):
             artifacts = prepare_execution_artifacts(
                 config, questions_info=self._SAMPLE_QUESTIONS_INFO
@@ -309,8 +314,152 @@ class RuntimePreparationTests:
         assert proxy_runtime.get_custom_proxy_api_override() == ""
         assert artifacts.execution_config_template.proxy.enabled is True
         assert artifacts.execution_config_template.proxy.source == "local"
+        assert artifacts.execution_config_template.proxy.reuse is True
         pool = list(artifacts.execution_config_template.proxy_ip_pool)
         assert [lease.address for lease in pool] == ["http://1.2.3.4:8080"]
+
+    def test_prepare_execution_artifacts_local_proxy_resolves_file_and_url_sources(
+        self,
+    ) -> None:
+        import tempfile
+
+        from survey_submitter.network.proxy.pool import is_proxy_responsive
+
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".txt", delete=False, encoding="utf-8"
+        ) as handle:
+            handle.write("# comment\n1.2.3.4:8080\n\n5.6.7.8:3128\n")
+            file_path = handle.name
+
+        config = self._build_config()
+        config.execution.proxy.source = "local"
+        config.execution.proxy.ip_list = [
+            file_path,
+            "https://proxy.example/list.txt",
+        ]
+        url_body = "5.6.7.8:3128, 9.10.11.12:1080\n# dup\n9.10.11.12:1080"
+
+        def fake_get(url, *args, **kwargs):
+            class _Resp:
+                status_code = 200
+                text = url_body
+
+            return _Resp()
+
+        with (
+            patch(
+                "survey_submitter.core.engine.execution_builder._verify_wjx_survey_is_answerable",
+                return_value=None,
+            ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.build_enabled_reverse_fill_spec",
+                return_value=None,
+            ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.configure_probabilities",
+                return_value=None,
+            ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.is_proxy_responsive",
+                return_value=True,
+            ),
+            patch(
+                "survey_submitter.network.proxy.local_source.http_client.get",
+                side_effect=fake_get,
+            ),
+        ):
+            artifacts = prepare_execution_artifacts(
+                config, questions_info=self._SAMPLE_QUESTIONS_INFO
+            )
+        pool = [lease.address for lease in artifacts.execution_config_template.proxy_ip_pool]
+        assert pool == [
+            "http://1.2.3.4:8080",
+            "http://5.6.7.8:3128",
+            "http://9.10.11.12:1080",
+        ]
+        assert len(pool) == len(set(pool))
+
+    def test_prepare_execution_artifacts_local_proxy_drops_unresponsive_keeps_responsive(
+        self,
+    ) -> None:
+        config = self._build_config()
+        config.execution.proxy.source = "local"
+        config.execution.proxy.ip_list = ["1.2.3.4:8080", "5.6.7.8:3128"]
+
+        def fake_responsive(address: str) -> bool:
+            return address == "http://5.6.7.8:3128"
+
+        with (
+            patch(
+                "survey_submitter.core.engine.execution_builder._verify_wjx_survey_is_answerable",
+                return_value=None,
+            ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.build_enabled_reverse_fill_spec",
+                return_value=None,
+            ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.configure_probabilities",
+                return_value=None,
+            ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.is_proxy_responsive",
+                side_effect=fake_responsive,
+            ),
+        ):
+            artifacts = prepare_execution_artifacts(
+                config, questions_info=self._SAMPLE_QUESTIONS_INFO
+            )
+        pool = [lease.address for lease in artifacts.execution_config_template.proxy_ip_pool]
+        assert pool == ["http://5.6.7.8:3128"]
+
+    def test_prepare_execution_artifacts_local_proxy_all_unresponsive_raises(self) -> None:
+        config = self._build_config()
+        config.execution.proxy.source = "local"
+        config.execution.proxy.ip_list = ["1.2.3.4:8080", "5.6.7.8:3128"]
+        with (
+            patch(
+                "survey_submitter.core.engine.execution_builder.is_proxy_responsive",
+                return_value=False,
+            ),
+        ):
+            with pytest.raises(RuntimePreparationError) as cm:
+                prepare_execution_artifacts(
+                    config, questions_info=self._SAMPLE_QUESTIONS_INFO
+                )
+        assert "无法连接 wjx.cn" in cm.value.user_message
+
+    def test_prepare_execution_artifacts_local_proxy_respects_target_num_cap(self) -> None:
+        config = self._build_config()
+        config.execution.target_num = 2
+        config.execution.proxy.source = "local"
+        config.execution.proxy.ip_list = [f"10.0.0.{i}:8080" for i in range(20)]
+        with (
+            patch(
+                "survey_submitter.core.engine.execution_builder._verify_wjx_survey_is_answerable",
+                return_value=None,
+            ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.build_enabled_reverse_fill_spec",
+                return_value=None,
+            ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.configure_probabilities",
+                return_value=None,
+            ),
+            patch(
+                "survey_submitter.core.engine.execution_builder.is_proxy_responsive",
+                return_value=True,
+            ),
+        ):
+            artifacts = prepare_execution_artifacts(
+                config, questions_info=self._SAMPLE_QUESTIONS_INFO
+            )
+        pool = [lease.address for lease in artifacts.execution_config_template.proxy_ip_pool]
+        assert len(pool) == 3  # ceil(2 * 1.5)
+        assert set(pool).issubset(
+            {f"http://10.0.0.{i}:8080" for i in range(20)}
+        )
 
     def test_prepare_execution_artifacts_uses_fallback_title_when_config_title_blank(self) -> None:
         config = self._build_config()

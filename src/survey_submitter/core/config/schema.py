@@ -104,14 +104,33 @@ class ProxySection(BaseConfigModel):
     enabled: bool = False
     source: str = "custom"
     custom_api_url: str = ""
-    ip_list: list[str] = []
+    ip_list: str | list[str] = []
     area_code: str | None = None
+    reuse: bool = False
 
     @field_validator("source", mode="before")
     @classmethod
     def validate_proxy_source(cls, v: Any) -> str:
         v = str(v or "custom").lower().strip()
         return v if v in ("custom", "local") else "custom"
+
+    @field_validator("ip_list", mode="before")
+    @classmethod
+    def coerce_proxy_ip_list(cls, v: Any) -> str | list[str]:
+        if v is None or v == "":
+            return []
+        if isinstance(v, str):
+            return v.strip()
+        if isinstance(v, (list, tuple)):
+            items: list[str] = []
+            for item in v:
+                if item is None:
+                    continue
+                text = str(item).strip()
+                if text:
+                    items.append(text)
+            return items
+        return str(v)
 
 
 class ExecutionSection(BaseConfigModel):

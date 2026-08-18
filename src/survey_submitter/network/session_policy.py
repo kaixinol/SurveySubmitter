@@ -25,6 +25,7 @@ from survey_submitter.network.proxy.submit import (  # noqa: F401  — re-export
     _mark_proxy_temporarily_bad,
     _merge_fetched_proxy_leases_locked,
     _pop_available_proxy_lease_locked,
+    _return_proxy_lease_to_pool,
 )
 from survey_submitter.network.user_agent import (  # noqa: F401  — re-exported for other modules
     _select_user_agent_for_session,
@@ -238,6 +239,8 @@ async def _select_proxy_for_session_async(
     if _is_local_proxy_source(ctx):
         if not wait:
             return None
+        if ctx.config.proxy.reuse and ctx.proxy_in_use_by_thread:
+            return None
         _stop_run_for_local_proxy_pool_exhausted(ctx)
         raise SubmitProxyUnavailableError(_LOCAL_PROXY_EXHAUSTED_MESSAGE)
 
@@ -252,6 +255,8 @@ async def _select_proxy_for_session_async(
                 return _mark_proxy_in_use(ctx, thread_name, selected)
             if _is_local_proxy_source(ctx):
                 if not wait:
+                    return None
+                if ctx.config.proxy.reuse and ctx.proxy_in_use_by_thread:
                     return None
                 _stop_run_for_local_proxy_pool_exhausted(ctx)
                 raise SubmitProxyUnavailableError(_LOCAL_PROXY_EXHAUSTED_MESSAGE)
@@ -342,10 +347,16 @@ async def acquire_submit_proxy(
 def release_submit_proxy(ctx: ExecutionState, thread_name: str, proxy_address: str | None) -> None:
     if not proxy_address or not thread_name:
         return
+    released: object | None = None
     try:
-        ctx.release_proxy_in_use(thread_name)
+        released = ctx.release_proxy_in_use(thread_name)
     except (KeyError, AttributeError):
         logger.opt(exception=True).debug("释放提交代理占用失败")
+    if released is not None and ctx.config.proxy.reuse:
+        try:
+            _return_proxy_lease_to_pool(ctx, released)
+        except Exception:
+            logger.opt(exception=True).debug("复用模式下归还代理租约失败")
 
 
 def mark_submit_proxy_success(ctx: ExecutionState, proxy_address: str | None) -> None:

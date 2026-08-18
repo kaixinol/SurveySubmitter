@@ -19,6 +19,7 @@ from survey_submitter.providers.contracts import SurveyQuestionMeta
 class ProxyRuntimeConfig(BaseConfigModel):
     enabled: bool = False
     source: str = "custom"
+    reuse: bool = False
 
     @field_validator("source", mode="before")
     @classmethod

@@ -11,65 +11,71 @@
 # Survey basics
 # ---------------------------------------------------------------------------
 survey:
-  url: "https://www.wjx.cn/s/your-survey-id.aspx"
-  title: ""                       # Optional; auto-detected if blank
-  provider: "wjx"                 # "wjx" (default) or auto-detected from URL
+    url: "https://www.wjx.cn/s/your-survey-id.aspx"
+    title: "" # Optional; auto-detected if blank
+    provider: "wjx" # "wjx" (default) or auto-detected from URL
 
 # ---------------------------------------------------------------------------
 # Execution settings
 # ---------------------------------------------------------------------------
 execution:
-  # -- Targets & concurrency --
-  target_num: 100                        # Number of submissions to collect
-  num_threads: 4                         # Concurrent worker threads (max 64)
+    # -- Targets & concurrency --
+    target_num: 100 # Number of submissions to collect
+    num_threads: 4 # Concurrent worker threads (max 64)
 
-  # -- Timing --
-  submit_interval_range_seconds: [5, 15] # Seconds between submissions (min, max)
-  answer_duration_range_seconds: [60, 180] # Simulated answer duration in seconds (min, max)
+    # -- Timing --
+    submit_interval_range_seconds: [5, 15] # Seconds between submissions (min, max)
+    answer_duration_range_seconds: [60, 180] # Simulated answer duration in seconds (min, max)
 
-  # Optional: restrict submissions to a datetime window
-  # answer_datetime_window: ["2025-01-01 09:00:00", "2025-12-31 18:00:00"]
-  answer_datetime_window: ["", ""]
+    # Optional: restrict submissions to a datetime window
+    # answer_datetime_window: ["2025-01-01 09:00:00", "2025-12-31 18:00:00"]
+    answer_datetime_window: ["", ""]
 
-  # -- 代理 (Proxy) --
-  proxy:
-    enabled: false               # 是否启用代理
-    source: "custom"             # "custom"=自定义代理API地址, "local"=仅本地静态列表
-    custom_api_url: ""           # source=custom 时的代理API地址
-    ip_list: []                  # 静态代理列表，格式 "ip:port"，如 ["1.2.3.4:8080"]；
-                                 # source=local 时必填（池子耗尽后停止拉取，直接结束）
-    area_code: null              # e.g. "110000" for Beijing, or null
+    # -- 代理 (Proxy) --
+    proxy:
+        enabled: false # 是否启用代理
+        source: "custom" # "custom"=自定义代理API地址, "local"=仅本地静态列表
+        custom_api_url: "" # source=custom 时的代理API地址
+        ip_list: [] # 静态代理列表，格式 "ip:port"，如 ["1.2.3.4:8080"]；
+            # source=local 时必填（池子耗尽后停止拉取，直接结束）。
+            # 支持：字面地址、本地文件路径（str）、http(s) 链接
+            # （str 或 list[str]）；文件/链接内容每行一个代理，
+            # 忽略空行与 # 注释，多源自动去重，并逐个测试 wjx.cn 连通性。
+        area_code: null # e.g. "110000" for Beijing, or null
+        reuse:
+            false # 允许复用 IP：已使用/占用的代理归还到池中循环使用
+            # （source=local 时配合少量静态 IP 可提交超过 IP 数量的份数）
 
-  # -- Random User-Agent --
-  random_user_agent: false
-  user_agent_ratios:                     # Must sum to 100
-    wechat: 33
-    mobile: 33
-    pc: 34
+    # -- Random User-Agent --
+    random_user_agent: false
+    user_agent_ratios: # Must sum to 100
+        wechat: 33
+        mobile: 33
+        pc: 34
 
-  # -- Failure handling --
-  stop_on_fail: true                     # Stop on consecutive failures
-  pause_on_aliyun_captcha: true          # Pause when Aliyun CAPTCHA is detected
+    # -- Failure handling --
+    stop_on_fail: true # Stop on consecutive failures
+    pause_on_aliyun_captcha: true # Pause when Aliyun CAPTCHA is detected
 
-  # -- Reliability --
-  reliability_mode: true
+    # -- Reliability --
+    reliability_mode: true
 
-  # -- AI configuration (optional) --
-  ai:
-    answering: true
-    api_key: ""
-    base_url: ""
-    api_protocol: "auto"
-    model: ""
-    system_prompt: ""
+    # -- AI configuration (optional) --
+    ai:
+        answering: true
+        api_key: ""
+        base_url: ""
+        api_protocol: "auto"
+        model: ""
+        system_prompt: ""
 
-  # -- Reverse fill (optional) --
-  reverse_fill:
-    enabled: false
-    source_path: ""
-    format: "auto"                       # "auto", "wjx_sequence", "wjx_score", "wjx_text"
-    start_row: 1
-    threads: 1
+    # -- Reverse fill (optional) --
+    reverse_fill:
+        enabled: false
+        source_path: ""
+        format: "auto" # "auto", "wjx_sequence", "wjx_score", "wjx_text"
+        start_row: 1
+        threads: 1
 
 # ---------------------------------------------------------------------------
 # Answer configuration
@@ -111,12 +117,12 @@ execution:
 #       2: "浦东新区"
 
 answer_config:
-  survey_questions: []
-  question_entries: []
-  answer_rules: []
-  # optional_fill_skip_ratio: 0.0
-  # 选填附加文本按概率留空跳过（0~1），必填附加文本不受影响。
-  # 默认 0.0 表示所有附加文本都按配置填写；例如 0.3 表示约 30% 的选填填空跳过。
+    survey_questions: []
+    question_entries: []
+    answer_rules: []
+    # optional_fill_skip_ratio: 0.0
+    # 选填附加文本按概率留空跳过（0~1），必填附加文本不受影响。
+    # 默认 0.0 表示所有附加文本都按配置填写；例如 0.3 表示约 30% 的选填填空跳过。
 
 # -- Random value pool (optional) --
 # 地区/高校类题目可在 question_entries 中设置 random_value_pool，
@@ -125,3 +131,4 @@ answer_config:
 #   - question_num: 1
 #     question_type: "location"
 #     random_value_pool: ["北京", "上海", "广州", "深圳"]
+

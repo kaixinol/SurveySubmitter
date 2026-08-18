@@ -18,6 +18,7 @@ from survey_submitter.core.engine.failure_reason import FailureReason
 from survey_submitter.core.engine.run_stop_policy import RunStopPolicy
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
+from survey_submitter.network.proxy.pool import mask_proxy_for_log
 from survey_submitter.network.session_policy import (
     SubmitProxyUnavailableError,
     _discard_unresponsive_proxy,
@@ -389,6 +390,7 @@ class AsyncSlotRunner:
         self, exc: SubmissionVerificationRequiredError
     ) -> bool:
         if self.config.proxy.enabled and self.proxy_session.proxy_address:
+            log_masked_proxy = mask_proxy_for_log(self.proxy_session.proxy_address)
             try:
                 _mark_proxy_temporarily_bad(self.state, self.proxy_session.proxy_address)
             except Exception:
@@ -398,7 +400,10 @@ class AsyncSlotRunner:
                 thread_name=self.slot_label,
                 failure_reason=FailureReason.SUBMISSION_VERIFICATION_REQUIRED,
                 status_text="触发验证，换IP",
-                log_message=f"当前随机 IP 触发问卷星智能验证，本轮丢弃并更换 IP：{exc}",
+                log_message=(
+                    f"随机 IP {log_masked_proxy} 触发问卷星智能验证，"
+                    f"本轮丢弃并更换 IP：{exc}"
+                ),
                 terminal_stop_category="submission_verification_threshold",
                 force_stop=True,
                 submission_failed=False,
@@ -424,14 +429,20 @@ class AsyncSlotRunner:
         )
 
     def _handle_http_transport_error(self, exc: BaseException) -> bool:
-        if self.proxy_session.proxy_address:
+        proxy_address = self.proxy_session.proxy_address
+        if proxy_address:
             try:
-                _discard_unresponsive_proxy(self.state, self.proxy_session.proxy_address)
+                _discard_unresponsive_proxy(self.state, proxy_address)
             except Exception:
                 logger.opt(exception=True).debug("废弃 HTTP 连接失败代理失败")
         return self._handle_proxy_unavailable(
-            status_text="代理连接失败" if self.proxy_session.proxy_address else "网络请求失败",
-            log_message=f"HTTP 请求失败，本轮按失败处理：{exc}",
+            status_text="代理连接失败" if proxy_address else "网络请求失败",
+            log_message=(
+                f"HTTP 请求失败（代理 {mask_proxy_for_log(proxy_address)}），"
+                f"本轮按失败处理：{exc}"
+                if proxy_address
+                else f"HTTP 请求失败，本轮按失败处理：{exc}"
+            ),
         )
 
     # ------------------------------------------------------------------
@@ -527,6 +538,8 @@ class AsyncSlotRunner:
             return await self._http_round_try()
         except SubmitProxyUnavailableError as exc:
             self._release_round_resources()
+            if self.state.get_terminal_stop_snapshot()[0]:
+                return _RoundOutcome(requeue=False, stop=True)
             if self._handle_proxy_unavailable(
                 status_text="代理获取失败",
                 log_message=f"提交前未获取到随机 IP，本轮跳过提交：{exc}",

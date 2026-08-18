@@ -81,8 +81,9 @@ uv run python cli.py run config.yaml --log-level DEBUG
 | `execution.ai` | AI 填空配置（api_key / base_url / model） |
 | `execution.reliability_mode` | 可靠性模式 |
 | `execution.persona` | 人格画像模拟 |
-| `execution.proxy.enabled` | 是否启用代理（`execution.proxy` 含 `source`/`custom_api_url`/`ip_list`/`area_code`） |
+| `execution.proxy.enabled` | 是否启用代理（`execution.proxy` 含 `source`/`custom_api_url`/`ip_list`/`area_code`/`reuse`） |
 | `execution.proxy.source` | 代理源：`custom`（自定义API地址）或 `local`（仅本地静态列表） |
+| `execution.proxy.reuse` | 是否允许复用 IP（已用/占用的代理归还到池中循环使用） |
 | `execution.random_user_agent` | 是否启用随机 User-Agent |
 | `execution.reverse_fill` | 反向填充配置 |
 | `answer_config.question_entries` | 各题答案权重与概率分布 |

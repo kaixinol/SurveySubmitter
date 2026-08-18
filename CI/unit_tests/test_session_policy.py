@@ -377,6 +377,90 @@ class SessionPolicyTests:
         assert session_policy.resolve_proxy_prefetch_request_count(ctx) == 0
         assert session_policy.should_continue_proxy_prefetch(ctx) is False
 
+    def test_reuse_enabled_returns_released_lease_to_pool(self) -> None:
+        ctx = ExecutionState(
+            config=ExecutionConfig(
+                proxy=ProxyRuntimeConfig(enabled=True, source="local", reuse=True)
+            )
+        )
+        lease = ProxyLease(address="http://1.1.1.1:8000", source="unit")
+        ctx.config.proxy_ip_pool = deque([lease])
+        selected = asyncio.run(
+            session_policy._select_proxy_for_session_async(ctx, "Worker-1", wait=True)
+        )
+        assert selected == "http://1.1.1.1:8000"
+        assert "Worker-1" in ctx.proxy_in_use_by_thread
+        assert list(ctx.config.proxy_ip_pool) == []
+        session_policy.release_submit_proxy(ctx, "Worker-1", selected)
+        assert "Worker-1" not in ctx.proxy_in_use_by_thread
+        assert list(ctx.config.proxy_ip_pool) == [lease]
+
+    def test_reuse_disabled_does_not_return_released_lease_to_pool(self) -> None:
+        ctx = ExecutionState(
+            config=ExecutionConfig(
+                proxy=ProxyRuntimeConfig(enabled=True, source="local", reuse=False)
+            )
+        )
+        ctx.config.proxy_ip_pool = deque([ProxyLease(address="http://1.1.1.1:8000", source="unit")])
+        selected = asyncio.run(
+            session_policy._select_proxy_for_session_async(ctx, "Worker-1", wait=True)
+        )
+        session_policy.release_submit_proxy(ctx, "Worker-1", selected)
+        assert list(ctx.config.proxy_ip_pool) == []
+
+    def test_reuse_enabled_keeps_successful_proxy_available_for_reuse(self) -> None:
+        ctx = ExecutionState(
+            config=ExecutionConfig(
+                proxy=ProxyRuntimeConfig(enabled=True, source="local", reuse=True)
+            )
+        )
+        lease = ProxyLease(address="http://1.1.1.1:8000", source="unit")
+        ctx.config.proxy_ip_pool = deque([lease])
+        selected = asyncio.run(
+            session_policy._select_proxy_for_session_async(ctx, "Worker-1", wait=True)
+        )
+        ctx.mark_successful_proxy_address(selected)
+        session_policy.release_submit_proxy(ctx, "Worker-1", selected)
+        with (
+            patch.object(submit_pool, "get_proxy_required_ttl_seconds", return_value=0),
+            patch.object(submit_pool, "proxy_lease_has_sufficient_ttl", return_value=True),
+        ):
+            reused = session_policy._pop_available_proxy_lease_locked(ctx)
+        assert reused == lease
+
+    def test_reuse_enabled_local_source_returns_none_when_proxies_held_by_others(self) -> None:
+        ctx = ExecutionState(
+            config=ExecutionConfig(
+                proxy=ProxyRuntimeConfig(enabled=True, source="local", reuse=True),
+                target_num=1,
+            )
+        )
+        ctx.config.proxy_ip_pool = deque()
+        ctx.proxy_in_use_by_thread = {"Worker-1": ProxyLease(address="http://1.1.1.1:8000")}
+        selected = asyncio.run(
+            session_policy._select_proxy_for_session_async(ctx, "Worker-2", wait=True)
+        )
+        assert selected is None
+        assert not ctx.stop_event.is_set()
+        assert ctx.terminal_stop_category == ""
+
+    def test_reuse_disabled_local_source_stops_when_pool_exhausted(self) -> None:
+        ctx = ExecutionState(
+            config=ExecutionConfig(
+                proxy=ProxyRuntimeConfig(enabled=True, source="local", reuse=False),
+                target_num=1,
+            )
+        )
+        ctx.config.proxy_ip_pool = deque()
+        ctx.proxy_in_use_by_thread = {"Worker-1": ProxyLease(address="http://1.1.1.1:8000")}
+        with pytest.raises(session_policy.SubmitProxyUnavailableError):
+            asyncio.run(
+                session_policy._select_proxy_for_session_async(
+                    ctx, "Worker-2", stop_signal=ctx.stop_event, wait=True
+                )
+            )
+        assert ctx.terminal_stop_category == "proxy_pool_exhausted"
+
     def test_select_proxy_for_session_dedupes_transient_fetch_failure_warning(self) -> None:
         ctx = ExecutionState(config=ExecutionConfig(proxy=ProxyRuntimeConfig(enabled=True), target_num=1))
 
