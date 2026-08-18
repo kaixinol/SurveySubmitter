@@ -174,7 +174,7 @@ def proxy_lease_has_sufficient_ttl(lease: ProxyLease | None, *, required_ttl_sec
     return (expire_ts - time.time()) >= max(0, int(required_ttl_seconds or 0))
 
 
-def _proxy_is_responsive(proxy_address: str) -> bool:
+def is_proxy_responsive(proxy_address: str) -> bool:
     masked_proxy = _mask_proxy_for_log(proxy_address)
     proxy_address = _normalize_proxy_address(proxy_address) or ""
     if not proxy_address:
@@ -183,28 +183,6 @@ def _proxy_is_responsive(proxy_address: str) -> bool:
     try:
         start = time.perf_counter()
         response = http_client.get(
-            PROXY_HEALTH_CHECK_URL, proxies=proxies, timeout=PROXY_HEALTH_CHECK_TIMEOUT
-        )
-        elapsed = time.perf_counter() - start
-    except Exception as exc:
-        logger.info(f"代理 {masked_proxy} 验证失败: {exc}")
-        return False
-    if response.status_code >= 400:
-        logger.warning(f"代理 {masked_proxy} 返回状态码 {response.status_code}")
-        return False
-    logger.info(f"代理 {masked_proxy} 验证通过，耗时 {elapsed:.2f}s")
-    return True
-
-
-async def _proxy_is_responsive_async(proxy_address: str) -> bool:
-    masked_proxy = _mask_proxy_for_log(proxy_address)
-    proxy_address = _normalize_proxy_address(proxy_address) or ""
-    if not proxy_address:
-        return False
-    proxies = {"http": proxy_address, "https": proxy_address}
-    try:
-        start = time.perf_counter()
-        response = await http_client.aget(
             PROXY_HEALTH_CHECK_URL, proxies=proxies, timeout=PROXY_HEALTH_CHECK_TIMEOUT
         )
         elapsed = time.perf_counter() - start
@@ -233,21 +211,10 @@ def coerce_proxy_lease(item: Any, *, source: str = "") -> ProxyLease | None:
     return _coerce_proxy_lease(item, source=source)
 
 
-def is_proxy_responsive(proxy_address: str) -> bool:
-
-    return _proxy_is_responsive(proxy_address)
-
-
-async def is_proxy_responsive_async(proxy_address: str) -> bool:
-
-    return await _proxy_is_responsive_async(proxy_address)
-
-
 __all__ = [
     "coerce_proxy_lease",
     "get_proxy_required_ttl_seconds",
     "is_proxy_responsive",
-    "is_proxy_responsive_async",
     "mask_proxy_for_log",
     "normalize_proxy_address",
     "proxy_lease_has_sufficient_ttl",

@@ -174,15 +174,6 @@ def _should_stop_proxy_wait(
     return bool(ctx.stop_event and ctx.stop_event.is_set())
 
 
-def _wait_for_next_proxy_cycle(
-    ctx: ExecutionState,
-    stop_signal: StopSignalLike | None,
-    *,
-    timeout: float = _PROXY_WAIT_POLL_SECONDS,
-) -> bool:
-    return ctx.wait_for_runtime_change(stop_signal=stop_signal, timeout=timeout)
-
-
 async def _wait_for_next_proxy_cycle_async(
     ctx: ExecutionState,
     stop_signal: StopSignalLike | None,

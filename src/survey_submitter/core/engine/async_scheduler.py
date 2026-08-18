@@ -27,14 +27,14 @@ class AsyncScheduler:
         for token_id in range(self._concurrency):
             self._ready.append(token_id)
 
-    async def start(self) -> None:
+    def start(self) -> None:
         if self._waker_task is None:
             self._waker_task = asyncio.create_task(
                 self._wake_delayed_tokens(), name="AsyncSchedulerWake"
             )
 
     async def acquire(self) -> int | None:
-        await self.start()
+        self.start()
         async with self._condition:
             while True:
                 if self._closed:

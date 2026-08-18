@@ -430,22 +430,6 @@ async def _load_wjx_page(
     return str(response.text or "")
 
 
-async def _build_actions(
-    config: ExecutionConfig,
-    ctx: ExecutionState,
-    *,
-    stop_signal: StopSignalLike | None,
-    thread_name: str = "",
-) -> list[AnswerAction]:
-    plan = await _build_action_plan(
-        config,
-        ctx,
-        stop_signal=stop_signal,
-        thread_name=thread_name,
-    )
-    return list(plan.actions)
-
-
 async def _build_action_plan(
     config: ExecutionConfig,
     ctx: ExecutionState,

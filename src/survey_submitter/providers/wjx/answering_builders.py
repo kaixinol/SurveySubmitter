@@ -70,7 +70,7 @@ def _get_fixed_answer(config: ExecutionConfig, question_num: int) -> str | None:
     return profile.get(question_num)
 
 
-async def _resolve_runtime_option_texts(
+def _resolve_runtime_option_texts(
     question: SurveyQuestionMeta,
 ) -> list[str]:
     from survey_submitter.providers.contracts import ChoiceQuestionMeta
@@ -105,7 +105,7 @@ def _resolve_choice_forced_index(
     return forced_index
 
 
-async def _select_choice_index(
+def _select_choice_index(
     *,
     config: ExecutionConfig,
     config_index: int,
@@ -246,7 +246,7 @@ async def _build_wjx_choice_action(
     """Shared logic for single-choice and dropdown builders."""
     config = ctx.config
     current = int(question.num or 0)
-    option_texts = await _resolve_runtime_option_texts(question)
+    option_texts = _resolve_runtime_option_texts(question)
     option_count = max(1, len(option_texts))
 
     fixed_answer = _get_fixed_answer(config, current)
@@ -277,7 +277,7 @@ async def _build_wjx_choice_action(
 
     forced_index = _resolve_choice_forced_index(question, option_count, ctx, thread_name)
 
-    selected_index, strict_ratio, has_reliability_dimension = await _select_choice_index(
+    selected_index, strict_ratio, has_reliability_dimension = _select_choice_index(
         config=config,
         config_index=config_index,
         ctx=ctx,
@@ -481,7 +481,7 @@ async def _build_wjx_score_like_action(
 
     config = ctx.config
     current = int(question.num or 0)
-    option_texts = await _resolve_runtime_option_texts(question)
+    option_texts = _resolve_runtime_option_texts(question)
     option_count = max(2, len(option_texts))
     reverse_fill_answer = resolve_current_reverse_fill_answer(
         ctx,
@@ -757,7 +757,7 @@ async def _build_wjx_multiple_action(
 ) -> AnswerAction | None:
     config = ctx.config
     current = int(question.num or 0)
-    option_texts = await _resolve_runtime_option_texts(question)
+    option_texts = _resolve_runtime_option_texts(question)
     option_count = max(1, len(option_texts))
 
     fixed_answer = _get_fixed_answer(config, current)
@@ -880,7 +880,7 @@ async def _build_wjx_matrix_action(
     from survey_submitter.providers.contracts import MatrixQuestionMeta
 
     row_count = max(1, question.rows if isinstance(question, MatrixQuestionMeta) else 1)
-    option_texts = await _resolve_runtime_option_texts(question)
+    option_texts = _resolve_runtime_option_texts(question)
     option_count = max(2, len(option_texts))
     reverse_fill_answer = resolve_current_reverse_fill_answer(
         ctx,
@@ -959,7 +959,7 @@ async def _build_wjx_matrix_action(
     )
 
 
-async def _build_wjx_slider_action(
+def _build_wjx_slider_action(
     question: SurveyQuestionMeta,
     config_index: int,
     ctx: ExecutionState,
@@ -981,7 +981,7 @@ async def _build_wjx_slider_action(
 async def _build_wjx_order_action(
     question: SurveyQuestionMeta,
 ) -> AnswerAction:
-    option_texts = await _resolve_runtime_option_texts(question)
+    option_texts = _resolve_runtime_option_texts(question)
     option_count = max(1, len(option_texts))
     ordered_indices = list(range(option_count))
     random.shuffle(ordered_indices)
@@ -996,7 +996,7 @@ async def _build_wjx_order_action(
     )
 
 
-async def _build_wjx_location_action(
+def _build_wjx_location_action(
     question: SurveyQuestionMeta,
     ctx: ExecutionState,
 ) -> AnswerAction | None:
@@ -1097,7 +1097,7 @@ async def build_answer_action(
             allow_ai_placeholder=allow_ai_placeholder,
         )
     if entry_type == QuestionType.LOCATION:
-        return await _build_wjx_location_action(question, ctx)
+        return _build_wjx_location_action(question, ctx)
     if entry_type == QuestionType.MATRIX:
         return await _build_wjx_matrix_action(
             question,
@@ -1122,7 +1122,7 @@ async def build_answer_action(
             thread_name=thread_name,
         )
     if entry_type == QuestionType.SLIDER:
-        return await _build_wjx_slider_action(question, config_index, ctx)
+        return _build_wjx_slider_action(question, config_index, ctx)
     if entry_type == QuestionType.ORDER:
         return await _build_wjx_order_action(question)
     return None

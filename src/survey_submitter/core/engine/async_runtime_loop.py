@@ -65,44 +65,6 @@ def _get_session_proxy_address(session: object) -> str | None:
         return None
 
 
-def _handle_ai_runtime_error(
-    exc: AIRuntimeError,
-    stop_signal: StopSignalLike,
-    *,
-    thread_name: str,
-    stop_policy: RunStopPolicy,
-    state: ExecutionState,
-) -> bool:
-    _ = state
-    if is_ai_timeout_runtime_error(exc):
-        logger.warning(f"AI 调用超时，本轮丢弃并继续下一轮：{exc}")
-        status_text = "AI超时"
-        log_message = (
-            f"AI调用超时，本轮按失败处理；连续达到 {AI_FILL_FAIL_THRESHOLD} 次才停止：{exc}"
-        )
-    else:
-        logger.opt(exception=True).warning(f"AI 填空失败，本轮丢弃并继续下一轮：{exc}")
-        status_text = "AI失败"
-        log_message = (
-            f"AI填空失败，本轮按失败处理；连续达到 {AI_FILL_FAIL_THRESHOLD} 次才停止：{exc}"
-        )
-
-    stopped = stop_policy.record_failure(
-        stop_signal,
-        thread_name=thread_name,
-        failure_reason=FailureReason.FILL_FAILED,
-        status_text=status_text,
-        log_message=log_message,
-        threshold_override=AI_FILL_FAIL_THRESHOLD,
-        terminal_stop_category="ai_unstable",
-        force_stop=True,
-        submission_failed=False,
-    )
-    if stopped:
-        logger.opt(exception=True).error(f"AI 连续失败达到阈值，任务停止：{exc}")
-    return bool(stopped)
-
-
 def _handle_verification_error(
     exc: SubmissionVerificationRequiredError,
     stop_signal: StopSignalLike,
@@ -125,34 +87,6 @@ def _handle_verification_error(
     state.mark_terminal_stop(
         _VERIFICATION_STOP_CATEGORY,
         failure_reason=FailureReason.SUBMISSION_VERIFICATION_REQUIRED.value,
-        message=message,
-    )
-    stop_signal.set()
-    return True
-
-
-def _handle_provider_unavailable(
-    exc: SurveyProviderUnavailableAtRuntimeError,
-    stop_signal: StopSignalLike,
-    *,
-    thread_name: str,
-    state: ExecutionState,
-) -> bool:
-    message = str(exc or "").strip() or "问卷当前不可填写"
-    logger.warning(f"会话[{thread_name}]发现问卷不可继续：{message}")
-
-    _safe_state_operation(
-        lambda: state.end_round(thread_name),
-        "问卷不可继续时回收轮次样本",
-    )
-    _safe_state_operation(
-        lambda: state.increment_thread_fail(thread_name, status_text="问卷不可填写"),
-        "问卷不可继续时更新线程状态",
-    )
-
-    state.mark_terminal_stop(
-        _PROVIDER_UNAVAILABLE_STOP_CATEGORY,
-        failure_reason=FailureReason.SURVEY_PROVIDER_UNAVAILABLE.value,
         message=message,
     )
     stop_signal.set()
@@ -343,7 +277,7 @@ class AsyncSlotRunner:
         self.round_resources.release_round_resources(submission_failed=submission_failed)
 
     async def _select_session_proxy_and_ua(self) -> tuple[str | None, str | None]:
-        return None, await self.proxy_session.select_user_agent()
+        return None, self.proxy_session.select_user_agent()
 
     def _release_session_proxy(self) -> None:
         self.proxy_session.release_current_proxy()
@@ -377,16 +311,36 @@ class AsyncSlotRunner:
             return True
         return False
 
-    async def _handle_ai_runtime_error(self, exc: AIRuntimeError) -> bool:
-        return _handle_ai_runtime_error(
-            exc,
+    def _handle_ai_runtime_error(self, exc: AIRuntimeError) -> bool:
+        if is_ai_timeout_runtime_error(exc):
+            logger.warning(f"AI 调用超时，本轮丢弃并继续下一轮：{exc}")
+            status_text = "AI超时"
+            log_message = (
+                f"AI调用超时，本轮按失败处理；连续达到 {AI_FILL_FAIL_THRESHOLD} 次才停止：{exc}"
+            )
+        else:
+            logger.opt(exception=True).warning(f"AI 填空失败，本轮丢弃并继续下一轮：{exc}")
+            status_text = "AI失败"
+            log_message = (
+                f"AI填空失败，本轮按失败处理；连续达到 {AI_FILL_FAIL_THRESHOLD} 次才停止：{exc}"
+            )
+
+        stopped = self.stop_policy.record_failure(
             self.stop_proxy,
             thread_name=self.slot_label,
-            stop_policy=self.stop_policy,
-            state=self.state,
+            failure_reason=FailureReason.FILL_FAILED,
+            status_text=status_text,
+            log_message=log_message,
+            threshold_override=AI_FILL_FAIL_THRESHOLD,
+            terminal_stop_category="ai_unstable",
+            force_stop=True,
+            submission_failed=False,
         )
+        if stopped:
+            logger.opt(exception=True).error(f"AI 连续失败达到阈值，任务停止：{exc}")
+        return bool(stopped)
 
-    async def _handle_submission_verification_error(
+    def _handle_submission_verification_error(
         self, exc: SubmissionVerificationRequiredError
     ) -> bool:
         if self.config.proxy.enabled and self.proxy_session.proxy_address:
@@ -418,15 +372,30 @@ class AsyncSlotRunner:
             state=self.state,
         )
 
-    async def _handle_survey_provider_unavailable_error(
+    def _handle_survey_provider_unavailable_error(
         self, exc: SurveyProviderUnavailableAtRuntimeError
     ) -> bool:
-        return _handle_provider_unavailable(
-            exc,
-            self.stop_proxy,
-            thread_name=self.slot_label,
-            state=self.state,
+        message = str(exc or "").strip() or "问卷当前不可填写"
+        logger.warning(f"会话[{self.slot_label}]发现问卷不可继续：{message}")
+
+        _safe_state_operation(
+            lambda: self.state.end_round(self.slot_label),
+            "问卷不可继续时回收轮次样本",
         )
+        _safe_state_operation(
+            lambda: self.state.increment_thread_fail(
+                self.slot_label, status_text="问卷不可填写"
+            ),
+            "问卷不可继续时更新线程状态",
+        )
+
+        self.state.mark_terminal_stop(
+            _PROVIDER_UNAVAILABLE_STOP_CATEGORY,
+            failure_reason=FailureReason.SURVEY_PROVIDER_UNAVAILABLE.value,
+            message=message,
+        )
+        self.stop_proxy.set()
+        return True
 
     def _handle_http_transport_error(self, exc: BaseException) -> bool:
         proxy_address = self.proxy_session.proxy_address
@@ -546,15 +515,15 @@ class AsyncSlotRunner:
             ):
                 return _RoundOutcome(requeue=False, stop=True)
         except AIRuntimeError as exc:
-            if await self._handle_ai_runtime_error(exc):
+            if self._handle_ai_runtime_error(exc):
                 return _RoundOutcome(requeue=False, stop=True)
             self._release_round_resources()
         except SubmissionVerificationRequiredError as exc:
-            if await self._handle_submission_verification_error(exc):
+            if self._handle_submission_verification_error(exc):
                 return _RoundOutcome(requeue=False, stop=True)
             self._release_round_resources()
         except SurveyProviderUnavailableAtRuntimeError as exc:
-            if await self._handle_survey_provider_unavailable_error(exc):
+            if self._handle_survey_provider_unavailable_error(exc):
                 return _RoundOutcome(requeue=False, stop=True)
             self._release_round_resources()
         except (http_client.TransportError,) as exc:

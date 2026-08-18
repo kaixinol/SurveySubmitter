@@ -31,27 +31,6 @@ _REVERSE_FILL_FORMATS = {
 _DEFAULT_UA_RATIOS = {"wechat": 33, "mobile": 33, "pc": 34}
 
 
-def _normalize_user_agent_ratios(raw_ratios: Any) -> dict[str, int]:
-    """Normalize user agent ratios from raw input."""
-    if not isinstance(raw_ratios, dict):
-        return dict(_DEFAULT_UA_RATIOS)
-
-    ratios: dict[str, int] = {}
-    for device_type in _DEFAULT_UA_RATIOS:
-        value = raw_ratios.get(device_type)
-        try:
-            int_value = int(value) if value is not None else 0
-        except (ValueError, TypeError):
-            int_value = 0
-        if int_value < 0 or int_value > 100:
-            return dict(_DEFAULT_UA_RATIOS)
-        ratios[device_type] = int_value
-
-    if sum(ratios.values()) != 100:
-        return dict(_DEFAULT_UA_RATIOS)
-    return ratios
-
-
 class SurveySection(BaseConfigModel):
     url: str = ""
     title: str = ""
@@ -192,7 +171,23 @@ class ExecutionSection(BaseConfigModel):
     @field_validator("user_agent_ratios", mode="before")
     @classmethod
     def normalize_ratios(cls, v: Any) -> dict[str, int]:
-        return _normalize_user_agent_ratios(v)
+        if not isinstance(v, dict):
+            return dict(_DEFAULT_UA_RATIOS)
+
+        ratios: dict[str, int] = {}
+        for device_type in _DEFAULT_UA_RATIOS:
+            value = v.get(device_type)
+            try:
+                int_value = int(value) if value is not None else 0
+            except (ValueError, TypeError):
+                int_value = 0
+            if int_value < 0 or int_value > 100:
+                return dict(_DEFAULT_UA_RATIOS)
+            ratios[device_type] = int_value
+
+        if sum(ratios.values()) != 100:
+            return dict(_DEFAULT_UA_RATIOS)
+        return ratios
 
 
 class QuestionInfo(BaseConfigModel):

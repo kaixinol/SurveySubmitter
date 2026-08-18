@@ -29,15 +29,10 @@ class AsyncProxySession:
         self.proxy_provider: str = "unknown"
         self.user_agent_profile: UserAgentProfile | None = None
 
-    async def select_user_agent(self) -> str | None:
+    def select_user_agent(self) -> str | None:
         profile = _select_user_agent_for_session(self.state)
         self.user_agent_profile = profile
         return profile.ua if profile is not None else None
-
-    async def select_user_agent_profile(self) -> UserAgentProfile | None:
-        profile = _select_user_agent_for_session(self.state)
-        self.user_agent_profile = profile
-        return profile
 
     def set_current_submit_proxy(
         self, proxy_address: str | None, *, provider: str = "unknown"
