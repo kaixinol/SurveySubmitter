@@ -99,6 +99,7 @@ class HeadlessRunner:
         )
         exec_config = artifacts.execution_config_template
         state = ExecutionState(config=exec_config)
+        state.proxy_ip_pool = artifacts.proxy_ip_pool
 
         self._engine = AsyncRuntimeEngine()
         self._engine.start()

@@ -62,11 +62,11 @@ PROBABILITY_CEILING = 100.0
 MAX_MULTIPLE_SELECTION_ATTEMPTS = 32
 
 
-def _get_fixed_answer(config: ExecutionConfig, question_num: int) -> str | None:
+def _get_fixed_answer(state: ExecutionState, question_num: int) -> str | None:
     """Get the fixed answer for the current question from test profiles."""
-    if not config.test_profiles:
+    if not state.config.test_profiles:
         return None
-    profile = config.test_profiles[config.current_profile_index]
+    profile = state.config.test_profiles[state.current_profile_index]
     return profile.get(question_num)
 
 
@@ -249,7 +249,7 @@ async def _build_wjx_choice_action(
     option_texts = _resolve_runtime_option_texts(question)
     option_count = max(1, len(option_texts))
 
-    fixed_answer = _get_fixed_answer(config, current)
+    fixed_answer = _get_fixed_answer(ctx, current)
     if fixed_answer is not None:
         forced_index = None
         for idx, text in enumerate(option_texts):
@@ -376,7 +376,7 @@ async def _build_wjx_text_action(
     current = int(question.num or 0)
     blank_count = max(1, int(question.text_inputs or 0))  # ty: ignore[unresolved-attribute]
 
-    fixed_answer = _get_fixed_answer(config, current)
+    fixed_answer = _get_fixed_answer(ctx, current)
     if fixed_answer is not None:
         return AnswerAction(
             question_num=current,
@@ -760,7 +760,7 @@ async def _build_wjx_multiple_action(
     option_texts = _resolve_runtime_option_texts(question)
     option_count = max(1, len(option_texts))
 
-    fixed_answer = _get_fixed_answer(config, current)
+    fixed_answer = _get_fixed_answer(ctx, current)
     if fixed_answer is not None:
         fixed_indices = []
         fixed_parts = [p.strip() for p in str(fixed_answer).split(",")]
@@ -1015,7 +1015,7 @@ def _build_wjx_location_action(
 
     current = int(question.num or 0)
 
-    fixed_answer = _get_fixed_answer(ctx.config, current)
+    fixed_answer = _get_fixed_answer(ctx, current)
     if fixed_answer is not None:
         return AnswerAction(
             question_num=current,

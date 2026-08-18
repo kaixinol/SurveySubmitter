@@ -18,8 +18,8 @@ def provider_run_context(
     thread_name: str = "",
 ) -> Iterator[object | None]:
 
-    if config.test_profiles and config.test_profiles_random:
-        config.current_profile_index = random.randint(0, len(config.test_profiles) - 1)
+    if state is not None and config.test_profiles and config.test_profiles_random:
+        state.current_profile_index = random.randint(0, len(config.test_profiles) - 1)
 
     reset_answer_context()
     reset_tendency()

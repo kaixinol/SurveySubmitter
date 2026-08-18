@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import math
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Any, cast
@@ -79,6 +80,7 @@ class PreparedExecutionArtifacts:
     """Immutable bundle produced by :func:`prepare_execution_artifacts`."""
 
     execution_config_template: ExecutionConfig
+    proxy_ip_pool: deque
     provider: str
     survey_questions: list[QuestionInfo]
     questions_info: list[SurveyQuestionMeta]
@@ -318,11 +320,6 @@ def _build_execution_config_template(
             source=str(config.execution.proxy.source or "custom").strip().lower(),
             reuse=bool(config.execution.proxy.reuse),
         ),
-        proxy_ip_pool=[
-            lease
-            for address in list(config.execution.proxy.ip_list or [])
-            if (lease := coerce_proxy_lease(address, source="custom")) is not None
-        ],
         random_user_agent=bool(config.execution.random_user_agent),
         user_agent_ratios=copy.deepcopy(dict(config.execution.user_agent_ratios or {})),
         pause_on_aliyun_captcha=bool(config.execution.pause_on_aliyun_captcha),
@@ -447,8 +444,15 @@ def prepare_execution_artifacts(
     except Exception as exc:
         raise RuntimePreparationError(str(exc), log_message=f"配置题目失败：{exc}") from exc
 
+    resolved_leases = []
+    for raw_address in list(config.execution.proxy.ip_list or []):
+        lease = coerce_proxy_lease(raw_address, source="custom")
+        if lease is not None:
+            resolved_leases.append(lease)
+
     return PreparedExecutionArtifacts(
         execution_config_template=execution_config,
+        proxy_ip_pool=deque(resolved_leases),
         provider=provider,
         survey_questions=list(survey_questions),
         questions_info=questions_info,

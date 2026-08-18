@@ -74,7 +74,6 @@ class ExecutionConfig(BaseConfigModel):
     answer_datetime_window_ms: tuple[int, int] = (0, 0)
 
     proxy: ProxyRuntimeConfig = Field(default_factory=ProxyRuntimeConfig)
-    proxy_ip_pool: Any = Field(default_factory=deque)
     random_user_agent: bool = False
     user_agent_ratios: dict[str, int] = {"wechat": 33, "mobile": 33, "pc": 34}
     pause_on_aliyun_captcha: bool = True
@@ -83,7 +82,6 @@ class ExecutionConfig(BaseConfigModel):
 
     test_profiles: list[dict[int, str]] = []
     test_profiles_random: bool = True
-    current_profile_index: int = 0
 
 
 @dataclass
@@ -109,6 +107,8 @@ class ExecutionState(
     proxy_in_use_by_thread: dict[str, ProxyLease] = field(default_factory=dict)
     successful_proxy_addresses: set[str] = field(default_factory=set)
     proxy_cooldowns_by_address: dict[str, float] = field(default_factory=dict)
+    proxy_ip_pool: deque = field(default_factory=deque)
+    current_profile_index: int = 0
     reverse_fill_runtime: ReverseFillRuntimeState | None = None
 
     stop_event: threading.Event = field(default_factory=threading.Event)

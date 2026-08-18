@@ -146,8 +146,8 @@ class RunStopPolicy:
                 record_thread_success = True
 
                 if self.config.test_profiles and not self.config.test_profiles_random:
-                    self.config.current_profile_index = (
-                        self.config.current_profile_index + 1
+                    self.state.current_profile_index = (
+                        self.state.current_profile_index + 1
                     ) % len(self.config.test_profiles)
 
                 logger.info(

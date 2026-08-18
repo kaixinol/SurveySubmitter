@@ -28,11 +28,11 @@ class SubmitProxyUnavailableError(RuntimeError):
 
 
 def _ensure_proxy_pool_deque_locked(ctx: ExecutionState) -> deque:
-    pool = ctx.config.proxy_ip_pool
+    pool = ctx.proxy_ip_pool
     if isinstance(pool, deque):
         return pool
     normalized_pool = deque(pool or [])
-    ctx.config.proxy_ip_pool = normalized_pool
+    ctx.proxy_ip_pool = normalized_pool
     return normalized_pool
 
 
@@ -130,7 +130,7 @@ def _purge_unusable_proxy_pool_locked(
         kept.append(lease)
     if removed:
         logger.info(f"代理池已清理无效/重复代理 {removed} 个")
-    ctx.config.proxy_ip_pool = kept
+    ctx.proxy_ip_pool = kept
     if removed:
         ctx.notify_runtime_change()
     return seen
@@ -238,7 +238,7 @@ def _discard_unresponsive_proxy(ctx: ExecutionState, proxy_address: str) -> None
                 removed = True
                 continue
             retained.append(lease)
-        ctx.config.proxy_ip_pool = retained
+        ctx.proxy_ip_pool = retained
         if removed:
             logger.info(f"已移除无响应代理：{mask_proxy_for_log(proxy_address)}")
             ctx.notify_runtime_change()
