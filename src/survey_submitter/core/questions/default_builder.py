@@ -231,7 +231,6 @@ class _ResolvedConfig:
     fillable_indices: object
     attached_selects: list[object]
     location_parts: list[str]
-    is_university: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -364,7 +363,6 @@ def _resolve_config_from_existing(
     multi_cfg = answer_cfg if isinstance(answer_cfg, MultiTextQuestionAnswerConfig) else None
     choice_cfg = answer_cfg if isinstance(answer_cfg, ChoiceQuestionAnswerConfig) else None
     location_cfg = answer_cfg if isinstance(answer_cfg, LocationQuestionAnswerConfig) else None
-    university_cfg = answer_cfg if isinstance(answer_cfg, UniversityQuestionAnswerConfig) else None
     return _ResolvedConfig(
         probabilities=copy.deepcopy(detail.probabilities),
         distribution=detail.distribution_mode or "random",
@@ -400,7 +398,6 @@ def _resolve_config_from_existing(
             else [],
         ),
         location_parts=(list(location_cfg.location_parts) if location_cfg is not None else []),
-        is_university=university_cfg is not None,
     )
 
 
@@ -592,7 +589,6 @@ def _assemble_question_info(
     answer_config_cls = answer_config_type_for_question_type(
         attrs.q_type,
         location_parts=config.location_parts if config.location_parts else None,
-        is_university=config.is_university,
     )
 
     answer_config_kwargs: dict[str, Any] = dict(ai_enabled=config.ai_enabled)
@@ -765,7 +761,6 @@ def _merge_answer_config(
             location_parts=(
                 list(merged.get("location_parts") or []) if "location_parts" in merged else None
             ),
-            is_university=bool(merged.get("is_university")),
         )
     try:
         return config_cls(**merged)

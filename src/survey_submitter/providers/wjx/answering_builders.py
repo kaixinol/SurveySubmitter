@@ -1096,7 +1096,7 @@ async def build_answer_action(
             thread_name=thread_name,
             allow_ai_placeholder=allow_ai_placeholder,
         )
-    if entry_type == QuestionType.LOCATION:
+    if entry_type in (QuestionType.LOCATION, QuestionType.UNIVERSITY):
         return _build_wjx_location_action(question, ctx)
     if entry_type == QuestionType.MATRIX:
         return _build_wjx_matrix_action(

@@ -16,6 +16,7 @@ class QuestionType(StrEnum):
     SLIDER = "slider"
     ORDER = "order"
     LOCATION = "location"
+    UNIVERSITY = "university"
     FILL_BLANK = "fill_blank"
     MULTI_FILL_BLANK = "multi_fill_blank"
     DESCRIPTION = "description"

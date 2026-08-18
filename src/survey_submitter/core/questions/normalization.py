@@ -608,7 +608,7 @@ def _handle_location(
     assert isinstance(
         qi.details.answer_config, (LocationQuestionAnswerConfig, UniversityQuestionAnswerConfig)
     )
-    mapped_value = ("location", -1)
+    mapped_value = (str(qi.question_type), -1)
     target.question_config_index_map[question_num] = mapped_value
     _remember_provider_mapping(target, qi, mapped_value, survey_provider)
     if isinstance(qi.details.answer_config, LocationQuestionAnswerConfig):
@@ -813,6 +813,9 @@ _NORMALIZATION_DISPATCH: dict[QuestionType, _NormalizationHandler] = {
         lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: _handle_order(e, qn, t, sp) or False
     ),
     QuestionType.LOCATION: (
+        lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: _handle_location(e, qn, t, sp) or False
+    ),
+    QuestionType.UNIVERSITY: (
         lambda e, qn, p, sr, t, idx, rel, cand, oc, sp: _handle_location(e, qn, t, sp) or False
     ),
     QuestionType.TEXT: (

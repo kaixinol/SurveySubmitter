@@ -47,6 +47,7 @@ from .html_parser_rules import (
     _extract_question_metadata_from_html,
     _extract_question_title,
 )
+from .university_list import UniversityList
 
 __all__ = [
     "_normalize_html_text",
@@ -204,12 +205,17 @@ def _resolve_question_type(question_div, raw_type_code: str) -> dict[str, object
     is_location = type_code in {TypeCode.TEXT, TypeCode.LOCATION} and _question_div_is_location(
         question_div
     )
+    location_verify_type = (
+        _extract_location_verify_type(question_div) if is_location else ""
+    )
     if is_location:
-        type_code = TypeCode.LOCATION
+        if UniversityList.is_university_verify(location_verify_type):
+            type_code = TypeCode.UNIVERSITY
+        else:
+            type_code = TypeCode.LOCATION
     elif type_code == TypeCode.LOCATION and not is_location:
         if question_div.find("textarea"):
             type_code = TypeCode.TEXT
-    location_verify_type = _extract_location_verify_type(question_div) if is_location else ""
     return {
         "type_code": type_code,
         "is_description": is_description,

@@ -191,10 +191,8 @@ class LocationQuestionAnswerConfig(QuestionAnswerConfig):
     random_value_pool: list[str] | None = None
 
 
-class UniversityQuestionAnswerConfig(QuestionAnswerConfig):
+class UniversityQuestionAnswerConfig(LocationQuestionAnswerConfig):
     """University questions."""
-
-    random_value_pool: list[str] | None = None
 
 
 # Mapping from QuestionType to the appropriate AnswerConfig subclass.
@@ -206,6 +204,7 @@ _ANSWER_CONFIG_BY_QUESTION_TYPE: dict[QuestionType, type[QuestionAnswerConfig]] 
     QuestionType.TEXT: TextQuestionAnswerConfig,
     QuestionType.MULTI_TEXT: MultiTextQuestionAnswerConfig,
     QuestionType.LOCATION: LocationQuestionAnswerConfig,
+    QuestionType.UNIVERSITY: UniversityQuestionAnswerConfig,
 }
 
 
@@ -213,25 +212,22 @@ def answer_config_type_for_question_type(
     question_type: str | QuestionType,
     *,
     location_parts: list[str] | None = None,
-    is_university: bool = False,
 ) -> type[QuestionAnswerConfig]:
     """Return the concrete QuestionAnswerConfig subclass for a question type.
 
-    When *location_parts* is non-empty, returns
-    :class:`LocationQuestionAnswerConfig` or
-    :class:`UniversityQuestionAnswerConfig` regardless of the question type,
-    because a text-typed question with location parts behaves as a location
-    or university question.
+    An explicit ``QuestionType`` member wins. When *location_parts* is
+    non-empty (a text-typed question carrying location parts), it falls back
+    to :class:`LocationQuestionAnswerConfig` regardless of the question type.
     """
-    if is_university:
-        return UniversityQuestionAnswerConfig
-    if location_parts:
-        return LocationQuestionAnswerConfig
     try:
         key = QuestionType(question_type)
     except ValueError:
-        return QuestionAnswerConfig
-    return _ANSWER_CONFIG_BY_QUESTION_TYPE.get(key, QuestionAnswerConfig)
+        key = None
+    if key in _ANSWER_CONFIG_BY_QUESTION_TYPE:
+        return _ANSWER_CONFIG_BY_QUESTION_TYPE[key]
+    if location_parts:
+        return LocationQuestionAnswerConfig
+    return QuestionAnswerConfig
 
 
 # ---------------------------------------------------------------------------

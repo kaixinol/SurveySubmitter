@@ -13,6 +13,7 @@ from survey_submitter.providers.contracts import (
     TextQuestionMeta,
     ensure_survey_question_meta,
 )
+from survey_submitter.providers.wjx.university_list import UniversityList
 
 QuestionMetaLike = SurveyQuestionMeta | Mapping[str, object]
 
@@ -76,6 +77,8 @@ def infer_question_entry_type(question: QuestionMetaLike) -> str:
         return QuestionType.SLIDER
     if isinstance(meta, TextQuestionMeta):
         if meta.is_location or meta.type_code == TypeCode.LOCATION:
+            if UniversityList.is_university_verify(meta.location_verify_type):
+                return QuestionType.UNIVERSITY
             return QuestionType.LOCATION
         if meta.text_inputs > 1:
             return QuestionType.MULTI_TEXT

@@ -337,12 +337,6 @@ def serialize_question_detail(qi: QuestionInfo) -> dict[str, Any]:
             "location_parts": list(ac.location_parts or []),
             "random_value_pool": list(ac.random_value_pool or []),
         }
-    elif isinstance(ac, UniversityQuestionAnswerConfig):
-        ac_dict = {
-            "ai_enabled": bool(ac.ai_enabled),
-            "is_university": True,
-            "random_value_pool": list(ac.random_value_pool or []),
-        }
     else:
         ac_dict = {"ai_enabled": bool(ac.ai_enabled)}
     payload["details"]["answer_config"] = ac_dict  # type: ignore[index]
@@ -416,9 +410,8 @@ def deserialize_question_detail(data: dict[str, object]) -> QuestionInfo:
         if isinstance(ac_location_parts, list)
         else [str(p) for p in _as_list(detail_raw.get("location_parts"))]
     )
-    is_university = _as_bool(ac_raw.get("is_university"))
     ac_cls = answer_config_type_for_question_type(
-        question_type, location_parts=location_parts or None, is_university=is_university
+        question_type, location_parts=location_parts or None
     )
 
     ac_fields = dict(ac_raw)
