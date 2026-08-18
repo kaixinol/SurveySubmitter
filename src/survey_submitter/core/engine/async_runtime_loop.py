@@ -56,15 +56,6 @@ def _safe_state_operation(operation: Callable[[], _T], operation_name: str) -> N
         logger.opt(exception=True).debug(f"{operation_name} 失败")
 
 
-def _get_session_proxy_address(session: object) -> str | None:
-    if session is None:
-        return None
-    try:
-        return cast("str | None", getattr(session, "proxy_address", None))
-    except AttributeError:
-        return None
-
-
 def _handle_verification_error(
     exc: SubmissionVerificationRequiredError,
     stop_signal: StopSignalLike,
@@ -276,7 +267,7 @@ class AsyncSlotRunner:
     def _release_round_resources(self, *, submission_failed: bool = False) -> None:
         self.round_resources.release_round_resources(submission_failed=submission_failed)
 
-    async def _select_session_proxy_and_ua(self) -> tuple[str | None, str | None]:
+    def _select_session_proxy_and_ua(self) -> tuple[str | None, str | None]:
         return None, self.proxy_session.select_user_agent()
 
     def _release_session_proxy(self) -> None:
@@ -550,7 +541,7 @@ class AsyncSlotRunner:
         if not await self._prepare_round_context():
             return _RoundOutcome(requeue=False)
 
-        _proxy_address, ua_value = await self._select_session_proxy_and_ua()
+        _proxy_address, ua_value = self._select_session_proxy_and_ua()
         ua_profile = self.proxy_session.user_agent_profile
         if self.run_context.stop_requested():
             return _RoundOutcome(requeue=False)

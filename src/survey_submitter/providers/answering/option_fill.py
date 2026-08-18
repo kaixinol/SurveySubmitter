@@ -1,14 +1,9 @@
 from __future__ import annotations
 
 import random
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
-from survey_submitter.core.questions.utils import (
-    OPTION_FILL_AI_TOKEN,
-    get_fill_text_from_config,
-    resolve_dynamic_text_token,
-)
 
 
 def option_requires_fill(question: Any, option_index: int) -> bool:
@@ -69,41 +64,3 @@ def default_missing_option_fill(
     if option_requires_fill(question, option_index):
         return DEFAULT_FILL_TEXT
     return None
-
-
-def option_fill_text_map(option_fill_texts: Sequence[tuple[int, str]] | None) -> dict[int, str]:
-    result: dict[int, str] = {}
-    for raw_index, raw_value in tuple(option_fill_texts or ()):
-        try:
-            option_index = int(raw_index)
-        except (ValueError, TypeError):
-            continue
-        value = str(raw_value or "").strip()
-        if value:
-            result[option_index] = value
-    return result
-
-
-def resolve_static_option_fill_text(
-    fill_entries: Sequence[str | None] | None,
-    option_index: int,
-    *,
-    question: Any = None,
-) -> str | None:
-    raw_value = get_fill_text_from_config(fill_entries, option_index)
-    if raw_value is None:
-        return default_missing_option_fill(question, option_index, None)
-    text = str(raw_value).strip()
-    if not text:
-        return default_missing_option_fill(question, option_index, None)
-    if text == OPTION_FILL_AI_TOKEN:
-        return DEFAULT_FILL_TEXT
-    return resolve_dynamic_text_token(text)
-
-
-def mapping_contains_fill_blank(value: Mapping[str, Any], *keys: str) -> bool:
-    for key in keys:
-        raw = value.get(key)
-        if raw is not None and str(raw).strip():
-            return True
-    return False

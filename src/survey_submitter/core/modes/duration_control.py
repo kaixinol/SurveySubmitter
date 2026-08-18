@@ -100,20 +100,6 @@ async def wait_answer_duration_seconds(
     return bool(await sleep_or_stop(stop_signal, wait_seconds))
 
 
-async def simulate_answer_duration_delay(
-    stop_signal: StopSignalLike | None = None,
-    answer_duration_range_seconds: tuple[int, int] = (0, 0),
-    *,
-    provider: str | None = None,
-) -> bool:
-
-    wait_seconds = sample_answer_duration_seconds(
-        answer_duration_range_seconds,
-        provider=provider,
-    )
-    return await wait_answer_duration_seconds(stop_signal, wait_seconds)
-
-
 async def is_survey_completion_page(driver: _DriverLike, provider: str | None = None) -> bool:
     try:
         current_url = str(await driver.current_url() or "")

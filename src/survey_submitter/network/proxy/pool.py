@@ -102,7 +102,7 @@ def _build_proxy_lease(
     )
 
 
-def _coerce_proxy_lease(item: Any, *, source: str = "") -> ProxyLease | None:
+def coerce_proxy_lease(item: Any, *, source: str = "") -> ProxyLease | None:
     if isinstance(item, ProxyLease):
         normalized = _normalize_proxy_address(item.address)
         if not normalized:
@@ -204,11 +204,6 @@ def normalize_proxy_address(proxy_address: str | None) -> str | None:
 def mask_proxy_for_log(proxy_address: str | None) -> str:
 
     return _mask_proxy_for_log(proxy_address)
-
-
-def coerce_proxy_lease(item: Any, *, source: str = "") -> ProxyLease | None:
-
-    return _coerce_proxy_lease(item, source=source)
 
 
 __all__ = [

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import json
 import re
 import threading
@@ -310,13 +309,6 @@ def _ensure_benefit_cache(force_refresh: bool = False) -> None:
             supported_areas, city_code_index = _build_local_benefit_fallback()
         _BENEFIT_SUPPORTED_AREAS_CACHE = supported_areas
         _BENEFIT_CITY_CODE_INDEX_CACHE = city_code_index
-
-
-def load_benefit_supported_areas(force_refresh: bool = False) -> list[dict[str, object]]:
-
-    _ensure_benefit_cache(force_refresh=force_refresh)
-    with _BENEFIT_CACHE_LOCK:
-        return copy.deepcopy(_BENEFIT_SUPPORTED_AREAS_CACHE or [])
 
 
 def build_benefit_city_code_index(force_refresh: bool = False) -> dict[str, str]:

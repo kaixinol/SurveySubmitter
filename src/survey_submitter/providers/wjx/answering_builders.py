@@ -469,7 +469,7 @@ async def _build_wjx_text_action(
     )
 
 
-async def _build_wjx_score_like_action(
+def _build_wjx_score_like_action(
     question: SurveyQuestionMeta,
     config_index: int,
     ctx: ExecutionState,
@@ -868,7 +868,7 @@ async def _build_wjx_multiple_action(
     return await _finalize(selected)
 
 
-async def _build_wjx_matrix_action(
+def _build_wjx_matrix_action(
     question: SurveyQuestionMeta,
     config_index: int,
     ctx: ExecutionState,
@@ -978,7 +978,7 @@ def _build_wjx_slider_action(
     )
 
 
-async def _build_wjx_order_action(
+def _build_wjx_order_action(
     question: SurveyQuestionMeta,
 ) -> AnswerAction:
     option_texts = _resolve_runtime_option_texts(question)
@@ -1099,14 +1099,14 @@ async def build_answer_action(
     if entry_type == QuestionType.LOCATION:
         return _build_wjx_location_action(question, ctx)
     if entry_type == QuestionType.MATRIX:
-        return await _build_wjx_matrix_action(
+        return _build_wjx_matrix_action(
             question,
             config_index,
             ctx,
             thread_name=thread_name,
         )
     if entry_type == QuestionType.SCALE:
-        return await _build_wjx_score_like_action(
+        return _build_wjx_score_like_action(
             question,
             config_index,
             ctx,
@@ -1114,7 +1114,7 @@ async def build_answer_action(
             thread_name=thread_name,
         )
     if entry_type == QuestionType.SCORE:
-        return await _build_wjx_score_like_action(
+        return _build_wjx_score_like_action(
             question,
             config_index,
             ctx,
@@ -1124,5 +1124,5 @@ async def build_answer_action(
     if entry_type == QuestionType.SLIDER:
         return _build_wjx_slider_action(question, config_index, ctx)
     if entry_type == QuestionType.ORDER:
-        return await _build_wjx_order_action(question)
+        return _build_wjx_order_action(question)
     return None

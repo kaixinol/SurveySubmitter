@@ -29,20 +29,8 @@ def get_default_user_config_directory() -> str:
     return str(Path(get_user_config_root()) / "configs")
 
 
-def resolve_user_config_directory(settings=None) -> str:
-    if isinstance(settings, str):
-        configured_path = settings.strip()
-        if configured_path:
-            return str(Path(configured_path).expanduser().resolve())
-    if isinstance(settings, dict):
-        configured_path = str(settings.get("config_directory", "") or "").strip()
-        if configured_path:
-            return str(Path(configured_path).expanduser().resolve())
-    return get_default_user_config_directory()
-
-
 def get_user_config_directory() -> str:
-    return resolve_user_config_directory()
+    return get_default_user_config_directory()
 
 
 def get_user_local_data_root() -> str:
@@ -99,5 +87,4 @@ __all__ = [
     "get_user_local_data_root",
     "get_user_logs_directory",
     "get_user_updates_directory",
-    "resolve_user_config_directory",
 ]

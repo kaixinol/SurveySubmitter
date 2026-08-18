@@ -9,32 +9,6 @@ from typing import TYPE_CHECKING, Protocol
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 
 
-def _get_active_proxy_addresses(
-    proxy_in_use_by_thread: dict[str, ProxyLease],
-    *,
-    exclude_thread_name: str = "",
-) -> set[str]:
-    excluded = str(exclude_thread_name or "").strip()
-    active = set()
-    for thread_name, lease in proxy_in_use_by_thread.items():
-        if excluded and str(thread_name or "").strip() == excluded:
-            continue
-        address = str(lease.address or "").strip()
-        if address:
-            active.add(address)
-    return active
-
-
-def _get_successful_proxy_addresses(
-    successful_proxy_addresses: set[str],
-) -> set[str]:
-    return {
-        str(address or "").strip()
-        for address in set(successful_proxy_addresses or set())
-        if str(address or "").strip()
-    }
-
-
 def _add_successful_proxy_address(
     successful_proxy_addresses: set[str],
     proxy_address: str,
@@ -60,20 +34,6 @@ def _purge_expired_proxy_cooldowns(
     ]
     for address in expired:
         cooldown_map.pop(address, None)
-
-
-def _is_proxy_in_cooldown(
-    cooldown_map: dict[str, float],
-    proxy_address: str,
-    *,
-    now_ts: float | None = None,
-) -> bool:
-    normalized = str(proxy_address or "").strip()
-    if not normalized:
-        return False
-    _purge_expired_proxy_cooldowns(cooldown_map, now_ts=now_ts)
-    current = float(now_ts if now_ts is not None else time.time())
-    return float(cooldown_map.get(normalized, 0.0) or 0.0) > current
 
 
 def _mark_proxy_in_cooldown(
@@ -241,11 +201,12 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
         *,
         now_ts: float | None = None,
     ) -> bool:
-        return _is_proxy_in_cooldown(
-            self.proxy_cooldowns_by_address,
-            proxy_address,
-            now_ts=now_ts,
-        )
+        normalized = str(proxy_address or "").strip()
+        if not normalized:
+            return False
+        _purge_expired_proxy_cooldowns(self.proxy_cooldowns_by_address, now_ts=now_ts)
+        current = float(now_ts if now_ts is not None else time.time())
+        return float(self.proxy_cooldowns_by_address.get(normalized, 0.0) or 0.0) > current
 
     def is_proxy_in_cooldown(
         self: "_ProxyRuntimeHost",
@@ -278,13 +239,22 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
         *,
         exclude_thread_name: str = "",
     ) -> set[str]:
-        return _get_active_proxy_addresses(
-            self.proxy_in_use_by_thread,
-            exclude_thread_name=exclude_thread_name,
-        )
+        excluded = str(exclude_thread_name or "").strip()
+        active = set()
+        for thread_name, lease in self.proxy_in_use_by_thread.items():
+            if excluded and str(thread_name or "").strip() == excluded:
+                continue
+            address = str(lease.address or "").strip()
+            if address:
+                active.add(address)
+        return active
 
     def successful_proxy_addresses_locked(self: "_ProxyRuntimeHost") -> set[str]:
-        return _get_successful_proxy_addresses(self.successful_proxy_addresses)
+        return {
+            str(address or "").strip()
+            for address in set(self.successful_proxy_addresses or set())
+            if str(address or "").strip()
+        }
 
     def snapshot_active_proxy_addresses(
         self: "_ProxyRuntimeHost",

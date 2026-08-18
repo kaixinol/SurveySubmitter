@@ -221,15 +221,6 @@ def _normalize_area_code(area_code: str | None) -> str:
     return cleaned
 
 
-def _is_province_level_area_code(area_code: str) -> bool:
-    return (
-        bool(area_code)
-        and len(area_code) == 6
-        and area_code.isdigit()
-        and area_code.endswith("0000")
-    )
-
-
 def _resolve_default_pool(area_code: str | None) -> str | None:
     normalized_area = _normalize_area_code(area_code)
     if not normalized_area:

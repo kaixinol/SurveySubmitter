@@ -138,11 +138,6 @@ def _normalize_question_type(value: object) -> str:
         return QuestionType.UNKNOWN.value
 
 
-def _as_str(value: object, default: str = "") -> str:
-    text = str(value or default).strip()
-    return text or default
-
-
 def _as_bool(value: object, default: bool = False) -> bool:
     if value is None:
         return default
@@ -265,15 +260,6 @@ def _normalize_multi_text_blank_int_ranges(raw: object) -> list[list[int]]:
     if not isinstance(raw, list):
         return []
     return [_normalize_random_int_range(item) for item in raw]
-
-
-def _legacy_answer_duration_to_range(value: int) -> tuple[int, int]:
-    normalized = min(MAX_ANSWER_DURATION_SECONDS, max(0, int(value or 0)))
-    if normalized <= 0:
-        return DEFAULT_ANSWER_DURATION_RANGE_SECONDS
-    low = max(0, int(round(normalized * 0.9)))
-    high = min(MAX_ANSWER_DURATION_SECONDS, max(low, int(round(normalized * 1.1))))
-    return low, high
 
 
 def _normalize_dimension_value(raw: object) -> str | None:

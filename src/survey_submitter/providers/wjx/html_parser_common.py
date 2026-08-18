@@ -52,21 +52,6 @@ def _normalize_html_text(value: str | None) -> str:
     return text.strip()
 
 
-def _extract_prefixed_question_number(raw_title: str | None) -> int | None:
-    text = normalize_match_text(raw_title)
-    if not text:
-        return None
-    match = WJX_QUESTION_PREFIX_RE.match(text)
-    if not match:
-        return None
-    number_text = match.group("cn_num") or match.group("q_num") or match.group("plain_num") or ""
-    try:
-        number = int(number_text)
-    except (ValueError, TypeError):
-        return None
-    return number if number > 0 else None
-
-
 def _text_looks_like_select_placeholder(value: str | None) -> bool:
     text = _normalize_html_text(str(value or ""))
     if not text:
@@ -215,7 +200,18 @@ def _cleanup_question_title(raw_title: str) -> str:
 
 
 def _extract_display_question_number(raw_title: str | None) -> int | None:
-    return _extract_prefixed_question_number(raw_title)
+    text = normalize_match_text(raw_title)
+    if not text:
+        return None
+    match = WJX_QUESTION_PREFIX_RE.match(text)
+    if not match:
+        return None
+    number_text = match.group("cn_num") or match.group("q_num") or match.group("plain_num") or ""
+    try:
+        number = int(number_text)
+    except (ValueError, TypeError):
+        return None
+    return number if number > 0 else None
 
 
 def _extract_display_heading_text(question_div) -> str:

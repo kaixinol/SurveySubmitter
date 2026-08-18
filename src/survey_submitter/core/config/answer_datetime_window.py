@@ -41,8 +41,3 @@ def answer_datetime_window_to_epoch_ms(
     if start is None or end is None:
         return 0, 0
     return int(start.timestamp() * 1000), int(end.timestamp() * 1000)
-
-
-def has_configured_answer_datetime_window(value: list[str] | tuple[str, ...] | None) -> bool:
-    start_text, end_text = normalize_answer_datetime_window(value)
-    return bool(start_text and end_text)

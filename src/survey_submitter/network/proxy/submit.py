@@ -92,15 +92,6 @@ def _mark_proxy_temporarily_bad(
     )
 
 
-def _cooldown_proxy_addresses_locked(ctx: ExecutionState) -> set[str]:
-    ctx._purge_expired_proxy_cooldowns_locked()
-    return {
-        str(address or "").strip()
-        for address, cooldown_until in ctx.proxy_cooldowns_by_address.items()
-        if str(address or "").strip() and float(cooldown_until or 0.0) > 0.0
-    }
-
-
 def _purge_unusable_proxy_pool_locked(
     ctx: ExecutionState,
     *,

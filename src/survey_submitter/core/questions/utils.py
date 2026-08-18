@@ -331,15 +331,6 @@ def serialize_random_int_range(raw: Any) -> list[int]:
     return [min_value, max_value]
 
 
-def describe_random_int_range(raw: Any) -> str:
-
-    parsed = try_parse_random_int_range(raw)
-    if parsed is None:
-        return "未设置"
-    min_value, max_value = parsed
-    return f"{min_value}-{max_value}"
-
-
 def build_random_int_token(min_value: Any, max_value: Any) -> str:
 
     normalized_min, normalized_max = normalize_random_int_range([min_value, max_value])
@@ -383,17 +374,6 @@ def resolve_dynamic_text_token(token: Any) -> str:
     if text == "__RANDOM_TEXT__":
         return generate_random_generic_text()
     return text or DEFAULT_FILL_TEXT
-
-
-def extract_text_from_element(element) -> str:
-    text = (element.text or "").strip()
-    if text:
-        return text
-    try:
-        text = (element.get_attribute("textContent") or "").strip()
-    except Exception:
-        text = ""
-    return text
 
 
 def get_fill_text_from_config(
