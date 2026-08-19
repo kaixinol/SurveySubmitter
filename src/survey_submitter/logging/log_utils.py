@@ -5,7 +5,6 @@ import logging
 import sys
 import threading
 import traceback
-from pathlib import Path
 from typing import Any
 
 from loguru import logger
@@ -116,10 +115,6 @@ def setup_logging() -> None:
         colorize=False,
     )
 
-    from survey_submitter.logging.session_log import _ensure_session_log_sink
-
-    _ensure_session_log_sink()
-
     logging.root.handlers = [_InterceptHandler()]
     logging.root.setLevel("INFO")
 
@@ -146,26 +141,7 @@ def setup_logging() -> None:
 
 
 def shutdown_logging() -> None:
-    try:
-        from survey_submitter.logging import session_log as _session_log
-
-        session_log_path = str(_session_log.get_current_session_log_path() or "")
-
-        _session_log._remove_session_log_sink()
-
-        logger.remove()
-
-        if (
-            _session_log._DELETE_SESSION_LOG_ON_SHUTDOWN
-            and session_log_path
-            and Path(session_log_path).is_file()
-        ):
-            try:
-                Path(session_log_path).unlink()
-            except OSError as exc:
-                _safe_internal_log("shutdown_logging failed to remove session log", exc)
-    except OSError as exc:
-        _safe_internal_log("shutdown_logging failed", exc)
+    logger.remove()
 
 
 atexit.register(lambda: shutdown_logging())

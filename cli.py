@@ -4,17 +4,13 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import faulthandler
 import io
 import logging
-import os
 import signal
 import sys
-from pathlib import Path
-from typing import Optional, cast
+from typing import cast
 
-_FAULT_HANDLER_STREAM: Optional[io.IOBase] = None
-_ORIGINAL_STDOUT: Optional[io.TextIOBase] = None
+_ORIGINAL_STDOUT: io.TextIOBase | None = None
 
 _TYPE_LABELS = {
     "single": "单选",
@@ -31,48 +27,10 @@ _TYPE_LABELS = {
 }
 
 
-def _enable_fault_handler() -> None:
-    global _FAULT_HANDLER_STREAM
-    if faulthandler.is_enabled():
-        return
-    try:
-        from survey_submitter.system.paths import get_fatal_crash_log_path
-
-        fault_log_path = get_fatal_crash_log_path()
-        logs_dir = Path(fault_log_path).parent
-        os.makedirs(logs_dir, exist_ok=True)
-        _FAULT_HANDLER_STREAM = open(fault_log_path, "a", encoding="utf-8", buffering=1)
-        faulthandler.enable(_FAULT_HANDLER_STREAM, all_threads=True)
-    except Exception:
-        try:
-            faulthandler.enable(all_threads=True)
-        except Exception:
-            _FAULT_HANDLER_STREAM = None
-
-
-def _disable_fault_handler() -> None:
-    global _FAULT_HANDLER_STREAM
-    try:
-        if faulthandler.is_enabled():
-            faulthandler.disable()
-    except Exception:
-        pass
-    stream = _FAULT_HANDLER_STREAM
-    _FAULT_HANDLER_STREAM = None
-    if stream is not None:
-        try:
-            stream.close()
-        except Exception:
-            pass
-
-
 def bootstrap() -> None:
     import survey_submitter.network.http as http_client
     from survey_submitter.logging.log_utils import setup_logging as _setup_logging
-    from survey_submitter.system.paths import ensure_user_data_directories
 
-    ensure_user_data_directories()
-    _enable_fault_handler()
     _setup_logging()
     http_client.prewarm()
 
@@ -84,7 +42,6 @@ def shutdown() -> None:
         shutdown_logging()
     except Exception:
         pass
-    _disable_fault_handler()
 
 
 def _out() -> io.TextIOBase:
