@@ -171,7 +171,13 @@ class AsyncRuntimeEngine:
         self._pause_event = asyncio.Event()
         self._state = state
         state.stop_event.clear()
-        worker_count = max(1, int(config.num_threads or 1))
+        worker_count = max(
+            1,
+            min(
+                int(config.num_threads or 1),
+                max(1, int(config.target_num or 1)),
+            ),
+        )
         state.ensure_worker_threads(worker_count, prefix="Slot")
         scheduler = AsyncScheduler(concurrency=worker_count)
         run_context = AsyncRunContext(

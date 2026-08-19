@@ -231,23 +231,32 @@ def _sync_and_validate_random_proxy_config(config: RuntimeConfig) -> None:
         max_proxies = max(1, math.ceil(target_num * 1.5))
         num_threads = max(1, int(config.execution.num_threads or 1))
         # 并发探测数与提交并发数挂钩，设下限避免大列表时过慢
-        max_workers = max(1, min(len(resolved), max(num_threads, 8)))
+        # 目标只有少量份数时，不应为了预检而同时启动大量代理请求。
+        max_workers = max(1, min(len(resolved), max(num_threads, 8), target_num))
         passing: dict[str, None] = {}
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_address = {
-                executor.submit(is_proxy_responsive, address): address
-                for address in resolved
-            }
-            for future in as_completed(future_to_address):
+            # 分批提交，避免一次性把整个代理列表放入线程池队列。
+            for offset in range(0, len(resolved), max_workers):
                 if len(passing) >= max_proxies:
-                    for pending in future_to_address:
-                        pending.cancel()
                     break
-                address = future_to_address[future]
-                if bool(future.result()):
-                    passing[address] = None
-                else:
-                    logger.warning(f"本地代理未通过 wjx.cn 连通性测试，已丢弃：{address}")
+                batch = resolved[offset : offset + max_workers]
+                future_to_address = {
+                    executor.submit(is_proxy_responsive, address): address
+                    for address in batch
+                }
+                for future in as_completed(future_to_address):
+                    address = future_to_address[future]
+                    if bool(future.result()):
+                        passing[address] = None
+                    else:
+                        logger.warning(
+                            f"本地代理未通过 wjx.cn 连通性测试，已丢弃：{address}"
+                        )
+                    if len(passing) >= max_proxies:
+                        for pending in future_to_address:
+                            if not pending.done():
+                                pending.cancel()
+                        break
         responsive = [address for address in resolved if address in passing][:max_proxies]
         if not responsive:
             raise RuntimePreparationError(
@@ -297,12 +306,22 @@ def _build_execution_config_template(
         )
         requested_num_threads = min(requested_num_threads, requested_target_num)
 
+    effective_num_threads = max(
+        1,
+        min(thread_limit, requested_num_threads, requested_target_num),
+    )
+    if effective_num_threads < requested_num_threads:
+        logger.info(
+            f"目标份数为 {requested_target_num}，提交并发已从 {requested_num_threads}"
+            f" 限制为 {effective_num_threads}"
+        )
+
     execution_config = ExecutionConfig(
         url=str(config.survey.url or ""),
         title=title,
         provider=provider,
         target_num=requested_target_num,
-        num_threads=max(1, min(thread_limit, requested_num_threads)),
+        num_threads=effective_num_threads,
         fail_threshold=5,
         submit_interval_range_seconds=(
             int(config.execution.submit_interval_range_seconds[0]),
