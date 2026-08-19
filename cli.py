@@ -27,11 +27,11 @@ _TYPE_LABELS = {
 }
 
 
-def bootstrap() -> None:
+def bootstrap(log_level: str = "INFO") -> None:
     import survey_submitter.network.http as http_client
     from survey_submitter.logging.log_utils import setup_logging as _setup_logging
 
-    _setup_logging()
+    _setup_logging(level=log_level)
     http_client.prewarm()
 
 
@@ -208,7 +208,7 @@ def main() -> None:
     global _ORIGINAL_STDOUT
     _ORIGINAL_STDOUT = cast("io.TextIOBase", sys.stdout)
 
-    bootstrap()
+    bootstrap(args.log_level)
 
     try:
         if args.url:

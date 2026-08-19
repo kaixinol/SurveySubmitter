@@ -4,6 +4,8 @@ import math
 import random
 from typing import Sequence
 
+from loguru import logger
+
 from survey_submitter.constants import DEFAULT_FILL_TEXT
 from survey_submitter.core.ai.runtime import (
     AIRuntimeError,
@@ -274,6 +276,12 @@ async def _build_wjx_choice_action(
                 ctx=ctx,
                 allow_ai_placeholder=allow_ai_placeholder,
             )
+        logger.warning(
+            "第{}题固定答案 {!r} 未匹配到选项，将回退为随机选择；当前选项={!r}",
+            current,
+            fixed_answer,
+            option_texts,
+        )
 
     forced_index = _resolve_choice_forced_index(question, option_count, ctx, thread_name)
 
@@ -1017,6 +1025,12 @@ def _build_wjx_location_action(
 
     fixed_answer = _get_fixed_answer(ctx, current)
     if fixed_answer is not None:
+        logger.debug(
+            "地区题答案调试：题号={} 类型={} 固定答案={!r}",
+            current,
+            question.type_code,
+            fixed_answer,
+        )
         return AnswerAction(
             question_num=current,
             kind="text",
@@ -1028,6 +1042,12 @@ def _build_wjx_location_action(
     random_value_pool = ctx.config.location_random_value_pools.get(current)
     if random_value_pool:
         text_value = random.choice(random_value_pool)
+        logger.debug(
+            "地区题答案调试：题号={} 类型={} 随机池答案={!r}",
+            current,
+            question.type_code,
+            text_value,
+        )
         return AnswerAction(
             question_num=current,
             kind="text",
@@ -1044,6 +1064,13 @@ def _build_wjx_location_action(
         text_value = sample_university_name()
     else:
         text_value = sample_location_text()
+
+    logger.debug(
+        "地区题答案调试：题号={} 类型={} 自动答案={!r}",
+        current,
+        question.type_code,
+        text_value,
+    )
 
     return AnswerAction(
         question_num=current,

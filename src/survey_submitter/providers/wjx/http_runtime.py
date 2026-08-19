@@ -515,6 +515,12 @@ async def _build_and_record_actions(
         questions=_question_items(config),
         skipped_question_nums=plan.skipped_question_nums,
     )
+    location_debug = [
+        (int(action.question_num), tuple(action.text_values))
+        for action in actions
+        if action.record_type == "location"
+    ]
+    logger.debug("地区题提交调试：答案={} 完整 submitdata={}", location_debug, submitdata)
     return actions, plan, submitdata
 
 

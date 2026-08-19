@@ -105,12 +105,13 @@ class _InterceptHandler(logging.Handler):
         logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
 
-def setup_logging() -> None:
+def setup_logging(*, level: str = "INFO") -> None:
+    normalized_level = str(level or "INFO").upper()
     logger.remove()
     logger.add(
         sys.stderr,
         format=LOG_FORMAT,
-        level="INFO",
+        level=normalized_level,
         filter=lambda record: not _should_filter_noise(str(record["message"])),
         colorize=False,
     )
