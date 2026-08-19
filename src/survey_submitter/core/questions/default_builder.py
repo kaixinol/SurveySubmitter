@@ -33,7 +33,6 @@ from survey_submitter.core.questions.types import (
     CHOICE_TYPES,
     TEXT_TYPES,
     QuestionType,
-    TypeCode,
 )
 from survey_submitter.core.questions.utils import _prob_config_is_unset
 from survey_submitter.providers.common import (
@@ -667,7 +666,7 @@ def build_default_survey_questions(
 
     entries: list[QuestionInfo] = []
     for q in questions_info:
-        if q.type_code == TypeCode.DESCRIPTION or q.unsupported:
+        if q.type_code == QuestionType.DESCRIPTION or q.unsupported:
             continue
 
         attrs = _extract_question_attrs(q)

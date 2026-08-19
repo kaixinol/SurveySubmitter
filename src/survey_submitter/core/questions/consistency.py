@@ -8,18 +8,18 @@ from pydantic import BaseModel, Field, field_validator
 
 from survey_submitter.core.config.schema import AnswerRulesConfig
 from survey_submitter.core.engine.answer_context import get_answered
-from survey_submitter.core.questions.types import TypeCode
+from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_survey_question_meta
 
 _thread_local = threading.local()
 _CONDITION_MODES = {"selected", "not_selected"}
 _ACTION_MODES = {"must_select", "must_not_select"}
 _SUPPORTED_RULE_TYPE_CODES = {
-    TypeCode.SINGLE,
-    TypeCode.MULTIPLE,
-    TypeCode.MATRIX,
-    TypeCode.SCORE,
-    TypeCode.SCALE,
+    QuestionType.SINGLE,
+    QuestionType.MULTIPLE,
+    QuestionType.MATRIX,
+    QuestionType.SCORE,
+    QuestionType.SCALE,
 }
 
 

@@ -9,19 +9,19 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from survey_submitter.constants import DEFAULT_FILL_TEXT
-from survey_submitter.core.questions.types import TypeCode
+from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.logging.log_utils import log_suppressed_exception
 from survey_submitter.system.paths import get_resource_path
 
 _NON_TEXT_TYPES = {
-    TypeCode.SINGLE,
-    TypeCode.MULTIPLE,
-    TypeCode.SCORE,
-    TypeCode.SCALE,
-    TypeCode.MATRIX,
-    TypeCode.DROPDOWN,
-    TypeCode.SLIDER,
-    TypeCode.ORDER,
+    QuestionType.SINGLE,
+    QuestionType.MULTIPLE,
+    QuestionType.SCORE,
+    QuestionType.SCALE,
+    QuestionType.MATRIX,
+    QuestionType.DROPDOWN,
+    QuestionType.SLIDER,
+    QuestionType.ORDER,
 }
 RANDOM_INT_TOKEN_PREFIX = "__RANDOM_INT__:"
 _RANDOM_ID_CARD_TOKEN = "__RANDOM_ID_CARD__"
@@ -52,7 +52,7 @@ def _is_text_like_question(
     if has_slider_matrix:
         return False
     normalized = _normalize_question_type_code(type_code)
-    if normalized in {TypeCode.TEXT, TypeCode.LOCATION, TypeCode.MATRIX}:
+    if normalized in {QuestionType.TEXT, QuestionType.LOCATION, QuestionType.MATRIX}:
         return text_input_count > 0
     if normalized in _NON_TEXT_TYPES:
         return False

@@ -23,7 +23,7 @@ from survey_submitter.core.engine.answer_context import record_answer
 from survey_submitter.core.engine.stop_signal import StopSignalLike
 from survey_submitter.core.modes.duration_control import sample_answer_duration_seconds
 from survey_submitter.core.questions.distribution import record_pending_choice
-from survey_submitter.core.questions.types import TypeCode
+from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.task import ExecutionConfig, ExecutionState
 from survey_submitter.network.proxy.pool import mask_proxy_for_log
 from survey_submitter.network.session_policy import (
@@ -271,23 +271,23 @@ def _skipped_submit_data_answer(question: SurveyQuestionMeta) -> str:
     rows = max(1, question.rows if isinstance(question, MatrixQuestionMeta) else 1)
     match type_code:
         case (
-            TypeCode.SINGLE
-            | TypeCode.MULTIPLE
-            | TypeCode.DROPDOWN
-            | TypeCode.SCORE
-            | TypeCode.SCALE
+            QuestionType.SINGLE
+            | QuestionType.MULTIPLE
+            | QuestionType.DROPDOWN
+            | QuestionType.SCORE
+            | QuestionType.SCALE
         ):
             return "-3"
-        case TypeCode.ORDER:
+        case QuestionType.ORDER:
             return ",".join("-3" for _ in range(option_count))
-        case TypeCode.MATRIX:
+        case QuestionType.MATRIX:
             return ",".join(f"{row_index + 1}!-3" for row_index in range(rows))
         case (
-            TypeCode.TEXT
-            | TypeCode.LOCATION
-            | TypeCode.SLIDER
-            | TypeCode.MULTI_TEXT
-            | TypeCode.UNKNOWN
+            QuestionType.TEXT
+            | QuestionType.LOCATION
+            | QuestionType.SLIDER
+            | QuestionType.MULTI_TEXT
+            | QuestionType.UNKNOWN
         ):
             return "(跳过)"
         case _:

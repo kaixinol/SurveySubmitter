@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping, cast
 
-from survey_submitter.core.questions.types import QuestionType, TypeCode
+from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.providers.contracts import (
     MatrixQuestionMeta,
     MultipleChoiceQuestionMeta,
@@ -71,12 +71,12 @@ def find_all_zero_attached_selects(attached_configs: object) -> list[tuple[int, 
 def infer_question_entry_type(question: QuestionMetaLike) -> str:
     meta = ensure_survey_question_meta(question)
 
-    if meta.type_code == TypeCode.DESCRIPTION:
+    if meta.type_code == QuestionType.DESCRIPTION:
         return QuestionType.DESCRIPTION
     if isinstance(meta, SliderQuestionMeta):
         return QuestionType.SLIDER
     if isinstance(meta, TextQuestionMeta):
-        if meta.is_location or meta.type_code == TypeCode.LOCATION:
+        if meta.is_location or meta.type_code == QuestionType.LOCATION:
             if UniversityList.is_university_verify(meta.location_verify_type):
                 return QuestionType.UNIVERSITY
             return QuestionType.LOCATION
@@ -87,9 +87,9 @@ def infer_question_entry_type(question: QuestionMetaLike) -> str:
         return QuestionType.MULTIPLE
     if isinstance(meta, SingleChoiceQuestionMeta):
         match meta.type_code:
-            case TypeCode.DROPDOWN:
+            case QuestionType.DROPDOWN:
                 return QuestionType.DROPDOWN
-            case TypeCode.ORDER:
+            case QuestionType.ORDER:
                 return QuestionType.ORDER
             case _:
                 return QuestionType.SINGLE
@@ -97,23 +97,23 @@ def infer_question_entry_type(question: QuestionMetaLike) -> str:
         return QuestionType.MATRIX
     if isinstance(meta, RatingQuestionMeta):
         match meta.type_code:
-            case TypeCode.SCORE:
+            case QuestionType.SCORE:
                 return QuestionType.SCORE
             case _:
                 return QuestionType.SCALE
 
     match meta.type_code:
-        case TypeCode.SINGLE:
+        case QuestionType.SINGLE:
             return QuestionType.SINGLE
-        case TypeCode.MULTIPLE:
+        case QuestionType.MULTIPLE:
             return QuestionType.MULTIPLE
-        case TypeCode.MATRIX:
+        case QuestionType.MATRIX:
             return QuestionType.MATRIX
-        case TypeCode.DROPDOWN:
+        case QuestionType.DROPDOWN:
             return QuestionType.DROPDOWN
-        case TypeCode.SLIDER:
+        case QuestionType.SLIDER:
             return QuestionType.SLIDER
-        case TypeCode.ORDER:
+        case QuestionType.ORDER:
             return QuestionType.ORDER
         case _:
             return QuestionType.SINGLE

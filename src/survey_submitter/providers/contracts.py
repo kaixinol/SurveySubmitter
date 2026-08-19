@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Iterable, Mapping, cast
 
 from survey_submitter.core.config.base import BaseConfigModel
-from survey_submitter.core.questions.types import QuestionType, TypeCode, convert_wire_type_code
+from survey_submitter.core.questions.types import QuestionType, convert_wire_type_code
 from survey_submitter.providers.common import SURVEY_PROVIDER_WJX, normalize_survey_provider
 
 type JumpRule = dict[str, str | int | bool]
@@ -149,7 +149,7 @@ def _normalize_question_media_list(raw: object) -> list[QuestionMedia]:
 class SurveyQuestionMeta(BaseConfigModel):
     num: int
     title: str
-    type_code: TypeCode = TypeCode.UNKNOWN
+    type_code: QuestionType = QuestionType.UNKNOWN
     provider_type: str = ""
     required: bool = False
     description: str | None = None
@@ -263,7 +263,7 @@ def _build_common_kwargs(
         "provider_type": str(normalized.get("type_code") or "").strip(),
         "required": bool(normalized.get("required")),
         "description": str(normalized.get("description") or "").strip() or None,
-        "unsupported": bool(normalized.get("unsupported")) and type_code != TypeCode.DESCRIPTION,
+        "unsupported": bool(normalized.get("unsupported")) and type_code != QuestionType.DESCRIPTION,
         "unsupported_reason": unsupported_reason or None,
         "provider_question_id": str(
             normalized.get("provider_question_id") or question_number
@@ -377,7 +377,7 @@ def _build_rating_kwargs(normalized: dict[str, object]) -> dict[str, object]:
 
 
 def _build_text_kwargs(
-    normalized: dict[str, object], type_code: TypeCode = TypeCode.UNKNOWN
+    normalized: dict[str, object], type_code: QuestionType = QuestionType.UNKNOWN
 ) -> dict[str, object]:
     text_input_labels = _normalize_text_list(normalized.get("text_input_labels")) or None
     text_inputs_raw = normalized.get("text_inputs")
@@ -394,7 +394,7 @@ def _build_text_kwargs(
     return {
         "text_inputs": text_inputs,
         "text_input_labels": text_input_labels,
-        "is_location": bool(normalized.get("is_location")) or type_code == TypeCode.LOCATION,
+        "is_location": bool(normalized.get("is_location")) or type_code == QuestionType.LOCATION,
         "location_verify_type": str(normalized.get("location_verify_type") or "").strip(),
     }
 
@@ -422,54 +422,54 @@ def _normalize_question(
     logic = _build_logic_kwargs(normalized)
 
     match type_code:
-        case TypeCode.SINGLE:
+        case QuestionType.SINGLE:
             return SingleChoiceQuestionMeta(
                 **_filter_kwargs(
                     SingleChoiceQuestionMeta,
                     {**common, **logic, **_build_choice_kwargs(normalized)},
                 )  # ty:ignore[invalid-argument-type]
             )
-        case TypeCode.MULTIPLE:
+        case QuestionType.MULTIPLE:
             kwargs = {**common, **logic, **_build_choice_kwargs(normalized)}
             kwargs["multi_min_limit"] = normalized.get("multi_min_limit")
             kwargs["multi_max_limit"] = normalized.get("multi_max_limit")
             return MultipleChoiceQuestionMeta(**_filter_kwargs(MultipleChoiceQuestionMeta, kwargs))  # ty:ignore[invalid-argument-type]
-        case TypeCode.DROPDOWN | TypeCode.ORDER:
+        case QuestionType.DROPDOWN | QuestionType.ORDER:
             return SingleChoiceQuestionMeta(
                 **_filter_kwargs(
                     SingleChoiceQuestionMeta,
                     {**common, **logic, **_build_choice_kwargs(normalized)},
                 )  # ty:ignore[invalid-argument-type]
             )
-        case TypeCode.MATRIX:
+        case QuestionType.MATRIX:
             return MatrixQuestionMeta(
                 **_filter_kwargs(
                     MatrixQuestionMeta,
                     {**common, **logic, **_build_matrix_kwargs(normalized)},
                 )  # ty:ignore[invalid-argument-type]
             )
-        case TypeCode.SCORE | TypeCode.SCALE:
+        case QuestionType.SCORE | QuestionType.SCALE:
             return RatingQuestionMeta(
                 **_filter_kwargs(
                     RatingQuestionMeta,
                     {**common, **logic, **_build_rating_kwargs(normalized)},
                 )  # ty:ignore[invalid-argument-type]
             )
-        case TypeCode.SLIDER:
+        case QuestionType.SLIDER:
             return SliderQuestionMeta(
                 **_filter_kwargs(
                     SliderQuestionMeta,
                     {**common, **logic, **_build_slider_kwargs(normalized)},
                 )  # ty:ignore[invalid-argument-type]
             )
-        case TypeCode.TEXT | TypeCode.MULTI_TEXT | TypeCode.LOCATION:
+        case QuestionType.TEXT | QuestionType.MULTI_TEXT | QuestionType.LOCATION:
             return TextQuestionMeta(
                 **_filter_kwargs(
                     TextQuestionMeta,
                     {**common, **logic, **_build_text_kwargs(normalized, type_code)},
                 )  # ty:ignore[invalid-argument-type]
             )
-        case TypeCode.DESCRIPTION:
+        case QuestionType.DESCRIPTION:
             return _QuestionMetaBase(**_filter_kwargs(_QuestionMetaBase, {**common, **logic}))  # ty:ignore[invalid-argument-type]
         case _:
             return ChoiceQuestionMeta(

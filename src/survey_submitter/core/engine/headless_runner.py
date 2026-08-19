@@ -50,13 +50,13 @@ class HeadlessRunner:
     @staticmethod
     def _log_parsed_questions(definition: SurveyDefinition) -> None:
         """Output parsed question details for --parse-only mode."""
-        from survey_submitter.core.questions.types import TypeCode
+        from survey_submitter.core.questions.types import QuestionType
 
         for q in definition.questions:
-            if q.type_code == TypeCode.DESCRIPTION:
+            if q.type_code == QuestionType.DESCRIPTION:
                 continue
             unsupported = " [不支持]" if q.unsupported else ""
-            location = " [地址题]" if q.type_code == TypeCode.LOCATION else ""
+            location = " [地址题]" if q.type_code == QuestionType.LOCATION else ""
             logger.info(f"  Q{q.num}: {q.title[:60]} ({q.type_code}){location}{unsupported}")
 
     async def run(self) -> None:

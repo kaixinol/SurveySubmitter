@@ -3,7 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import cast
 
-from survey_submitter.core.questions.types import TypeCode, convert_wire_type_code
+from survey_submitter.core.questions.types import QuestionType, convert_wire_type_code
 from survey_submitter.core.questions.utils import _is_text_like_question
 from survey_submitter.providers.contracts import (
     LOGIC_PARSE_STATUS_COMPLETE,
@@ -191,18 +191,18 @@ def _question_div_has_question_ancestor(question_div, fieldset) -> bool:
 def _resolve_question_type(question_div, raw_type_code: str) -> dict[str, object]:
     """Determine the effective question type and related flags from the HTML div."""
     type_code = convert_wire_type_code(raw_type_code)
-    if type_code != TypeCode.ORDER and _question_div_looks_like_reorder(question_div):
-        type_code = TypeCode.ORDER
+    if type_code != QuestionType.ORDER and _question_div_looks_like_reorder(question_div):
+        type_code = QuestionType.ORDER
     is_description = _question_div_looks_like_description(question_div, type_code)
     is_required = _question_div_is_required(question_div)
     is_rating = False
     rating_max = 0
-    if type_code == TypeCode.SCORE:
+    if type_code == QuestionType.SCORE:
         is_rating = _question_div_looks_like_rating(question_div)
         if is_rating:
             rating_max = _extract_rating_option_count(question_div)
-            type_code = TypeCode.SCALE
-    is_location = type_code in {TypeCode.TEXT, TypeCode.LOCATION} and _question_div_is_location(
+            type_code = QuestionType.SCALE
+    is_location = type_code in {QuestionType.TEXT, QuestionType.LOCATION} and _question_div_is_location(
         question_div
     )
     location_verify_type = (
@@ -210,12 +210,12 @@ def _resolve_question_type(question_div, raw_type_code: str) -> dict[str, object
     )
     if is_location:
         if UniversityList.is_university_verify(location_verify_type):
-            type_code = TypeCode.UNIVERSITY
+            type_code = QuestionType.UNIVERSITY
         else:
-            type_code = TypeCode.LOCATION
-    elif type_code == TypeCode.LOCATION and not is_location:
+            type_code = QuestionType.LOCATION
+    elif type_code == QuestionType.LOCATION and not is_location:
         if question_div.find("textarea"):
-            type_code = TypeCode.TEXT
+            type_code = QuestionType.TEXT
     return {
         "type_code": type_code,
         "is_description": is_description,
@@ -265,7 +265,7 @@ def _apply_rating_scale_option_texts(
             has_meaningful = any(_text_looks_meaningful(text) for text in option_texts)
             if not option_texts or not has_meaningful:
                 option_texts = [str(i + 1) for i in range(option_count)]
-    elif type_code in {TypeCode.SCORE, TypeCode.SCALE}:
+    elif type_code in {QuestionType.SCORE, QuestionType.SCALE}:
         scale_texts = _extract_rating_option_texts(question_div)
         if scale_texts:
             option_texts = scale_texts
@@ -285,7 +285,7 @@ def _extract_question_features(
 ) -> dict[str, object]:
     """Extract jump rules, display conditions, slider range, text inputs, and other features."""
     attached_option_selects: list[dict[str, object]] = []
-    if type_code in {TypeCode.SINGLE, TypeCode.MULTIPLE}:
+    if type_code in {QuestionType.SINGLE, QuestionType.MULTIPLE}:
         attached_option_selects = _extract_choice_attached_selects(question_div)
     has_jump, jump_rules = _extract_jump_rules_from_html(
         question_div, question_number, option_texts
@@ -295,7 +295,7 @@ def _extract_question_features(
     )
     is_slider_matrix = _question_div_looks_like_slider_matrix(question_div)
     slider_min, slider_max, slider_step = (None, None, None)
-    if type_code == TypeCode.SLIDER or is_slider_matrix:
+    if type_code == QuestionType.SLIDER or is_slider_matrix:
         slider_min, slider_max, slider_step = _extract_slider_range(question_div, question_number)
     text_input_count = _count_text_inputs_in_soup(question_div)
     text_input_labels = _extract_text_input_labels(question_div) if text_input_count > 1 else []
@@ -315,11 +315,11 @@ def _extract_question_features(
         has_gapfill,
         has_slider_matrix=is_slider_matrix,
     )
-    if is_multi_text and type_code == TypeCode.MATRIX:
-        type_code = TypeCode.MULTI_TEXT
+    if is_multi_text and type_code == QuestionType.MATRIX:
+        type_code = QuestionType.MULTI_TEXT
     forced_option_index: int | None = None
     forced_option_text: str | None = None
-    if type_code in {TypeCode.SINGLE, TypeCode.SCORE, TypeCode.SCALE, TypeCode.DROPDOWN}:
+    if type_code in {QuestionType.SINGLE, QuestionType.SCORE, QuestionType.SCALE, QuestionType.DROPDOWN}:
         forced_option_index, forced_option_text = _extract_force_select_option(
             question_div,
             title_text,
@@ -476,7 +476,7 @@ def _process_question_div(
     )
 
     if is_description:
-        type_code = TypeCode.DESCRIPTION
+        type_code = QuestionType.DESCRIPTION
 
     features = _extract_question_features(
         soup,

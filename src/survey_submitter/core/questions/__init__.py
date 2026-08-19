@@ -5,7 +5,6 @@ from survey_submitter.core.questions.types import (
     RATING_TYPES,
     TEXT_TYPES,
     QuestionType,
-    TypeCode,
 )
 
 __all__ = [
@@ -15,5 +14,4 @@ __all__ = [
     "QuestionType",
     "RATING_TYPES",
     "TEXT_TYPES",
-    "TypeCode",
 ]

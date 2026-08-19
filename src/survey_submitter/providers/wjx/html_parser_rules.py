@@ -7,7 +7,7 @@ try:
 except ImportError:
     BeautifulSoup = None  # ty: ignore[invalid-assignment]
 
-from survey_submitter.core.questions.types import TypeCode
+from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.providers.match_utils import normalize_match_text
 
 from .html_parser_choice import (
@@ -157,27 +157,27 @@ def _extract_question_metadata_from_html(soup, question_div, question_number: in
     multi_max_limit: int | None = None
 
     if type_code in {
-        TypeCode.SINGLE,
-        TypeCode.MULTIPLE,
-        TypeCode.SCORE,
-        TypeCode.SCALE,
-        TypeCode.ORDER,
+        QuestionType.SINGLE,
+        QuestionType.MULTIPLE,
+        QuestionType.SCORE,
+        QuestionType.SCALE,
+        QuestionType.ORDER,
     }:
         option_texts, fillable_indices, required_fillable_indices = _collect_choice_option_texts(
             question_div
         )
         option_count = len(option_texts)
 
-        if type_code == TypeCode.MULTIPLE:
+        if type_code == QuestionType.MULTIPLE:
             multi_min_limit, multi_max_limit = _extract_multiple_choice_limits(
                 question_div, question_number
             )
-    elif type_code == TypeCode.DROPDOWN:
+    elif type_code == QuestionType.DROPDOWN:
         option_texts = _collect_select_option_texts(question_div, soup, question_number)
         option_count = len(option_texts)
         if option_count > 0 and _question_div_has_shared_text_input(question_div):
             fillable_indices = [option_count - 1]
-    elif type_code == TypeCode.MATRIX:
+    elif type_code == QuestionType.MATRIX:
         matrix_rows, option_texts, row_texts = _collect_matrix_option_texts(
             soup, question_div, question_number
         )
@@ -185,7 +185,7 @@ def _extract_question_metadata_from_html(soup, question_div, question_number: in
     elif _question_div_looks_like_slider_matrix(question_div):
         matrix_rows, option_texts, row_texts = _collect_slider_matrix_metadata(question_div)
         option_count = len(option_texts)
-    elif type_code == TypeCode.SLIDER:
+    elif type_code == QuestionType.SLIDER:
         option_count = 1
     return (
         option_texts,

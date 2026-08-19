@@ -8,7 +8,7 @@ try:
 except ImportError:
     BeautifulSoup = None  # ty: ignore[invalid-assignment]
 
-from survey_submitter.core.questions.types import TypeCode
+from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.questions.utils import _normalize_question_type_code
 from survey_submitter.providers.match_utils import normalize_match_text
 
@@ -16,14 +16,14 @@ from .regexes import WJX_MODLEN_CLASS_RE, WJX_QUESTION_PREFIX_RE, WJX_TITLE_SUFF
 
 _TEXT_INPUT_ALLOWED_TYPES = {"text", "tel", "email", "number", "search", "url", "password"}
 _NON_TEXT_TYPES = {
-    TypeCode.SINGLE,
-    TypeCode.MULTIPLE,
-    TypeCode.SCORE,
-    TypeCode.SCALE,
-    TypeCode.MATRIX,
-    TypeCode.DROPDOWN,
-    TypeCode.SLIDER,
-    TypeCode.ORDER,
+    QuestionType.SINGLE,
+    QuestionType.MULTIPLE,
+    QuestionType.SCORE,
+    QuestionType.SCALE,
+    QuestionType.MATRIX,
+    QuestionType.DROPDOWN,
+    QuestionType.SLIDER,
+    QuestionType.ORDER,
 }
 _SELECT_PLACEHOLDER_PREFIXES = ("请选择", "请先选择")
 _LOCATION_VERIFY_MARKERS = (
@@ -384,7 +384,7 @@ def _question_div_looks_like_description(question_div, type_code: str) -> bool:
     if is_unreachable_placeholder:
         return True
 
-    if type_code not in {TypeCode.SINGLE, TypeCode.MULTIPLE}:
+    if type_code not in {QuestionType.SINGLE, QuestionType.MULTIPLE}:
         return False
 
     choice_inputs = question_div.find_all(
@@ -508,11 +508,11 @@ def _should_mark_as_multi_text(
     if has_slider_matrix:
         return False
     normalized = _normalize_question_type_code(type_code)
-    if normalized == TypeCode.MATRIX and has_gapfill:
+    if normalized == QuestionType.MATRIX and has_gapfill:
         return True
     if text_input_count < 2:
         return False
-    if normalized in {TypeCode.TEXT, TypeCode.LOCATION, TypeCode.MATRIX}:
+    if normalized in {QuestionType.TEXT, QuestionType.LOCATION, QuestionType.MATRIX}:
         return True
     if normalized in _NON_TEXT_TYPES:
         return False

@@ -22,12 +22,6 @@ class QuestionType(StrEnum):
     DESCRIPTION = "description"
 
 
-# ``TypeCode`` 是 ``QuestionType`` 的别名（``StrEnum`` 为 final 不可子类化，
-# 故以别名方式表达「问卷平台原始题型码 / wire-provenance」语义层）。
-# 两者成员与值完全一致，``TypeCode.X`` 与 ``QuestionType.X`` 等价。
-TypeCode = QuestionType
-
-
 CHOICE_TYPES = frozenset(
     {QuestionType.SINGLE, QuestionType.DROPDOWN, QuestionType.SCALE, QuestionType.SCORE}
 )
@@ -82,6 +76,5 @@ __all__ = [
     "QuestionType",
     "RATING_TYPES",
     "TEXT_TYPES",
-    "TypeCode",
     "convert_wire_type_code",
 ]

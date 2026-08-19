@@ -13,7 +13,7 @@ from survey_submitter.core.questions.schema import (
     MultiTextQuestionAnswerConfig,
     TextQuestionAnswerConfig,
 )
-from survey_submitter.core.questions.types import CHOICE_TYPES, TEXT_TYPES, QuestionType, TypeCode
+from survey_submitter.core.questions.types import CHOICE_TYPES, TEXT_TYPES, QuestionType
 from survey_submitter.core.reverse_fill.parser import (
     infer_reverse_fill_question_type,
     parse_choice_answer,
@@ -497,7 +497,7 @@ def _validate_and_collect_question(
 
     Returns True if question was successfully processed, False if skipped/error.
     """
-    if info.type_code == TypeCode.DESCRIPTION:
+    if info.type_code == QuestionType.DESCRIPTION:
         return False
 
     question_num = int(info.num or 0)
