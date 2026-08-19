@@ -3,18 +3,14 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import cast
 
+from bs4 import BeautifulSoup, Tag
+
 from survey_submitter.core.questions.types import QuestionType, convert_wire_type_code
 from survey_submitter.core.questions.utils import _is_text_like_question
 from survey_submitter.providers.contracts import (
     LOGIC_PARSE_STATUS_COMPLETE,
     LOGIC_PARSE_STATUS_NONE,
 )
-
-try:
-    from bs4 import BeautifulSoup, Tag
-except ImportError:
-    BeautifulSoup = None  # ty: ignore[invalid-assignment]
-    Tag = None  # ty: ignore[invalid-assignment]
 
 from .html_parser_choice import (
     _extract_choice_attached_selects,

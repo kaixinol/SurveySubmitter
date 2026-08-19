@@ -3,10 +3,7 @@ from __future__ import annotations
 import re
 from typing import cast
 
-try:
-    from bs4 import BeautifulSoup
-except ImportError:
-    BeautifulSoup = None  # ty: ignore[invalid-assignment]
+from bs4 import BeautifulSoup
 
 from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.providers.contracts import DisplayCondition, JumpRule
@@ -68,25 +65,24 @@ def _collect_multi_limit_text_fragments(question_div) -> list[str]:
             if text:
                 fragments.append(text)
 
-    if BeautifulSoup is not None:
-        cloned_soup = BeautifulSoup(str(question_div), "html.parser")
-        for selector in (
-            ".ui-controlgroup",
-            "ul",
-            "ol",
-            "table",
-            "textarea",
-            "select",
-            ".slider",
-            ".rangeslider",
-            ".range-slider",
-            ".errorMessage",
-        ):
-            for element in cloned_soup.select(selector):
-                element.decompose()
-        cleaned_text = _normalize_html_text(cloned_soup.get_text(" ", strip=True))
-        if cleaned_text:
-            fragments.append(cleaned_text)
+    cloned_soup = BeautifulSoup(str(question_div), "html.parser")
+    for selector in (
+        ".ui-controlgroup",
+        "ul",
+        "ol",
+        "table",
+        "textarea",
+        "select",
+        ".slider",
+        ".rangeslider",
+        ".range-slider",
+        ".errorMessage",
+    ):
+        for element in cloned_soup.select(selector):
+            element.decompose()
+    cleaned_text = _normalize_html_text(cloned_soup.get_text(" ", strip=True))
+    if cleaned_text:
+        fragments.append(cleaned_text)
 
     deduped: list[str] = []
     seen = set()

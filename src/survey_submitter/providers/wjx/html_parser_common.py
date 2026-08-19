@@ -3,10 +3,7 @@ from __future__ import annotations
 import html as html_lib
 import re
 
-try:
-    from bs4 import BeautifulSoup
-except ImportError:
-    BeautifulSoup = None  # ty: ignore[invalid-assignment]
+from bs4 import BeautifulSoup
 
 from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.core.questions.utils import _normalize_question_type_code
