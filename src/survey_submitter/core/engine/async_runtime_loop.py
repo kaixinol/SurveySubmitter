@@ -238,6 +238,20 @@ class AsyncSlotRunner:
         except asyncio.TimeoutError:
             return self.run_context.stop_requested()
 
+    async def _acquire_scheduler_token(self) -> int | None:
+        acquire_task = asyncio.create_task(self.scheduler.acquire())
+        stop_task = asyncio.create_task(self.run_context.stop_event.wait())
+        done, _pending = await asyncio.wait(
+            (acquire_task, stop_task), return_when=asyncio.FIRST_COMPLETED
+        )
+        if stop_task in done:
+            acquire_task.cancel()
+            await asyncio.gather(acquire_task, return_exceptions=True)
+            return None
+        stop_task.cancel()
+        await asyncio.gather(stop_task, return_exceptions=True)
+        return await acquire_task
+
     def _resolve_dispatch_delay_seconds(self) -> float:
         min_wait, max_wait = self.config.submit_interval_range_seconds
         if max_wait <= 0:
@@ -447,7 +461,7 @@ class AsyncSlotRunner:
         while True:
             if await self._should_stop_loop():
                 break
-            token_id = await self.scheduler.acquire()
+            token_id = await self._acquire_scheduler_token()
             if token_id is None:
                 break
             outcome = _RoundOutcome()
