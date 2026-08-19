@@ -8,17 +8,10 @@ from pathlib import Path
 from loguru import logger
 
 from survey_submitter.constants import (
-    AUTO_SAVE_LOG_RETENTION_COUNT_KEY,
     AUTO_SAVE_LOG_RETENTION_OPTIONS,
-    AUTO_SAVE_LOGS_SETTING_KEY,
     DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT,
     DEFAULT_AUTO_SAVE_LOGS,
     LOG_FORMAT,
-)
-from survey_submitter.io.config.settings_store import (
-    app_settings,
-    get_bool_setting,
-    get_int_setting,
 )
 from survey_submitter.logging.log_utils import _safe_internal_log
 from survey_submitter.system.paths import get_user_logs_directory
@@ -89,19 +82,13 @@ def _ensure_logs_dir(runtime_directory: str) -> str:
 
 
 def get_auto_save_log_settings() -> tuple[bool, int]:
-    settings = app_settings()
-    enabled = get_bool_setting(settings.value(AUTO_SAVE_LOGS_SETTING_KEY), DEFAULT_AUTO_SAVE_LOGS)
     max_keep = (
         max(AUTO_SAVE_LOG_RETENTION_OPTIONS)
         if AUTO_SAVE_LOG_RETENTION_OPTIONS
         else DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT
     )
-    keep_count = get_int_setting(
-        settings.value(AUTO_SAVE_LOG_RETENTION_COUNT_KEY),
-        DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT,
-    )
-    keep_count = max(1, min(keep_count, max_keep))
-    return bool(enabled), int(keep_count)
+    keep_count = min(DEFAULT_AUTO_SAVE_LOG_RETENTION_COUNT, max_keep)
+    return bool(DEFAULT_AUTO_SAVE_LOGS), int(keep_count)
 
 
 def prune_session_log_files(runtime_directory: str, keep_count: int) -> int:

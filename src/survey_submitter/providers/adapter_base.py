@@ -8,7 +8,6 @@ from survey_submitter.providers.contracts import SurveyDefinition
 
 ParseSurveyHook = Callable[[str], Awaitable[SurveyDefinition]]
 FillSurveyHttpHook = Callable[..., Awaitable[bool]]
-PagePredicateHook = Callable[[Any], Awaitable[bool]]
 
 
 async def _return_false(*_args: Any, **_kwargs: Any) -> bool:
@@ -19,7 +18,6 @@ async def _return_false(*_args: Any, **_kwargs: Any) -> bool:
 class ProviderAdapterHooks:
     parse_survey: ParseSurveyHook
     fill_survey_http: FillSurveyHttpHook = _return_false
-    is_completion_page: PagePredicateHook = _return_false
 
 
 class CallableProviderAdapter:
@@ -54,9 +52,6 @@ class CallableProviderAdapter:
                 submit_proxy_lease_factory=submit_proxy_lease_factory,
             )
         )
-
-    async def is_completion_page_async(self, driver: Any) -> bool:
-        return bool(await self._hooks.is_completion_page(driver))
 
 
 __all__ = [

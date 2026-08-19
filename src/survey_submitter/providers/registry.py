@@ -97,16 +97,10 @@ async def fill_survey_http(
         )
 
 
-async def is_completion_page(driver: Any, provider: str | None = None) -> bool:
-
-    return bool(await _get_provider_adapter(provider=provider).is_completion_page_async(driver))
-
-
 __all__ = [
     "SURVEY_PROVIDER_WJX",
     "SurveyDefinition",
     "detect_survey_provider",
     "parse_survey",
     "fill_survey_http",
-    "is_completion_page",
 ]
