@@ -29,7 +29,7 @@ def _jump_rule_terminates_survey(rule: dict[str, object]) -> bool:
         return False
     if "terminates_survey" in rule:
         return bool(rule.get("terminates_survey"))
-    option_text = str(rule.get("option_text") or "").strip()
+    option_text = str(rule.get("option_text") or "")
     return bool(option_text and any(keyword in option_text for keyword in _TERMINATE_JUMP_KEYWORDS))
 
 
@@ -47,7 +47,7 @@ def question_has_survey_logic(question: SurveyQuestionMeta) -> bool:
 
 
 def _logic_status_is_complete_enough(question: SurveyQuestionMeta) -> bool:
-    logic_status = str(question.logic_parse_status or "").strip().lower()
+    logic_status = (question.logic_parse_status or "").lower()
     if logic_status == LOGIC_PARSE_STATUS_COMPLETE:
         return True
     if logic_status != LOGIC_PARSE_STATUS_UNKNOWN:
@@ -85,7 +85,7 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
             except (ValueError, TypeError):
                 source_question_num = 0
             condition_mode = (
-                str(condition.get("condition_mode") or "selected").strip() or "selected"
+                condition.get("condition_mode") or "selected"
             )
             if source_question_num <= 0:
                 return f"第{question_num}题显隐条件缺少来源题号"
@@ -103,7 +103,7 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
                 )
             except (ValueError, TypeError):
                 target_question_num = 0
-            condition_mode = str(target.get("condition_mode") or "selected").strip() or "selected"
+            condition_mode = target.get("condition_mode") or "selected"
             if target_question_num <= question_num:
                 return f"第{question_num}题控制显示规则存在回跳"
             if condition_mode not in _SUPPORTED_CONDITION_MODES:
@@ -146,10 +146,10 @@ def _condition_is_met(
     if source_action is None:
         return False
 
-    condition_mode = str(condition.get("condition_mode") or "selected").strip() or "selected"
+    condition_mode = condition.get("condition_mode") or "selected"
     option_indices = condition.get("condition_option_indices")
     normalized_indices = (
-        {int(item) for item in list(option_indices or []) if str(item).strip() and int(item) >= 0}
+        {int(item) for item in list(option_indices or []) if str(item) and int(item) >= 0}
         if isinstance(option_indices, list)
         else set()
     )
@@ -184,7 +184,7 @@ def _question_is_visible(
             source_question_num = 0
         if source_question_num <= 0:
             continue
-        condition_mode = str(condition.get("condition_mode") or "selected").strip() or "selected"
+        condition_mode = str(condition.get("condition_mode") or "selected")
         grouped_conditions.setdefault((source_question_num, condition_mode), []).append(condition)
     if not grouped_conditions:
         return not bool(question.has_display_condition)

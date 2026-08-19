@@ -23,7 +23,7 @@ class AsyncHttpSubmitter:
 
     def uses_http_runtime(self) -> bool:
         provider = normalize_survey_provider(self.config.provider)
-        if not str(self.config.url or "").strip() or provider not in HTTP_RUNTIME_PROVIDERS:
+        if not self.config.url or "" or provider not in HTTP_RUNTIME_PROVIDERS:
             return False
         questions = list((self.config.questions_metadata or {}).values())
         return not bool(get_http_logic_fallback_reason(questions))
@@ -32,11 +32,11 @@ class AsyncHttpSubmitter:
         provider = normalize_survey_provider(self.config.provider)
         if provider not in HTTP_RUNTIME_PROVIDERS:
             return ""
-        url = str(self.config.url or "").strip()
+        url = self.config.url or ""
         if not url:
             return "问卷链接为空，无法进入纯 HTTP 提交"
         questions = list((self.config.questions_metadata or {}).values())
-        reason = str(get_http_logic_fallback_reason(questions) or "").strip()
+        reason = get_http_logic_fallback_reason(questions) or ""
         if reason:
             return reason
         return ""

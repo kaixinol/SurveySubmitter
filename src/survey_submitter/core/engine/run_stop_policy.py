@@ -78,7 +78,7 @@ class RunStopPolicy:
             else:
                 self.state.consecutive_fail_count += 1
                 consecutive_failures = int(self.state.consecutive_fail_count or 0)
-            message = str(log_message or "").strip()
+            message = log_message or ""
             if message:
                 logger.warning(f"{message}")
             threshold_enabled = bool(self.config.stop_on_fail or force_stop)

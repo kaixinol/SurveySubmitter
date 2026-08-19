@@ -68,13 +68,13 @@ def get_current_session_log_path() -> str:
 
 
 def _ensure_logs_dir(runtime_directory: str) -> str:
-    normalized = str(Path(str(runtime_directory or "").strip()).resolve())
+    normalized = Path(str(runtime_directory or "")).resolve()
     if not normalized:
         raise ValueError("runtime_directory 不能为空")
 
     candidate_name = Path(normalized).name.lower()
     if candidate_name == "logs":
-        logs_dir = normalized
+        logs_dir = str(normalized)
     else:
         logs_dir = str(Path(normalized) / "logs")
     Path(logs_dir).mkdir(parents=True, exist_ok=True)

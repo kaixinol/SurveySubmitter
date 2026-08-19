@@ -163,7 +163,7 @@ def _resolve_runtime_dimension(
     allows_joint_ratio = bool(allows_reliability) if allows_reliability is not None else True
     if not reliability_mode_enabled or (strict_ratio and not allows_joint_ratio):
         return None
-    raw_dimension = str(qi.details.dimension or "").strip()
+    raw_dimension = qi.details.dimension or ""
     if not raw_dimension or raw_dimension == DIMENSION_UNGROUPED:
         return None
     return raw_dimension
@@ -240,7 +240,7 @@ _ATTITUDE_POSITIVE_CORES = (
 
 
 def _normalize_ordinal_text(value: object) -> str:
-    text = str(value or "").strip()
+    text = str(value) if value else ""
     return re.sub(r"\s+", "", text)
 
 
@@ -321,7 +321,7 @@ def _match_attitude_scale(texts: list[str]) -> list[int] | None:
 
 
 def _is_ordinal_options(option_texts: list[str]) -> bool:
-    texts = [_normalize_ordinal_text(item) for item in option_texts if str(item or "").strip()]
+    texts = [_normalize_ordinal_text(item) for item in option_texts if item or ""]
     if len(texts) < 2:
         return False
     scores = (
@@ -568,7 +568,7 @@ def _handle_slider(
     target.question_config_index_map[question_num] = mapped_value
     _remember_provider_mapping(target, qi, mapped_value, survey_provider)
     idx += 1
-    mode = str(qi.details.distribution_mode or "").strip().lower()
+    mode = (qi.details.distribution_mode or "").lower()
     if mode == "random":
         target.slider_targets.append(float("nan"))
         return idx, True
@@ -613,7 +613,7 @@ def _handle_location(
     _remember_provider_mapping(target, qi, mapped_value, survey_provider)
     if isinstance(qi.details.answer_config, LocationQuestionAnswerConfig):
         target.location_parts[question_num] = [
-            str(item or "").strip()
+            item or ""
             for item in list(qi.details.answer_config.location_parts or [])[:3]
         ]
     if qi.details.answer_config.random_value_pool:
@@ -645,7 +645,7 @@ def _handle_text(
         _remember_provider_mapping(target, qi, mapped_value, survey_provider)
         if isinstance(qi.details.answer_config, LocationQuestionAnswerConfig):
             target.location_parts[question_num] = [
-                str(item or "").strip()
+                item or ""
                 for item in list(qi.details.answer_config.location_parts or [])[:3]
             ]
         if qi.details.answer_config.random_value_pool:
@@ -654,11 +654,11 @@ def _handle_text(
             )
 
     text_random_mode = (
-        str(qi.details.answer_config.text_random_mode or _TEXT_RANDOM_NONE).strip().lower()
+        str(qi.details.answer_config.text_random_mode or _TEXT_RANDOM_NONE).lower()
         if isinstance(qi.details.answer_config, TextQuestionAnswerConfig)
         else _TEXT_RANDOM_NONE
     )
-    normalized_values = [str(item).strip() for item in (qi.options or []) if str(item).strip()]
+    normalized_values = [str(item) for item in (qi.options or []) if str(item)]
     normalized_blank_ai_flags: list[bool] = []
     normalized_blank_int_ranges: list[list[int]] = []
     if isinstance(qi.details.answer_config, MultiTextQuestionAnswerConfig):
@@ -671,7 +671,7 @@ def _handle_text(
                 serialize_random_int_range(item) for item in raw_blank_int_ranges
             ]
         for blank_idx, mode in enumerate(qi.details.answer_config.multi_text_blank_modes or []):
-            if str(mode or _TEXT_RANDOM_NONE).strip().lower() != _TEXT_RANDOM_INTEGER:
+            if str(mode or _TEXT_RANDOM_NONE).lower() != _TEXT_RANDOM_INTEGER:
                 continue
             target_range = (
                 raw_blank_int_ranges[blank_idx] if blank_idx < len(raw_blank_int_ranges) else []
@@ -842,7 +842,7 @@ def _apply_reliability_fallback(
     reliability_candidates: list[tuple[int, bool, str]],
 ) -> None:
     has_explicit_runtime_dimension = any(
-        isinstance(dimension, str) and bool(str(dimension).strip())
+        isinstance(dimension, str) and bool(str(dimension))
         for dimension in target.question_dimension_map.values()
     )
     if reliability_mode_enabled and reliability_candidates and not has_explicit_runtime_dimension:

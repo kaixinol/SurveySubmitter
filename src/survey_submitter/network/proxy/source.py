@@ -60,7 +60,7 @@ def _safe_to_string(value: str | int | float | None, default: str = "") -> str:
         return default
 
     try:
-        return str(value).strip()
+        return str(value)
     except (ValueError, TypeError):
         return default
 
@@ -144,7 +144,7 @@ def get_proxy_minute_by_answer_seconds(
     *,
     provider: str | None = None,
 ) -> int:
-    normalized_provider = str(provider or "").strip().lower()
+    normalized_provider = (provider or "").lower()
     if normalized_provider == SURVEY_PROVIDER_WJX:
         return 1
     required_seconds = get_proxy_ttl_for_answer_duration(total_seconds)
@@ -181,7 +181,7 @@ def set_proxy_occupy_minute_by_answer_duration(
         else:
             max_seconds = min_seconds
     max_seconds = max(max_seconds, min_seconds)
-    normalized_provider = str(provider or "").strip().lower()
+    normalized_provider = (provider or "").lower()
     minute = get_proxy_minute_by_answer_seconds(max_seconds, provider=normalized_provider)
     required_seconds = get_proxy_ttl_for_answer_duration(max_seconds)
     with _config_lock:
@@ -235,7 +235,7 @@ def get_default_proxy_area_code() -> str:
 
 def get_custom_proxy_api_override() -> str:
     with _config_lock:
-        return (_proxy_api_url_override or "").strip()
+        return _proxy_api_url_override or ""
 
 
 def has_custom_proxy_api_override() -> bool:
@@ -280,7 +280,7 @@ def apply_proxy_source_settings(source: str, *, custom_api_url: str | None = Non
 
     normalized = normalize_proxy_source(source)
     if normalized == PROXY_SOURCE_CUSTOM:
-        set_proxy_api_override(custom_api_url if custom_api_url else None)
+        set_proxy_api_override(custom_api_url or None)
     else:
         set_proxy_api_override(None)
     set_proxy_source(normalized)
@@ -295,5 +295,5 @@ def apply_proxy_area_code(area_code: str | None) -> ProxySettings:
 
 def apply_custom_proxy_api(custom_api_url: str | None) -> ProxySettings:
 
-    set_proxy_api_override(custom_api_url if custom_api_url else None)
+    set_proxy_api_override(custom_api_url or None)
     return get_proxy_settings()

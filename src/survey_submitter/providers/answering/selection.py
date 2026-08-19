@@ -27,7 +27,7 @@ def format_weight_value(value: Any) -> str:
     try:
         number = float(value)
     except (ValueError, TypeError):
-        return str(value or "").strip() or "随机"
+        return value or "随机"
     if math.isnan(number) or math.isinf(number):
         return "随机"
     text = f"{number:.6f}".rstrip("0").rstrip(".")

@@ -57,7 +57,7 @@ _BENEFIT_CITY_CODE_INDEX_CACHE: dict[str, str] | None = None
 
 
 def _normalize_province_name(name: str | None) -> str:
-    text = re.sub(r"\s+", "", (name or "").strip())
+    text = re.sub(r"\s+", "", (name or ""))
     for suffix in _PROVINCE_SUFFIXES:
         if text.endswith(suffix):
             text = text[: -len(suffix)]
@@ -66,7 +66,7 @@ def _normalize_province_name(name: str | None) -> str:
 
 
 def _normalize_city_name(name: str | None) -> str:
-    text = re.sub(r"\s+", "", (name or "").strip())
+    text = re.sub(r"\s+", "", (name or ""))
     if text == "市辖区":
         return text
     for suffix in _CITY_SUFFIXES:
@@ -77,7 +77,7 @@ def _normalize_city_name(name: str | None) -> str:
 
 
 def _normalize_area_code(area_code: str | None) -> str:
-    text = (area_code or "").strip()
+    text = area_code or ""
     return text if _AREA_CODE_PATTERN.fullmatch(text) else ""
 
 
@@ -96,13 +96,13 @@ def load_supported_area_codes() -> tuple[set[str], bool]:
         return codes, has_all
 
     for raw_line in content.splitlines():
-        line = raw_line.strip()
+        line = raw_line
         if not line or line.startswith("#"):
             continue
         parts = line.split()
         if len(parts) < 2:
             continue
-        code = str(parts[-1]).strip()
+        code = str(parts[-1])
         if not code:
             continue
         if code.lower() == "all":
@@ -166,7 +166,7 @@ def _build_local_area_lookup() -> tuple[list[dict[str, object]], dict[str, dict[
         if not isinstance(province, dict):
             continue
         province_code = _normalize_area_code(cast("str | None", province.get("code")))
-        province_name = str(province.get("name") or "").strip()
+        province_name = str(province.get("name") or "")
         if not province_code or not province_name:
             continue
         province_request_name = _MUNICIPALITY_REQUEST_NAMES.get(
@@ -180,7 +180,7 @@ def _build_local_area_lookup() -> tuple[list[dict[str, object]], dict[str, dict[
             if not isinstance(city, dict):
                 continue
             city_code = _normalize_area_code(cast("str | None", city.get("code")))
-            city_name = str(city.get("name") or "").strip()
+            city_name = str(city.get("name") or "")
             if not city_code or not city_name:
                 continue
             request_name = (
@@ -224,7 +224,7 @@ def _parse_benefit_area_text(content: str) -> dict[str, set[str]]:
     current_province = ""
 
     for raw_line in str(content or "").splitlines():
-        line = raw_line.strip()
+        line = raw_line
         if not line:
             continue
         province_match = _ONLINE_PROVINCE_PATTERN.match(line)
@@ -323,7 +323,7 @@ def resolve_proxy_area_for_source(source: str, area_code: str | None) -> str:
     normalized_code = _normalize_area_code(area_code)
     if not normalized_code:
         return ""
-    source_key = str(source or "").strip().lower()
+    source_key = (source or "").lower()
     if source_key == "benefit":
         return str(build_benefit_city_code_index().get(normalized_code) or "")
     return normalized_code

@@ -27,7 +27,7 @@ MIN_PROXY_TTL_SECONDS = 50
 def _normalize_proxy_address(proxy_address: str | None) -> str | None:
     if not proxy_address:
         return None
-    normalized = proxy_address.strip()
+    normalized = proxy_address
     if not normalized:
         return None
     if "://" not in normalized:
@@ -48,7 +48,7 @@ def _format_host_port(hostname: str, port: int | None) -> str:
 def _mask_proxy_for_log(proxy_address: str | None) -> str:
     if not proxy_address:
         return ""
-    text = str(proxy_address).strip()
+    text = str(proxy_address)
     if not text:
         return ""
     candidate = text if "://" in text else f"http://{text}"
@@ -69,7 +69,7 @@ def _mask_proxy_for_log(proxy_address: str | None) -> str:
 
 
 def _parse_expire_at_timestamp(expire_at: str | None) -> float:
-    text = str(expire_at or "").strip()
+    text = expire_at or ""
     if not text:
         return 0.0
     try:
@@ -92,13 +92,13 @@ def _build_proxy_lease(
     normalized = _normalize_proxy_address(proxy_address)
     if not normalized:
         return None
-    expire_text = str(expire_at or "").strip()
+    expire_text = expire_at or ""
     return ProxyLease(
         address=normalized,
         expire_at=expire_text,
         expire_ts=_parse_expire_at_timestamp(expire_text),
         poolable=bool(poolable),
-        source=str(source or "").strip(),
+        source=source or "",
     )
 
 
@@ -122,7 +122,7 @@ def coerce_proxy_lease(item: Any, *, source: str = "") -> ProxyLease | None:
         address = item.get("address") or item.get("proxy") or item.get("host")
         expire_at = item.get("expire_at")
         poolable = bool(item.get("poolable", True))
-        item_source = str(item.get("source") or source or "").strip()
+        item_source = item.get("source") or source or ""
         if address and item.get("port") and isinstance(address, str) and ":" not in address:
             address = f"{address}:{item.get('port')}"
         return _build_proxy_lease(
@@ -152,7 +152,7 @@ def get_proxy_required_ttl_seconds(
                     max_seconds = max(0, int(float(first)))
                 except (ValueError, TypeError, OverflowError):
                     max_seconds = 0
-    normalized_provider = str(provider or "").strip().lower()
+    normalized_provider = (provider or "").lower()
     if normalized_provider == SURVEY_PROVIDER_WJX:
         return MIN_PROXY_TTL_SECONDS
     if normalized_provider:

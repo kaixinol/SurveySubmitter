@@ -57,7 +57,7 @@ class DistributionRuntimeMixin:
         self: "_DistributionRuntimeHost", thread_name: str | None = None
     ) -> None:
         key = (
-            str(thread_name or threading.current_thread().name or "Worker-?").strip() or "Worker-?"
+            thread_name or threading.current_thread().name or "Worker-?"
         )
         with self.lock:
             self.pending_by_thread[key] = []
@@ -70,7 +70,7 @@ class DistributionRuntimeMixin:
         thread_name: str | None = None,
     ) -> None:
         key = (
-            str(thread_name or threading.current_thread().name or "Worker-?").strip() or "Worker-?"
+            thread_name or threading.current_thread().name or "Worker-?"
         )
         normalized_option_count = max(0, int(option_count or 0))
         normalized_option_index = int(option_index or 0)
@@ -87,7 +87,7 @@ class DistributionRuntimeMixin:
         self: "_DistributionRuntimeHost", thread_name: str | None = None
     ) -> int:
         key = (
-            str(thread_name or threading.current_thread().name or "Worker-?").strip() or "Worker-?"
+            thread_name or threading.current_thread().name or "Worker-?"
         )
         committed = 0
         with self.lock:

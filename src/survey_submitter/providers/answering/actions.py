@@ -44,6 +44,6 @@ def action_payload(action: AnswerAction) -> dict[str, Any]:
         "optionFillTexts": [
             {"optionIndex": int(option_index), "value": str(value or "")}
             for option_index, value in action.option_fill_texts
-            if str(value or "").strip()
+            if value or ""
         ],
     }

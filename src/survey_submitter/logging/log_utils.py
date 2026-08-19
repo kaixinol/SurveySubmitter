@@ -34,7 +34,7 @@ def _should_filter_noise(message: str) -> bool:
     if message is None:
         return True
     text = str(message)
-    if not text.strip():
+    if not text:
         return True
     return any(pattern in text for pattern in _SUPPRESSED_RUNTIME_NOISE_PATTERNS)
 
@@ -73,8 +73,8 @@ def log_deduped_message(
     *,
     level: str = "INFO",
 ) -> bool:
-    normalized_key = str(key or "").strip()
-    normalized_message = str(message or "").strip()
+    normalized_key = key or ""
+    normalized_message = message or ""
     if not normalized_key or not normalized_message:
         return False
     with _DEDUPED_LOG_LOCK:
@@ -86,7 +86,7 @@ def log_deduped_message(
 
 
 def reset_deduped_log_message(key: str) -> None:
-    normalized_key = str(key or "").strip()
+    normalized_key = key or ""
     if not normalized_key:
         return
     with _DEDUPED_LOG_LOCK:

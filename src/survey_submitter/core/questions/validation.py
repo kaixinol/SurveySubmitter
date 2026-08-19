@@ -32,7 +32,7 @@ def _extract_text_min_length(*fragments: Any) -> int | None:
 
     limits: list[int] = []
     for fragment in fragments:
-        text = str(fragment or "").strip()
+        text = fragment or ""
         if not text:
             continue
         for pattern in _TEXT_MIN_LENGTH_PATTERNS:
@@ -42,7 +42,7 @@ def _extract_text_min_length(*fragments: Any) -> int | None:
 
 
 def _is_text_ai_enabled(qi: QuestionInfo) -> bool:
-    question_type = qi.question_type.strip()
+    question_type = qi.question_type
     if question_type == QuestionType.TEXT:
         return bool(qi.details.answer_config.ai_enabled)
     if question_type == QuestionType.MULTI_TEXT and isinstance(
@@ -56,7 +56,7 @@ def _is_text_ai_enabled(qi: QuestionInfo) -> bool:
 
 
 def _text_random_mode_label(raw_mode: Any) -> str:
-    mode = str(raw_mode or "").strip().lower()
+    mode = (raw_mode or "").lower()
     return {
         "name": "随机姓名",
         "mobile": "随机手机号",
@@ -74,7 +74,7 @@ def _display_question_num(raw_num: Any, question_info: SurveyQuestionMeta | None
 
 
 def _pick_config_weights(qi: QuestionInfo) -> Any:
-    distribution_mode = str(qi.details.distribution_mode or "").strip().lower()
+    distribution_mode = (qi.details.distribution_mode or "").lower()
     custom_weights = qi.details.custom_weights
     probabilities = qi.details.probabilities
     return (
@@ -103,9 +103,9 @@ def _build_question_info_map(
 def _format_unsupported_error(unsupported_questions: list[SurveyQuestionMeta]) -> str:
     lines = ["当前问卷包含暂不支持的题型，已禁止启动："]
     for item in unsupported_questions[:MAX_DISPLAYED_UNSUPPORTED_ITEMS]:
-        title = str(item.title or f"第{item.num}题").strip()
-        provider_type = str(item.provider_type or item.type_code or "未知类型").strip()
-        reason = str(item.unsupported_reason or "").strip()
+        title = str(item.title or f"第{item.num}题")
+        provider_type = item.provider_type or item.type_code or "未知类型"
+        reason = item.unsupported_reason or ""
         suffix = f"（{provider_type}，{reason}）" if reason else f"（{provider_type}）"
         lines.append(f"  - 第 {item.num} 题：{title}{suffix}")
     if len(unsupported_questions) > MAX_DISPLAYED_UNSUPPORTED_ITEMS:
@@ -159,7 +159,7 @@ def _validate_text_entry(
     if min_text_length is None or min_text_length <= 0:
         return
     text_random_mode = (
-        str(qi.details.answer_config.text_random_mode or "").strip().lower()
+        (qi.details.answer_config.text_random_mode or "").lower()
         if isinstance(qi.details.answer_config, TextQuestionAnswerConfig)
         else ""
     )

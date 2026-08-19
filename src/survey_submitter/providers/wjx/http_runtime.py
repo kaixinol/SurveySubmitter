@@ -96,22 +96,22 @@ _WJX_SPECIAL_CHAR_REPLACEMENTS = (
 
 
 def _proxy_arg(proxy_address: str | None) -> dict[str, str] | str:
-    proxy = (proxy_address or "").strip()
+    proxy = proxy_address or ""
     return proxy if proxy else {}
 
 
 def _short_id_from_url(url: str) -> str:
-    parsed = urlparse(url.strip())
+    parsed = urlparse(url)
     path = parsed.path or ""
     last = path.rstrip("/").rsplit("/", 1)[-1]
-    shortid = last.replace(".aspx", "").strip()
+    shortid = last.replace(".aspx", "")
     if not shortid:
         raise RuntimeError("问卷星链接缺少 shortid")
     return shortid
 
 
 def _submit_domain(url: str) -> str:
-    host = urlparse(url.strip()).netloc.lower()
+    host = urlparse(url).netloc.lower()
     if "ks.wjx.com" in host:
         return "ks.wjx.com"
     return "v.wjx.cn"
@@ -146,21 +146,21 @@ def _extract_wjx_scene_id(page_html: str) -> str:
         match = pattern.search(text)
         if not match:
             continue
-        value = (match.group("value") or "").strip()
+        value = match.group("value") or ""
         if value:
             return value
     return _WJX_DEFAULT_SCENE_ID
 
 
 def _resolve_user_agent(user_agent: str | None) -> str:
-    text = (user_agent or "").strip()
+    text = user_agent or ""
     if text:
         return text
-    return str(DEFAULT_USER_AGENT or USER_AGENT_PRESETS.get("pc_web", {}).get("ua") or "").strip()
+    return DEFAULT_USER_AGENT or USER_AGENT_PRESETS.get("pc_web", {}).get("ua") or ""
 
 
 def _is_wechat_user_agent(user_agent: str | None) -> bool:
-    return "micromessenger" in (user_agent or "").strip().lower()
+    return "micromessenger" in (user_agent or "").lower()
 
 
 def _resolve_wjx_channel_profile(
@@ -168,7 +168,7 @@ def _resolve_wjx_channel_profile(
     user_agent_profile: UserAgentProfile | None = None,
 ) -> WjxChannelProfile:
     category = (
-        str(user_agent_profile.category if user_agent_profile is not None else "").strip().lower()
+        str(user_agent_profile.category if user_agent_profile is not None else "").lower()
     )
     if not category:
         category = "wechat" if _is_wechat_user_agent(user_agent) else "pc"
@@ -204,7 +204,7 @@ def _build_jqsign(jqnonce: str, ktimes: int) -> str:
 
 
 def _escape_wjx_submit_text(value: str | int | float | None) -> str:
-    text = str(value or "").strip()
+    text = str(value) if value else ""
     if not text:
         return ""
     for source, target in _WJX_SPECIAL_CHAR_REPLACEMENTS:
@@ -353,20 +353,20 @@ def _question_error_label(config: ExecutionConfig, question_num: int) -> str:
         if isinstance(question, _QuestionMetaBase) and question.display_num
         else 0
     )
-    title = str(question.title or "").strip()
+    title = question.title or ""
     prefix = f"第{display_num if display_num > 0 else int(question_num)}题"
     return f"{prefix}（{title}）" if title else prefix
 
 
 def is_wjx_submission_verification_response(response_text: str) -> bool:
-    text = response_text.strip()
+    text = response_text
     if not text:
         return False
     return any(marker in text for marker in _WJX_SUBMISSION_VERIFICATION_MARKERS)
 
 
 def classify_wjx_submit_response(response_text: str) -> str:
-    text = response_text.strip()
+    text = response_text
     if is_wjx_submission_verification_response(text):
         return WjxSubmitResult.VERIFICATION
     lowered = text.lower()
@@ -388,15 +388,15 @@ def _raise_submit_rejected(
     *,
     proxy_address: str | None = None,
 ) -> None:
-    text = response_text.strip()
+    text = response_text
     if is_wjx_submission_verification_response(text):
         message = (
             WJX_PROXY_SUBMISSION_VERIFICATION_MESSAGE
-            if proxy_address and proxy_address.strip()
+            if proxy_address and proxy_address
             else WJX_SUBMISSION_VERIFICATION_MESSAGE
         )
         raise SubmissionVerificationRequiredError(message)
-    parts = [part.strip() for part in text.split("〒", 2)]
+    parts = [part for part in text.split("〒", 2)]
     if len(parts) != 3:
         raise RuntimeError(f"问卷星提交被拒绝：{text[:200]}")
     try:
@@ -574,13 +574,11 @@ async def _post_wjx_submit_request(
 ) -> tuple[str, str | None]:
     """Acquire proxy if needed, POST the submit request, return (response_text, resolved_proxy_address)."""
     await update_http_submit_step(ctx, thread_name, "提交问卷")
-    submit_proxy_address = proxy_address.strip() if proxy_address else None
+    submit_proxy_address = proxy_address or None
     submit_proxy_lease = None
     if submit_proxy_lease_factory is not None:
         submit_proxy_lease = await submit_proxy_lease_factory()
-        submit_proxy_address = (
-            submit_proxy_lease.address.strip() if submit_proxy_lease.address else None
-        )
+        submit_proxy_address = submit_proxy_lease.address or None
     if bool(config.proxy.enabled) and not submit_proxy_address:
         raise SubmitProxyUnavailableError("提交前未获取到随机 IP")
     submit_proxies = _proxy_arg(submit_proxy_address)
@@ -608,7 +606,7 @@ async def _post_wjx_submit_request(
         if submit_proxy_address and thread_name:
             release_submit_proxy(ctx, thread_name, submit_proxy_address)
         raise
-    return str(response.text or "").strip(), submit_proxy_address
+    return response.text or "", submit_proxy_address
 
 
 def _process_wjx_submit_response(

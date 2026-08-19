@@ -131,7 +131,7 @@ def _coerce_int(value: object, default: int = 0) -> int:
 
 
 def _normalize_question_type(value: object) -> str:
-    raw = str(value or "").strip() or QuestionType.UNKNOWN
+    raw = value or "" or QuestionType.UNKNOWN
     try:
         return QuestionType(raw).value
     except ValueError:
@@ -146,7 +146,7 @@ def _as_bool(value: object, default: bool = False) -> bool:
     if isinstance(value, (int, float)):
         return bool(value)
     if isinstance(value, str):
-        text = value.strip().lower()
+        text = value.lower()
         if text in {"1", "true", "yes", "on"}:
             return True
         if text in {"0", "false", "no", "off", ""}:
@@ -186,13 +186,13 @@ def _select_user_agent_from_ratios(
 
     key = chooser.choice(ua_keys)
     preset = USER_AGENT_PRESETS.get(key) or {}
-    ua = str(preset.get("ua") or "").strip()
-    label = str(preset.get("label") or "").strip()
+    ua = preset.get("ua") or ""
+    label = preset.get("label") or ""
     if not ua:
         return None
     return UserAgentProfile(
-        category=str(device_type or "").strip(),
-        preset_key=str(key or "").strip(),
+        category=device_type or "",
+        preset_key=key or "",
         ua=ua,
         label=label,
     )
@@ -239,7 +239,7 @@ def _normalize_multi_text_blank_modes(raw: object) -> list[str]:
         return []
     normalized: list[str] = []
     for item in raw:
-        mode = str(item or "none").strip().lower()
+        mode = str(item) if item else "none"
         normalized.append(mode if mode in _TEXT_RANDOM_MODES else "none")
     return normalized
 
@@ -263,7 +263,7 @@ def _normalize_multi_text_blank_int_ranges(raw: object) -> list[list[int]]:
 
 
 def _normalize_dimension_value(raw: object) -> str | None:
-    text = str(raw or "").strip()
+    text = str(raw) if raw else ""
     if not text or text == "未分组":
         return None
     return text
@@ -369,7 +369,7 @@ def deserialize_question_detail(data: dict[str, object]) -> QuestionInfo:
         raise ValueError(f"{_CONFIG_CORRUPTED_MESSAGE}：题目配置包含未知字段 {sorted(unknown)}")
 
     num = _coerce_int(data.get("num"), 0)
-    title = str(data.get("title") or "").strip()
+    title = str(data.get("title") or "")
     question_type = _normalize_question_type(data.get("question_type"))
     options = _as_list(data.get("options")) if isinstance(data.get("options"), list) else []
     required = _as_bool(data.get("required"))
@@ -384,7 +384,7 @@ def deserialize_question_detail(data: dict[str, object]) -> QuestionInfo:
             f"{_CONFIG_CORRUPTED_MESSAGE}：题目详情包含未知字段 {sorted(unknown_detail)}"
         )
 
-    mode_raw = str(detail_raw.get("distribution_mode") or "random").strip()
+    mode_raw = str(detail_raw.get("distribution_mode") or "random")
     probabilities: object = detail_raw.get("probabilities")
     custom_weights: object = detail_raw.get("custom_weights")
     if (
@@ -436,7 +436,7 @@ def deserialize_question_detail(data: dict[str, object]) -> QuestionInfo:
     elif ac_cls is TextQuestionAnswerConfig:
         answer_config = TextQuestionAnswerConfig(
             ai_enabled=_as_bool(ac_fields.get("ai_enabled")),
-            text_random_mode=str(ac_fields.get("text_random_mode") or "none").strip(),
+            text_random_mode=str(ac_fields.get("text_random_mode") or "none"),
             text_random_int_range=_normalize_random_int_range(
                 ac_fields.get("text_random_int_range")
             ),
@@ -469,8 +469,8 @@ def deserialize_question_detail(data: dict[str, object]) -> QuestionInfo:
         answer_config = QuestionAnswerConfig(ai_enabled=_as_bool(ac_fields.get("ai_enabled")))
 
     detail = QuestionDetail(
-        provider_question_id=str(detail_raw.get("provider_question_id") or "").strip() or None,
-        provider_page_id=str(detail_raw.get("provider_page_id") or "").strip() or None,
+        provider_question_id=str(detail_raw.get("provider_question_id") or "") or None,
+        provider_page_id=str(detail_raw.get("provider_page_id") or "") or None,
         probabilities=cast("list[float] | list[list[float]] | int | None", probabilities),
         distribution_mode=mode_raw,
         custom_weights=cast("list[float] | list[list[float]] | None", custom_weights),
@@ -702,7 +702,7 @@ def _normalize_test_profiles(raw: object) -> TestProfilesConfig:
                     question_num = int(key)
                 except (ValueError, TypeError):
                     continue
-                fixed_answers[question_num] = str(value or "").strip()
+                fixed_answers[question_num] = str(value) if value else ""
             if fixed_answers:
                 profiles.append(TestProfile(fixed_answers=fixed_answers))
     return TestProfilesConfig(random=random_bool, profiles=profiles)

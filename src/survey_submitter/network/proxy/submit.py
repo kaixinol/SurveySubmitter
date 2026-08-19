@@ -52,7 +52,7 @@ def _excluded_proxy_addresses_locked(
 
 
 def _return_proxy_lease_to_pool(ctx: ExecutionState, lease: ProxyLease | None) -> bool:
-    if lease is None or not str(lease.address or "").strip():
+    if lease is None or not lease.address or "":
         return False
     if not lease.poolable:
         return False
@@ -82,7 +82,7 @@ def _mark_proxy_temporarily_bad(
     *,
     cooldown_seconds: float = _BAD_PROXY_COOLDOWN_SECONDS,
 ) -> None:
-    normalized = str(proxy_address or "").strip()
+    normalized = proxy_address or ""
     if not normalized:
         return
     ctx.mark_proxy_in_cooldown(normalized, cooldown_seconds)
@@ -226,7 +226,7 @@ def _discard_unresponsive_proxy(ctx: ExecutionState, proxy_address: str) -> None
         return
     with ctx.lock:
         removed = False
-        normalized = str(proxy_address or "").strip()
+        normalized = proxy_address or ""
         retained = deque()
         pool = _ensure_proxy_pool_deque_locked(ctx)
         while pool:

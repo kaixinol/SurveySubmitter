@@ -52,11 +52,11 @@ def _read_source_text(source: str) -> str:
 def _tokenize_proxy_text(text: str) -> list[str]:
     addresses: list[str] = []
     for raw_line in text.splitlines():
-        line = raw_line.strip()
+        line = raw_line
         if not line or line.startswith("#"):
             continue
         for token in line.replace(",", " ").split():
-            token = token.strip()
+            token = token
             if token:
                 addresses.append(token)
     return addresses
@@ -69,12 +69,12 @@ def resolve_local_proxy_addresses(raw: str | list[str]) -> list[str]:
     文件/链接内容按行解析（每行一个代理，忽略空行与 ``#`` 注释），多源合并后去重。
     """
     if isinstance(raw, str):
-        sources: list[str] = [raw] if raw.strip() else []
+        sources: list[str] = [raw] if raw else []
     elif isinstance(raw, (list, tuple)):
-        sources = [str(item).strip() for item in raw if item is not None]
+        sources = [str(item) for item in raw if item is not None]
         sources = [item for item in sources if item]
     else:
-        sources = [str(raw).strip()] if str(raw).strip() else []
+        sources = [str(raw)] if str(raw) else []
 
     seen: set[str] = set()
     resolved: list[str] = []

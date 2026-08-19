@@ -37,7 +37,7 @@ _LOCAL_PROXY_EXHAUSTED_MESSAGE = "本地静态代理池已耗尽，无法获取�
 
 
 def _stop_run_for_proxy_api_not_configured(ctx: ExecutionState, exc: BaseException) -> None:
-    message = str(exc or "").strip() or "自定义代理API地址未配置，请在设置中填写API地址"
+    message = str(exc) or "自定义代理API地址未配置，请在设置中填写API地址"
     log_deduped_message(_PROXY_FETCH_FAILED_DEDUP_KEY, f"获取随机代理失败：{message}", level="WARNING")
     ctx.mark_terminal_stop(
         "proxy_api_not_configured",
@@ -62,7 +62,7 @@ def _stop_run_for_local_proxy_pool_exhausted(ctx: ExecutionState) -> None:
 
 
 def _is_local_proxy_source(ctx: ExecutionState) -> bool:
-    return str(ctx.config.proxy.source or "").strip().lower() == "local"
+    return (ctx.config.proxy.source or "").lower() == "local"
 
 
 def _proxy_fetching_enabled(ctx: ExecutionState) -> bool:
@@ -312,7 +312,7 @@ def _resolve_proxy_provider_for_thread(ctx: ExecutionState, thread_name: str) ->
             lease = ctx.proxy_in_use_by_thread.get(thread_name)
             if lease is None:
                 return "unknown"
-            return str(lease.source or "unknown").strip() or "unknown"
+            return lease.source or "unknown" or "unknown"
     except (AttributeError, KeyError):
         logger.opt(exception=True).debug("读取代理来源失败")
     return "unknown"

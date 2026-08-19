@@ -12,7 +12,7 @@ _WJX_SURVEY_HOSTS = ("v.wjx.cn", "www.wjx.cn", "www.wjx.top")
 
 def normalize_survey_provider(value: Any, default: str = SURVEY_PROVIDER_WJX) -> str:
     try:
-        provider = str(value or "").strip().lower()
+        provider = (value or "").lower()
     except (ValueError, TypeError):
         provider = ""
     return (
@@ -21,7 +21,7 @@ def normalize_survey_provider(value: Any, default: str = SURVEY_PROVIDER_WJX) ->
 
 
 def _parse_url_host(url_value: str) -> tuple[str, str]:
-    text = str(url_value or "").strip()
+    text = url_value or ""
     if not text:
         return "", ""
     candidate = text if "://" in text else f"https://{text}"
@@ -30,7 +30,7 @@ def _parse_url_host(url_value: str) -> tuple[str, str]:
     except (ValueError, TypeError):
         return "", ""
     host = (parsed.netloc or "").split(":", 1)[0].lower()
-    path = str(parsed.path or "").strip()
+    path = parsed.path or ""
     return host, path
 
 
@@ -63,7 +63,7 @@ def is_supported_survey_url(url_value: str) -> bool:
 
 
 def normalize_survey_parse_url(url_value: str) -> str:
-    text = str(url_value or "").strip()
+    text = url_value or ""
     if not text:
         return ""
     candidate = text if "://" in text else f"https://{text}"
@@ -89,12 +89,12 @@ def ensure_question_provider_fields(
     normalized = dict(item)
     provider = normalize_survey_provider(normalized.get("provider"), default=default_provider)
     normalized["provider"] = provider
-    normalized["provider_question_id"] = str(normalized.get("provider_question_id") or "").strip()
-    normalized["provider_page_id"] = str(normalized.get("provider_page_id") or "").strip()
-    normalized["provider_type"] = str(normalized.get("provider_type") or "").strip()
+    normalized["provider_question_id"] = normalized.get("provider_question_id") or ""
+    normalized["provider_page_id"] = normalized.get("provider_page_id") or ""
+    normalized["provider_type"] = normalized.get("provider_type") or ""
     normalized["provider_page_raw"] = normalized.get("provider_page_raw")
     normalized["unsupported"] = bool(normalized.get("unsupported", False))
-    normalized["unsupported_reason"] = str(normalized.get("unsupported_reason") or "").strip()
+    normalized["unsupported_reason"] = normalized.get("unsupported_reason") or ""
     return normalized
 
 
@@ -117,8 +117,8 @@ def make_provider_question_key(
     provider_question_id: Any,
 ) -> str:
     normalized_provider = normalize_survey_provider(provider, default=SURVEY_PROVIDER_WJX)
-    page_id = str(provider_page_id or "").strip()
-    question_id = str(provider_question_id or "").strip()
+    page_id = provider_page_id or ""
+    question_id = provider_question_id or ""
     if not page_id or not question_id:
         return ""
     return f"{normalized_provider}:{page_id}:{question_id}"

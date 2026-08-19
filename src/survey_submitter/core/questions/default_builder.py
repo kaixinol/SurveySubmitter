@@ -71,7 +71,7 @@ def _normalize_question_num(raw: object) -> int | None:
 
 
 def _normalize_title(raw: object) -> str:
-    text = str(raw or "").strip()
+    text = str(raw) if raw else ""
     if not text:
         return ""
     return "".join(text.split())
@@ -81,7 +81,7 @@ def _normalize_provider_key(
     raw_provider: object, raw_question_id: object
 ) -> tuple[str, str] | None:
     provider = normalize_survey_provider(raw_provider, default=SURVEY_PROVIDER_WJX)
-    question_id = str(raw_question_id or "").strip()
+    question_id = str(raw_question_id) if raw_question_id else ""
     if not question_id:
         return None
     return provider, question_id
@@ -107,12 +107,12 @@ def _build_forced_single_weights(option_count: int, forced_index: int) -> list[f
 
 def _infer_multi_text_blank_modes(q: SurveyQuestionMeta, blank_count: int) -> list[str]:
     labels = [
-        str(item or "").strip()
+        item or ""
         for item in list(
             q.text_input_labels if isinstance(q, TextQuestionMeta) and q.text_input_labels else []
         )
     ]
-    title = str(q.title or "").strip()
+    title = q.title or ""
     modes: list[str] = []
     for index in range(max(0, int(blank_count or 0))):
         text = labels[index] if index < len(labels) else ""
@@ -156,7 +156,7 @@ def _filter_option_fill_texts_to_fillable(
         raw_value = (
             option_fill_texts[option_index] if option_index < len(option_fill_texts) else None
         )
-        text = str(raw_value or "").strip()
+        text = str(raw_value) if raw_value else ""
         normalized.append(text if option_index in fillable_set and text else None)
     return normalized if any(normalized) else None
 
@@ -272,7 +272,7 @@ def _extract_question_attrs(
     slider_min = q.slider_min if isinstance(q, SliderQuestionMeta) else None
     slider_max = q.slider_max if isinstance(q, SliderQuestionMeta) else None
     rating_max = q.rating_max if isinstance(q, RatingQuestionMeta) else 0
-    title_text = str(q.title or "").strip()
+    title_text = q.title or ""
     forced_option_text = (
         q.forced_option_text if isinstance(q, ChoiceQuestionMeta) and q.forced_option_text else ""
     )
@@ -281,8 +281,8 @@ def _extract_question_attrs(
         if isinstance(q, ChoiceQuestionMeta) and isinstance(q.attached_option_selects, list)
         else []
     )
-    provider_question_id = str(q.provider_question_id or "").strip()
-    provider_page_id = str(q.provider_page_id or "").strip()
+    provider_question_id = q.provider_question_id or ""
+    provider_page_id = q.provider_page_id or ""
 
     q_type = infer_question_entry_type(q)
 
@@ -520,7 +520,7 @@ def _text_question_needs_default_candidate(
     if q_type == QuestionType.TEXT:
         return (
             not config.ai_enabled
-            and str(config.text_random_mode or _TEXT_RANDOM_NONE).strip().lower()
+            and str(config.text_random_mode or _TEXT_RANDOM_NONE).lower()
             == _TEXT_RANDOM_NONE
         )
     if q_type == QuestionType.MULTI_TEXT:

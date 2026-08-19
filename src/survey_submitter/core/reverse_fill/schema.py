@@ -40,7 +40,7 @@ REVERSE_FILL_RUNTIME_SUPPORTED_TYPES = frozenset(
 
 
 def reverse_fill_format_label(format_key: str) -> str:
-    normalized = str(format_key or REVERSE_FILL_FORMAT_AUTO).strip().lower()
+    normalized = str(format_key or REVERSE_FILL_FORMAT_AUTO).lower()
     return {
         REVERSE_FILL_FORMAT_AUTO: "自动识别",
         REVERSE_FILL_FORMAT_WJX_SEQUENCE: "问卷星按序号",
@@ -131,7 +131,7 @@ class ReverseFillSpec:
     @property
     def blocking_issues(self) -> list[ReverseFillIssue]:
         return [
-            issue for issue in self.issues if str(issue.severity or "").strip().lower() == "block"
+            issue for issue in self.issues if (issue.severity or "").lower() == "block"
         ]
 
     @property

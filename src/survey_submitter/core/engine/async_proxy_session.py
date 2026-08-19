@@ -37,8 +37,8 @@ class AsyncProxySession:
     def set_current_submit_proxy(
         self, proxy_address: str | None, *, provider: str = "unknown"
     ) -> None:
-        self.proxy_address = str(proxy_address or "").strip() or None
-        self.proxy_provider = str(provider or "unknown").strip() or "unknown"
+        self.proxy_address = proxy_address or "" or None
+        self.proxy_provider = provider or "unknown" or "unknown"
 
     def clear_current_submit_proxy(self) -> None:
         self.proxy_address = None

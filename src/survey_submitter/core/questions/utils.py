@@ -35,7 +35,7 @@ def _normalize_question_type_code(value: str | int | None) -> str:
         return ""
 
     try:
-        return str(value).strip()
+        return str(value)
     except (ValueError, TypeError):
         return ""
 
@@ -230,7 +230,7 @@ def _load_id_card_area_codes() -> tuple[str, ...]:
         for city in province.get("cities", []) or []:
             if not isinstance(city, dict):
                 continue
-            code = str(city.get("code") or "").strip()
+            code = city.get("code") or ""
             if len(code) == 6 and code.isdigit() and code not in seen:
                 seen.add(code)
                 codes.append(code)
@@ -341,7 +341,7 @@ def parse_random_int_token(token: Any) -> tuple[int, int] | None:
 
     if token is None:
         return None
-    text = str(token).strip()
+    text = str(token)
     if not text.startswith(RANDOM_INT_TOKEN_PREFIX):
         return None
     payload = text[len(RANDOM_INT_TOKEN_PREFIX) :]
@@ -361,7 +361,7 @@ def resolve_dynamic_text_token(token: Any) -> str:
 
     if token is None:
         return DEFAULT_FILL_TEXT
-    text = str(token).strip()
+    text = str(token)
     random_int_range = parse_random_int_token(text)
     if random_int_range is not None:
         return generate_random_integer_text(random_int_range[0], random_int_range[1])
@@ -385,7 +385,7 @@ def get_fill_text_from_config(
     value = fill_entries[option_index]
     if value is None:
         return None
-    text = str(value).strip()
+    text = str(value)
     return text or None
 
 
@@ -439,7 +439,7 @@ def normalize_option_fill_texts(
         if raw is None:
             normalized.append(None)
             continue
-        text_value = str(raw).strip()
+        text_value = str(raw)
         normalized.append(text_value or None)
     if not any(value for value in normalized):
         return None

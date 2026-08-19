@@ -23,7 +23,7 @@ _SEQUENCE_SUFFIX_RE = re.compile(r"^\(\s*选项\s*\d+\s*\)$")
 def _cell_text(value: Any) -> str:
     if value is None:
         return ""
-    text = str(value).strip()
+    text = str(value)
     return text
 
 
@@ -59,7 +59,7 @@ def _detect_wjx_export_format(
     for columns in question_columns.values():
         if len(columns) <= 1:
             continue
-        if any(_SEQUENCE_SUFFIX_RE.match(str(column.suffix or "").strip()) for column in columns):
+        if any(_SEQUENCE_SUFFIX_RE.match(column.suffix or "") for column in columns):
             return REVERSE_FILL_FORMAT_WJX_SEQUENCE
 
     has_numeric_type = False
@@ -92,7 +92,7 @@ def _detect_wjx_export_format(
 def load_wjx_excel_export(
     source_path: str, *, preferred_format: str = REVERSE_FILL_FORMAT_AUTO
 ) -> WjxExcelExport:
-    raw_path = str(source_path or "").strip()
+    raw_path = source_path or ""
     if not raw_path:
         raise ValueError("未提供 Excel 文件路径")
     path = str(Path(raw_path).resolve())
@@ -117,7 +117,7 @@ def load_wjx_excel_export(
         if not match:
             continue
         question_num = int(match.group(1))
-        suffix = str(match.group(2) or "").strip()
+        suffix = match.group(2) or ""
         column_index = col_idx + 1  # 1-based column index
         question_columns.setdefault(question_num, []).append(
             ReverseFillColumn(
@@ -147,7 +147,7 @@ def load_wjx_excel_export(
         )
 
     detected_format = _detect_wjx_export_format(question_columns, raw_rows)
-    selected_format = str(preferred_format or REVERSE_FILL_FORMAT_AUTO).strip().lower()
+    selected_format = str(preferred_format or REVERSE_FILL_FORMAT_AUTO).lower()
     if selected_format == REVERSE_FILL_FORMAT_AUTO:
         selected_format = detected_format
     return WjxExcelExport(

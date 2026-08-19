@@ -48,7 +48,7 @@ class ReverseFillRuntimeMixin:
         self.notify_runtime_change()
 
     def _thread_key(self, thread_name: str | None = None) -> str:
-        key = str(thread_name or threading.current_thread().name or "Worker-?").strip()
+        key = thread_name or threading.current_thread().name or "Worker-?"
         return key or "Worker-?"
 
     def _possible_total_locked(self: "_ReverseFillRuntimeHost") -> int:

@@ -58,7 +58,7 @@ def _has_active_runtime_dimension(ctx: ExecutionState | None, question_index: in
         return False
     dimension_map = ctx.config.question_dimension_map
     dimension = dimension_map.get(question_index) if isinstance(dimension_map, dict) else None
-    return isinstance(dimension, str) and bool(str(dimension).strip())
+    return isinstance(dimension, str) and bool(str(dimension))
 
 
 def _resolve_correction_params(

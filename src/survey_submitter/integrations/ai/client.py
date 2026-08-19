@@ -44,7 +44,7 @@ async def agenerate_answer(
     api_key = str(config["api_key"] or "")
     base_url = str(config["base_url"] or "")
     model = str(config["model"] or "")
-    system_prompt = str(config["system_prompt"] or "").strip() or get_default_system_prompt()
+    system_prompt = config["system_prompt"] or "" or get_default_system_prompt()
 
     api_protocol = _normalize_custom_api_protocol(config["api_protocol"])
     resolved_protocol, request_url, has_explicit_endpoint = resolve_custom_endpoint(

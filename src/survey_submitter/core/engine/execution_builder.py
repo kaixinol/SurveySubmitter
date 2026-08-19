@@ -157,7 +157,7 @@ def _validate_datetime_window(config: RuntimeConfig, provider: str) -> None:
 def _verify_wjx_survey_is_answerable(config: RuntimeConfig, provider: str) -> None:
     if provider != SURVEY_PROVIDER_WJX:
         return
-    url = str(config.survey.url or "").strip()
+    url = config.survey.url or ""
     if not url:
         return
     try:
@@ -211,7 +211,7 @@ def _sync_and_validate_random_proxy_config(config: RuntimeConfig) -> None:
     proxy = config.execution.proxy
     if not bool(proxy.enabled):
         return
-    source = str(proxy.source or "custom").strip().lower()
+    source = str(proxy.source or "custom").lower()
     if source == "local":
         set_proxy_api_override(None)
         try:
@@ -262,9 +262,9 @@ def _sync_and_validate_random_proxy_config(config: RuntimeConfig) -> None:
         proxy.ip_list = responsive
         return
     try:
-        if str(proxy.custom_api_url or "").strip():
+        if proxy.custom_api_url or "":
             set_proxy_api_override(proxy.custom_api_url)
-        if str(proxy.area_code or "").strip():
+        if proxy.area_code or "":
             set_proxy_area_code(proxy.area_code)
     except ValueError as exc:
         raise RuntimePreparationError(
@@ -317,7 +317,7 @@ def _build_execution_config_template(
         ),
         proxy=ProxyRuntimeConfig(
             enabled=bool(config.execution.proxy.enabled),
-            source=str(config.execution.proxy.source or "custom").strip().lower(),
+            source=str(config.execution.proxy.source or "custom").lower(),
             reuse=bool(config.execution.proxy.reuse),
         ),
         random_user_agent=bool(config.execution.random_user_agent),
@@ -333,7 +333,7 @@ def _build_execution_config_template(
             max(0.0, float(config.answer_config.optional_fill_skip_ratio or 0.0)),
         ),
         reverse_fill_spec=copy.deepcopy(reverse_fill_spec),
-        ai_system_prompt=str(config.execution.ai.system_prompt or "").strip(),
+        ai_system_prompt=config.execution.ai.system_prompt or "",
         ai_answering=bool(config.execution.ai.answering),
         test_profiles=[
             {int(k): str(v) for k, v in tp.fixed_answers.items()}

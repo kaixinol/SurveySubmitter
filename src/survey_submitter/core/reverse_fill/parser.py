@@ -37,7 +37,7 @@ def normalize_reverse_fill_text(value: object) -> str:
             return str(int(value))
         text = f"{value:.12f}".rstrip("0").rstrip(".")
         return text or "0"
-    return str(value).strip()
+    return str(value)
 
 
 def normalize_reverse_fill_key(value: object) -> str:
@@ -64,12 +64,12 @@ def label_variants(value: object) -> list[str]:
             variants.append(normalized)
 
     _append(text)
-    stripped = _LEADING_INDEX_RE.sub("", text).strip().strip("_")
+    stripped = _LEADING_INDEX_RE.sub("", text).strip("_")
     _append(stripped)
     normalized_stripped = stripped.replace("—", "-").replace("–", "-").replace("－", "-")
     for separator in ("-", ":", "丨", "|", "/", "／"):
         if separator in normalized_stripped:
-            _append(normalized_stripped.rsplit(separator, 1)[-1].strip().strip("_"))
+            _append(normalized_stripped.rsplit(separator, 1)[-1].strip("_"))
     return variants
 
 
@@ -86,14 +86,14 @@ def infer_reverse_fill_question_type(
     if inferred:
         return inferred
     if entry is not None:
-        return (entry.question_type or QuestionType.SINGLE).strip() or QuestionType.SINGLE
+        return (entry.question_type or QuestionType.SINGLE) or QuestionType.SINGLE
     return QuestionType.SINGLE
 
 
 def supports_reverse_fill_runtime(
     question_type: str, info: SurveyQuestionMeta | dict[str, Any]
 ) -> bool:
-    normalized = (question_type or "").strip().lower()
+    normalized = (question_type or "").lower()
     if normalized not in REVERSE_FILL_RUNTIME_SUPPORTED_TYPES:
         return False
     if isinstance(info, SurveyQuestionMeta):

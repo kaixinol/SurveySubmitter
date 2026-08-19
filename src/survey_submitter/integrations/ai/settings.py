@@ -53,7 +53,7 @@ __all__ = [
 
 
 def _normalize_custom_api_protocol(value: Any) -> str:
-    protocol = str(value or "auto").strip().lower()
+    protocol = value or "auto".lower()
     if protocol in CUSTOM_API_PROTOCOLS:
         return protocol
     return "auto"
@@ -69,7 +69,7 @@ class AISettings(BaseConfigModel):
     @field_validator("api_protocol")
     @classmethod
     def normalize_api_protocol(cls, v: str) -> str:
-        protocol = str(v or "auto").strip().lower()
+        protocol = v or "auto".lower()
         if protocol in CUSTOM_API_PROTOCOLS:
             return protocol
         return "auto"
@@ -77,12 +77,12 @@ class AISettings(BaseConfigModel):
     @field_validator("base_url", "model")
     @classmethod
     def strip_string(cls, v: str) -> str:
-        return str(v or "").strip()
+        return v or ""
 
     @field_validator("system_prompt")
     @classmethod
     def normalize_system_prompt(cls, v: str) -> str:
-        prompt = str(v or "").strip()
+        prompt = v or ""
         return prompt or DEFAULT_SYSTEM_PROMPT
 
 
@@ -98,11 +98,11 @@ def get_ai_readiness_error(config: dict[str, Any] | None = None) -> str:
     settings = AISettings.model_validate(config) if config is not None else AISettings()
 
     missing_fields: list[str] = []
-    if not settings.api_key.strip():
+    if not settings.api_key:
         missing_fields.append("API Key")
-    if not settings.base_url.strip():
+    if not settings.base_url:
         missing_fields.append("Base URL")
-    if not settings.model.strip():
+    if not settings.model:
         missing_fields.append("模型 ID")
 
     if missing_fields:

@@ -47,7 +47,7 @@ async def resolve_option_fill_text_from_config(
     raw_value = get_fill_text_from_config(fill_entries, option_index)
     if raw_value is None:
         return None
-    text = str(raw_value).strip()
+    text = str(raw_value)
     if not text:
         return None
     if text != OPTION_FILL_AI_TOKEN:
@@ -55,7 +55,7 @@ async def resolve_option_fill_text_from_config(
     if not ai_answering:
         return DEFAULT_FILL_TEXT
     if allow_ai_placeholder:
-        return str(ai_placeholder_text or "").strip() or DEFAULT_FILL_TEXT
+        return ai_placeholder_text or "" or DEFAULT_FILL_TEXT
 
     ai_prompt = build_ai_option_fill_prompt(
         question_title=question_title,
@@ -67,7 +67,7 @@ async def resolve_option_fill_text_from_config(
         answer = await agenerate_ai_answer(ai_prompt, question_type="fill_blank", ctx=ctx)
     except AIRuntimeError as exc:
         raise AIRuntimeError(f"第{question_number}题附加填空 AI 生成失败：{exc}") from exc
-    return str(answer).strip() or DEFAULT_FILL_TEXT
+    return str(answer) or DEFAULT_FILL_TEXT
 
 
 def resolve_option_fill_list_value(text: str) -> str:
@@ -89,17 +89,17 @@ def resolve_option_fill_list_value(text: str) -> str:
     candidates: list[str] = []
     weights: list[float] = []
     for raw_part in text.split(MULTI_TEXT_DELIMITER):
-        part = raw_part.strip()
+        part = raw_part
         if not part:
             continue
         if _OPTION_FILL_WEIGHT_SEP in part:
             answer, sep, weight_text = part.rpartition(_OPTION_FILL_WEIGHT_SEP)
-            if sep and answer.strip():
+            if sep and answer:
                 try:
-                    weight = max(0.0, float(weight_text.strip()))
+                    weight = max(0.0, float(weight_text))
                 except (ValueError, TypeError):
                     weight = 0.0
-                candidates.append(answer.strip())
+                candidates.append(answer)
                 weights.append(weight)
                 continue
         candidates.append(part)
@@ -125,7 +125,7 @@ def resolve_text_values_from_config(
     blank_modes: Sequence[Any] | None = None,
     blank_int_ranges: Sequence[Any] | None = None,
 ) -> list[str]:
-    candidates = [str(item).strip() for item in list(answer_candidates or []) if str(item).strip()]
+    candidates = [str(item) for item in list(answer_candidates or []) if str(item)]
     if not candidates:
         candidates = [DEFAULT_FILL_TEXT]
     weights = list(probabilities or [])
@@ -141,7 +141,7 @@ def resolve_text_values_from_config(
 
     selected_raw = candidates[weighted_index(normalized)]
     resolved_blank_count = max(1, int(blank_count or 1))
-    if (entry_type or "").strip() == QuestionType.MULTI_TEXT:
+    if entry_type or "" == QuestionType.MULTI_TEXT:
         text_values = [
             resolve_dynamic_text_token(part) for part in selected_raw.split(MULTI_TEXT_DELIMITER)
         ]
@@ -156,7 +156,7 @@ def resolve_text_values_from_config(
     modes = list(blank_modes or [])
     ranges = list(blank_int_ranges or [])
     for blank_index in range(resolved_blank_count):
-        mode = str(modes[blank_index] if blank_index < len(modes) else "").strip().lower()
+        mode = str(modes[blank_index] if blank_index < len(modes) else "").lower()
         if mode == _TEXT_RANDOM_NAME:
             text_values[blank_index] = resolve_dynamic_text_token(_TEXT_RANDOM_NAME_TOKEN)
         elif mode == _TEXT_RANDOM_MOBILE:
@@ -170,7 +170,7 @@ def resolve_text_values_from_config(
                     build_random_int_token(int_range[0], int_range[1])
                 )
 
-    return [str(value or "").strip() or DEFAULT_FILL_TEXT for value in text_values]
+    return [value or "" or DEFAULT_FILL_TEXT for value in text_values]
 
 
 __all__ = [

@@ -66,7 +66,7 @@ class ReverseFillSection(BaseConfigModel):
     @field_validator("format", mode="before")
     @classmethod
     def validate_format(cls, v: Any) -> str:
-        v = str(v or "auto").lower().strip()
+        v = str(v or "auto").lower()
         return v if v in _REVERSE_FILL_FORMATS else "auto"
 
     @field_validator("start_row", "threads", mode="before")
@@ -90,7 +90,7 @@ class ProxySection(BaseConfigModel):
     @field_validator("source", mode="before")
     @classmethod
     def validate_proxy_source(cls, v: Any) -> str:
-        v = str(v or "custom").lower().strip()
+        v = str(v or "custom").lower()
         return v if v in ("custom", "local") else "custom"
 
     @field_validator("ip_list", mode="before")
@@ -99,13 +99,13 @@ class ProxySection(BaseConfigModel):
         if v is None or v == "":
             return []
         if isinstance(v, str):
-            return v.strip()
+            return v
         if isinstance(v, (list, tuple)):
             items: list[str] = []
             for item in v:
                 if item is None:
                     continue
-                text = str(item).strip()
+                text = str(item)
                 if text:
                     items.append(text)
             return items

@@ -37,7 +37,7 @@ class AnswerRule(BaseModel):
     @field_validator("id", mode="before")
     @classmethod
     def normalize_id(cls, v: Any) -> str:
-        return str(v or "").strip()
+        return v or ""
 
     @field_validator("condition_question_num", "target_question_num", mode="before")
     @classmethod
@@ -50,7 +50,7 @@ class AnswerRule(BaseModel):
     @field_validator("condition_mode", "action_mode", mode="before")
     @classmethod
     def normalize_mode(cls, v: Any) -> str:
-        return str(v or "").strip()
+        return v or ""
 
     @field_validator("condition_option_indices", "target_option_indices", mode="before")
     @classmethod
@@ -82,7 +82,7 @@ class AnswerRule(BaseModel):
 
 
 def _normalize_question_type_code(value: str | None) -> str:
-    return str(value or "").strip()
+    return value or ""
 
 
 def question_supports_answer_rule(question: dict[str, object] | SurveyQuestionMeta) -> bool:

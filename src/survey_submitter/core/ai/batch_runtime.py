@@ -103,7 +103,7 @@ def _build_ai_batch_items_for_actions(
                 item_question_map[item_id] = question_num
 
         option_texts = [
-            str(item or "").strip() for item in list(getattr(question, "option_texts", []) or [])
+            item or "" for item in list(getattr(question, "option_texts", []) or [])
         ]
         for option_index, fill_value in tuple(action.option_fill_texts or ()):
             if not is_ai_option_fill_placeholder(fill_value):
@@ -138,7 +138,7 @@ def _resolved_answers_by_question_num(
         if question_num is None:
             continue
         normalized = tuple(
-            str(item or "").strip() for item in list(answers or []) if str(item or "").strip()
+            item or "" for item in list(answers or []) if item or ""
         )
         if normalized:
             resolved[int(question_num)] = normalized
@@ -155,7 +155,7 @@ def _resolved_option_fill_answers(
         if option_key is None:
             continue
         normalized_answers = [
-            str(item or "").strip() for item in list(answers or []) if str(item or "").strip()
+            item or "" for item in list(answers or []) if item or ""
         ]
         if normalized_answers:
             resolved[option_key] = normalized_answers[0]
@@ -206,9 +206,9 @@ def _raise_prefill_incomplete_error(
 def _normalize_item_answers(item: AIBatchItem, raw_answer: str | list[str]) -> list[str]:
     if item.question_type == QuestionType.MULTI_FILL_BLANK:
         if isinstance(raw_answer, list):
-            answers = [str(value or "").strip() for value in raw_answer]
+            answers = [value or "" for value in raw_answer]
         else:
-            answers = [part.strip() for part in str(raw_answer or "").split("||")]
+            answers = [part for part in str(raw_answer or "").split("||")]
         answers = [value for value in answers if value]
         expected = int(item.blank_count or 0)
         if expected > 0 and len(answers) != expected:
@@ -217,7 +217,7 @@ def _normalize_item_answers(item: AIBatchItem, raw_answer: str | list[str]) -> l
             raise RuntimeError("AI 未返回有效答案")
         return answers
 
-    answer = str(raw_answer or "").strip()
+    answer = str(raw_answer or "")
     if not answer:
         raise RuntimeError("AI 未返回有效答案")
     return [answer]
@@ -261,7 +261,7 @@ def _rebuild_selected_texts(
     fill_map: dict[int, str],
 ) -> tuple[str, ...]:
     option_texts = [
-        str(item or "").strip() for item in list(getattr(question, "option_texts", []) or [])
+        item or "" for item in list(getattr(question, "option_texts", []) or [])
     ]
     existing = list(action.selected_texts or ())
     rebuilt: list[str] = []
@@ -269,8 +269,8 @@ def _rebuild_selected_texts(
         normalized_index = int(option_index)
         base_text = option_texts[normalized_index] if normalized_index < len(option_texts) else ""
         if not base_text and position < len(existing):
-            base_text = str(existing[position] or "").split(" / ", 1)[0].strip()
-        fill_value = str(fill_map.get(normalized_index) or "").strip()
+            base_text = str(existing[position] or "").split(" / ", 1)[0]
+        fill_value = fill_map.get(normalized_index) or ""
         if fill_value:
             rebuilt.append(f"{base_text} / {fill_value}" if base_text else fill_value)
         else:
@@ -294,7 +294,7 @@ def _apply_prefilled_answers(
             updated_action = replace(
                 updated_action,
                 text_values=tuple(
-                    str(item or "").strip() or DEFAULT_FILL_TEXT
+                    item or "" or DEFAULT_FILL_TEXT
                     for item in resolved_answers[question_num]
                 ),
             )
@@ -305,13 +305,13 @@ def _apply_prefilled_answers(
             changed = False
             for option_index, raw_value in tuple(updated_action.option_fill_texts or ()):
                 normalized_option_index = int(option_index)
-                normalized_value = str(raw_value or "").strip()
+                normalized_value = raw_value or ""
                 if is_ai_option_fill_placeholder(normalized_value):
                     normalized_value = str(
                         resolved_option_fill_answers.get(
                             (question_num, normalized_option_index), ""
                         )
-                    ).strip()
+                    )
                     changed = True
                 if normalized_value:
                     fill_map[normalized_option_index] = normalized_value

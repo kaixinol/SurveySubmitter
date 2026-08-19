@@ -77,7 +77,7 @@ def _resolve_runtime_option_texts(
 
     if isinstance(question, ChoiceQuestionMeta) and question.option_texts:
         return [
-            str(item or "").strip() for item in question.option_texts if str(item or "").strip()
+            item or "" for item in question.option_texts if item or ""
         ]
     return []
 
@@ -128,7 +128,7 @@ def _select_choice_index(
     _apply_dimension_gate = entry_type == QuestionType.SINGLE
 
     dimension = config.question_dimension_map.get(current)
-    has_reliability_dimension = isinstance(dimension, str) and bool(str(dimension).strip())
+    has_reliability_dimension = isinstance(dimension, str) and bool(str(dimension))
 
     prob_list = (
         getattr(config, prob_config_key)[config_index]
@@ -393,11 +393,11 @@ async def _build_wjx_text_action(
 
     if reverse_fill_answer is not None and reverse_fill_answer.kind == REVERSE_FILL_KIND_MULTI_TEXT:
         text_values = [
-            str(item or "").strip() or DEFAULT_FILL_TEXT
+            item or "" or DEFAULT_FILL_TEXT
             for item in list(reverse_fill_answer.text_values or [])
         ]
     elif reverse_fill_answer is not None and reverse_fill_answer.kind == REVERSE_FILL_KIND_TEXT:
-        text_values = [str(reverse_fill_answer.text_value or "").strip() or DEFAULT_FILL_TEXT]
+        text_values = [reverse_fill_answer.text_value or "" or DEFAULT_FILL_TEXT]
     else:
         ai_enabled = (
             bool(config.text_ai_flags[config_index])
@@ -426,9 +426,9 @@ async def _build_wjx_text_action(
                 except AIRuntimeError as exc:
                     raise AIRuntimeError(f"问卷星第{current}题 AI 生成失败：{exc}") from exc
                 text_values = (
-                    [str(item or "").strip() or DEFAULT_FILL_TEXT for item in list(generated or [])]
+                    [item or "" or DEFAULT_FILL_TEXT for item in list(generated or [])]
                     if isinstance(generated, list)
-                    else [str(generated or "").strip() or DEFAULT_FILL_TEXT]
+                    else [generated or "" or DEFAULT_FILL_TEXT]
                 )
         else:
             text_entry_types = list(ctx.config.text_entry_types or [])
@@ -461,7 +461,7 @@ async def _build_wjx_text_action(
         question_num=current,
         kind="text",
         text_values=tuple(
-            str(text_values[index] if index < len(text_values) else text_values[-1] or "").strip()
+            text_values[index] if index < len(text_values) else text_values[-1] or ""
             or DEFAULT_FILL_TEXT
             for index in range(blank_count)
         ),
@@ -763,7 +763,7 @@ async def _build_wjx_multiple_action(
     fixed_answer = _get_fixed_answer(ctx, current)
     if fixed_answer is not None:
         fixed_indices = []
-        fixed_parts = [p.strip() for p in str(fixed_answer).split(",")]
+        fixed_parts = [p for p in str(fixed_answer).split(",")]
         for part in fixed_parts:
             for idx, text in enumerate(option_texts):
                 if text == part:

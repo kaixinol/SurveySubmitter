@@ -7,7 +7,7 @@ EMPTY_ANSWER_DATETIME_WINDOW = ("", "")
 
 
 def parse_answer_datetime_string(value: str | None) -> datetime | None:
-    text = str(value or "").strip()
+    text = value or ""
     if not text:
         return None
     try:

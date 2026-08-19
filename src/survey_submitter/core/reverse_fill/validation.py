@@ -45,9 +45,9 @@ MAX_DISPLAYED_BLOCKING_ISSUES = 12
 
 def _detail_from_columns(columns: list[object]) -> str:
     headers = [
-        str(getattr(column, "header", "") or "").strip()
+        getattr(column, "header", "") or ""
         for column in list(columns or [])
-        if str(getattr(column, "header", "") or "").strip()
+        if getattr(column, "header", "") or ""
     ]
     return " / ".join(headers)
 
@@ -57,8 +57,8 @@ def _regular_config_ready(
 ) -> bool:
     if qi is None:
         return False
-    entry_type = qi.question_type.strip()
-    normalized_expected = (expected_type or "").strip()
+    entry_type = qi.question_type
+    normalized_expected = expected_type or ""
     if entry_type != normalized_expected:
         # Location questions may have a different type_code in questions_info
         from survey_submitter.core.questions.schema import LocationQuestionAnswerConfig
@@ -80,14 +80,14 @@ def _question_issue(
     suggestion: str | None = None,
     severity: str | None = None,
 ) -> ReverseFillIssue:
-    resolved_suggestion = str(suggestion or "").strip()
+    resolved_suggestion = suggestion or ""
     if not resolved_suggestion:
         resolved_suggestion = (
             "已回退到当前题目的常规配置，可继续运行"
             if fallback_ready
             else "请先打开配置向导，把这题的常规配置补齐后再启动"
         )
-    resolved_severity = str(severity or "").strip().lower() or (
+    resolved_severity = (severity or "").lower() or (
         "warn" if fallback_ready else "block"
     )
     return ReverseFillIssue(
@@ -113,9 +113,9 @@ def _build_question_plan(
     fallback_resolved: bool = False,
 ) -> ReverseFillQuestionPlan:
     headers = [
-        str(getattr(column, "header", "") or "").strip()
+        getattr(column, "header", "") or ""
         for column in list(columns or [])
-        if str(getattr(column, "header", "") or "").strip()
+        if getattr(column, "header", "") or ""
     ]
     return ReverseFillQuestionPlan(
         question_num=question_num,
@@ -138,7 +138,7 @@ def _entry_differs_from_default(qi: QuestionInfo | None, default_qi: QuestionInf
             return q.question_type
         if field == "option_count":
             if q.question_type in TEXT_TYPES:
-                options = [str(item).strip() for item in list(q.options or []) if str(item).strip()]
+                options = [str(item) for item in list(q.options or []) if str(item)]
                 if not options:
                     options = [DEFAULT_FILL_TEXT]
                 return len(options)
@@ -273,7 +273,7 @@ def _validate_question_prerequisite(
     Returns error_reason if validation fails, None if OK to continue.
     """
     if bool(info.unsupported):
-        return str(info.unsupported_reason or "当前程序暂不支持这道题").strip()
+        return info.unsupported_reason or "当前程序暂不支持这道题"
     return None
 
 
@@ -504,7 +504,7 @@ def _validate_and_collect_question(
     if question_num <= 0:
         return False
 
-    title = str(info.title or f"第{question_num}题").strip()
+    title = str(info.title or f"第{question_num}题")
     entry = resolve_question_entry(info, survey_questions)
     question_type = infer_reverse_fill_question_type(info, entry)
     columns = list((getattr(export, "question_columns", None) or {}).get(question_num) or [])
@@ -752,7 +752,7 @@ def build_reverse_fill_spec(
         )
 
     return ReverseFillSpec(
-        source_path=str(Path(str(source_path or "").strip()).resolve()),
+        source_path=str(Path(str(source_path or "")).resolve()),
         selected_format=str(export.selected_format or REVERSE_FILL_FORMAT_AUTO),
         detected_format=str(
             export.detected_format or export.selected_format or REVERSE_FILL_FORMAT_AUTO
@@ -792,7 +792,7 @@ def build_enabled_reverse_fill_spec(
     rf = config.execution.reverse_fill
     if not bool(rf.enabled):
         return None
-    source_path = str(rf.source_path or "").strip()
+    source_path = rf.source_path or ""
     if not source_path:
         return None
     spec = build_reverse_fill_spec(

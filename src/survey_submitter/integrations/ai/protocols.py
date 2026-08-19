@@ -26,7 +26,7 @@ __all__ = [
 
 
 def normalize_endpoint_url(raw_url: str) -> str:
-    return str(raw_url or "").strip().rstrip("/")
+    return (raw_url or "").rstrip("/")
 
 
 def _path_endswith(path: str, suffix: str) -> bool:
@@ -72,7 +72,7 @@ def resolve_custom_endpoint(base_url: str, api_protocol: str) -> tuple[str, str,
     if _path_endswith(path, _LEGACY_COMPLETIONS_SUFFIX):
         raise RuntimeError("暂不支持旧版 /completions 协议，请改用 /chat/completions 或 /responses")
 
-    if str(api_protocol or "auto").strip().lower() == "responses":
+    if api_protocol or "auto".lower() == "responses":
         return "responses", _replace_path_suffix(parts, RESPONSES_SUFFIX), False
     return "chat_completions", _replace_path_suffix(parts, _CHAT_COMPLETIONS_SUFFIX), False
 
@@ -98,7 +98,7 @@ def is_endpoint_mismatch_error(exc: Exception) -> bool:
 
 def _extract_text_parts(content: Any) -> Iterable[str]:
     if isinstance(content, str):
-        text = content.strip()
+        text = content
         if text:
             yield text
         return
@@ -108,14 +108,14 @@ def _extract_text_parts(content: Any) -> Iterable[str]:
 
     for item in content:
         if isinstance(item, str):
-            text = item.strip()
+            text = item
             if text:
                 yield text
             continue
         if not isinstance(item, dict):
             continue
-        item_type = str(item.get("type") or "").strip().lower()
-        text = str(item.get("text") or item.get("content") or "").strip()
+        item_type = (item.get("type") or "").lower()
+        text = item.get("text") or item.get("content") or ""
         if item_type in {"text", "output_text", "input_text"} and text:
             yield text
 
@@ -129,12 +129,12 @@ def extract_chat_completion_text(data: dict[str, Any]) -> str:
     content = message.get("content")
     parts = list(_extract_text_parts(content))
     if parts:
-        return "\n".join(parts).strip()
+        return "\n".join(parts)
     raise RuntimeError("API 返回内容为空")
 
 
 def extract_responses_text(data: dict[str, Any]) -> str:
-    top_level_text = str(data.get("output_text") or "").strip()
+    top_level_text = data.get("output_text") or ""
     if top_level_text:
         return top_level_text
 
@@ -145,7 +145,7 @@ def extract_responses_text(data: dict[str, Any]) -> str:
                 continue
             parts = list(_extract_text_parts(item.get("content")))
             if parts:
-                return "\n".join(parts).strip()
+                return "\n".join(parts)
 
     raise RuntimeError("Responses API 返回内容为空")
 
@@ -177,7 +177,7 @@ async def acall_chat_completions(
         )
         content = response.choices[0].message.content
         if content:
-            return content.strip()
+            return content
         raise RuntimeError("API 返回内容为空")
     except APIError as exc:
         raise RuntimeError(f"API 调用失败: {exc}") from exc
@@ -206,7 +206,7 @@ async def acall_responses(
             max_output_tokens=200,
             temperature=0.7,
         )
-        text = str(response.output_text or "").strip()
+        text = response.output_text or ""
         if text:
             return text
         raise RuntimeError("Responses API 返回内容为空")

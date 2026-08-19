@@ -33,7 +33,7 @@ CHOICE_LIKE_TYPES = frozenset({QuestionType.SINGLE, QuestionType.MULTIPLE, Quest
 
 def convert_wire_type_code(raw: str) -> QuestionType:
     """Convert numeric wire-format type code to semantic QuestionType."""
-    match str(raw or "").strip():
+    match raw or "":
         case "3":
             return QuestionType.SINGLE
         case "4":
@@ -64,7 +64,7 @@ def convert_wire_type_code(raw: str) -> QuestionType:
             return QuestionType.MULTI_TEXT
         case _:
             try:
-                return QuestionType(str(raw or "").strip())
+                return QuestionType(raw or "")
             except ValueError:
                 return QuestionType.UNKNOWN
 

@@ -16,7 +16,7 @@ def load_yaml_config(path: str) -> RuntimeConfig:
     """Load a YAML config file and return a RuntimeConfig."""
     from yaml12 import read_yaml
 
-    raw_path = str(path or "").strip()
+    raw_path = path or ""
     if not raw_path:
         raise ValueError("未提供配置文件路径")
     abs_path = str(Path(raw_path).resolve())

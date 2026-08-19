@@ -64,7 +64,7 @@ def find_all_zero_attached_selects(attached_configs: object) -> list[tuple[int, 
             continue
         weights = cfg.get("weights")
         if isinstance(weights, list) and weights and count_positive_weights(weights) <= 0:
-            issues.append((cfg_idx, str(cfg.get("option_text") or "").strip()))
+            issues.append((cfg_idx, cfg.get("option_text") or ""))
     return issues
 
 
@@ -148,12 +148,12 @@ def normalize_attached_selects(
             option_index = int(cast(Any, raw_option_index))
         except (ValueError, TypeError):
             continue
-        option_text = str(item.get("option_text") or "").strip()
+        option_text = item.get("option_text") or ""
         select_options_raw = item.get("select_options")
         if not isinstance(select_options_raw, list):
             continue
         select_options = [
-            str(opt or "").strip() for opt in select_options_raw if str(opt or "").strip()
+            opt or "" for opt in select_options_raw if opt or ""
         ]
         if not select_options:
             continue

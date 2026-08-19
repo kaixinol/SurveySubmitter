@@ -43,7 +43,7 @@ def _format_seconds_range(value: tuple[int, int] | list[int] | None) -> str:
 
 
 def _format_proxy_source(source: str | None) -> str:
-    normalized = str(source or "custom").strip().lower()
+    normalized = str(source or "custom").lower()
     labels = {
         "custom": "自定义",
         "local": "本地",

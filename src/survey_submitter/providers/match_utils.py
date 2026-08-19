@@ -17,14 +17,14 @@ def normalize_match_text(value: Any) -> str:
     text = html.unescape(text)
     text = unicodedata.normalize("NFKC", text)
     text = _MATCH_SPACE_RE.sub(" ", text)
-    return text.strip()
+    return text
 
 
 def get_element_attribute(element: Any, *names: str) -> Any:
     if element is None:
         return None
     for name in names:
-        attr_name = str(name or "").strip()
+        attr_name = name or ""
         if not attr_name:
             continue
         if isinstance(element, dict):

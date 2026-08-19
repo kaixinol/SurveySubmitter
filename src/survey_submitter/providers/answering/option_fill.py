@@ -59,8 +59,8 @@ def should_skip_optional_option_fill(
 def default_missing_option_fill(
     question: Any, option_index: int, fill_value: str | None
 ) -> str | None:
-    if str(fill_value or "").strip():
-        return str(fill_value or "").strip()
+    if fill_value or "":
+        return fill_value or ""
     if option_requires_fill(question, option_index):
         return DEFAULT_FILL_TEXT
     return None

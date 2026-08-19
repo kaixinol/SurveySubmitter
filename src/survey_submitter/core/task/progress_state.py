@@ -39,13 +39,13 @@ if TYPE_CHECKING:
 class ThreadProgressMixin:
     @staticmethod
     def _resolve_thread_index(thread_name: str) -> int:
-        text = str(thread_name or "").strip()
+        text = thread_name or ""
         if not text:
             return 0
         for prefix in ("Worker-", "Slot-"):
             if not text.startswith(prefix):
                 continue
-            suffix = text.split("-", 1)[1].strip()
+            suffix = text.split("-", 1)[1]
             try:
                 value = int(suffix)
                 return value if value > 0 else 0
@@ -67,11 +67,11 @@ class ThreadProgressMixin:
     @staticmethod
     def _format_thread_display_name(thread_name: str, thread_index: int) -> str:
         if thread_index > 0:
-            text = str(thread_name or "").strip()
+            text = thread_name or ""
             if text.startswith("Slot-"):
                 return f"会话 {thread_index}"
             return f"线程 {thread_index}"
-        text = str(thread_name or "").strip()
+        text = thread_name or ""
         if text.startswith("Worker-?"):
             return "线程 ?"
         if text.startswith("Slot-?"):
@@ -82,7 +82,7 @@ class ThreadProgressMixin:
         self: "_ThreadProgressHost",
         thread_name: str,
     ) -> ThreadProgressState:
-        key = str(thread_name or "").strip() or "Worker-?"
+        key = thread_name or "Worker-?"
         state = self.thread_progress.get(key)
         if state is not None:
             return state
@@ -99,7 +99,7 @@ class ThreadProgressMixin:
     ) -> None:
         count = max(1, int(expected_count or 1))
         now = time.time()
-        normalized_prefix = str(prefix or "Worker").strip() or "Worker"
+        normalized_prefix = prefix or "Worker"
         changed = False
         with self.lock:
             for idx in range(1, count + 1):

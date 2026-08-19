@@ -62,7 +62,7 @@ def _normalize_expected_proxy_count(expected_count: Any) -> int:
 def _extract_proxy_from_string(s: str) -> str | None:
     if not isinstance(s, str):
         return None
-    m = _PROXY_ADDRESS_PATTERN.search(s.strip())
+    m = _PROXY_ADDRESS_PATTERN.search(s)
     if not m:
         return None
     user, password, ip, port = m.group(1), m.group(2), m.group(3), m.group(4)
@@ -72,11 +72,11 @@ def _extract_proxy_from_string(s: str) -> str | None:
 def _extract_proxy_from_dict(obj: dict) -> str | None:
     if not isinstance(obj, dict):
         return None
-    ip = str(obj.get("ip") or obj.get("IP") or obj.get("host") or "").strip()
-    port = str(obj.get("port") or obj.get("Port") or obj.get("PORT") or "").strip()
+    ip = obj.get("ip") or obj.get("IP") or obj.get("host") or ""
+    port = obj.get("port") or obj.get("Port") or obj.get("PORT") or ""
     if ip and port:
-        username = str(obj.get("account") or obj.get("username") or obj.get("user") or "").strip()
-        password = str(obj.get("password") or obj.get("pwd") or obj.get("pass") or "").strip()
+        username = obj.get("account") or obj.get("username") or obj.get("user") or ""
+        password = obj.get("password") or obj.get("pwd") or obj.get("pass") or ""
         return f"{username}:{password}@{ip}:{port}" if username and password else f"{ip}:{port}"
     for v in obj.values():
         if isinstance(v, str):
@@ -136,7 +136,7 @@ def _extract_custom_api_error(data: Any) -> str | None:
     code = data.get("code")
     if code == 0:
         return None
-    message = str(data.get("message") or "").strip()
+    message = data.get("message") or ""
     if not message:
         return None
     for pattern, user_msg in _FATAL_PATTERNS:
@@ -186,9 +186,9 @@ def _check_minute_conflict(url: str) -> str | None:
 
 
 def test_custom_proxy_api(url: str) -> tuple[bool, str, list[str]]:
-    if not url or not url.strip():
+    if not url:
         return False, "API地址不能为空", []
-    url = url.strip()
+    url = url
     if not (url.lower().startswith("http://") or url.lower().startswith("https://")):
         return False, "API地址必须以 http:// 或 https:// 开头", []
     try:

@@ -19,7 +19,7 @@ def record_answer_action(
     current = int(action.question_num or 0)
     if current <= 0:
         return
-    record_type = str(action.record_type or action.kind or "").strip()
+    record_type = action.record_type or action.kind or ""
     for option_index, option_count, row_index in action.pending_distribution_choices:
         record_pending_distribution_choice_fn(
             ctx,
@@ -35,7 +35,7 @@ def record_answer_action(
             )
         return
     if record_type == QuestionType.TEXT:
-        text_values = [str(item or "").strip() or default_fill_text for item in action.text_values]
+        text_values = [item or "" or default_fill_text for item in action.text_values]
         if not text_values:
             text_values = [default_fill_text]
         record_answer_fn(

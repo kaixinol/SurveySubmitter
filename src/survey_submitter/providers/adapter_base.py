@@ -22,7 +22,7 @@ class ProviderAdapterHooks:
 
 class CallableProviderAdapter:
     def __init__(self, provider: str, hooks: ProviderAdapterHooks) -> None:
-        self.provider = str(provider or "").strip()
+        self.provider = provider or ""
         self._hooks = hooks
 
     async def parse_survey_async(self, url: str) -> SurveyDefinition:

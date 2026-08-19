@@ -51,7 +51,7 @@ _VALID_LOGIC_PARSE_STATUSES = {
 def _normalize_text_list(raw: object) -> list[str]:
     if not isinstance(raw, list):
         return []
-    return [str(item or "").strip() for item in raw]
+    return [str(item) if item else "" for item in raw]
 
 
 def _normalize_dict_list(raw: object) -> list[dict[str, object]]:
@@ -72,7 +72,7 @@ def _normalize_jump_rules(raw: object) -> list[JumpRule]:
     for rule in rules:
         normalized_rule = dict(rule)
         if "terminates_survey" not in normalized_rule:
-            option_text = str(normalized_rule.get("option_text") or "").strip()
+            option_text = str(normalized_rule.get("option_text") or "")
             normalized_rule["terminates_survey"] = bool(
                 option_text and any(keyword in option_text for keyword in terminate_keywords)
             )
@@ -84,7 +84,7 @@ def _normalize_jump_rules(raw: object) -> list[JumpRule]:
 
 def _infer_logic_parse_status(normalized: Mapping[str, object]) -> str:
     if "logic_parse_status" in normalized:
-        explicit = str(normalized.get("logic_parse_status") or "").strip().lower()
+        explicit = str(normalized.get("logic_parse_status") or "").lower()
         if explicit in _VALID_LOGIC_PARSE_STATUSES:
             return explicit
         return LOGIC_PARSE_STATUS_UNKNOWN
@@ -112,13 +112,13 @@ def _normalize_question_media_list(raw: object) -> list[QuestionMedia]:
     for item in raw:
         if not isinstance(item, Mapping):
             continue
-        kind = str(item.get("kind") or "").strip().lower()
+        kind = str(item.get("kind") or "").lower()
         if kind != "image":
             continue
-        scope = str(item.get("scope") or "").strip().lower()
+        scope = str(item.get("scope") or "").lower()
         if scope not in {"title", "option", "row"}:
             continue
-        source_url = str(item.get("source_url") or "").strip()
+        source_url = str(item.get("source_url") or "")
         if not source_url:
             continue
         index = item.get("index")
@@ -133,7 +133,7 @@ def _normalize_question_media_list(raw: object) -> list[QuestionMedia]:
                 continue
             if normalized_index < 0:
                 continue
-        label = str(item.get("label") or "").strip()
+        label = str(item.get("label") or "")
         items.append(
             {
                 "kind": "image",
@@ -241,14 +241,14 @@ def survey_question_meta_to_dict(question: SurveyQuestionMeta) -> dict[str, obje
 
 
 def _resolve_type_code(normalized: Mapping[str, object]) -> QuestionType:
-    raw = str(normalized.get("type_code") or "unknown").strip()
+    raw = str(normalized.get("type_code") or "unknown")
     return convert_wire_type_code(raw)
 
 
 def _build_common_kwargs(
     normalized: dict[str, object], type_code: QuestionType, question_number: int
 ) -> dict[str, object]:
-    unsupported_reason = str(normalized.get("unsupported_reason") or "").strip()
+    unsupported_reason = normalized.get("unsupported_reason") or ""
     if bool(normalized.get("unsupported")) and not unsupported_reason:
         unsupported_reason = "当前平台暂不支持该题型"
     page_raw = normalized.get("page")
@@ -258,17 +258,17 @@ def _build_common_kwargs(
         page_number = 1
     return {
         "num": question_number,
-        "title": str(normalized.get("title") or "").strip(),
+        "title": normalized.get("title") or "",
         "type_code": type_code,
-        "provider_type": str(normalized.get("type_code") or "").strip(),
+        "provider_type": normalized.get("type_code") or "",
         "required": bool(normalized.get("required")),
-        "description": str(normalized.get("description") or "").strip() or None,
+        "description": normalized.get("description") or "" or None,
         "unsupported": bool(normalized.get("unsupported")) and type_code != QuestionType.DESCRIPTION,
         "unsupported_reason": unsupported_reason or None,
         "provider_question_id": str(
             normalized.get("provider_question_id") or question_number
-        ).strip(),
-        "provider_page_id": str(normalized.get("provider_page_id") or page_number).strip(),
+        ),
+        "provider_page_id": str(normalized.get("provider_page_id") or page_number),
     }
 
 
@@ -323,7 +323,7 @@ def _build_choice_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     return {
         "option_texts": option_texts or None,
         "forced_option_index": forced_option_index,
-        "forced_option_text": str(normalized.get("forced_option_text") or "").strip() or None,
+        "forced_option_text": normalized.get("forced_option_text") or "" or None,
         "fillable_options": fillable_options or None,
         "required_fillable_options": required_fillable_options or None,
         "attached_option_selects": attached_list or None,
@@ -395,7 +395,7 @@ def _build_text_kwargs(
         "text_inputs": text_inputs,
         "text_input_labels": text_input_labels,
         "is_location": bool(normalized.get("is_location")) or type_code == QuestionType.LOCATION,
-        "location_verify_type": str(normalized.get("location_verify_type") or "").strip(),
+        "location_verify_type": normalized.get("location_verify_type") or "",
     }
 
 
@@ -538,6 +538,6 @@ def build_survey_definition(
     normalized_provider = normalize_survey_provider(provider, default=SURVEY_PROVIDER_WJX)
     return SurveyDefinition(
         provider=normalized_provider,
-        title=str(title or "").strip(),
+        title=title or "",
         questions=normalize_survey_questions(normalized_provider, questions),
     )

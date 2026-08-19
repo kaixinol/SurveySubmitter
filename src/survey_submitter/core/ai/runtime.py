@@ -23,7 +23,7 @@ _AI_OPT_FILL_PREFIX = "__FREE_AI_OPTION_FILL__"
 
 
 def _is_retryable_error(error: Exception) -> bool:
-    text = str(error or "").strip().lower()
+    text = str(error).lower()
     if not text:
         return True
     non_retryable_markers = (
@@ -41,7 +41,7 @@ def is_ai_timeout_runtime_error(error: object) -> bool:
     visited: set[int] = set()
     while current is not None and id(current) not in visited:
         visited.add(id(current))
-        text = str(current or "").strip().lower()
+        text = str(current).lower()
         if "timed out" in text or "timeout" in text or "超时" in text:
             return True
         next_error = getattr(current, "__cause__", None) or getattr(current, "__context__", None)
@@ -52,7 +52,7 @@ def is_ai_timeout_runtime_error(error: object) -> bool:
 def _normalize_text(value: str | None) -> str:
     if not value:
         return ""
-    return _HTML_SPACE_RE.sub(" ", str(value)).strip()
+    return _HTML_SPACE_RE.sub(" ", str(value))
 
 
 def _cleanup_question_title(raw_title: str) -> str:
@@ -61,7 +61,7 @@ def _cleanup_question_title(raw_title: str) -> str:
         return ""
     title = re.sub(r"^\*?\s*\d+[\.、]?\s*", "", title)
     title = title.replace("【单选题】", "").replace("【多选题】", "")
-    return title.strip()
+    return title
 
 
 def build_ai_question_prompt(
@@ -150,21 +150,21 @@ async def agenerate_ai_answer(
             )
             if question_type == QuestionType.MULTI_FILL_BLANK:
                 if not isinstance(answer, list):
-                    if not answer or not str(answer).strip():
+                    if not answer or not str(answer):
                         raise AIRuntimeError("AI 未返回有效答案")
-                    return str(answer).strip()
+                    return str(answer)
                 cleaned_answers: list[str] = []
                 for item in answer:
-                    text = str(item or "").strip()
+                    text = item or ""
                     if not text:
                         raise AIRuntimeError("AI 返回的多项填空答案包含空值")
                     cleaned_answers.append(text)
                 if not cleaned_answers:
                     raise AIRuntimeError("AI 未返回有效答案")
                 return cleaned_answers
-            if not answer or not str(answer).strip():
+            if not answer or not str(answer):
                 raise AIRuntimeError("AI 未返回有效答案")
-            return str(answer).strip()
+            return str(answer)
         except Exception as exc:
             last_error = exc
             if attempt >= _AI_FILL_MAX_ATTEMPTS or not _is_retryable_error(exc):

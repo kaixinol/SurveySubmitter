@@ -23,7 +23,7 @@ async def update_http_submit_step(
     min_visible_seconds: float = HTTP_SUBMIT_STEP_MIN_VISIBLE_SECONDS,
 ) -> None:
 
-    label = str(step_label or "").strip()
+    label = step_label or ""
     try:
         current = HTTP_SUBMIT_STEPS.index(label) + 1
     except ValueError:

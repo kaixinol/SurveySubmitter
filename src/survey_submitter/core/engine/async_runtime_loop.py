@@ -63,7 +63,7 @@ def _handle_verification_error(
     thread_name: str,
     state: ExecutionState,
 ) -> bool:
-    message = str(exc or "").strip() or "提交触发智能验证，请启用随机 IP 后再试"
+    message = str(exc) or "提交触发智能验证，请启用随机 IP 后再试"
     logger.warning(f"会话[{thread_name}]触发提交智能验证：{message}")
 
     _safe_state_operation(
@@ -249,7 +249,7 @@ class AsyncSlotRunner:
     def _resolve_finished_status_text(self) -> str:
         if self.run_context.stop_requested():
             try:
-                terminal_category = str(self.state.get_terminal_stop_snapshot()[0] or "").strip()
+                terminal_category = self.state.get_terminal_stop_snapshot()[0] or ""
             except Exception:
                 logger.opt(exception=True).debug("获取终端停止快照失败")
                 terminal_category = ""
@@ -366,7 +366,7 @@ class AsyncSlotRunner:
     def _handle_survey_provider_unavailable_error(
         self, exc: SurveyProviderUnavailableAtRuntimeError
     ) -> bool:
-        message = str(exc or "").strip() or "问卷当前不可填写"
+        message = str(exc) or "问卷当前不可填写"
         logger.warning(f"会话[{self.slot_label}]发现问卷不可继续：{message}")
 
         _safe_state_operation(
@@ -416,7 +416,7 @@ class AsyncSlotRunner:
         return self.http_submitter.resolve_block_reason()
 
     def _block_http_runtime(self, reason: str) -> None:
-        message = str(reason or "").strip() or "当前问卷不支持纯 HTTP 提交"
+        message = reason or "当前问卷不支持纯 HTTP 提交"
         logger.error(f"会话[{self.slot_label}]已阻止纯 HTTP 提交：{message}")
         self._update_status("纯 HTTP 不支持", running=False)
         self.stop_policy.record_failure(

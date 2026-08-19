@@ -13,7 +13,7 @@ def _add_successful_proxy_address(
     successful_proxy_addresses: set[str],
     proxy_address: str,
 ) -> bool:
-    normalized = str(proxy_address or "").strip()
+    normalized = proxy_address or ""
     if not normalized:
         return False
     previous_size = len(successful_proxy_addresses)
@@ -41,7 +41,7 @@ def _mark_proxy_in_cooldown(
     proxy_address: str,
     cooldown_seconds: float,
 ) -> bool:
-    normalized = str(proxy_address or "").strip()
+    normalized = proxy_address or ""
     if not normalized:
         return False
     try:
@@ -166,14 +166,14 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
             self.proxy_waiting_threads = max(0, int(self.proxy_waiting_threads or 0) - 1)
 
     def mark_proxy_in_use(self: "_ProxyRuntimeHost", thread_name: str, lease: ProxyLease) -> None:
-        key = str(thread_name or "").strip()
+        key = thread_name or ""
         if not key or not isinstance(lease, ProxyLease):
             return
         with self.lock:
             self.proxy_in_use_by_thread[key] = lease
 
     def release_proxy_in_use(self: "_ProxyRuntimeHost", thread_name: str) -> ProxyLease | None:
-        key = str(thread_name or "").strip()
+        key = thread_name or ""
         if not key:
             return None
         with self.lock:
@@ -201,7 +201,7 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
         *,
         now_ts: float | None = None,
     ) -> bool:
-        normalized = str(proxy_address or "").strip()
+        normalized = proxy_address or ""
         if not normalized:
             return False
         _purge_expired_proxy_cooldowns(self.proxy_cooldowns_by_address, now_ts=now_ts)
@@ -214,7 +214,7 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
         *,
         now_ts: float | None = None,
     ) -> bool:
-        normalized = str(proxy_address or "").strip()
+        normalized = proxy_address or ""
         if not normalized:
             return False
         with self.lock:
@@ -239,21 +239,21 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
         *,
         exclude_thread_name: str = "",
     ) -> set[str]:
-        excluded = str(exclude_thread_name or "").strip()
+        excluded = exclude_thread_name or ""
         active = set()
         for thread_name, lease in self.proxy_in_use_by_thread.items():
-            if excluded and str(thread_name or "").strip() == excluded:
+            if excluded and thread_name or "" == excluded:
                 continue
-            address = str(lease.address or "").strip()
+            address = lease.address or ""
             if address:
                 active.add(address)
         return active
 
     def successful_proxy_addresses_locked(self: "_ProxyRuntimeHost") -> set[str]:
         return {
-            str(address or "").strip()
+            address or ""
             for address in set(self.successful_proxy_addresses or set())
-            if str(address or "").strip()
+            if address or ""
         }
 
     def snapshot_active_proxy_addresses(
@@ -284,7 +284,7 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
         *,
         exclude_thread_name: str = "",
     ) -> bool:
-        normalized = str(proxy_address or "").strip()
+        normalized = proxy_address or ""
         if not normalized:
             return False
         with self.lock:
@@ -300,7 +300,7 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
         return changed
 
     def is_successful_proxy_address(self: "_ProxyRuntimeHost", proxy_address: str) -> bool:
-        normalized = str(proxy_address or "").strip()
+        normalized = proxy_address or ""
         if not normalized:
             return False
         with self.lock:

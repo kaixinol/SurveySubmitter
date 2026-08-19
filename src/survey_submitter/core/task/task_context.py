@@ -24,7 +24,7 @@ class ProxyRuntimeConfig(BaseConfigModel):
     @field_validator("source", mode="before")
     @classmethod
     def validate_proxy_source(cls, v: Any) -> str:
-        text = str(v or "custom").lower().strip()
+        text = str(v or "custom").lower()
         return text if text in ("custom", "local") else "custom"
 
 
@@ -144,11 +144,11 @@ class ExecutionState(
         message: str = "",
         overwrite: bool = False,
     ) -> None:
-        normalized_category = str(category or "").strip()
+        normalized_category = category or ""
         if not normalized_category:
             return
-        normalized_failure_reason = str(failure_reason or "").strip()
-        normalized_message = str(message or "").strip()
+        normalized_failure_reason = failure_reason or ""
+        normalized_message = message or ""
         with self._terminal_stop_lock:
             if self.terminal_stop_category and not overwrite:
                 return

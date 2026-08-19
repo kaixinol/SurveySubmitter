@@ -38,7 +38,7 @@ def is_strict_custom_ratio_mode(
     custom_weights: object,
 ) -> bool:
 
-    mode = str(distribution_mode or "").strip().lower()
+    mode = str(distribution_mode or "").lower()
     if mode != "custom":
         return False
     return has_positive_weight_values(custom_weights) or has_positive_weight_values(probabilities)
