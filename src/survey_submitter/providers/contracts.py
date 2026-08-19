@@ -1,16 +1,41 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Mapping, cast
+from typing import Iterable, Mapping, TypedDict, cast
 
 from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.questions.types import QuestionType, convert_wire_type_code
 from survey_submitter.providers.common import SURVEY_PROVIDER_WJX, normalize_survey_provider
 
-type JumpRule = dict[str, str | int | bool]
-type DisplayCondition = dict[str, str | list[str] | int | list[int]]
-type QuestionMedia = dict[str, str | int | None]
-type AttachedOptionSelect = dict[str, str | list[str] | list[float]]
+
+class JumpRule(TypedDict, total=False):
+    option_index: int
+    jumpto: int
+    option_text: str | None
+    terminates_survey: bool
+
+
+class DisplayCondition(TypedDict, total=False):
+    condition_question_num: int
+    condition_mode: str
+    condition_option_indices: list[int]
+    raw_relation: str | None
+    target_question_num: int
+
+
+class QuestionMedia(TypedDict, total=False):
+    kind: str
+    scope: str
+    index: int | None
+    source_url: str
+    label: str
+
+
+class AttachedOptionSelect(TypedDict, total=False):
+    option_index: int
+    option_text: str
+    select_options: list[str]
+    weights: list[float] | None
 
 __all__ = [
     "LOGIC_PARSE_STATUS_COMPLETE",
@@ -77,7 +102,7 @@ def _normalize_jump_rules(raw: object) -> list[JumpRule]:
                 option_text and any(keyword in option_text for keyword in terminate_keywords)
             )
         else:
-            normalized_rule["terminates_survey"] = bool(normalized_rule.get("terminates_survey"))
+            normalized_rule["terminates_survey"] = bool(normalized_rule["terminates_survey"])
         normalized_rules.append(cast(JumpRule, normalized_rule))
     return normalized_rules
 

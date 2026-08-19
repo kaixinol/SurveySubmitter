@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Sequence, cast
+from typing import Awaitable, Callable, Sequence, cast
 
 from loguru import logger
 
@@ -9,6 +9,8 @@ from survey_submitter.providers.answering import AnswerAction
 from survey_submitter.providers.contracts import (
     LOGIC_PARSE_STATUS_COMPLETE,
     LOGIC_PARSE_STATUS_UNKNOWN,
+    DisplayCondition,
+    JumpRule,
     SurveyQuestionMeta,
 )
 
@@ -24,11 +26,9 @@ class HttpLogicPlan:
     terminated_early: bool = False
 
 
-def _jump_rule_terminates_survey(rule: dict[str, object]) -> bool:
-    if not isinstance(rule, dict):
-        return False
+def _jump_rule_terminates_survey(rule: JumpRule) -> bool:
     if "terminates_survey" in rule:
-        return bool(rule.get("terminates_survey"))
+        return bool(rule["terminates_survey"])
     option_text = str(rule.get("option_text") or "")
     return bool(option_text and any(keyword in option_text for keyword in _TERMINATE_JUMP_KEYWORDS))
 
@@ -80,7 +80,7 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
                 return f"第{question_num}题显隐条件格式异常"
             try:
                 source_question_num = int(
-                    cast("str | None", condition.get("condition_question_num")) or 0
+                    condition.get("condition_question_num") or 0
                 )
             except (ValueError, TypeError):
                 source_question_num = 0
@@ -99,7 +99,7 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
                 return f"第{question_num}题控制显示规则格式异常"
             try:
                 target_question_num = int(
-                    cast("str | None", target.get("target_question_num")) or 0
+                    target.get("target_question_num") or 0
                 )
             except (ValueError, TypeError):
                 target_question_num = 0
@@ -116,7 +116,7 @@ def get_http_logic_fallback_reason(questions: Sequence[SurveyQuestionMeta]) -> s
                 jump_target = int(rule.get("jumpto") or 0)
             except (ValueError, TypeError):
                 jump_target = 0
-            if _jump_rule_terminates_survey(cast("dict[str, object]", rule)):
+            if _jump_rule_terminates_survey(cast(JumpRule, rule)):
                 continue
             if jump_target <= question_num:
                 return f"第{question_num}题跳题目标回跳到已过题目"
@@ -133,7 +133,7 @@ def _action_selected_indices(action: AnswerAction) -> set[int]:
 
 def _condition_is_met(
     action_by_question_num: dict[int, AnswerAction],
-    condition: dict[str, Any],
+    condition: DisplayCondition,
 ) -> bool:
     try:
         source_question_num = int(condition.get("condition_question_num") or 0)
@@ -172,13 +172,13 @@ def _question_is_visible(
     if not conditions:
         return not bool(question.has_display_condition)
 
-    grouped_conditions: dict[tuple[int, str], list[dict[str, Any]]] = {}
+    grouped_conditions: dict[tuple[int, str], list[DisplayCondition]] = {}
     for condition in conditions:
         if not isinstance(condition, dict):
             continue
         try:
             source_question_num = int(
-                cast("str | None", condition.get("condition_question_num")) or 0
+                condition.get("condition_question_num") or 0
             )
         except (ValueError, TypeError):
             source_question_num = 0
@@ -211,7 +211,7 @@ def _resolve_jump_target(
             jump_target = 0
         if jump_target <= 0:
             continue
-        terminates_survey = _jump_rule_terminates_survey(cast("dict[str, object]", rule))
+        terminates_survey = _jump_rule_terminates_survey(cast(JumpRule, rule))
         try:
             option_index = int(rule.get("option_index") or 0)
         except (ValueError, TypeError):

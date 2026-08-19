@@ -156,7 +156,7 @@ def _resolve_user_agent(user_agent: str | None) -> str:
     text = user_agent or ""
     if text:
         return text
-    return DEFAULT_USER_AGENT or USER_AGENT_PRESETS.get("pc_web", {}).get("ua") or ""
+    return DEFAULT_USER_AGENT or USER_AGENT_PRESETS["pc_web"]["ua"] or ""
 
 
 def _is_wechat_user_agent(user_agent: str | None) -> bool:

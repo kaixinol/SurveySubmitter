@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from typing import cast
 
 try:
     from bs4 import BeautifulSoup
@@ -8,6 +9,7 @@ except ImportError:
     BeautifulSoup = None  # ty: ignore[invalid-assignment]
 
 from survey_submitter.core.questions.types import QuestionType
+from survey_submitter.providers.contracts import DisplayCondition, JumpRule
 from survey_submitter.providers.match_utils import normalize_match_text
 
 from .html_parser_choice import (
@@ -267,9 +269,9 @@ def _extract_jump_rules_from_html(
             if unconditional_target:
                 break
         if unconditional_target and not any(
-            int(rule.get("option_index") or 0)  # ty: ignore[invalid-argument-type]
+            cast(JumpRule, rule)["option_index"]
             < 0
-            and int(rule.get("jumpto") or 0)  # ty: ignore[invalid-argument-type]
+            and cast(JumpRule, rule)["jumpto"]
             == unconditional_target
             for rule in jump_rules
             if isinstance(rule, dict)
@@ -360,11 +362,12 @@ def _attach_display_condition_metadata(questions_info: list[dict[str, object]]) 
         for condition in display_conditions:
             if not isinstance(condition, dict):
                 continue
+            typed_condition = cast(DisplayCondition, condition)
             try:
-                source_question_num = int(condition.get("condition_question_num") or 0)  # ty: ignore[invalid-argument-type]
+                source_question_num = int(typed_condition["condition_question_num"] or 0)
             except (ValueError, TypeError):
                 source_question_num = 0
-            option_indices = condition.get("condition_option_indices") or []
+            option_indices = typed_condition.get("condition_option_indices") or []
             if source_question_num <= 0 or not isinstance(option_indices, list):
                 continue
             source_info = by_num.get(source_question_num)
@@ -378,7 +381,7 @@ def _attach_display_condition_metadata(questions_info: list[dict[str, object]]) 
             seen_indices = set()
             for raw_index in option_indices:
                 try:
-                    index = int(raw_index)  # ty: ignore[invalid-argument-type]
+                    index = int(raw_index)
                 except (ValueError, TypeError):
                     continue
                 if index < 0 or index in seen_indices:
@@ -391,14 +394,15 @@ def _attach_display_condition_metadata(questions_info: list[dict[str, object]]) 
             for existing in targets:
                 if not isinstance(existing, dict):
                     continue
+                typed_existing = cast(DisplayCondition, existing)
                 try:
-                    existing_target = int(existing.get("target_question_num") or 0)  # ty: ignore[invalid-argument-type]
+                    existing_target = int(typed_existing["target_question_num"] or 0)
                 except (ValueError, TypeError):
                     existing_target = 0
-                existing_indices = existing.get("condition_option_indices") or []
+                existing_indices = typed_existing.get("condition_option_indices") or []
                 if (
                     existing_target == target_question_num
-                    and list(existing_indices) == normalized_indices  # ty: ignore[invalid-argument-type]
+                    and list(existing_indices) == normalized_indices
                 ):
                     duplicate = True
                     break
@@ -408,7 +412,7 @@ def _attach_display_condition_metadata(questions_info: list[dict[str, object]]) 
                 {  # ty: ignore[invalid-argument-type]
                     "target_question_num": target_question_num,
                     "condition_option_indices": normalized_indices,
-                    "condition_mode": str(condition.get("condition_mode") or "selected").strip()
+                    "condition_mode": str(typed_condition.get("condition_mode") or "selected").strip()
                     or "selected",
                 }
             )
@@ -418,8 +422,8 @@ def _attach_display_condition_metadata(questions_info: list[dict[str, object]]) 
         if isinstance(targets, list) and targets:
             targets.sort(
                 key=lambda item: (
-                    int(item.get("target_question_num") or 0) if isinstance(item, dict) else 0,
-                    tuple(item.get("condition_option_indices") or [])
+                    int(cast(DisplayCondition, item)["target_question_num"] or 0) if isinstance(item, dict) else 0,
+                    tuple(cast(DisplayCondition, item).get("condition_option_indices") or [])
                     if isinstance(item, dict)
                     else (),
                 )

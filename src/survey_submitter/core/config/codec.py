@@ -180,7 +180,7 @@ def _select_user_agent_from_ratios(
         return None
 
     device_type = chooser.choices(devices, weights=weights, k=1)[0]
-    ua_keys = _USER_AGENT_DEVICE_TO_PRESET_KEYS.get(device_type, [])
+    ua_keys = _USER_AGENT_DEVICE_TO_PRESET_KEYS[device_type]
     if not ua_keys:
         return None
 
