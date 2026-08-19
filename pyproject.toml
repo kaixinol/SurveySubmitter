@@ -21,7 +21,6 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "pytest-cov",
-    "pytest-xdist>=3.8.0",
     "ruff>=0.15.17",
     "xlsxwriter",
 ]
@@ -35,6 +34,9 @@ default-groups = ["dev"]
 [tool.setuptools.packages.find]
 where = ["src"]
 namespaces = false
+
+[tool.setuptools.package-data]
+"survey_submitter.assets" = ["*.json", "*.txt"]
 
 [tool.ruff]
 line-length = 100
