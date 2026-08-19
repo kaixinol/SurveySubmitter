@@ -115,6 +115,10 @@ def infer_question_entry_type(question: QuestionMetaLike) -> str:
             return QuestionType.SLIDER
         case QuestionType.ORDER:
             return QuestionType.ORDER
+        case QuestionType.LOCATION:
+            return QuestionType.LOCATION
+        case QuestionType.UNIVERSITY:
+            return QuestionType.UNIVERSITY
         case _:
             return QuestionType.SINGLE
 

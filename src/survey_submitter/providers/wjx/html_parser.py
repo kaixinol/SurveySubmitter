@@ -198,9 +198,9 @@ def _resolve_question_type(question_div, raw_type_code: str) -> dict[str, object
         if is_rating:
             rating_max = _extract_rating_option_count(question_div)
             type_code = QuestionType.SCALE
-    is_location = type_code in {QuestionType.TEXT, QuestionType.LOCATION} and _question_div_is_location(
-        question_div
-    )
+    # 问卷星的高校输入有时会被标成普通选项题，不能只依赖原始题型代码。
+    # get_Local/verify 属性才是地区和高校题的可靠标记。
+    is_location = _question_div_is_location(question_div)
     location_verify_type = (
         _extract_location_verify_type(question_div) if is_location else ""
     )
