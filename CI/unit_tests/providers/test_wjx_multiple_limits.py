@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from bs4 import BeautifulSoup
+from lxml import html as lxml_html
 
 from survey_submitter.providers.wjx.questions import multiple_limits
 
@@ -37,8 +37,8 @@ class WjxMultipleLimitsTests:
         element = _FakeElement({"minvalue": "2", "maxvalue": "6"})
         assert multiple_limits._extract_min_max_from_attributes(element) == (2, 6)
 
-    def test_extract_min_max_from_attributes_supports_beautifulsoup_tag(self) -> None:
-        element = BeautifulSoup("<div minvalue='2' maxvalue='6'></div>", "html.parser").div
+    def test_extract_min_max_from_attributes_supports_lxml_element(self) -> None:
+        element = lxml_html.fromstring("<div minvalue='2' maxvalue='6'></div>")
         assert multiple_limits._extract_min_max_from_attributes(element) == (2, 6)
 
     def test_extract_multi_limit_range_from_text_supports_cn_and_en_patterns(self) -> None:

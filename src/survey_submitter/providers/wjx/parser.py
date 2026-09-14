@@ -17,9 +17,11 @@ from survey_submitter.providers.errors import (
 from survey_submitter.providers.match_utils import normalize_match_text
 from survey_submitter.providers.wjx.html_parser import (
     _normalize_html_text,
+    _parse_document,
     extract_survey_title_from_html,
     parse_survey_questions_from_html,
 )
+from survey_submitter.providers.wjx.html_parser.texts import text_of
 from survey_submitter.providers.wjx.regexes import WJX_NOT_OPEN_TIME_RE, WJX_PAUSED_SURVEY_RE
 
 PAUSED_SURVEY_ERROR_MESSAGE = "问卷已暂停，需要前往问卷星后台重新发布"
@@ -67,19 +69,14 @@ def is_paused_survey_page(html: str) -> bool:
 
 
 def _html_has_question_content(html: str) -> bool:
-    try:
-        from bs4 import BeautifulSoup
-
-        soup = BeautifulSoup(html, "html.parser")
-        question_container = soup.find("div", id="divQuestion")
-        if not question_container:
-            return False
-        return bool(
-            question_container.find_all("fieldset")
-            or question_container.find_all("div", attrs={"topic": True})
-        )
-    except Exception:
+    document = _parse_document(html)
+    if document is None:
         return False
+    containers = document.xpath("//div[@id='divQuestion']")
+    if not containers:
+        return False
+    container = containers[0]
+    return bool(container.xpath(".//fieldset") or container.xpath(".//div[@topic]"))
 
 
 def is_stopped_survey_page(html: str) -> bool:
@@ -88,19 +85,14 @@ def is_stopped_survey_page(html: str) -> bool:
     if not text or "停止状态" not in text or "无法作答" not in text:
         return False
 
-    try:
-        from bs4 import BeautifulSoup
-
-        soup = BeautifulSoup(html, "html.parser")
+    document = _parse_document(html)
+    if document is not None:
         for selector_id in ("divWorkError", "divTip"):
-            error_container = soup.find("div", id=selector_id)
-            if error_container is not None:
-                error_text = _normalize_html_text(error_container.get_text(" ", strip=True))
+            for error_container in document.xpath(f"//div[@id='{selector_id}']"):
+                error_text = _normalize_html_text(text_of(error_container))
                 error_text = normalize_match_text(error_text)
                 if "停止状态" in error_text and "无法作答" in error_text:
                     return True
-    except Exception:
-        pass
 
     if _html_has_question_content(html):
         return False
