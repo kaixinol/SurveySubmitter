@@ -1,55 +1,80 @@
+"""问卷星 HTML 解析器各阶段单元测试（lxml + XPath 实现）。
+
+覆盖三段流水线：``texts`` / ``features``（特征抽取）、``classify``（题型分类）、
+``models`` / ``logic``（解析模型与逻辑）。
+"""
+
 from __future__ import annotations
 
-from bs4 import BeautifulSoup
+from lxml import html as lxml_html
 
-from survey_submitter.providers.wjx import html_parser_choice, html_parser_common, html_parser_rules
+from survey_submitter.core.questions.types import QuestionType
+from survey_submitter.providers.wjx.html_parser import (
+    _display_question_number,
+    _should_mark_as_multi_text,
+    extract_survey_title_from_html,
+)
+from survey_submitter.providers.wjx.html_parser import classify as classify_module
+from survey_submitter.providers.wjx.html_parser import features as features_module
+from survey_submitter.providers.wjx.html_parser import logic as logic_module
+from survey_submitter.providers.wjx.html_parser import models as models_module
+from survey_submitter.providers.wjx.html_parser import texts as texts_module
+from survey_submitter.providers.wjx.html_parser.features import Marker
 
 
-def _soup(html: str) -> BeautifulSoup:
-    return BeautifulSoup(html, "html.parser")
+def _node(html: str):
+    """把 HTML 片段解析成片段的根元素。"""
+    return lxml_html.fromstring(html.strip())
+
+
+def _features(html: str):
+    node = _node(html)
+    return features_module.extract(node, node)
+
+
+def _rule(name: str) -> classify_module.Rule:
+    return next(rule for rule in classify_module.RULES if rule.name == name)
 
 
 class WjxHtmlParserHelperTests:
     def test_force_select_text_helpers_and_fragment_dedupe(self) -> None:
-        question_div = _soup(
+        features = _features(
             """
             <div>
               <div class="topichtml">请务必选 A 项</div>
               <div class="field-label">请务必选 A 项</div>
             </div>
             """
-        ).div
+        )
 
-        assert html_parser_choice._normalize_force_select_text(" 【A】 选项 ") == "a选项"
-        assert html_parser_choice._extract_force_select_option_label("(B) 香蕉") == "B"
-        assert html_parser_choice._extract_force_select_option_label("普通文本") is None
-        assert html_parser_choice._collect_force_select_fragments(
-            question_div, "请务必选 A 项"
-        ) == ["请务必选 A 项"]
+        assert models_module._normalize_force_text(" 【A】 选项 ") == "a选项"
+        assert models_module._force_option_label("(B) 香蕉") == "B"
+        assert models_module._force_option_label("普通文本") is None
+        assert models_module._force_fragments(features, "请务必选 A 项") == ["请务必选 A 项"]
 
     def test_text_input_helpers_detect_shared_other_inputs(self) -> None:
-        ui_other_div = _soup("<div class='ui-other'><input type='text' /></div>").div
-        keyword_div = _soup("<div><input id='other_reason' type='text' /></div>").div
+        ui_other_div = _node("<div class='ui-other'><input type='text' /></div>")
+        keyword_div = _node("<div><input id='other_reason' type='text' /></div>")
 
-        assert html_parser_choice._is_text_input_element(_soup("<textarea></textarea>").textarea)
-        assert html_parser_choice._is_text_input_element(_soup("<input type='text' />").input)
-        assert not html_parser_choice._is_text_input_element(_soup("<input type='radio' />").input)
-        assert html_parser_choice._element_contains_text_input(ui_other_div)
-        assert html_parser_choice._question_div_has_shared_text_input(ui_other_div)
-        assert html_parser_choice._question_div_has_shared_text_input(keyword_div)
+        assert texts_module.text_input_control(_node("<textarea></textarea>"))
+        assert texts_module.text_input_control(_node("<input type='text' />"))
+        assert not texts_module.text_input_control(_node("<input type='radio' />"))
+        assert models_module._has_text_input(ui_other_div)
+        assert models_module._has_shared_text_input(ui_other_div)
+        assert models_module._has_shared_text_input(keyword_div)
 
     def test_extract_option_text_from_attrs_prefers_primary_and_child_attrs(self) -> None:
-        primary = _soup("<div title='主标题'></div>").div
-        child = _soup("<div><span aria-label='子标题'></span></div>").div
-        fallback = _soup("<div data-val='备用值'></div>").div
+        primary = _node("<div title='主标题'></div>")
+        child = _node("<div><span aria-label='子标题'></span></div>")
+        fallback = _node("<div data-val='备用值'></div>")
 
-        assert html_parser_choice._extract_option_text_from_attrs(primary) == "主标题"
-        assert html_parser_choice._extract_option_text_from_attrs(child) == "子标题"
-        assert html_parser_choice._extract_option_text_from_attrs(fallback) == "备用值"
-        assert html_parser_choice._extract_option_text_from_attrs(None) == ""
+        assert texts_module.option_text_from_attrs(primary) == "主标题"
+        assert texts_module.option_text_from_attrs(child) == "子标题"
+        assert texts_module.option_text_from_attrs(fallback) == "备用值"
+        assert texts_module.option_text_from_attrs(None) == ""
 
     def test_extract_rating_option_texts_can_fall_back_to_numbering(self) -> None:
-        rating_div = _soup(
+        rating_div = _node(
             """
             <div>
               <ul class="modlen3">
@@ -59,11 +84,11 @@ class WjxHtmlParserHelperTests:
               </ul>
             </div>
             """
-        ).div
+        )
 
-        assert html_parser_choice._extract_rating_option_texts(rating_div) == ["1", "2", "3"]
-        assert html_parser_choice._text_looks_meaningful("A1")
-        assert not html_parser_choice._text_looks_meaningful("   ")
+        assert models_module._rating_texts(rating_div) == ["1", "2", "3"]
+        assert texts_module.has_content("A1")
+        assert not texts_module.has_content("   ")
 
     def test_extract_survey_title_from_html_strips_wjx_suffix(self) -> None:
         html = """
@@ -72,31 +97,21 @@ class WjxHtmlParserHelperTests:
           <body><div id="divTitle"><h1>正式标题 ｜ 问卷星</h1></div></body>
         </html>
         """
-        assert html_parser_common.extract_survey_title_from_html(html) == "正式标题"
+        assert extract_survey_title_from_html(html) == "正式标题"
 
     def test_extract_question_number_and_cleanup_helpers(self) -> None:
-        soup = _soup("<div id='div12' topic='12'></div>")
-        assert html_parser_common._extract_question_number_from_div(soup.div) == 12
-        assert (
-            html_parser_common._extract_question_number_from_div(
-                _soup("<div id='div77'></div>").div
-            )
-            == 77
-        )
-        assert (
-            html_parser_common._cleanup_question_title(" １． 【单选题】 题目标题 ") == "题目标题"
-        )
-        assert (
-            html_parser_common._cleanup_question_title(" 第1题 【多选题】 题目标题 ") == "题目标题"
-        )
-        assert html_parser_common._cleanup_question_title(" Q1 题目标题 ") == "题目标题"
-        assert html_parser_common._extract_display_question_number("* 18. 题目") == 18
-        assert html_parser_common._extract_display_question_number("第8题 题目") == 8
-        assert html_parser_common._extract_display_question_number("Q9 题目") == 9
-        assert html_parser_common._extract_display_question_number("10、题目") == 10
+        assert features_module._question_number(_node("<div id='div12' topic='12'></div>")) == 12
+        assert features_module._question_number(_node("<div id='div77'></div>")) == 77
+        assert features_module._cleanup_title(" １． 【单选题】 题目标题 ") == "题目标题"
+        assert features_module._cleanup_title(" 第1题 【多选题】 题目标题 ") == "题目标题"
+        assert features_module._cleanup_title(" Q1 题目标题 ") == "题目标题"
+        assert _display_question_number("* 18. 题目") == 18
+        assert _display_question_number("第8题 题目") == 8
+        assert _display_question_number("Q9 题目") == 9
+        assert _display_question_number("10、题目") == 10
 
     def test_extract_display_heading_text_includes_split_topic_number(self) -> None:
-        soup = _soup(
+        node = _node(
             """
             <div id="div23" topic="23" type="2">
               <div class="field-label">
@@ -107,12 +122,12 @@ class WjxHtmlParserHelperTests:
             </div>
             """
         )
-        heading = html_parser_common._extract_display_heading_text(soup.div)
+        heading = features_module._heading_text(node)
         assert heading == "22. 请评价培训和实习"
-        assert html_parser_common._extract_display_question_number(heading) == 22
+        assert _display_question_number(heading) == 22
 
     def test_count_text_inputs_and_extract_labels_from_mixed_nodes(self) -> None:
-        soup = _soup(
+        node = _node(
             """
             <div>
               <input type="text" placeholder="姓名" />
@@ -124,8 +139,9 @@ class WjxHtmlParserHelperTests:
             </div>
             """
         )
-        assert html_parser_common._count_text_inputs_in_soup(soup.div) == 5
-        assert html_parser_common._extract_text_input_labels(soup.div) == [
+        count, text_nodes = features_module._collect_text_inputs(node)
+        assert count == 5
+        assert features_module._text_input_labels(text_nodes) == [
             "姓名",
             "性别",
             "备注",
@@ -134,18 +150,18 @@ class WjxHtmlParserHelperTests:
         ]
 
     def test_extract_display_heading_text_falls_back_to_blockquote_and_plain_text(self) -> None:
-        blockquote_div = _soup("<div><blockquote> 引用标题 </blockquote></div>").div
-        plain_div = _soup("<div> 普通标题 </div>").div
+        blockquote_div = _node("<div><blockquote> 引用标题 </blockquote></div>")
+        plain_div = _node("<div> 普通标题 </div>")
 
-        assert html_parser_common._extract_display_heading_text(blockquote_div) == "引用标题"
-        assert html_parser_common._extract_display_heading_text(plain_div) == "普通标题"
+        assert features_module._heading_text(blockquote_div) == "引用标题"
+        assert features_module._heading_text(plain_div) == "普通标题"
 
     def test_description_reorder_scale_and_rating_detection(self) -> None:
-        description_div = _soup("<div><div class='topichtml'>说明</div></div>").div
-        reorder_div = _soup(
+        description_features = _features("<div><div class='topichtml'>说明</div></div>")
+        reorder_div = _node(
             "<div><ul><li>A</li><li>B</li></ul><div class='ui-sortable'></div></div>"
-        ).div
-        scale_div = _soup(
+        )
+        scale_div = _node(
             """
             <div>
               <div class="scaleTitle"></div>
@@ -155,24 +171,25 @@ class WjxHtmlParserHelperTests:
               </ul>
             </div>
             """
-        ).div
-        rating_div = _soup(
-            "<div><div class='evaluateTagWrap'></div><a class='rate-off'>星</a></div>"
-        ).div
-        rating_count_div = _soup("<div><ul class='modlen5'><li></li></ul></div>").div
-
-        assert html_parser_common._question_div_looks_like_description(description_div, "single")
-        assert not html_parser_common._question_div_looks_like_description(
-            _soup("<div><input type='radio'/></div>").div, "single"
         )
-        assert html_parser_common._question_div_looks_like_reorder(reorder_div)
-        assert html_parser_common._question_div_looks_like_numeric_scale(scale_div)
-        assert not html_parser_common._question_div_looks_like_rating(scale_div)
-        assert html_parser_common._question_div_looks_like_rating(rating_div)
-        assert html_parser_common._extract_rating_option_count(rating_count_div) == 5
+        rating_div = _node(
+            "<div><div class='evaluateTagWrap'></div><a class='rate-off'>星</a></div>"
+        )
+        rating_count_div = _node("<div><ul class='modlen5'><li></li></ul></div>")
+
+        description_rule = _rule("description")
+        assert description_rule.matches(description_features, QuestionType.SINGLE)
+        assert not description_rule.matches(
+            _features("<div><input type='radio'/></div>"), QuestionType.SINGLE
+        )
+        assert features_module._reorder(reorder_div)
+        assert features_module._numeric_scale(scale_div)
+        assert not features_module._rating(scale_div)
+        assert features_module._rating(rating_div)
+        assert features_module._rating_max(rating_count_div) == 5
 
     def test_dval_scale_with_blank_rate_icons_is_not_rating(self) -> None:
-        scale_div = _soup(
+        scale_div = _node(
             """
             <div>
               <div class="scaleTitle_frist">很不同意</div>
@@ -186,62 +203,66 @@ class WjxHtmlParserHelperTests:
               </ul>
             </div>
             """
-        ).div
+        )
 
-        assert html_parser_common._question_div_looks_like_numeric_scale(scale_div)
-        assert not html_parser_common._question_div_looks_like_rating(scale_div)
+        assert features_module._numeric_scale(scale_div)
+        assert not features_module._rating(scale_div)
 
     def test_required_and_select_placeholder_helpers(self) -> None:
-        question_div = _soup("<div req='1'><div class='topichtml'>题目</div></div>").div
-        heading_required = _soup("<div><div class='topichtml'>* 必答题</div></div>").div
-        selector_required = _soup("<div><span class='required'></span></div>").div
-        assert html_parser_common._question_div_is_required(question_div)
-        assert html_parser_common._question_div_is_required(heading_required)
-        assert html_parser_common._question_div_is_required(selector_required)
-        assert html_parser_common._text_looks_like_select_placeholder(" 请选择省份 ")
-        assert html_parser_common._is_select_placeholder_option(0, "", "请选择")
-        assert not html_parser_common._is_select_placeholder_option(1, "1", "北京")
+        required_cases = (
+            "<div req='1'><div class='topichtml'>题目</div></div>",
+            "<div><div class='topichtml'>* 必答题</div></div>",
+            "<div><span class='required'></span></div>",
+        )
+        for html in required_cases:
+            assert Marker.REQUIRED in _features(html).markers
+        assert features_module.placeholder_option(0, "", "请选择")
+        assert not features_module.placeholder_option(1, "1", "北京")
 
     def test_should_mark_as_multi_text_respects_type_and_flags(self) -> None:
-        assert html_parser_common._should_mark_as_multi_text("text", 0, 2, False)
-        assert html_parser_common._should_mark_as_multi_text(
-            "matrix", 0, 1, False, has_gapfill=True
-        )
-        assert not html_parser_common._should_mark_as_multi_text("single", 4, 2, False)
-        assert not html_parser_common._should_mark_as_multi_text("text", 0, 2, True)
-        assert not html_parser_common._should_mark_as_multi_text(
-            "text", 0, 2, False, has_slider_matrix=True
-        )
+        no_markers = frozenset()
+        assert _should_mark_as_multi_text("text", 0, 2, no_markers)
+        assert _should_mark_as_multi_text("matrix", 0, 1, frozenset({Marker.GAP_FILL}))
+        assert not _should_mark_as_multi_text("single", 4, 2, no_markers)
+        assert not _should_mark_as_multi_text("text", 0, 2, frozenset({Marker.LOCATION}))
+        assert not _should_mark_as_multi_text("text", 0, 2, frozenset({Marker.SLIDER_MATRIX}))
 
     def test_force_select_detection_supports_text_label_and_index(self) -> None:
-        text_div = _soup("<div><div class='topichtml'>本题检测，请选择 非常满意。</div></div>").div
-        label_div = _soup("<div><div class='topichtml'>请务必选A项</div></div>").div
-        index_div = _soup("<div><div class='topichtml'>请直接选第2项</div></div>").div
+        text_features = _features(
+            "<div><div class='topichtml'>本题检测，请选择 非常满意。</div></div>"
+        )
+        label_features = _features("<div><div class='topichtml'>请务必选A项</div></div>")
+        index_features = _features("<div><div class='topichtml'>请直接选第2项</div></div>")
+        detached = features_module.Features(node=None, root=None)
 
-        assert html_parser_choice._extract_force_select_option(
-            text_div, "本题检测，请选择 非常满意。", ["非常不满意", "非常满意"]
+        assert models_module.forced_option(
+            text_features, "本题检测，请选择 非常满意。", ["非常不满意", "非常满意"]
         ) == (1, "非常满意")
-        assert html_parser_choice._extract_force_select_option(
-            label_div, "请务必选A项", ["(A) 苹果", "(B) 香蕉"]
+        assert models_module.forced_option(
+            label_features, "请务必选A项", ["(A) 苹果", "(B) 香蕉"]
         ) == (0, "(A) 苹果")
-        assert html_parser_choice._extract_force_select_option(
-            index_div, "请直接选第2项", ["甲", "乙", "丙"]
-        ) == (1, "乙")
-        assert html_parser_choice._extract_force_select_option(
-            None, "请直接选第9项", ["甲", "乙"]
-        ) == (None, None)
+        assert models_module.forced_option(index_features, "请直接选第2项", ["甲", "乙", "丙"]) == (
+            1,
+            "乙",
+        )
+        assert models_module.forced_option(detached, "请直接选第9项", ["甲", "乙"]) == (
+            None,
+            None,
+        )
 
     def test_force_select_text_matching_requires_exact_normalized_text(self) -> None:
-        question_div = _soup("<div><div class='topichtml'>请直接选满意</div></div>").div
-        assert html_parser_choice._extract_force_select_option(
-            question_div, "请直接选满意", ["不满意", "满意度一般"]
-        ) == (None, None)
-        assert html_parser_choice._extract_force_select_option(
-            question_div, "请直接选满意", ["数字1", "满意"]
-        ) == (1, "满意")
+        features = _features("<div><div class='topichtml'>请直接选满意</div></div>")
+        assert models_module.forced_option(features, "请直接选满意", ["不满意", "满意度一般"]) == (
+            None,
+            None,
+        )
+        assert models_module.forced_option(features, "请直接选满意", ["数字1", "满意"]) == (
+            1,
+            "满意",
+        )
 
     def test_choice_option_and_attached_select_parsing_marks_fillable_options(self) -> None:
-        question_div = _soup(
+        features = _features(
             """
             <div>
               <div class="ui-controlgroup">
@@ -260,16 +281,14 @@ class WjxHtmlParserHelperTests:
               </div>
             </div>
             """
-        ).div
-
-        texts, fillable_indices, required_fillable_indices = (
-            html_parser_choice._collect_choice_option_texts(question_div)
         )
-        attached = html_parser_choice._extract_choice_attached_selects(question_div)
 
-        assert texts == ["选项A", "其他"]
-        assert fillable_indices == [1]
-        assert required_fillable_indices == []
+        options = models_module._choice_model(features, QuestionType.MULTIPLE)
+        attached = models_module.attached_selects(features)
+
+        assert options.option_texts == ["选项A", "其他"]
+        assert options.fillable_indices == [1]
+        assert options.required_fillable_indices == []
         assert attached == [
             {
                 "option_index": 1,
@@ -280,7 +299,7 @@ class WjxHtmlParserHelperTests:
         ]
 
     def test_choice_option_parsing_falls_back_to_plain_list_and_shared_input(self) -> None:
-        question_div = _soup(
+        features = _features(
             """
             <div>
               <ul>
@@ -290,23 +309,21 @@ class WjxHtmlParserHelperTests:
               <div class="ui-other"><input type="text" /></div>
             </div>
             """
-        ).div
-
-        texts, fillable_indices, required_fillable_indices = (
-            html_parser_choice._collect_choice_option_texts(question_div)
         )
-        assert texts == ["选项一", "选项二"]
-        assert fillable_indices == [1]
-        assert required_fillable_indices == []
+
+        options = models_module._choice_model(features, QuestionType.MULTIPLE)
+        assert options.option_texts == ["选项一", "选项二"]
+        assert options.fillable_indices == [1]
+        assert options.required_fillable_indices == []
 
     def test_custom_select_and_location_helpers(self) -> None:
-        custom_input = _soup("<input custom='请选择, 苹果,香蕉, 苹果' />").input
-        typo_custom_input = _soup("<input cusom='北京|上海|北京' />").input
-        location_div = _soup("<div><input verify='地图定位' /></div>").div
-        location_input = _soup(
-            "<input type='text' verify='省市区' onclick='openCityBox(this,3,event,1);' readonly='readonly' />"
-        ).input
-        soup = _soup(
+        custom_input = _node("<input custom='请选择, 苹果,香蕉, 苹果' />")
+        typo_custom_input = _node("<input cusom='北京|上海|北京' />")
+        location_input = (
+            "<input type='text' verify='省市区' onclick='openCityBox(this,3,event,1);'"
+            " readonly='readonly' />"
+        )
+        select_features = _features(
             """
             <div>
               <div topic="7">
@@ -320,44 +337,35 @@ class WjxHtmlParserHelperTests:
             """
         )
 
-        assert html_parser_choice._extract_custom_select_option_texts(custom_input) == [
-            "苹果",
-            "香蕉",
-        ]
-        assert html_parser_choice._extract_custom_select_option_texts(typo_custom_input) == [
-            "北京",
-            "上海",
-        ]
-        assert html_parser_choice._verify_text_indicates_location("腾讯地图")
-        assert html_parser_choice._verify_text_indicates_location("省市区")
-        assert not html_parser_choice._verify_text_indicates_location("city")
-        assert not html_parser_choice._verify_text_indicates_location("province")
-        assert not html_parser_choice._verify_text_indicates_location("area")
-        assert not html_parser_choice._verify_text_indicates_location("普通文本")
-        assert html_parser_choice._question_div_is_location(location_div)
-        assert html_parser_choice._question_div_is_location(
-            _soup("<div><input verify='省市区' onclick='openCityBox(this,3,event,1);' /></div>").div
-        )
-        assert not html_parser_choice._question_div_is_location(
-            _soup("<div><input onclick='openCityBox(this,3,event,1);' /></div>").div
-        )
-        assert not html_parser_choice._question_div_is_location(
-            _soup("<div><input verify='city' /></div>").div
+        assert models_module._custom_select_texts(custom_input) == ["苹果", "香蕉"]
+        assert models_module._custom_select_texts(typo_custom_input) == ["北京", "上海"]
+        assert features_module._location_verify_hit("腾讯地图")
+        assert features_module._location_verify_hit("省市区")
+        assert not features_module._location_verify_hit("city")
+        assert not features_module._location_verify_hit("province")
+        assert not features_module._location_verify_hit("area")
+        assert not features_module._location_verify_hit("普通文本")
+        assert Marker.LOCATION in _features("<div><input verify='地图定位' /></div>").markers
+        assert (
+            Marker.LOCATION
+            in _features(
+                "<div><input verify='省市区' onclick='openCityBox(this,3,event,1);' /></div>"
+            ).markers
         )
         assert (
-            html_parser_common._count_text_inputs_in_soup(_soup(f"<div>{location_input}</div>").div)
-            == 0
+            Marker.LOCATION
+            not in _features("<div><input onclick='openCityBox(this,3,event,1);' /></div>").markers
         )
-        assert html_parser_choice._collect_select_option_texts(soup.div, soup, 7) == [
+        assert Marker.LOCATION not in _features("<div><input verify='city' /></div>").markers
+        assert features_module._collect_text_inputs(_node(f"<div>{location_input}</div>"))[0] == 0
+        assert models_module._dropdown_model(select_features).option_texts == ["北京", "上海"]
+        assert models_module._select_option_texts(select_features.node.xpath(".//select")[0]) == [
             "北京",
             "上海",
         ]
-        assert html_parser_choice._extract_select_option_texts_from_element(
-            soup.find("select")
-        ) == ["北京", "上海"]
 
     def test_question_title_limits_jump_and_display_rules(self) -> None:
-        question_div = _soup(
+        features = _features(
             """
             <div relation="1,1|1,1|3,1,2">
               <div class="topichtml">2. 请选择你喜欢的项目 [至少选2项，最多选4项]</div>
@@ -365,18 +373,15 @@ class WjxHtmlParserHelperTests:
               <input type="checkbox" />
             </div>
             """
-        ).div
-
-        assert (
-            html_parser_rules._extract_question_title(question_div, 2)
-            == "请选择你喜欢的项目 [至少选2项，最多选4项]"
         )
-        assert html_parser_rules._extract_multiple_choice_limits(question_div, 2) == (2, 4)
-        assert html_parser_rules._extract_jump_rules_from_html(question_div, 2, ["A", "B"]) == (
+
+        assert features.title_text == "请选择你喜欢的项目 [至少选2项，最多选4项]"
+        assert models_module._multiple_limits(features.node) == (2, 4)
+        assert logic_module.jump_rules(features, ["A", "B"]) == (
             True,
             [{"option_index": 0, "jumpto": 5, "option_text": "A", "terminates_survey": False}],
         )
-        assert html_parser_rules._extract_display_conditions_from_html(question_div, 2) == (
+        assert logic_module.display_conditions(features.relation) == (
             True,
             [
                 {
@@ -410,7 +415,7 @@ class WjxHtmlParserHelperTests:
             },
         ]
 
-        html_parser_rules._attach_display_condition_metadata(questions)
+        logic_module.attach_display_condition_metadata(questions)
 
         assert questions[0]["has_dependent_display_logic"] is True
         assert questions[0]["controls_display_targets"] == [
@@ -422,7 +427,7 @@ class WjxHtmlParserHelperTests:
         ]
 
     def test_multi_limit_fragment_collection_and_metadata_helpers(self) -> None:
-        question_div = _soup(
+        features = _features(
             """
             <div topic="7" type="7">
               <div class="topichtml">至少选1项，最多选3项</div>
@@ -431,21 +436,16 @@ class WjxHtmlParserHelperTests:
               <input id="other_city" type="text" />
             </div>
             """
-        ).div
-        soup = _soup(str(question_div))
-
-        fragments = html_parser_rules._collect_multi_limit_text_fragments(question_div)
-        metadata = html_parser_rules._extract_question_metadata_from_html(
-            soup, question_div, 7, "dropdown"
         )
 
-        assert fragments == ["至少选1项，最多选3项"]
-        assert metadata[0] == ["北京"]
-        assert metadata[1] == 1
-        assert metadata[4] == [0]
+        assert models_module._limit_fragments(features.node) == ["至少选1项，最多选3项"]
+        options = models_module.parse(features, QuestionType.DROPDOWN)
+        assert options.option_texts == ["北京"]
+        assert options.option_count == 1
+        assert options.fillable_indices == [0]
 
     def test_choice_metadata_marks_required_fillable_option_indices(self) -> None:
-        question_div = _soup(
+        features = _features(
             """
             <div topic="7" type="4">
               <div class="ui-controlgroup">
@@ -463,18 +463,14 @@ class WjxHtmlParserHelperTests:
               </div>
             </div>
             """
-        ).div
-        soup = _soup(str(question_div))
-
-        metadata = html_parser_rules._extract_question_metadata_from_html(
-            soup, question_div, 7, "multiple"
         )
 
-        assert metadata[4] == [0, 1]
-        assert metadata[5] == [1]
+        options = models_module.parse(features, QuestionType.MULTIPLE)
+        assert options.fillable_indices == [0, 1]
+        assert options.required_fillable_indices == [1]
 
     def test_choice_metadata_marks_required_shared_other_input(self) -> None:
-        question_div = _soup(
+        features = _features(
             """
             <div topic="7" type="4">
               <ul>
@@ -486,32 +482,24 @@ class WjxHtmlParserHelperTests:
               </div>
             </div>
             """
-        ).div
-        soup = _soup(str(question_div))
-
-        metadata = html_parser_rules._extract_question_metadata_from_html(
-            soup, question_div, 7, "multiple"
         )
 
-        assert metadata[4] == [1]
-        assert metadata[5] == [1]
+        options = models_module.parse(features, QuestionType.MULTIPLE)
+        assert options.fillable_indices == [1]
+        assert options.required_fillable_indices == [1]
 
     def test_jump_and_display_rule_helpers_ignore_invalid_values(self) -> None:
-        question_div = _soup(
+        features = _features(
             """
             <div relation="bad|1,a|2,0|3,2,2">
               <input type="checkbox" data-jumpto="跳到第8题" />
               <input type="text" jumpto="9" />
             </div>
             """
-        ).div
+        )
 
-        has_jump, jump_rules = html_parser_rules._extract_jump_rules_from_html(
-            question_div, 3, ["A", "B"]
-        )
-        has_display, display_rules = html_parser_rules._extract_display_conditions_from_html(
-            question_div, 3
-        )
+        has_jump, jump_rules = logic_module.jump_rules(features, ["A", "B"])
+        has_display, display_rules = logic_module.display_conditions(features.relation)
 
         assert has_jump is True
         assert jump_rules == [
@@ -528,20 +516,18 @@ class WjxHtmlParserHelperTests:
         ]
 
     def test_jump_rule_helper_rejects_undefined_text_format(self) -> None:
-        question_div = _soup(
+        features = _features(
             """
             <div hasjump="1" type="3">
               <input type="radio" data-jumpto="去第8题" />
             </div>
             """
-        ).div
+        )
 
-        assert html_parser_rules._extract_jump_rules_from_html(question_div, 1, ["A"]) == (True, [])
+        assert logic_module.jump_rules(features, ["A"]) == (True, [])
 
     def test_display_rule_helper_skips_dirty_chunks_and_keeps_valid_blocks(self) -> None:
-        question_div = _soup("<div relation='1,1|脏数据|3,2,3|4,a,1|5,1'></div>").div
-
-        assert html_parser_rules._extract_display_conditions_from_html(question_div, 6) == (
+        assert logic_module.display_conditions("1,1|脏数据|3,2,3|4,a,1|5,1") == (
             True,
             [
                 {
@@ -566,7 +552,7 @@ class WjxHtmlParserHelperTests:
         )
 
     def test_jump_rule_helper_supports_select_option_jumps(self) -> None:
-        question_div = _soup(
+        features = _features(
             """
             <div hasjump="1" type="7">
               <select>
@@ -576,45 +562,39 @@ class WjxHtmlParserHelperTests:
               </select>
             </div>
             """
-        ).div
+        )
 
-        assert html_parser_rules._extract_jump_rules_from_html(
-            question_div, 7, ["北京", "上海"]
-        ) == (
+        assert logic_module.jump_rules(features, ["北京", "上海"]) == (
             True,
             [{"option_index": 0, "jumpto": 9, "option_text": "北京", "terminates_survey": False}],
         )
 
     def test_jump_rule_helper_supports_unconditional_question_jump(self) -> None:
-        question_div = _soup(
+        features = _features(
             """
             <div hasjump="1" jumpto="11" type="3">
               <input type="radio" />
               <input type="radio" />
             </div>
             """
-        ).div
+        )
 
-        assert html_parser_rules._extract_jump_rules_from_html(question_div, 10, ["A", "B"]) == (
+        assert logic_module.jump_rules(features, ["A", "B"]) == (
             True,
             [{"option_index": -1, "jumpto": 11, "option_text": None}],
         )
 
     def test_jump_rule_helper_marks_wjx_end_option_as_terminate(self) -> None:
-        question_div = _soup(
+        features = _features(
             """
             <div hasjump="1" type="3">
               <input type="radio" value="1" />
               <input type="radio" value="2" jumpto="1" />
             </div>
             """
-        ).div
+        )
 
-        assert html_parser_rules._extract_jump_rules_from_html(
-            question_div,
-            1,
-            ["有（继续作答）", "没有（结束作答）"],
-        ) == (
+        assert logic_module.jump_rules(features, ["有（继续作答）", "没有（结束作答）"]) == (
             True,
             [
                 {
@@ -629,19 +609,17 @@ class WjxHtmlParserHelperTests:
     def test_jump_rule_helper_treats_wjx_mobile_jumpto_one_as_terminate_without_keyword(
         self,
     ) -> None:
-        question_div = _soup(
+        features = _features(
             """
             <div hasjump="1" type="3">
               <input type="radio" value="1" />
               <input type="radio" value="2" jumpto="1" />
             </div>
             """
-        ).div
+        )
 
-        assert html_parser_rules._extract_jump_rules_from_html(
-            question_div,
-            1,
-            ["是，应届毕业生", "否，暂时不是应届毕业生或准毕业生"],
+        assert logic_module.jump_rules(
+            features, ["是，应届毕业生", "否，暂时不是应届毕业生或准毕业生"]
         ) == (
             True,
             [
@@ -676,7 +654,7 @@ class WjxHtmlParserHelperTests:
             {"num": 3, "display_conditions": "bad", "controls_display_targets": []},
         ]
 
-        html_parser_rules._attach_display_condition_metadata(questions)
+        logic_module.attach_display_condition_metadata(questions)
 
         assert questions[0]["controls_display_targets"] == [
             {

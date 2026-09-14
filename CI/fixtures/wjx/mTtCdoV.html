@@ -1,0 +1,745 @@
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+    <title>自动传参</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, maximum-scale=1,user-scalable=no, viewport-fit=cover">
+    <meta name="format-detection" content="telephone=no">
+    
+    <meta property="og:type" content="article"> 
+    <meta property="og:release_date" content="2022-10-10">
+    <meta property="og:image" content="https://image.wjx.com/images/wlogo.png">
+    <meta property="og:description" content="我在问卷星上发布了问卷《自动传参》，请帮忙填写，非常感谢！">
+    
+    <meta name="applicable-device" content="pc,mobile">
+    <meta name="google" value="notranslate">
+    
+    <meta name="robots" content="noindex">
+    
+
+    <link rel="dns-prefetch" href="//sojump.cn-hangzhou.log.aliyuncs.com">
+    <link rel="preconnect" href="//image.wjx.cn">
+    <link rel="preconnect" href="https://image.wjx.cn/cdn">
+    <link rel="preconnect" href="//image.wjx.cn" crossorigin="">
+    
+    <link href="https://image.wjx.cn/cdn/select2/4.0.12/css/select2.css" rel="stylesheet" type="text/css">
+    
+        <link rel="stylesheet" href="//image.wjx.cn/joinnew/css/jqmobo.css?v=7528">
+         
+        <link rel="stylesheet" href="//image.wjx.cn/joinnew/css/jqmobo_pc.css?v=7528">
+        
+    <script type="text/javascript">
+        if (window.location.hash) {
+            window.location.hash = "";
+            window.location.href = window.location.href.replace("#", "");
+        }
+        var jqnonce = "f7005793-3863-4ebf-8307-fab79e97cfe9";
+        var CanUseIe=0;
+        function jumpToOld() {
+            var ua = navigator.userAgent;
+            if (ua.indexOf("MSIE 6.0") > 0 || ua.indexOf("MSIE 7.0") > 0 || ua.indexOf("MSIE 8.0") > 0 || ua.indexOf("MSIE 9.0") > 0) {//ie8以下
+                if(CanUseIe) window.location.href = window.location.href.replace("/m/", "/jq/").replace("/vm/", "/vj/");
+                else{
+                  var jumpInterval=  setInterval(function(){
+                      if(window.layer){
+                          $("#pageDiv,.reportto").hide();
+                          clearInterval(jumpInterval);
+                            layer.open({
+                                type: 1,
+                                title: false,
+                                area: ['700px', '100px'],
+                                closeBtn: 0,
+                                shadeClose: false,
+                                content: '<div style="margin:20px;">提示：检测到您的浏览器版本过低，为了更好的体验，推荐使用Chrome/Edge/Firefox/QQ浏览器/360浏览器(极速模式)等</div>'
+                            });
+                        }
+                    },200);
+                }
+            }
+        }
+        jumpToOld();
+        function DecodeId(input) {
+            return input ^ 2130030173;
+        }
+        var maxCheatTimes = 0;
+        var activityCommonInfo = "";
+        var activityId = DecodeId(1976417988);
+        var CurrentActivityId = activityId;
+        var IsOneQuestionPerPage = 0;
+        var isWeiXin =0;
+        var qrCodeUrl ="";
+        var isMobile =0;
+        var isStrictMobile =0;
+        var CDNDomain = "//image.wjx.cn";
+        var ExternalCdnDomain = "https://image.wjx.cn/cdn";
+        var JsVersion = "7528";
+        var isEnglish =0;
+        var testEnv=0;
+        var partPages = "";
+        var volcRecordVid = "";
+        var isinterview =0;
+        var hideSource =0;
+        var duraTime = 0;
+        var answerTime = "";
+        var interviewStartTime = "";
+        var nowTime = "2026-09-13 13:33:19"; 
+        var isInterview2 = interviewStartTime ? true : false;
+        var validQlist = []; //需要置空的题目列表
+        var recordType =0;
+        var isactivity =0;
+        var canOpenWxTag=false;
+        var saveContact=0;
+        var langVer =0;
+        var hasManuallyCutQues = 0;
+        var originalSurveyTitle = "%e8%87%aa%e5%8a%a8%e4%bc%a0%e5%8f%82";
+        var leftSeconds =0;
+        var touPiaoCount = 0
+        var showTpRank =0//是否展示排行榜
+        var isTestEnv = 0;
+        var needBug = 0;
+        var volcRecordType = 0;
+    </script>
+     
+
+    <style>
+        
+    </style>
+
+    
+
+
+    <script src="//usercsscdn.wjx.com/wjxlang_zh.js?v=7528" type="text/javascript"></script>
+    <script type="text/javascript">
+        !window.wjxlang && document.write('<script src="//image.wjx.cn/joinnew/js/hintinfo.js?v=7528"><\/script>');
+    </script>
+    
+        <script src="//usercsscdn.wjx.com/wjxlang_zh_40661.js?v=20260913133319" type="text/javascript"></script>
+    <script type="text/javascript" src="https://image.wjx.cn/cdn/jquery/1.10.2/jquery.min.js"></script><script type="text/javascript">!window.jQuery&&document.write('<script src="/js/jquery-1.10.2.min.js"><\/script>');</script>
+    <script src="https://image.wjx.cn/cdn/layer/3.5.1/layer.js"></script><link rel="stylesheet" href="https://image.wjx.cn/cdn/layer/3.5.1/theme/default/layer.css?v=3.5.1" id="layuicss-layer">
+    <script type="text/javascript">
+        if (!window.layer) {
+            document.write('<script src="//image.wjx.cn/layer-v3.5.1/layer/layer.js"><\/script>');
+        }
+    </script>
+   <script src="//image.wjx.cn/joinnew/js/wjx_captch.js?v=7528"></script>
+
+    
+    <script>
+        var hasDropDown =1;
+    </script>
+   
+    <script src="https://image.wjx.cn/cdn/select2/4.0.13/js/select2.min.js"></script>
+   
+    
+    <script src="https://image.wjx.cn/cdn/select2/4.0.12/js/i18n/zh-CN.js"></script>
+    
+    <script type="text/javascript">
+        if (!window.jQuery.fn.select2) {
+            $('<link rel="stylesheet" type="text/css" href="//image.wjx.cn/js/plugin/select2/css/select2.min.css" />').appendTo('head');
+            document.write('<script src="//image.wjx.cn/js/plugin/select2/js/select2.min.js"><\/script>');
+        }
+    </script>
+    
+      <script type="text/javascript" src="//image.wjx.cn/joinnew/js/arealoc.js?v=7528"></script>
+    
+    <script src="//image.wjx.cn/joinnew/js/jqmobo2.js?v=7528" type="text/javascript"></script>
+     <script type="text/javascript" src="//image.wjx.cn/joinnew/js/matchawardinfmobilenew.js?v=7528"></script>
+    
+<style type="text/css">@font-face {font-family: "aliyun-captcha-iconfont";src: url("data:application/font-woff2;base64,d09GMgABAAAAAALkAAsAAAAABsQAAAKWAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHFQGYACCcAqBPIFbATYCJAMICwYABCAFhGcHNBsbBsguIScbXkQAFdTQssL1nfvZdRAAEA9P++M7d2Y+gEQ2KYPpNy9CW0eo1U19I5Q3v8tly9PaeNQqTnVHKyWf21zpydI0kkEJjMNhS1NgcS8c7mDGGbqsy2VfE8ZVW6+51wjbM68AJtNv0/z/v3f8G0Ab5B7Pbc1Fa+MD66RR1gdqrGURdvLQUxFvOehefkWg0ZIxTQdzKzus7ymnnPVr4TQHeWY8jQLOOmSfoiBZL9RSVxbxRQ3pbSp8jj8f/6xEPUlN5uQc38367GnumPy6ek3+5vVyNTgvoQYZc5hCnPfHDjWLNkqzRluLEVQWwU9VFRrEobVC+uuc9GYwDN4z8X3Bo7ImUOjOGubxpF7kgZ6eZ/eY8Zi2082MvV2m799Z8I5rGtvt0OS+ofE94xac7Oxu7O1s7e9t70Lz6wcxjgceOuPsxWNH7IxdbH1mvLT0DBaucVgMDophbHjsqLMYxOFGLX/o3cuQE7AhFo/fDobqdaH85gf/xuoXr20b/+ubCvjeT4aA5qD+DmzB75RfEZHF9JNKG19OJWua71DS6AapOK5Ov1NVXbedCvW6bt5RZyiHrN4IVsgzUKPJCtSqtwmNZs2ub9Kl1CxKAybcMQjtHiFp9RWyds9YIX9DjV5/UKvdPzS6jJbdmkzE9bRCTuhD/RYiUeTSU1KMdwuDy5SrpvAeKh0hCK7lVJPzmKOaY46+CjwiCVIVGcyJ52GaFlCqIkZBVkhUDtm2bHuLJYqMTVMQR5AP1N0CEaGQkyGayt+3BQUupThFxPZiihYBP3BZHAI2L8tJDQ+yj3Yl4CFEApJiiQyYk4ehVKoAyvZhMSQQSzghUhpiuyhJlVnbK7Jf2waNHHUKd1HWeJ0WGs00ypExAAA=") format("woff2");}.iconfont-aliyun-captcha {font-family: "aliyun-captcha-iconfont" !important;font-size: 16px;font-style: normal;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: grayscale;}.aliyun-captcha .icon-close-line:before {content: "\e67e";}</style></head>
+<body class=" hasbgpic hasHeader" style=""> 
+
+    <div id="loadbox" style="position: fixed; top: 50%; left: 50%; margin-left: -18px; margin-top: -18px; text-align: center; z-index: 50000; display: none;">
+        <div class="wjx-loading-spinner"></div>
+    </div>
+
+    
+
+
+    
+    
+    
+    
+<style>
+    
+    
+    
+</style>
+
+
+
+    
+<style>
+    
+    .field-label{color:#000000 !important} .mainColor{color:#0095FF !important;}.mainBgColor{background:#0095FF !important;}.mainBgBorderColor{background:#0095FF !important;border:1px solid #0095FF !important;}
+     :root{ --color1:#007FD9;--color2:#0068B2;--color3:#003459;--color4:#73C5FF;--color5:#BFE4FF;--color6:#CCEAFF;--color7:#E0F2FF;--color8:#E6F4FF;--color9:#F2FAFF;--color10:#F7FCFF;--color11:#EDF8FF;--mcolor:#0095FF; }
+</style>
+
+
+    <style>
+        html, body {
+            height: 100%;
+        }
+
+        .hasbgpic #form1 {
+            background: #fff;
+        }
+
+        body {
+            margin: 0px;
+            text-align: left;
+        }
+
+        #headsplitdiv {
+            height: 40px;
+        }
+
+        div.field {
+            border: 0px;
+        }
+
+        #divAwardAfter {
+            margin-top: 0px !important;
+        }
+
+        #form1 {
+            margin: 0px 14px;
+        }
+
+        .matrixtable {
+            background: #fff;
+        }
+
+        #divTip {
+            width: 100%;
+            font-size: 14px;
+            color: #FF5760;
+            text-align: center;
+            background: #FFEAEA;
+        }
+
+        #divPromote {
+            margin-top: 0px !important;
+        }
+
+        body #divBackgroundWrap {
+            position: fixed;
+            /*position:absolute\0;*/
+            top: 0px;
+            width: 100%;
+            bottom: 0;
+            left: 0;
+            z-index: -5;
+            background-image: url("//pubnew.paperol.cn/20230620/1687255656BRDPpA.jpg");
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: left top;
+            background-color:#BEE4FF;
+        }
+
+    </style>
+    
+    <style>
+        body #divBackgroundWrap{
+            background-image: none;
+        }
+        .backgroundshade {
+            background-image: linear-gradient(180deg, rgba(255,255,255,0) 0%, #BEE4FF 100%)
+        }
+        
+    </style>
+    
+    <div id="divBackgroundWrap">
+        <div id="bgimgwrap" class="backgroundimgWrap">
+            <img class="backgroundimg" src="//pubnew.paperol.cn/20230620/1687255656BRDPpA.jpg" alt=""> 
+            <div class="backgroundshade"></div>
+        </div>
+    </div>
+<script>
+    var themeId = "";
+    var hasBackground = 1;
+    var backgroundId = "12";
+    var pageColor = "#0095FF";
+    var backgroundLogo = "//pubnew.paperol.cn/20230620/1687255656BRDPpA.jpg";
+</script>
+
+    
+    
+    
+    
+    <div id="divUserCss"><link rel="stylesheet" href="https://pubdz.paperol.cn/css/37hideAwardNotify.css"></div>
+    
+    <div id="pageDiv">
+        <div id="answerProcess" style="">
+            <div class="processInner mainBgColor"></div>
+        </div>
+        <div id="headsplitdiv"></div>
+         <div id="divTip" style="display: none; font-size: 14px; color: #ffffff; padding: 8px 14px; background-color: #f95b5b; text-align:center;margin:0 auto 10px;"></div>
+    <form id="form1" method="post" action="https://www.wjx.cn/joinnew/processjq.ashx?shortid=mTtCdoV" autocomplete="off">
+        
+<style>
+    
+    
+    
+</style>
+
+<div id="toplogo"><img class="pclogo" style="height:auto;max-height:none;max-width:100%;width:100%;margin:0;" src="//pubnew.paperol.cn/20230630/1688107277Z3NJ7Y.png" alt=""></div>
+
+        <div style="position:relative" id="divPcMobSet">
+            <div id="divMob">
+                <div id="divMa" style="display:none;">
+                    <div class="qrwrap">
+                        <div id="divQrBig" src="https://qr.wjx.cn/handler/qrcode.ashx?chl=https%3a%2f%2fwww.wjx.cn%2fvm%2fmTtCdoV.aspx&amp;chs=170x170&amp;sign=1ea1543da81f83141f99bb4e040b34e31b3f1b59" style="background:url('https://qr.wjx.cn/handler/qrcode.ashx?chl=https%3a%2f%2fwww.wjx.cn%2fvm%2fmTtCdoV.aspx&amp;chs=170x170&amp;sign=1ea1543da81f83141f99bb4e040b34e31b3f1b59') no-repeat;background-size:170px 170px;width:170px;height:170px;margin:10px;"></div>
+                        <div id="divMobileCodeText">手机扫描二维码答题</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+       
+        <div style="position: relative;">
+            <div id="ytyyProcess" class="mainBgColor" style="display:none;"></div>
+            <div id="ytyyProcessBg" style="display: none;"></div>  
+        </div>
+        <div class="interviewCount" style="display: none;"><i class="comIcon" style="font-size:18px;color:#005eff"></i> <span class="interviewCountdown">00:00:00</span></div>
+ 
+        <span id="lblMobile" style="position:absolute; right:20px; top:20px;"></span>
+        
+        <div id="divLoadAnswer" style="display: none; font-size: 14px;line-height:24px;padding:6px 8px;background-color: #fff9f0;"></div>
+        <div class="exam_card_box clearfix" style="display:none;"></div>
+        <div class="headerWrap">
+        <div id="toptitle" class="topTitle" export-item="1">
+                <h1 class="htitle" id="htitle">
+                    自动传参
+                </h1>
+       </div>
+       
+       
+        </div>
+        
+        
+        
+        
+        <div id="divMaxTime" style="display: none; ">
+                <span id="spanTimeTip"></span><span id="spanMaxTime"></span>
+                <span id="recordingTip" style="margin:0 20px;display:none;"><i class="iconfontNew" style="vertical-align:middle;color:#0095ff;margin-right: 2px;"></i><span style="vertical-align:middle">录音中...</span></span>
+            </div>
+        
+        <div style="background: #fff; position: fixed; top: 0px; left: 0px; right: 0px; bottom: 0px; z-index: 2; display: none;" id="divWorkError"></div>
+        <div id="divContent" class="divContent">
+            <div id="divContentHeader"></div>
+              
+            
+            
+            
+            
+             
+             
+            
+            <div id="divS" style="background: transparent; position: fixed; z-index: 30000; inset: 0px; display: none;"></div>
+            
+            <div id="ytyyNum" style="display:none"></div>
+            <div id="divQuestion">
+                <fieldset class="fieldset" pg="1" style="" id="fieldset1"><div class="field ui-field-contain" topic="1" id="div1" req="1" data-role="fieldcontain" type="1"><div class="field-label"><span class="req">*</span><div class="topicnumber">1.</div><div class="topichtml">您的姓名：</div></div><div class="ui-input-text selfMess" style="position:relative;"><input type="text" autocomplete="off" id="q1" value="" name="q1" verify="姓名" style="padding-left:30px;"><i class="iconfontNew imgiconfont"></i></div><div class="errorMessage"></div></div><div class="field ui-field-contain" topic="2" id="div2" req="1" data-role="fieldcontain" type="3"><div class="field-label"><span class="req">*</span><div class="topicnumber">2.</div><div class="topichtml">您的性别：</div></div><div class="ui-controlgroup two_column"><div class="ui-radio"><span class="jqradiowrapper"><input type="radio" value="1" id="q2_1" name="q2" style="display:none;"><a class="jqradio" href="javascript:;"></a></span><div class="label" dit="%e7%94%b7" for="q2_1">男</div></div><div class="ui-radio"><span class="jqradiowrapper"><input type="radio" value="2" id="q2_2" name="q2" style="display:none;"><a class="jqradio" href="javascript:;"></a></span><div class="label" dit="%e5%a5%b3" for="q2_2">女</div></div></div><div class="errorMessage"></div></div><div class="field ui-field-contain" topic="3" id="div3" req="1" data-role="fieldcontain" type="1"><div class="field-label"><span class="req">*</span><div class="topicnumber">3.</div><div class="topichtml">请选择城市:</div></div><div class="ui-input-text selfMess" style="position:relative;"><input type="text" autocomplete="off" id="q3" value="" name="q3" verify="城市单选" style="padding-left:30px;" onclick="openCityBox(this,1,event,3);" readonly="readonly"><i class="iconfontNew imgiconfont"></i></div><div class="errorMessage"></div></div><div class="field ui-field-contain" topic="4" id="div4" req="1" data-role="fieldcontain" type="1"><div class="field-label"><span class="req">*</span><div class="topicnumber">4.</div><div class="topichtml">请选择省份城市与地区:</div></div><div class="ui-input-text selfMess" style="position:relative;"><input type="text" autocomplete="off" id="q4" value="" name="q4" verify="省市区" style="padding-left:30px;" onclick="openCityBox(this,3,event,4);" readonly="readonly"><i class="iconfontNew imgiconfont"></i></div><div class="errorMessage"></div></div><div class="field ui-field-contain" topic="5" id="div5" req="1" data-role="fieldcontain" type="3"><div class="field-label"><span class="req">*</span><div class="topicnumber">5.</div><div class="topichtml">您的年龄段：</div></div><div class="ui-controlgroup columns column4 two_column"><div class="ui-radio"><span class="jqradiowrapper"><input type="radio" value="1" id="q5_1" name="q5" style="display:none;"><a class="jqradio" href="javascript:;"></a></span><div class="label" dit="18%e5%b2%81%e4%bb%a5%e4%b8%8b" for="q5_1">18岁以下</div></div><div class="ui-radio"><span class="jqradiowrapper"><input type="radio" value="2" id="q5_2" name="q5" style="display:none;"><a class="jqradio" href="javascript:;"></a></span><div class="label" dit="18%7e25" for="q5_2">18~25</div></div><div class="ui-radio"><span class="jqradiowrapper"><input type="radio" value="3" id="q5_3" name="q5" style="display:none;"><a class="jqradio" href="javascript:;"></a></span><div class="label" dit="26%7e30" for="q5_3">26~30</div></div><div class="ui-radio"><span class="jqradiowrapper"><input type="radio" value="4" id="q5_4" name="q5" style="display:none;"><a class="jqradio" href="javascript:;"></a></span><div class="label" dit="31%7e40" for="q5_4">31~40</div></div><div class="ui-radio"><span class="jqradiowrapper"><input type="radio" value="5" id="q5_5" name="q5" style="display:none;"><a class="jqradio" href="javascript:;"></a></span><div class="label" dit="41%7e50" for="q5_5">41~50</div></div><div class="ui-radio"><span class="jqradiowrapper"><input type="radio" value="6" id="q5_6" name="q5" style="display:none;"><a class="jqradio" href="javascript:;"></a></span><div class="label" dit="51%7e60" for="q5_6">51~60</div></div><div class="ui-radio"><span class="jqradiowrapper"><input type="radio" value="7" id="q5_7" name="q5" style="display:none;"><a class="jqradio" href="javascript:;"></a></span><div class="label" dit="60%e4%bb%a5%e4%b8%8a" for="q5_7">60以上</div></div></div><div class="errorMessage"></div></div><div class="field ui-field-contain" topic="60001" id="div6" style="display:none;" relation="-1" data-role="fieldcontain" type="1"><div class="field-label"><div class="topicnumber">6.</div><div class="topichtml">用户ID</div></div><div class="ui-input-text" style="position:relative;"><input type="text" autocomplete="off" id="q6" value="" name="q6" onfocus="setTip(this)" onmouseover="setTip(this);" onmouseout="hideTip(this)" onpropertychange="setTip(this);" oninput="setTip(this);"></div><div class="errorMessage"></div></div><div class="field ui-field-contain" topic="60002" id="div7" style="display:none;" relation="-1" data-role="fieldcontain" type="1"><div class="field-label"><div class="topicnumber">6.</div><div class="topichtml">姓名</div></div><div class="ui-input-text" style="position:relative;"><input type="text" autocomplete="off" id="q7" value="" name="q7" onfocus="setTip(this)" onmouseover="setTip(this);" onmouseout="hideTip(this)" onpropertychange="setTip(this);" oninput="setTip(this);"></div><div class="errorMessage"></div></div><div class="field ui-field-contain" topic="60003" id="div8" style="display:none;" relation="-1" data-role="fieldcontain" type="1"><div class="field-label"><div class="topicnumber">6.</div><div class="topichtml">手机号码</div></div><div class="ui-input-text" style="position:relative;"><input type="text" autocomplete="off" id="q8" value="" name="q8" onfocus="setTip(this)" onmouseover="setTip(this);" onmouseout="hideTip(this)" onpropertychange="setTip(this);" oninput="setTip(this);"></div><div class="errorMessage"></div></div><div class="field ui-field-contain" topic="60004" id="div9" style="display:none;" relation="-1" data-role="fieldcontain" type="1"><div class="field-label"><div class="topicnumber">6.</div><div class="topichtml">邮箱</div></div><div class="ui-input-text" style="position:relative;"><input type="text" autocomplete="off" id="q9" value="" name="q9" onfocus="setTip(this)" onmouseover="setTip(this);" onmouseout="hideTip(this)" onpropertychange="setTip(this);" oninput="setTip(this);"></div><div class="errorMessage"></div></div><div class="field ui-field-contain" topic="60005" id="div10" style="display:none;" relation="-1" data-role="fieldcontain" type="1"><div class="field-label"><div class="topicnumber">6.</div><div class="topichtml">用户类型</div></div><div class="ui-input-text" style="position:relative;"><input type="text" autocomplete="off" id="q10" value="" name="q10" onfocus="setTip(this)" onmouseover="setTip(this);" onmouseout="hideTip(this)" onpropertychange="setTip(this);" oninput="setTip(this);"></div><div class="errorMessage"></div></div></fieldset>
+            </div>
+            <div id="divMatrixRel" style="position: absolute;width: 60%;margin: 0px 20%;border-color: #ccc;top: 240px;left: 0px;display:none;box-shadow: 0 0 3px 1px #e0e0e0;" class="ui-input-text">
+                <input type="text" placeholder="请注明..." id="matrixinput" style="min-height: 1em; width: 100%; padding: 6px 10px;">
+            </div>
+            <div id="isSpeaking" class="speak-style" style="display: none;">
+            </div>
+            <div class="shopcart" id="shopcart" style="display: none;">
+            </div>
+             <div class="appointcart" id="appointcart" style="display: none;">
+            </div>
+            
+                     
+            <div class="footer">
+                <div class="ValError" id="ValError">
+                </div>
+                <div id="captchaOut" style="padding:0 40px;">
+                    <div id="captchaWrap">
+                        <span id="captchaTit" style="display:none;color:#42B917;"></span>
+                        <div id="captcha" style="margin: 0 auto;"></div>
+                        <div id="captchabtn"></div>
+                    </div>
+                </div>
+                
+                <div id="divSubmit" style="padding: 10px 20px;">
+                    
+                    <script>
+                        var useAliVerify =0;
+                        var captchaType = '2';
+                        var needLoadAliVerify=1;
+                    </script>
+                    <div id="SubmitBtnGroup">
+                        
+                        
+                        <div id="ctlNext" class="submitbtn mainBgColor">提交</div>
+                        
+                    </div>
+                    
+                </div>
+                <a href="javascript:;" class="lxstartBtn mainBgColor" id="cgstartbutton" style="display: none;">开始作答</a>
+                <div id="divSearch"></div>
+            </div>
+        </div>  
+        <div class="logofooter bottomDiv coverhide" id="reportfooter">
+            <a href="javascript:;" class="policyLink">隐私政策</a><div id="divPowerBy" style="margin: 0 auto;"><div class="wjfooter"><span id="spanPower"><i class="comIcon"></i><a href="https://www.wjx.cn/" target="_blank" title="问卷星_不止问卷调查/在线考试">问卷星</a><span>提供技术支持</span></span></div></div>
+            <a href="https://www.wjx.cn/vm/Q0mluca.aspx?q1=mTtCdoV&amp;q2=1" class="reportto" target="_blank" rel="nofollow">举报</a>
+        </div>
+
+
+        <div id="bottomsplitdiv"></div>
+        
+        
+        <div class="result" id="outdiv">
+            <div class="indiv" id="indiv">
+                <i class="icon_close"></i>
+                <div id="preView_wrap">
+                    <img class="imgresult" id="bigimg" src="" alt="">
+                </div>
+            </div>
+        </div>
+        
+        <input type="hidden" value="2026/9/13 13:33:19" id="starttime" name="starttime">
+        <input type="hidden" value="directphone" id="source" name="source">
+        
+    </form>
+    </div>
+    
+     
+     
+     
+    
+
+    <div id="divMatrixHeader" class="divMatrixHeader" style="position: absolute; display: none; font-size: 12px; color: #333"></div>
+    <a id="lnkCity" style="display: none;"></a>
+    <div id="divFrameData" style="display:none;"></div>
+    <div id="fontWrap" style="font-size:100px;display:none;">
+        字体大小
+    </div>
+
+    <div class="vote-wrap" id="helpVoteWrap" style="display:none;">
+        <i class="close-btn iconfont" onclick="layer.closeAll()"></i>
+        <div class="vote-content_top">
+             <h3>自动传参</h3>
+             
+            <div class="dec"></div>
+       </div>
+       <div class="vote-content_bot">
+           <div class="qr-code">
+               <h3></h3>
+               <div id="voteQrCode"></div>
+           </div>
+            <div style="display:flex">
+               <div class="lapiao_share" onclick="ShareByLink()" style="margin-right: 10px;width:35%;"></div>
+               <div class="save-btn" onclick="saveCanvas()" style="flex:1"> </div>
+            </div>
+            
+       </div>
+    </div>
+
+    <div id="clipVoteCodeDiv" class="clip_vote_code_div" style="max-width:370px;display:none">
+        <input type="text" id="clipVoteCode" readonly="readonly">
+        <a href="javascript:;" data-clipboard-target="#clipVoteCode" id="clipVoteCodeButton">复制</a>
+    </div>
+
+    <input name="hfAnswerData" type="hidden" id="hfAnswerData">
+
+    <script type="text/javascript">
+        
+        var isYdb=0;
+        var isPub=0;
+        var isQywx =0;
+        var isQywxAnswerChangeUrl = '';
+        var hasJoinPermit=0;
+        var cqType=1;
+        var ddcorpid="";
+        var sojumpParm='';
+        var parmsign='';
+        var casign='';
+        var cats='';
+        var endTs='';
+        var isEdit='';
+        var parmkey='sojumpParm';
+        var isKaoShi=0;
+        var lastTopic=0;
+        var Password = window.Password ? window.Password : "";
+        var PasswordExt = window.PasswordExt ? window.PasswordExt : "";
+        var pwdExt="";
+        var emailName="";
+        var displayExt="";
+        var phoneName="";
+        var wxNickName="";
+        var cepingName="";
+        var guid = "";
+        var udsid=0;var fromsour="";
+        var autoLangv=0;
+        var divTip=document.getElementById("divTip");
+        var displayPrevPage="none";
+        var inviteid='';var jbkid='';
+        var access_token="";
+        var ai_access_token="";
+        var ai_ts="";
+        var openid = "";
+        var unionId = "";
+        var wxUserId = "";
+        var wxappId = "";
+        var wxtokenappid = "";
+        
+        var isQQLogin=0;
+        var isDingTalkLogin = 0;
+        var ddgroupid = '';
+        var wxthird=0;
+        var parterts="";
+        var parterjoiner="";
+        var partersign="";
+        var parterrealname="";
+        var parterextf="";
+        var parterdept="";
+        var parterpuser="";
+        var relusername="";
+        var relts="";
+        var relsign="";
+        var relrealname="";
+        var reldept="";
+        var relext = "";
+        var writeuser = "";
+        var formopen="";
+        var formts="";
+        var formsign="";
+        var formnick="";
+        var nbk=0;
+        var corpId="";
+        var flist=0;
+        var isPvw=0;
+        var user_token="";
+        var IsSampleService=0;
+        var hashb=0;
+        var sjUser='';
+        var sjts='';
+        var sjsign='';
+        var outuser='';
+        var sourcelink='';
+        var outsign='';
+        var sourceurl = '';
+        var sourcename="";
+        var isSimple='';
+        var jiFenBao=0;
+        var isRunning=1;
+        var SJBack='';var jiFen="0";
+        var FromSj=0;
+        var ItemDicData="";
+        var rndnum="1964346039.53204566";
+        var totalPage=1;
+        var totalCut=0;
+        var cepingCandidate = ``;
+        var isZhuanYiName =0;
+        var allowPart =0;
+        var showTotalScore =0;
+        var showTotalScorePosition =1;
+        var controlPercent360 = '';
+        var controlVal360 = '';
+        var controlContain360 = '';
+        var controlDown360 = '';
+        var controlOption360 = '';
+        var controlRound360 = '';
+        var cateGoreyData = '';
+        var OneaTime =0;
+        var oneDept =0;
+        var oneLevel =0;
+        var oneneedcontcp =0
+        var cpid="";
+        var needSaveJoin=0;
+        var preserveAnswer=0;
+        var allowAppCrossDeviceSaveJoin=0;
+        var isChuangGuan=0;
+        var isytyy = 0;
+        var ytyyframe = 0;
+        var ytyyauto = 0;
+        var maxCgTime =0;
+        var maxIncorrectTime =1;
+        var maxOpTime=0;
+        var qBeginDate="1665398870770";
+        var randomMode=0;
+        var fisrtLoadTime=new Date().getTime();
+        var canAward=1;
+        var allowAward=0;
+        var isVip =2;
+        var isCepingQues =0;
+        var isProUser =0;
+        var isNewQ=0;
+        var emUserName = "R+4JFPUJ8eypT2aTx9l/tQ==";
+        var LogStoreLocal=0;
+        var needAddList =0;
+        var needLoadReSetPeo = 0;
+        var candetailJson = '';
+        
+        var needLogCompanyId=40661;
+        var needHBAlert=0;
+        var isPromoteing=0;
+        var prsjts = "";
+        var  prsjsign = "";
+        var cityPeiEQues = "";
+          
+        var hasRelationAns =0;
+          
+        var ishydj = 0;
+        var canEditAnswer = 0;
+        var forbidEditStr = "";
+        var markerText = '';
+        var jumpOrgMinPro =1;
+        var progressBarType = 1;
+        var isNeedAnsCard = (progressBarType == 3 || progressBarType == 4) && isKaoShi;
+        var isdingtalkFreeUser = 0
+        
+        var hasTouPiao =0;
+        var compressPictures =0;
+        var completeResultType = 1;
+        var introtxt = '详细介绍';
+        if(needHBAlert && !window.needLogin){
+                if(needHBAlert==-1){
+                    var hbmsg=$("#spanTip").text();
+                    alertNew(hbmsg);
+                }
+                else if(needHBAlert==-2)
+                    alertNew("提示：本问卷有红"+"包抽奖，抽中后答卷需发布者审核，通过审核后才会发放！");
+                else if(needHBAlert==-4){
+                    var hbmsg=$("#spanTip").text();
+                    alertNew(hbmsg);
+                }
+                else if(needHBAlert<0){
+                    alertNew("请注意：每个参与者填完问卷后有"+(needHBAlert*-1)+"%的概率抽中红"+"包");
+                }
+                else
+                    alertNew("请注意：每个参与者填完问卷后有1/" + needHBAlert + "的概率抽中红"+"包");
+        }
+        var needAwardAlert=0;
+        if(needAwardAlert && !window.needLogin){
+                var divawardalert=document.getElementById("divawardalert");
+                var awt=$.trim($(divawardalert).text());
+                if(awt)
+                    alert(awt);
+        }
+        var hasChuangGuanEnd=false;
+        var IsPar=0;
+        var curProvince="陕西";
+        var curCity="咸阳";
+        var curCityArea="渭城";
+        var curIp="117.35.110.226";
+        var curFuHe=0;
+        var curCheckResult=0;
+        var addtoHis=0;
+        var isForein =0;
+        var uploadformAction = "https://wjx-z0.qiniup.com";
+        var wxJoinUserMainUrl = '';
+        var isJielongAdminEdit = false;
+        var isJielongQywxEdit = false;
+        var isJielongYHTXEdit = false;
+        var jlViewJoinPageUrl = '';
+        var isJielongAdminHelp = 0;
+        var activityShortUrl = '';
+        var newAward =0;
+        var awardkeylist = "";
+        var awardkeyNoMatch = "";
+        var awardkeyMatch = "";
+        var needImportWeight = 0;
+        var qukeylist="";
+        var currJT=63;
+        var isMobileFile = 1;
+        var keyWordChange = "";
+        var enableCtj = 0;
+        var hasHideLabel = 0;
+        var aiPointsCount = 0;
+        var isRadioAutonext = 0;
+        var ossId = 1;
+        var defaultFileExt = ".png|.jpg|.gif|.jpeg|.bmp|.doc|.docx|.pdf|.xls|.xlsx|.ppt|.pptx|.txt|.rar|.zip|.gzip|.mp4|.m3u8|.flv|.f4v|.webm|.mov|.m4v|.3gp|.avi|.wmv|.mp3|.wma|.wav|.amr|.m4a|.aac|.awb|.webp|.sb3|.xml|.ofd|.livp|.csv|.fit";
+        var hasEyeMode = "False";
+        var mulspecpeie = '';
+        var needCheckSensitiveInfo = 1;
+        function jumpAnswerlist() {
+            window.location.href = wxJoinUserMainUrl;
+        }
+    </script>
+    
+    
+    <script type="text/javascript">
+        var replaceParms= {};
+        var postPrams="";
+    </script>
+     <script type="text/javascript" src="//image.wjx.cn/joinnew/js/paramsetmobo.js?v=7528"></script>
+    
+
+    <script type="text/javascript">
+        function setCookie(name, value, expires, path, domain, secure) {
+            document.cookie = name + "=" + encodeURIComponent(value) +
+                ((expires) ? "; expires=" + expires : "") +
+                ((path) ? "; path=" + path : "") +
+                ((domain) ? "; domain=" + domain : "") +
+                ((secure) ? "; secure" : "");
+        }
+        var loadCdnSuccess = true;
+        function loadLocalRes() {
+            var cdnDomain = "//image.wjx.cn";
+              var cdnfailreload = 2;
+              try {
+                  if (typeof initSlider == 'undefined' && cdnDomain) {
+                      if (cdnfailreload == 1) {
+                          var epd = new Date();
+                          epd.setTime(epd.getTime() + (24 * 3600 * 1000));
+                          setCookie("cdnloadfail", 1, epd.toUTCString(), "/", "", null);
+                          var nocdnlink = window.location.href;
+                          if (nocdnlink.indexOf("?") > -1)
+                              nocdnlink = nocdnlink + "&ncdn=1";
+                          else
+                              nocdnlink = nocdnlink + "?ncdn=1";
+                          if (window.location.href.indexOf("ncdn=1") == -1)
+                              window.location.href = nocdnlink;
+                      } else {
+                          var links =document.getElementsByTagName("link");
+                          var arrlink=[];
+                          for (var i = 0; i < links.length; i++) {
+                              if(links[i].href)
+                                  arrlink.push(links[i].href);
+                          }
+                          for (var i = 0; i < arrlink.length; i++) {
+                              if (arrlink[i].indexOf(cdnDomain) > -1) {
+                                  var newHref = links[i].href.split(cdnDomain)[1];
+                                  var newlink = document.createElement('link');
+                                  newlink.setAttribute('rel', 'stylesheet');
+                                  newlink.setAttribute('type', 'text/css');
+                                  newlink.setAttribute('href', newHref);
+                                  document.head.appendChild(newlink);
+                              }
+                          }
+                          var scripts = document.getElementsByTagName("script");
+                          var arrscripts=[];
+                          for (var i = 0; i < scripts.length; i++) {
+                              if(scripts[i].src)
+                                  arrscripts.push(scripts[i].src);
+                          }
+                          for (var i = 0; i < arrscripts.length; i++) {
+                              if (arrscripts[i].indexOf(cdnDomain) == -1) continue;
+                              var newHref = arrscripts[i].split(cdnDomain)[1];
+                              document.write('<script src="' + newHref + '"><\/script>');
+                          }
+                          CDNDomain="";
+                      }
+                      loadCdnSuccess = false;
+                      var rimg = document.createElement("img");
+                      rimg.src = "//sojump.cn-hangzhou.log.aliyuncs.com/logstores/applog/track.gif?APIVersion=0.6.0&activity=" + activityId + "&action=cdnerror&url=" + encodeURIComponent(window.location.href) + "&ua=" + encodeURIComponent(navigator.userAgent);
+                  }
+              }
+              catch (ex) {
+              }
+          }
+        loadLocalRes();
+       
+    </script>
+     
+    <div style="display: none;"></div>
+
+
+
+    
+     
+
+
+</body></html>
