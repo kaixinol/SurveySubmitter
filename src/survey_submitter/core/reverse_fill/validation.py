@@ -38,7 +38,11 @@ from survey_submitter.core.reverse_fill.schema import (
 )
 from survey_submitter.io.spreadsheets.wjx_excel import load_wjx_excel_export
 from survey_submitter.providers.common import SURVEY_PROVIDER_WJX, normalize_survey_provider
-from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_survey_question_meta
+from survey_submitter.providers.contracts import (
+    QuestionSignal,
+    SurveyQuestionMeta,
+    ensure_survey_question_meta,
+)
 
 MAX_DISPLAYED_BLOCKING_ISSUES = 12
 
@@ -272,7 +276,7 @@ def _validate_question_prerequisite(
 
     Returns error_reason if validation fails, None if OK to continue.
     """
-    if bool(info.unsupported):
+    if QuestionSignal.UNSUPPORTED in info.signals:
         return info.unsupported_reason or "当前程序暂不支持这道题"
     return None
 

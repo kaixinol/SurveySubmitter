@@ -19,7 +19,7 @@ from survey_submitter.core.reverse_fill.schema import (
     ReverseFillColumn,
     ReverseFillRawRow,
 )
-from survey_submitter.providers.contracts import SurveyQuestionMeta
+from survey_submitter.providers.contracts import QuestionSignal, SurveyQuestionMeta
 
 _LEADING_INDEX_RE = re.compile(r"^[\(\[（【]?\s*\d+\s*[\)\]）】]?\s*")
 _NUMBER_TEXT_RE = re.compile(r"^\d+(?:\.0+)?$")
@@ -97,16 +97,18 @@ def supports_reverse_fill_runtime(
     if normalized not in REVERSE_FILL_RUNTIME_SUPPORTED_TYPES:
         return False
     if isinstance(info, SurveyQuestionMeta):
-        from survey_submitter.providers.contracts import ChoiceQuestionMeta, TextQuestionMeta
+        from survey_submitter.providers.contracts import ChoiceQuestionMeta
 
-        is_location = info.is_location if isinstance(info, TextQuestionMeta) else False
+        location_hit = QuestionSignal.LOCATION in info.signals
         fillable = info.fillable_options if isinstance(info, ChoiceQuestionMeta) else None
         attached = info.attached_option_selects if isinstance(info, ChoiceQuestionMeta) else None
     else:
-        is_location = info.get("is_location")
+        location_hit = bool(info.get("is_location")) or QuestionSignal.LOCATION in (
+            info.get("signals") or ()
+        )
         fillable = info.get("fillable_options")
         attached = info.get("attached_option_selects")
-    if normalized == QuestionType.TEXT and bool(is_location):
+    if normalized == QuestionType.TEXT and bool(location_hit):
         return False
     if normalized in {QuestionType.SINGLE, QuestionType.DROPDOWN}:
         if list(fillable or []) or list(attached or []):

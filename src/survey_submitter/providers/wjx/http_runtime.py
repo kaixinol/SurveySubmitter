@@ -33,7 +33,7 @@ from survey_submitter.network.session_policy import (
 )
 from survey_submitter.providers.answering import AnswerAction
 from survey_submitter.providers.answering.recording import record_answer_action
-from survey_submitter.providers.contracts import SurveyQuestionMeta
+from survey_submitter.providers.contracts import QuestionSignal, SurveyQuestionMeta
 from survey_submitter.providers.errors import (
     SubmissionVerificationRequiredError,
     SurveyEnterpriseUnavailableError,
@@ -441,7 +441,7 @@ async def _build_action_plan(
     for question in questions:
         if stop_signal is not None and stop_signal.is_set():
             return HttpLogicPlan(actions=())
-        if question.unsupported:
+        if QuestionSignal.UNSUPPORTED in question.signals:
             raise RuntimeError(
                 f"问卷星第{question.num}题暂不支持：{question.unsupported_reason or question.type_code}"
             )

@@ -37,7 +37,7 @@ from survey_submitter.providers.common import (
     detect_survey_provider,
     normalize_survey_provider,
 )
-from survey_submitter.providers.contracts import SurveyQuestionMeta
+from survey_submitter.providers.contracts import QuestionSignal, SurveyQuestionMeta
 
 _TEXT_RANDOM_MODES = {"none", "name", "mobile", "id_card", "integer"}
 DEFAULT_ANSWER_DURATION_RANGE_SECONDS = (60, 120)
@@ -516,7 +516,7 @@ def survey_questions_from_definition(
                 title=item.title or "",
                 question_type=str(item.type_code),
                 options=list(getattr(item, "option_texts", None) or []),
-                required=bool(item.required),
+                required=QuestionSignal.REQUIRED in item.signals,
             )
         )
     return infos

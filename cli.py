@@ -54,12 +54,12 @@ def _type_label(type_code: str) -> str:
 
 def _question_type_label(question: object) -> str:
     """题型展示标签；location 题按 verify 子类型区分「地区」与「高校」。"""
-    from survey_submitter.providers.contracts import TextQuestionMeta
+    from survey_submitter.providers.contracts import QuestionSignal, TextQuestionMeta
 
     type_code = getattr(question, "type_code", None)
     type_code_value = type_code.value if hasattr(type_code, "value") else str(type_code or "")
     label = _type_label(type_code_value)
-    if isinstance(question, TextQuestionMeta) and question.is_location:
+    if isinstance(question, TextQuestionMeta) and QuestionSignal.LOCATION in question.signals:
         label = "高校" if "高校" in (question.location_verify_type or "") else "地区"
     return label
 
@@ -67,6 +67,7 @@ def _question_type_label(question: object) -> str:
 def _print_survey(definition: object) -> None:
     from survey_submitter.providers.contracts import (
         ChoiceQuestionMeta,
+        QuestionSignal,
         SurveyDefinition,
     )
 
@@ -79,17 +80,17 @@ def _print_survey(definition: object) -> None:
 
     for question in defn.questions:
         label = _question_type_label(question)
-        required_mark = " *" if question.required else ""
+        required_mark = " *" if QuestionSignal.REQUIRED in question.signals else ""
         out.write(f"\n第{question.num}题 [{label}]{required_mark}\n")
         out.write(f"  {question.title}\n")
 
-        if question.has_jump:
+        if QuestionSignal.JUMP in question.signals:
             rules = question.jump_rules or []
             for rule in rules:
                 target = rule.get("jumpto", "?") if isinstance(rule, dict) else "?"
                 out.write(f"  → 跳题: 跳到第{target}题\n")
 
-        if question.has_display_condition:
+        if QuestionSignal.DISPLAY_CONDITION in question.signals:
             conditions = question.display_conditions or []
             for condition in conditions:
                 if isinstance(condition, dict):
@@ -104,7 +105,7 @@ def _print_survey(definition: object) -> None:
                 fill_tag = " [可填空]" if i in fillable else ""
                 out.write(f"  {i + 1}. {text}{fill_tag}\n")
 
-        if question.unsupported:
+        if QuestionSignal.UNSUPPORTED in question.signals:
             reason = question.unsupported_reason or "不支持"
             out.write(f"  ⚠ {reason}\n")
 

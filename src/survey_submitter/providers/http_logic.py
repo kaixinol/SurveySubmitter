@@ -11,12 +11,20 @@ from survey_submitter.providers.contracts import (
     LOGIC_PARSE_STATUS_UNKNOWN,
     DisplayCondition,
     JumpRule,
+    QuestionSignal,
     SurveyQuestionMeta,
 )
 
 BuildHttpAnswerAction = Callable[[SurveyQuestionMeta], Awaitable[AnswerAction | None]]
 _SUPPORTED_CONDITION_MODES = {"selected", "not_selected"}
 _TERMINATE_JUMP_KEYWORDS = ("结束作答", "结束答题", "结束填写", "终止作答", "停止作答")
+_LOGIC_SIGNALS = frozenset(
+    {
+        QuestionSignal.JUMP,
+        QuestionSignal.DISPLAY_CONDITION,
+        QuestionSignal.DEPENDENT_DISPLAY_LOGIC,
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -41,9 +49,7 @@ def _ordered_questions(questions: Sequence[SurveyQuestionMeta]) -> list[SurveyQu
 
 
 def question_has_survey_logic(question: SurveyQuestionMeta) -> bool:
-    return bool(
-        question.has_jump or question.has_display_condition or question.has_dependent_display_logic
-    )
+    return bool(_LOGIC_SIGNALS & question.signals)
 
 
 def _logic_status_is_complete_enough(question: SurveyQuestionMeta) -> bool:
@@ -53,11 +59,13 @@ def _logic_status_is_complete_enough(question: SurveyQuestionMeta) -> bool:
     if logic_status != LOGIC_PARSE_STATUS_UNKNOWN:
         return False
 
-    if bool(question.has_jump) and not list(question.jump_rules or []):
+    if QuestionSignal.JUMP in question.signals and not list(question.jump_rules or []):
         return False
-    if bool(question.has_display_condition) and not list(question.display_conditions or []):
+    if QuestionSignal.DISPLAY_CONDITION in question.signals and not list(
+        question.display_conditions or []
+    ):
         return False
-    if bool(question.has_dependent_display_logic) and not list(
+    if QuestionSignal.DEPENDENT_DISPLAY_LOGIC in question.signals and not list(
         question.controls_display_targets or []
     ):
         return False
@@ -170,7 +178,7 @@ def _question_is_visible(
 ) -> bool:
     conditions = list(question.display_conditions or [])
     if not conditions:
-        return not bool(question.has_display_condition)
+        return QuestionSignal.DISPLAY_CONDITION not in question.signals
 
     grouped_conditions: dict[tuple[int, str], list[DisplayCondition]] = {}
     for condition in conditions:
@@ -187,7 +195,7 @@ def _question_is_visible(
         condition_mode = str(condition.get("condition_mode") or "selected")
         grouped_conditions.setdefault((source_question_num, condition_mode), []).append(condition)
     if not grouped_conditions:
-        return not bool(question.has_display_condition)
+        return QuestionSignal.DISPLAY_CONDITION not in question.signals
 
     for grouped in grouped_conditions.values():
         if not any(_condition_is_met(action_by_question_num, condition) for condition in grouped):

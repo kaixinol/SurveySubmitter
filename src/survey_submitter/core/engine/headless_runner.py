@@ -19,7 +19,7 @@ from survey_submitter.core.questions.default_builder import (
     build_default_survey_questions,
 )
 from survey_submitter.core.task.task_context import ExecutionState
-from survey_submitter.providers.contracts import SurveyDefinition
+from survey_submitter.providers.contracts import QuestionSignal, SurveyDefinition
 from survey_submitter.providers.registry import parse_survey
 
 
@@ -55,7 +55,7 @@ class HeadlessRunner:
         for q in definition.questions:
             if q.type_code == QuestionType.DESCRIPTION:
                 continue
-            unsupported = " [不支持]" if q.unsupported else ""
+            unsupported = " [不支持]" if QuestionSignal.UNSUPPORTED in q.signals else ""
             location = " [地址题]" if q.type_code == QuestionType.LOCATION else ""
             logger.info(f"  Q{q.num}: {q.title[:60]} ({q.type_code}){location}{unsupported}")
 

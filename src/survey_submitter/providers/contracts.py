@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Iterable, Mapping, TypedDict, cast
+
+from pydantic import field_serializer, model_validator
 
 from survey_submitter.core.config.base import BaseConfigModel
 from survey_submitter.core.questions.types import QuestionType, convert_wire_type_code
@@ -48,6 +51,7 @@ __all__ = [
     "MatrixQuestionMeta",
     "MultipleChoiceQuestionMeta",
     "QuestionMedia",
+    "QuestionSignal",
     "RatingQuestionMeta",
     "SingleChoiceQuestionMeta",
     "SliderQuestionMeta",
@@ -90,6 +94,17 @@ def _normalize_dict_list(raw: object) -> list[dict[str, object]]:
     return items
 
 
+_ATTACHED_OPTION_KEYS = frozenset({"option_index", "option_text", "select_options", "weights"})
+
+
+def _filter_attached_items(attached_list: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Drop non-contract keys such as the html-parser debug field ``select_option_count``."""
+    return [
+        {key: value for key, value in item.items() if key in _ATTACHED_OPTION_KEYS}
+        for item in attached_list
+    ]
+
+
 def _normalize_jump_rules(raw: object) -> list[JumpRule]:
     rules = _normalize_dict_list(raw)
     normalized_rules: list[JumpRule] = []
@@ -107,6 +122,16 @@ def _normalize_jump_rules(raw: object) -> list[JumpRule]:
     return normalized_rules
 
 
+def _signal_hit(normalized: Mapping[str, object], signal: QuestionSignal, legacy_key: str) -> bool:
+    """输入 dict 里信号是否命中（新格式读 signals 键，旧格式读 is_/has_ 布尔键）。"""
+    raw_signals = normalized.get("signals") or ()
+    if isinstance(raw_signals, (list, tuple, set, frozenset)):
+        for value in raw_signals:
+            if isinstance(value, str) and value == signal.value:
+                return True
+    return bool(normalized.get(legacy_key))
+
+
 def _infer_logic_parse_status(normalized: Mapping[str, object]) -> str:
     if "logic_parse_status" in normalized:
         explicit = str(normalized.get("logic_parse_status") or "").lower()
@@ -114,20 +139,22 @@ def _infer_logic_parse_status(normalized: Mapping[str, object]) -> str:
             return explicit
         return LOGIC_PARSE_STATUS_UNKNOWN
 
-    has_logic = bool(
-        normalized.get("has_jump")
-        or normalized.get("has_display_condition")
-        or normalized.get("has_dependent_display_logic")
+    has_logic = (
+        _signal_hit(normalized, QuestionSignal.JUMP, "has_jump")
+        or _signal_hit(normalized, QuestionSignal.DISPLAY_CONDITION, "has_display_condition")
+        or _signal_hit(
+            normalized, QuestionSignal.DEPENDENT_DISPLAY_LOGIC, "has_dependent_display_logic"
+        )
     )
     if not has_logic:
         return LOGIC_PARSE_STATUS_NONE
 
-    has_parsed_logic = bool(
+    parsed_logic = bool(
         _normalize_dict_list(normalized.get("jump_rules"))
         or _normalize_dict_list(normalized.get("display_conditions"))
         or _normalize_dict_list(normalized.get("controls_display_targets"))
     )
-    return LOGIC_PARSE_STATUS_COMPLETE if has_parsed_logic else LOGIC_PARSE_STATUS_UNKNOWN
+    return LOGIC_PARSE_STATUS_COMPLETE if parsed_logic else LOGIC_PARSE_STATUS_UNKNOWN
 
 
 def _normalize_question_media_list(raw: object) -> list[QuestionMedia]:
@@ -171,24 +198,95 @@ def _normalize_question_media_list(raw: object) -> list[QuestionMedia]:
     return items
 
 
+class QuestionSignal(StrEnum):
+    """题目携带的布尔信号。
+
+    取代旧契约里堆砌的 is_/has_ 布尔字段：序列化成
+    ``"signals": ["jump", "required"]``，旧格式的布尔键由
+    :meth:`SurveyQuestionMeta` 的前置校验器折叠吸收。
+    """
+
+    REQUIRED = "required"
+    UNSUPPORTED = "unsupported"
+    JUMP = "jump"
+    DISPLAY_CONDITION = "display-condition"
+    DEPENDENT_DISPLAY_LOGIC = "dependent-display-logic"
+    ATTACHED_OPTION_SELECT = "attached-option-select"
+    LOCATION = "location"
+
+
+# 旧契约的 is_/has_ 布尔键 → 信号成员（读侧兼容存量配置）
+_LEGACY_BOOL_KEYS: Mapping[str, QuestionSignal] = {
+    "required": QuestionSignal.REQUIRED,
+    "unsupported": QuestionSignal.UNSUPPORTED,
+    "has_jump": QuestionSignal.JUMP,
+    "has_display_condition": QuestionSignal.DISPLAY_CONDITION,
+    "has_dependent_display_logic": QuestionSignal.DEPENDENT_DISPLAY_LOGIC,
+    "has_attached_option_select": QuestionSignal.ATTACHED_OPTION_SELECT,
+    "is_location": QuestionSignal.LOCATION,
+}
+_SIGNAL_VALUES = frozenset(signal.value for signal in QuestionSignal)
+
+# 题型家族：保持旧实现 _build_text_kwargs / _build_choice_kwargs 的分支边界
+_TEXT_FAMILY_TYPES = frozenset(
+    {QuestionType.TEXT, QuestionType.MULTI_TEXT, QuestionType.LOCATION}
+)
+_NON_CHOICE_FAMILY_TYPES = (
+    _TEXT_FAMILY_TYPES
+    | {
+        QuestionType.DESCRIPTION,
+        QuestionType.MATRIX,
+        QuestionType.SCORE,
+        QuestionType.SCALE,
+        QuestionType.SLIDER,
+    }
+)
+
+
 class SurveyQuestionMeta(BaseConfigModel):
     num: int
     title: str
     type_code: QuestionType = QuestionType.UNKNOWN
     provider_type: str = ""
-    required: bool = False
+    signals: frozenset[QuestionSignal] = frozenset()
     description: str | None = None
-    unsupported: bool = False
     unsupported_reason: str | None = None
     provider_question_id: str = ""
     provider_page_id: str = ""
-    has_jump: bool = False
     jump_rules: list[JumpRule] | None = None
-    has_display_condition: bool = False
     display_conditions: list[DisplayCondition] | None = None
-    has_dependent_display_logic: bool = False
     controls_display_targets: list[DisplayCondition] | None = None
     logic_parse_status: str = LOGIC_PARSE_STATUS_UNKNOWN
+
+    @model_validator(mode="before")
+    @classmethod
+    def _absorb_legacy_bool_fields(cls, data: object) -> object:
+        """旧格式的 is_/has_ 布尔键折叠进 signals（extra=forbid，必须摘除原键）。"""
+        if not isinstance(data, dict):
+            return data
+        merged = {
+            key: value
+            for key, value in data.items()
+            if key not in _LEGACY_BOOL_KEYS and key != "signals"
+        }
+        raw_signals = data.get("signals") or ()
+        if isinstance(raw_signals, (str, bytes)) or not hasattr(raw_signals, "__iter__"):
+            raise ValueError(f"signals must be an iterable of signal names, got {raw_signals!r}")
+        signals: set[QuestionSignal] = set()
+        for value in raw_signals:
+            if isinstance(value, QuestionSignal):
+                signals.add(value)
+            elif isinstance(value, str) and value in _SIGNAL_VALUES:
+                signals.add(QuestionSignal(value))
+            else:
+                raise ValueError(f"unknown question signal: {value!r}")
+        signals.update(signal for key, signal in _LEGACY_BOOL_KEYS.items() if data.get(key))
+        merged["signals"] = frozenset(signals)
+        return merged
+
+    @field_serializer("signals")
+    def _dump_signals(self, value: frozenset[QuestionSignal]) -> list[str]:
+        return sorted(signal.value for signal in value)
 
 
 class _QuestionMetaBase(SurveyQuestionMeta):
@@ -203,7 +301,6 @@ class ChoiceQuestionMeta(_QuestionMetaBase):
     fillable_options: list[int] | None = None
     required_fillable_options: list[int] | None = None
     attached_option_selects: list[AttachedOptionSelect] | None = None
-    has_attached_option_select: bool = False
 
 
 class SingleChoiceQuestionMeta(ChoiceQuestionMeta):
@@ -228,7 +325,6 @@ class RatingQuestionMeta(_QuestionMetaBase):
 class TextQuestionMeta(_QuestionMetaBase):
     text_inputs: int = 0
     text_input_labels: list[str] | None = None
-    is_location: bool = False
     location_verify_type: str = ""
 
 
@@ -270,11 +366,65 @@ def _resolve_type_code(normalized: Mapping[str, object]) -> QuestionType:
     return convert_wire_type_code(raw)
 
 
+def _collect_signals(
+    normalized: Mapping[str, object], type_code: QuestionType, attached_list: list[dict[str, object]]
+) -> frozenset[QuestionSignal]:
+    """从输入 dict（新旧键皆可）装配信号集合。
+
+    LOCATION / ATTACHED_OPTION_SELECT 与旧实现的分支边界一致：
+    前者只在文本家族题型上生效，后者只在选项题家族上生效，
+    其余题型即使输入带旧键也不落信号。
+    """
+    text_family = type_code in _TEXT_FAMILY_TYPES
+    choice_family = type_code not in _NON_CHOICE_FAMILY_TYPES
+    candidates = (
+        (QuestionSignal.REQUIRED, bool(normalized.get("required"))),
+        (
+            QuestionSignal.UNSUPPORTED,
+            bool(normalized.get("unsupported")) and type_code != QuestionType.DESCRIPTION,
+        ),
+        (QuestionSignal.JUMP, _signal_hit(normalized, QuestionSignal.JUMP, "has_jump")),
+        (
+            QuestionSignal.DISPLAY_CONDITION,
+            _signal_hit(normalized, QuestionSignal.DISPLAY_CONDITION, "has_display_condition"),
+        ),
+        (
+            QuestionSignal.DEPENDENT_DISPLAY_LOGIC,
+            _signal_hit(
+                normalized, QuestionSignal.DEPENDENT_DISPLAY_LOGIC, "has_dependent_display_logic"
+            ),
+        ),
+        (
+            QuestionSignal.ATTACHED_OPTION_SELECT,
+            choice_family
+            and bool(normalized.get("has_attached_option_select") or attached_list),
+        ),
+        (
+            QuestionSignal.LOCATION,
+            text_family
+            and (bool(normalized.get("is_location")) or type_code == QuestionType.LOCATION),
+        ),
+    )
+    signals = {signal for signal, present in candidates if present}
+    raw_signals = normalized.get("signals")
+    if isinstance(raw_signals, (list, tuple, set, frozenset)):
+        for value in raw_signals:
+            if isinstance(value, QuestionSignal):
+                signals.add(value)
+            elif isinstance(value, str) and value in _SIGNAL_VALUES:
+                signals.add(QuestionSignal(value))
+            else:
+                raise ValueError(f"unknown question signal: {value!r}")
+    elif raw_signals:
+        raise ValueError(f"signals must be an iterable of signal names, got {raw_signals!r}")
+    return frozenset(signals)
+
+
 def _build_common_kwargs(
     normalized: dict[str, object], type_code: QuestionType, question_number: int
 ) -> dict[str, object]:
     unsupported_reason = normalized.get("unsupported_reason") or ""
-    if bool(normalized.get("unsupported")) and not unsupported_reason:
+    if _signal_hit(normalized, QuestionSignal.UNSUPPORTED, "unsupported") and not unsupported_reason:
         unsupported_reason = "当前平台暂不支持该题型"
     page_raw = normalized.get("page")
     try:
@@ -286,9 +436,7 @@ def _build_common_kwargs(
         "title": normalized.get("title") or "",
         "type_code": type_code,
         "provider_type": normalized.get("type_code") or "",
-        "required": bool(normalized.get("required")),
         "description": normalized.get("description") or "" or None,
-        "unsupported": bool(normalized.get("unsupported")) and type_code != QuestionType.DESCRIPTION,
         "unsupported_reason": unsupported_reason or None,
         "provider_question_id": str(
             normalized.get("provider_question_id") or question_number
@@ -307,11 +455,8 @@ def _build_logic_kwargs(normalized: dict[str, object]) -> dict[str, object]:
             display_number = None
     return {
         "display_num": display_number,
-        "has_jump": bool(normalized.get("has_jump")),
         "jump_rules": _normalize_jump_rules(normalized.get("jump_rules")) or None,
-        "has_display_condition": bool(normalized.get("has_display_condition")),
         "display_conditions": _normalize_dict_list(normalized.get("display_conditions")) or None,
-        "has_dependent_display_logic": bool(normalized.get("has_dependent_display_logic")),
         "controls_display_targets": _normalize_dict_list(normalized.get("controls_display_targets"))
         or None,
         "logic_parse_status": _infer_logic_parse_status(normalized),
@@ -319,7 +464,9 @@ def _build_logic_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     }
 
 
-def _build_choice_kwargs(normalized: dict[str, object]) -> dict[str, object]:
+def _build_choice_kwargs(
+    normalized: dict[str, object], attached_list: list[dict[str, object]]
+) -> dict[str, object]:
     option_texts = _normalize_text_list(normalized.get("option_texts"))
     forced_option_index = normalized.get("forced_option_index")
     try:
@@ -343,8 +490,6 @@ def _build_choice_kwargs(normalized: dict[str, object]) -> dict[str, object]:
                 required_fillable_options.append(int(cast("int | str", raw)))
             except (ValueError, TypeError):
                 continue
-    attached = normalized.get("attached_option_selects")
-    attached_list = _normalize_dict_list(attached) if isinstance(attached, list) else []
     return {
         "option_texts": option_texts or None,
         "forced_option_index": forced_option_index,
@@ -352,9 +497,6 @@ def _build_choice_kwargs(normalized: dict[str, object]) -> dict[str, object]:
         "fillable_options": fillable_options or None,
         "required_fillable_options": required_fillable_options or None,
         "attached_option_selects": attached_list or None,
-        "has_attached_option_select": bool(
-            normalized.get("has_attached_option_select") or attached_list
-        ),
     }
 
 
@@ -401,9 +543,7 @@ def _build_rating_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     }
 
 
-def _build_text_kwargs(
-    normalized: dict[str, object], type_code: QuestionType = QuestionType.UNKNOWN
-) -> dict[str, object]:
+def _build_text_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     text_input_labels = _normalize_text_list(normalized.get("text_input_labels")) or None
     text_inputs_raw = normalized.get("text_inputs")
     try:
@@ -419,7 +559,6 @@ def _build_text_kwargs(
     return {
         "text_inputs": text_inputs,
         "text_input_labels": text_input_labels,
-        "is_location": bool(normalized.get("is_location")) or type_code == QuestionType.LOCATION,
         "location_verify_type": normalized.get("location_verify_type") or "",
     }
 
@@ -443,19 +582,27 @@ def _normalize_question(
         question_number = index
     type_code = _resolve_type_code(normalized)
 
+    attached_raw = normalized.get("attached_option_selects")
+    attached_list = (
+        _filter_attached_items(_normalize_dict_list(attached_raw))
+        if isinstance(attached_raw, list)
+        else []
+    )
     common = _build_common_kwargs(normalized, type_code, question_number)
     logic = _build_logic_kwargs(normalized)
+    signals = _collect_signals(normalized, type_code, attached_list)
+    common["signals"] = signals
 
     match type_code:
         case QuestionType.SINGLE:
             return SingleChoiceQuestionMeta(
                 **_filter_kwargs(
                     SingleChoiceQuestionMeta,
-                    {**common, **logic, **_build_choice_kwargs(normalized)},
+                    {**common, **logic, **_build_choice_kwargs(normalized, attached_list)},
                 )  # ty:ignore[invalid-argument-type]
             )
         case QuestionType.MULTIPLE:
-            kwargs = {**common, **logic, **_build_choice_kwargs(normalized)}
+            kwargs = {**common, **logic, **_build_choice_kwargs(normalized, attached_list)}
             kwargs["multi_min_limit"] = normalized.get("multi_min_limit")
             kwargs["multi_max_limit"] = normalized.get("multi_max_limit")
             return MultipleChoiceQuestionMeta(**_filter_kwargs(MultipleChoiceQuestionMeta, kwargs))  # ty:ignore[invalid-argument-type]
@@ -463,7 +610,7 @@ def _normalize_question(
             return SingleChoiceQuestionMeta(
                 **_filter_kwargs(
                     SingleChoiceQuestionMeta,
-                    {**common, **logic, **_build_choice_kwargs(normalized)},
+                    {**common, **logic, **_build_choice_kwargs(normalized, attached_list)},
                 )  # ty:ignore[invalid-argument-type]
             )
         case QuestionType.MATRIX:
@@ -491,7 +638,7 @@ def _normalize_question(
             return TextQuestionMeta(
                 **_filter_kwargs(
                     TextQuestionMeta,
-                    {**common, **logic, **_build_text_kwargs(normalized, type_code)},
+                    {**common, **logic, **_build_text_kwargs(normalized)},
                 )  # ty:ignore[invalid-argument-type]
             )
         case QuestionType.DESCRIPTION:
@@ -500,7 +647,7 @@ def _normalize_question(
             return ChoiceQuestionMeta(
                 **_filter_kwargs(
                     ChoiceQuestionMeta,
-                    {**common, **logic, **_build_choice_kwargs(normalized)},
+                    {**common, **logic, **_build_choice_kwargs(normalized, attached_list)},
                 )  # ty:ignore[invalid-argument-type]
             )
 

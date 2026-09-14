@@ -6,6 +6,7 @@ from survey_submitter.core.questions.types import QuestionType
 from survey_submitter.providers.contracts import (
     MatrixQuestionMeta,
     MultipleChoiceQuestionMeta,
+    QuestionSignal,
     RatingQuestionMeta,
     SingleChoiceQuestionMeta,
     SliderQuestionMeta,
@@ -76,7 +77,7 @@ def infer_question_entry_type(question: QuestionMetaLike) -> str:
     if isinstance(meta, SliderQuestionMeta):
         return QuestionType.SLIDER
     if isinstance(meta, TextQuestionMeta):
-        if meta.is_location or meta.type_code == QuestionType.LOCATION:
+        if QuestionSignal.LOCATION in meta.signals or meta.type_code == QuestionType.LOCATION:
             if UniversityList.is_university_verify(meta.location_verify_type):
                 return QuestionType.UNIVERSITY
             return QuestionType.LOCATION

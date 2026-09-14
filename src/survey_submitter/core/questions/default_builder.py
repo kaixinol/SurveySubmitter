@@ -42,6 +42,7 @@ from survey_submitter.providers.common import (
 from survey_submitter.providers.contracts import (
     ChoiceQuestionMeta,
     MatrixQuestionMeta,
+    QuestionSignal,
     RatingQuestionMeta,
     SliderQuestionMeta,
     SurveyQuestionMeta,
@@ -666,7 +667,7 @@ def build_default_survey_questions(
 
     entries: list[QuestionInfo] = []
     for q in questions_info:
-        if q.type_code == QuestionType.DESCRIPTION or q.unsupported:
+        if q.type_code == QuestionType.DESCRIPTION or QuestionSignal.UNSUPPORTED in q.signals:
             continue
 
         attrs = _extract_question_attrs(q)

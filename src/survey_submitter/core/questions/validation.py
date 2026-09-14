@@ -15,7 +15,11 @@ from survey_submitter.core.questions.schema import (
     TextQuestionAnswerConfig,
 )
 from survey_submitter.core.questions.types import CHOICE_TYPES, TEXT_TYPES, QuestionType
-from survey_submitter.providers.contracts import SurveyQuestionMeta, ensure_survey_question_meta
+from survey_submitter.providers.contracts import (
+    QuestionSignal,
+    SurveyQuestionMeta,
+    ensure_survey_question_meta,
+)
 
 __all__ = ["validate_question_config"]
 
@@ -95,7 +99,7 @@ def _build_question_info_map(
         meta = ensure_survey_question_meta(item)
         if meta.num > 0:
             question_info_map[meta.num] = meta
-        if bool(meta.unsupported):
+        if QuestionSignal.UNSUPPORTED in meta.signals:
             unsupported_questions.append(meta)
     return question_info_map, unsupported_questions
 

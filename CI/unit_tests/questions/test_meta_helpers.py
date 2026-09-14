@@ -10,6 +10,7 @@ from survey_submitter.core.questions.meta_helpers import (
 )
 from survey_submitter.providers.contracts import (
     LOGIC_PARSE_STATUS_COMPLETE,
+    QuestionSignal,
     build_survey_definition,
     ensure_survey_question_meta,
 )
@@ -65,7 +66,7 @@ class QuestionMetaHelperTests:
             ],
         )
         question = definition.questions[0]
-        assert question.has_dependent_display_logic
+        assert QuestionSignal.DEPENDENT_DISPLAY_LOGIC in question.signals
         assert question.controls_display_targets == [
             {"target_question_num": "2", "condition_option_indices": ["0"]}
         ]

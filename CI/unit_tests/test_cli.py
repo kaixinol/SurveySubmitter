@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from cli import _question_type_label, _type_label
-from survey_submitter.providers.contracts import TextQuestionMeta
+from survey_submitter.providers.contracts import QuestionSignal, TextQuestionMeta
 
 
 class CliSurveyPrintTests:
@@ -15,14 +15,14 @@ class CliSurveyPrintTests:
             num=1,
             title="所在地区",
             type_code="location",
-            is_location=True,
+            signals={QuestionSignal.LOCATION},
             location_verify_type="省市区",
         )
         school = TextQuestionMeta(
             num=2,
             title="你的学校全称是？",
             type_code="location",
-            is_location=True,
+            signals={QuestionSignal.LOCATION},
             location_verify_type="高校",
         )
 
