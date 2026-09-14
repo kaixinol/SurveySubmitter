@@ -51,7 +51,7 @@ def is_strict_ratio_question(task_ctx: object, question_number: object) -> bool:
         q_num = int(cast(Any, question_number))
     except (ValueError, TypeError):
         return False
-    config = getattr(task_ctx, "config", task_ctx)
+    config = cast(Any, getattr(task_ctx, "config", task_ctx))
     if not hasattr(config, "question_maps"):
         return False
     strict_map = config.question_maps.question_strict_ratio_map

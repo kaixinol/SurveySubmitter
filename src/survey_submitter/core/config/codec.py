@@ -339,7 +339,8 @@ def serialize_question_detail(qi: QuestionInfo) -> dict[str, Any]:
         }
     else:
         ac_dict = {"ai_enabled": bool(ac.ai_enabled)}
-    payload["details"]["answer_config"] = ac_dict  # type: ignore[index]
+    details = cast("dict[str, object]", payload["details"])
+    details["answer_config"] = ac_dict
     return payload
 
 

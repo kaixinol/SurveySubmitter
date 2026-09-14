@@ -126,7 +126,7 @@ _MULTI_MIN_VALUE_PATTERNS = _compile_key_value_patterns(_MULTI_MIN_LIMIT_VALUE_K
 _MULTI_MAX_VALUE_PATTERNS = _compile_key_value_patterns(_MULTI_MAX_LIMIT_VALUE_KEYSET)
 
 
-def _safe_positive_int(value: str | int | float | None) -> int | None:
+def _safe_positive_int(value: object) -> int | None:
 
     if value is None:
         return None
@@ -148,9 +148,7 @@ def _safe_positive_int(value: str | int | float | None) -> int | None:
     return None
 
 
-def _extract_range_from_json_obj(
-    obj: dict[str, object] | list[object],
-) -> tuple[int | None, int | None]:
+def _extract_range_from_json_obj(obj: object) -> tuple[int | None, int | None]:
 
     min_limit: int | None = None
     max_limit: int | None = None
@@ -158,14 +156,14 @@ def _extract_range_from_json_obj(
         for key, value in obj.items():
             normalized_key = str(key).lower()
             if normalized_key in _MULTI_MIN_LIMIT_VALUE_KEYSET:
-                candidate = _safe_positive_int(value)  # ty: ignore[invalid-argument-type]
+                candidate = _safe_positive_int(value)
                 if candidate:
                     min_limit = min_limit or candidate
             if normalized_key in _MULTI_MAX_LIMIT_VALUE_KEYSET:
-                candidate = _safe_positive_int(value)  # ty: ignore[invalid-argument-type]
+                candidate = _safe_positive_int(value)
                 if candidate:
                     max_limit = max_limit or candidate
-            nested_min, nested_max = _extract_range_from_json_obj(value)  # ty: ignore[invalid-argument-type]
+            nested_min, nested_max = _extract_range_from_json_obj(value)
             if min_limit is None and nested_min is not None:
                 min_limit = nested_min
             if max_limit is None and nested_max is not None:
@@ -174,7 +172,7 @@ def _extract_range_from_json_obj(
                 break
     elif isinstance(obj, list):
         for item in obj:
-            nested_min, nested_max = _extract_range_from_json_obj(item)  # ty: ignore[invalid-argument-type]
+            nested_min, nested_max = _extract_range_from_json_obj(item)
             if min_limit is None and nested_min is not None:
                 min_limit = nested_min
             if max_limit is None and nested_max is not None:

@@ -619,10 +619,10 @@ def _assemble_question_info(
         answer_config_kwargs["multi_text_blank_ai_flags"] = config.multi_text_blank_ai_flags
         answer_config_kwargs["multi_text_blank_int_ranges"] = config.multi_text_blank_int_ranges
     elif answer_config_cls is LocationQuestionAnswerConfig:
+        existing_answer_config = existing_config.details.answer_config if existing_config else None
         answer_config_kwargs["location_parts"] = (
-            list(existing_config.details.answer_config.location_parts)  # type: ignore[union-attr]
-            if existing_config
-            and isinstance(existing_config.details.answer_config, LocationQuestionAnswerConfig)
+            list(existing_answer_config.location_parts)
+            if isinstance(existing_answer_config, LocationQuestionAnswerConfig)
             else []
         )
     elif answer_config_cls is UniversityQuestionAnswerConfig:

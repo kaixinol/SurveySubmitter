@@ -230,7 +230,7 @@ def _append_media_item(
     normalized_url = _normalize_media_source_url(source_url)
     if not normalized_url:
         return
-    item = {
+    item: dict[str, object] = {
         "kind": "image",
         "scope": scope,
         "index": index,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Sequence
+from typing import Sequence, cast
 
 from loguru import logger
 
@@ -380,9 +380,11 @@ async def _build_wjx_text_action(
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
 ) -> AnswerAction | None:
+    from survey_submitter.providers.contracts import TextQuestionMeta
+
     config = ctx.config
     current = int(question.num or 0)
-    blank_count = max(1, int(question.text_inputs or 0))  # ty: ignore[unresolved-attribute]
+    blank_count = max(1, int(cast(TextQuestionMeta, question).text_inputs or 0))
 
     fixed_answer = _get_fixed_answer(ctx, current)
     if fixed_answer is not None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Iterable, Mapping, TypedDict, cast
+from typing import Any, Iterable, Mapping, TypedDict, cast
 
 from pydantic import field_serializer, model_validator
 
@@ -126,7 +126,7 @@ def _signal_hit(normalized: Mapping[str, object], signal: QuestionSignal, legacy
     """输入 dict 里信号是否命中（新格式读 signals 键，旧格式读 is_/has_ 布尔键）。"""
     raw_signals = normalized.get("signals") or ()
     if isinstance(raw_signals, (list, tuple, set, frozenset)):
-        for value in raw_signals:
+        for value in cast(Iterable[object], raw_signals):
             if isinstance(value, str) and value == signal.value:
                 return True
     return bool(normalized.get(legacy_key))
@@ -180,7 +180,7 @@ def _normalize_question_media_list(raw: object) -> list[QuestionMedia]:
             if index is None:
                 continue
             try:
-                normalized_index = int(index)  # ty:ignore[invalid-argument-type]
+                normalized_index = int(cast("int | str", index))
             except (ValueError, TypeError):
                 continue
             if normalized_index < 0:
@@ -273,7 +273,7 @@ class SurveyQuestionMeta(BaseConfigModel):
         if isinstance(raw_signals, (str, bytes)) or not hasattr(raw_signals, "__iter__"):
             raise ValueError(f"signals must be an iterable of signal names, got {raw_signals!r}")
         signals: set[QuestionSignal] = set()
-        for value in raw_signals:
+        for value in cast(Iterable[object], raw_signals):
             if isinstance(value, QuestionSignal):
                 signals.add(value)
             elif isinstance(value, str) and value in _SIGNAL_VALUES:
@@ -344,7 +344,7 @@ class SurveyDefinition:
 SurveyQuestionInput = SurveyQuestionMeta | Mapping[str, object]
 
 
-def _filter_kwargs(cls: type[BaseConfigModel], kwargs: dict[str, object]) -> dict[str, object]:
+def _filter_kwargs(cls: type[BaseConfigModel], kwargs: dict[str, object]) -> dict[str, Any]:
     valid_fields = set(cls.model_fields)
     return {k: v for k, v in kwargs.items() if k in valid_fields}
 
@@ -353,7 +353,7 @@ def _survey_question_input_to_dict(question: object) -> dict[str, object] | None
     if isinstance(question, SurveyQuestionMeta):
         return survey_question_meta_to_dict(question)
     if isinstance(question, Mapping):
-        return dict[str, object](question)  # ty:ignore[no-matching-overload]
+        return cast("dict[str, object]", dict(question))
     return None
 
 
@@ -408,7 +408,7 @@ def _collect_signals(
     signals = {signal for signal, present in candidates if present}
     raw_signals = normalized.get("signals")
     if isinstance(raw_signals, (list, tuple, set, frozenset)):
-        for value in raw_signals:
+        for value in cast(Iterable[object], raw_signals):
             if isinstance(value, QuestionSignal):
                 signals.add(value)
             elif isinstance(value, str) and value in _SIGNAL_VALUES:
@@ -450,7 +450,7 @@ def _build_logic_kwargs(normalized: dict[str, object]) -> dict[str, object]:
     display_number: int | None = None
     if raw_display_num not in (None, ""):
         try:
-            display_number = int(raw_display_num)  # ty:ignore[invalid-argument-type]
+            display_number = int(cast("int | str", raw_display_num))
         except (ValueError, TypeError):
             display_number = None
     return {
@@ -471,7 +471,7 @@ def _build_choice_kwargs(
     forced_option_index = normalized.get("forced_option_index")
     try:
         if forced_option_index is not None:
-            forced_option_index = int(forced_option_index)  # ty:ignore[invalid-argument-type]
+            forced_option_index = int(cast("int | str", forced_option_index))
     except (ValueError, TypeError):
         forced_option_index = None
     fillable_options_raw = normalized.get("fillable_options")
@@ -479,7 +479,7 @@ def _build_choice_kwargs(
     if isinstance(fillable_options_raw, list):
         for raw in fillable_options_raw:
             try:
-                fillable_options.append(int(raw))  # ty:ignore[invalid-argument-type]
+                fillable_options.append(int(cast("int | str", raw)))
             except (ValueError, TypeError):
                 continue
     required_fillable_options_raw = normalized.get("required_fillable_options")
@@ -599,56 +599,56 @@ def _normalize_question(
                 **_filter_kwargs(
                     SingleChoiceQuestionMeta,
                     {**common, **logic, **_build_choice_kwargs(normalized, attached_list)},
-                )  # ty:ignore[invalid-argument-type]
+                )
             )
         case QuestionType.MULTIPLE:
             kwargs = {**common, **logic, **_build_choice_kwargs(normalized, attached_list)}
             kwargs["multi_min_limit"] = normalized.get("multi_min_limit")
             kwargs["multi_max_limit"] = normalized.get("multi_max_limit")
-            return MultipleChoiceQuestionMeta(**_filter_kwargs(MultipleChoiceQuestionMeta, kwargs))  # ty:ignore[invalid-argument-type]
+            return MultipleChoiceQuestionMeta(**_filter_kwargs(MultipleChoiceQuestionMeta, kwargs))
         case QuestionType.DROPDOWN | QuestionType.ORDER:
             return SingleChoiceQuestionMeta(
                 **_filter_kwargs(
                     SingleChoiceQuestionMeta,
                     {**common, **logic, **_build_choice_kwargs(normalized, attached_list)},
-                )  # ty:ignore[invalid-argument-type]
+                )
             )
         case QuestionType.MATRIX:
             return MatrixQuestionMeta(
                 **_filter_kwargs(
                     MatrixQuestionMeta,
                     {**common, **logic, **_build_matrix_kwargs(normalized)},
-                )  # ty:ignore[invalid-argument-type]
+                )
             )
         case QuestionType.SCORE | QuestionType.SCALE:
             return RatingQuestionMeta(
                 **_filter_kwargs(
                     RatingQuestionMeta,
                     {**common, **logic, **_build_rating_kwargs(normalized)},
-                )  # ty:ignore[invalid-argument-type]
+                )
             )
         case QuestionType.SLIDER:
             return SliderQuestionMeta(
                 **_filter_kwargs(
                     SliderQuestionMeta,
                     {**common, **logic, **_build_slider_kwargs(normalized)},
-                )  # ty:ignore[invalid-argument-type]
+                )
             )
         case QuestionType.TEXT | QuestionType.MULTI_TEXT | QuestionType.LOCATION:
             return TextQuestionMeta(
                 **_filter_kwargs(
                     TextQuestionMeta,
                     {**common, **logic, **_build_text_kwargs(normalized)},
-                )  # ty:ignore[invalid-argument-type]
+                )
             )
         case QuestionType.DESCRIPTION:
-            return _QuestionMetaBase(**_filter_kwargs(_QuestionMetaBase, {**common, **logic}))  # ty:ignore[invalid-argument-type]
+            return _QuestionMetaBase(**_filter_kwargs(_QuestionMetaBase, {**common, **logic}))
         case _:
             return ChoiceQuestionMeta(
                 **_filter_kwargs(
                     ChoiceQuestionMeta,
                     {**common, **logic, **_build_choice_kwargs(normalized, attached_list)},
-                )  # ty:ignore[invalid-argument-type]
+                )
             )
 
 

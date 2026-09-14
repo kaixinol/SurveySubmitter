@@ -66,7 +66,7 @@ def text_of(node) -> str:
 def classes_of(node) -> list[str]:
     if node is None:
         return []
-    return (node.get("class") or "").split()
+    return [str(name) for name in str(node.get("class") or "").split()]
 
 
 def has_class(node, name: str) -> bool:
