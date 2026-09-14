@@ -27,7 +27,7 @@ MIN_PROXY_TTL_SECONDS = 50
 def _normalize_proxy_address(proxy_address: str | None) -> str | None:
     if not proxy_address:
         return None
-    normalized = proxy_address
+    normalized = str(proxy_address).strip()
     if not normalized:
         return None
     if "://" not in normalized:

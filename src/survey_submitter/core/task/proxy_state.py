@@ -242,7 +242,7 @@ class ProxyRuntimeMixin(_ProxyRuntimeNotifyMixin):
         excluded = exclude_thread_name or ""
         active = set()
         for thread_name, lease in self.proxy_in_use_by_thread.items():
-            if excluded and thread_name or "" == excluded:
+            if excluded and thread_name == excluded:
                 continue
             address = lease.address or ""
             if address:

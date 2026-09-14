@@ -8,6 +8,7 @@ from loguru import logger
 
 from survey_submitter.core.task import ExecutionState, ProxyLease
 from survey_submitter.network.proxy.pool import (
+    _normalize_proxy_address,
     coerce_proxy_lease,
     get_proxy_required_ttl_seconds,
     mask_proxy_for_log,
@@ -226,7 +227,7 @@ def _discard_unresponsive_proxy(ctx: ExecutionState, proxy_address: str) -> None
         return
     with ctx.lock:
         removed = False
-        normalized = proxy_address or ""
+        normalized = _normalize_proxy_address(proxy_address) or ""
         retained = deque()
         pool = _ensure_proxy_pool_deque_locked(ctx)
         while pool:

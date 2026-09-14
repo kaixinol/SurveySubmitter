@@ -207,6 +207,16 @@ _ANSWER_CONFIG_BY_QUESTION_TYPE: dict[QuestionType, type[QuestionAnswerConfig]] 
     QuestionType.UNIVERSITY: UniversityQuestionAnswerConfig,
 }
 
+_TEXT_LIKE_QUESTION_TYPES = frozenset(
+    {
+        QuestionType.TEXT,
+        QuestionType.MULTI_TEXT,
+        QuestionType.FILL_BLANK,
+        QuestionType.MULTI_FILL_BLANK,
+        QuestionType.UNKNOWN,
+    }
+)
+
 
 def answer_config_type_for_question_type(
     question_type: str | QuestionType,
@@ -215,14 +225,16 @@ def answer_config_type_for_question_type(
 ) -> type[QuestionAnswerConfig]:
     """Return the concrete QuestionAnswerConfig subclass for a question type.
 
-    An explicit ``QuestionType`` member wins. When *location_parts* is
-    non-empty (a text-typed question carrying location parts), it falls back
-    to :class:`LocationQuestionAnswerConfig` regardless of the question type.
+    Text-like questions carrying *location_parts* are treated as location
+    questions. Any other recognised ``QuestionType`` maps directly; the
+    *location_parts* fallback also applies to unrecognised types.
     """
     try:
         key = QuestionType(question_type)
     except ValueError:
         key = None
+    if location_parts and key in _TEXT_LIKE_QUESTION_TYPES:
+        return LocationQuestionAnswerConfig
     if key in _ANSWER_CONFIG_BY_QUESTION_TYPE:
         return _ANSWER_CONFIG_BY_QUESTION_TYPE[key]
     if location_parts:

@@ -710,6 +710,6 @@ def build_survey_definition(
     normalized_provider = normalize_survey_provider(provider, default=SURVEY_PROVIDER_WJX)
     return SurveyDefinition(
         provider=normalized_provider,
-        title=title or "",
+        title=str(title or "").strip(),
         questions=normalize_survey_questions(normalized_provider, questions),
     )

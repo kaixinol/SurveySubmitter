@@ -89,12 +89,12 @@ def ensure_question_provider_fields(
     normalized = dict(item)
     provider = normalize_survey_provider(normalized.get("provider"), default=default_provider)
     normalized["provider"] = provider
-    normalized["provider_question_id"] = normalized.get("provider_question_id") or ""
-    normalized["provider_page_id"] = normalized.get("provider_page_id") or ""
-    normalized["provider_type"] = normalized.get("provider_type") or ""
+    normalized["provider_question_id"] = str(normalized.get("provider_question_id") or "").strip()
+    normalized["provider_page_id"] = str(normalized.get("provider_page_id") or "").strip()
+    normalized["provider_type"] = str(normalized.get("provider_type") or "").strip()
     normalized["provider_page_raw"] = normalized.get("provider_page_raw")
     normalized["unsupported"] = bool(normalized.get("unsupported", False))
-    normalized["unsupported_reason"] = normalized.get("unsupported_reason") or ""
+    normalized["unsupported_reason"] = str(normalized.get("unsupported_reason") or "").strip()
     return normalized
 
 

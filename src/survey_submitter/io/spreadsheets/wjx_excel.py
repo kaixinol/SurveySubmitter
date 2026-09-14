@@ -92,7 +92,7 @@ def _detect_wjx_export_format(
 def load_wjx_excel_export(
     source_path: str, *, preferred_format: str = REVERSE_FILL_FORMAT_AUTO
 ) -> WjxExcelExport:
-    raw_path = source_path or ""
+    raw_path = str(source_path or "").strip()
     if not raw_path:
         raise ValueError("未提供 Excel 文件路径")
     path = str(Path(raw_path).resolve())

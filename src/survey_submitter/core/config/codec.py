@@ -263,7 +263,7 @@ def _normalize_multi_text_blank_int_ranges(raw: object) -> list[list[int]]:
 
 
 def _normalize_dimension_value(raw: object) -> str | None:
-    text = str(raw) if raw else ""
+    text = str(raw or "").strip()
     if not text or text == "未分组":
         return None
     return text
@@ -469,8 +469,8 @@ def deserialize_question_detail(data: dict[str, object]) -> QuestionInfo:
         answer_config = QuestionAnswerConfig(ai_enabled=_as_bool(ac_fields.get("ai_enabled")))
 
     detail = QuestionDetail(
-        provider_question_id=str(detail_raw.get("provider_question_id") or "") or None,
-        provider_page_id=str(detail_raw.get("provider_page_id") or "") or None,
+        provider_question_id=str(detail_raw.get("provider_question_id") or "").strip() or None,
+        provider_page_id=str(detail_raw.get("provider_page_id") or "").strip() or None,
         probabilities=cast("list[float] | list[list[float]] | int | None", probabilities),
         distribution_mode=mode_raw,
         custom_weights=cast("list[float] | list[list[float]] | None", custom_weights),
