@@ -33,7 +33,17 @@ from survey_submitter.core.reverse_fill import ReverseFillSpec
 from survey_submitter.core.reverse_fill.validation import (
     build_enabled_reverse_fill_spec,
 )
-from survey_submitter.core.task import ExecutionConfig, ProxyRuntimeConfig
+from survey_submitter.core.task import (
+    AIAnsweringConfig,
+    AnswerPolicyConfig,
+    ChoiceFillConfig,
+    ExecutionConfig,
+    ExecutionControlConfig,
+    NetworkIdentityConfig,
+    ProxyRuntimeConfig,
+    SurveyIdentityConfig,
+    TestProfileConfig,
+)
 from survey_submitter.network.proxy import (
     get_custom_proxy_api_override,
     set_proxy_api_override,
@@ -317,51 +327,65 @@ def _build_execution_config_template(
         )
 
     execution_config = ExecutionConfig(
-        url=str(config.survey.url or ""),
-        title=title,
-        provider=provider,
-        target_num=requested_target_num,
-        num_threads=effective_num_threads,
-        fail_threshold=5,
-        submit_interval_range_seconds=(
-            int(config.execution.submit_interval_range_seconds[0]),
-            int(config.execution.submit_interval_range_seconds[1]),
+        survey=SurveyIdentityConfig(
+            url=str(config.survey.url or ""),
+            title=title,
+            provider=provider,
         ),
-        answer_duration_range_seconds=(
-            int(config.execution.answer_duration_range_seconds[0]),
-            int(config.execution.answer_duration_range_seconds[1]),
+        control=ExecutionControlConfig(
+            target_num=requested_target_num,
+            num_threads=effective_num_threads,
+            fail_threshold=5,
+            stop_on_fail=bool(config.execution.stop_on_fail),
+            submit_interval_range_seconds=(
+                int(config.execution.submit_interval_range_seconds[0]),
+                int(config.execution.submit_interval_range_seconds[1]),
+            ),
+            answer_duration_range_seconds=(
+                int(config.execution.answer_duration_range_seconds[0]),
+                int(config.execution.answer_duration_range_seconds[1]),
+            ),
+            answer_datetime_window_ms=answer_datetime_window_to_epoch_ms(
+                config.execution.answer_datetime_window
+            ),
         ),
-        answer_datetime_window_ms=answer_datetime_window_to_epoch_ms(
-            config.execution.answer_datetime_window
+        network=NetworkIdentityConfig(
+            proxy=ProxyRuntimeConfig(
+                enabled=bool(config.execution.proxy.enabled),
+                source=str(config.execution.proxy.source or "custom").lower(),
+                reuse=bool(config.execution.proxy.reuse),
+            ),
+            random_user_agent=bool(config.execution.random_user_agent),
+            user_agent_ratios=copy.deepcopy(dict(config.execution.user_agent_ratios or {})),
+            pause_on_aliyun_captcha=bool(config.execution.pause_on_aliyun_captcha),
         ),
-        proxy=ProxyRuntimeConfig(
-            enabled=bool(config.execution.proxy.enabled),
-            source=str(config.execution.proxy.source or "custom").lower(),
-            reuse=bool(config.execution.proxy.reuse),
+        answer_policy=AnswerPolicyConfig(
+            rules=copy.deepcopy(
+                list(config.answer_config.answer_rules.constraints or [])
+                + list(config.answer_config.answer_rules.per_question or [])
+            ),
+            reverse_fill_spec=copy.deepcopy(reverse_fill_spec),
         ),
-        random_user_agent=bool(config.execution.random_user_agent),
-        user_agent_ratios=copy.deepcopy(dict(config.execution.user_agent_ratios or {})),
-        pause_on_aliyun_captcha=bool(config.execution.pause_on_aliyun_captcha),
-        stop_on_fail=bool(config.execution.stop_on_fail),
-        answer_rules=copy.deepcopy(
-            list(config.answer_config.answer_rules.constraints or [])
-            + list(config.answer_config.answer_rules.per_question or [])
+        choice_fill=ChoiceFillConfig(
+            optional_fill_skip_ratio=min(
+                1.0,
+                max(0.0, float(config.answer_config.optional_fill_skip_ratio or 0.0)),
+            ),
         ),
-        optional_fill_skip_ratio=min(
-            1.0,
-            max(0.0, float(config.answer_config.optional_fill_skip_ratio or 0.0)),
+        ai=AIAnsweringConfig(
+            system_prompt=config.execution.ai.system_prompt or "",
+            answering=bool(config.execution.ai.answering),
         ),
-        reverse_fill_spec=copy.deepcopy(reverse_fill_spec),
-        ai_system_prompt=config.execution.ai.system_prompt or "",
-        ai_answering=bool(config.execution.ai.answering),
-        test_profiles=[
-            {int(k): str(v) for k, v in tp.fixed_answers.items()}
-            for tp in config.answer_config.test_profiles.profiles
-        ],
-        test_profiles_random=bool(config.answer_config.test_profiles.random),
+        test_profiles=TestProfileConfig(
+            profiles=[
+                {int(k): str(v) for k, v in tp.fixed_answers.items()}
+                for tp in config.answer_config.test_profiles.profiles
+            ],
+            random=bool(config.answer_config.test_profiles.random),
+        ),
     )
-    execution_config.questions_metadata = _build_questions_metadata(questions_info)
-    execution_config.provider_question_metadata_map = _build_provider_metadata(
+    execution_config.question_maps.questions_metadata = _build_questions_metadata(questions_info)
+    execution_config.question_maps.provider_question_metadata_map = _build_provider_metadata(
         questions_info,
         provider=str(config.survey.provider or ""),
     )

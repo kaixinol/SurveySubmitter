@@ -174,8 +174,8 @@ class AsyncRuntimeEngine:
         worker_count = max(
             1,
             min(
-                int(config.num_threads or 1),
-                max(1, int(config.target_num or 1)),
+                int(config.control.num_threads or 1),
+                max(1, int(config.control.target_num or 1)),
             ),
         )
         state.ensure_worker_threads(worker_count, prefix="Slot")
@@ -187,7 +187,7 @@ class AsyncRuntimeEngine:
             status_sink=self._status_bus.emit,
         )
         logger.info(
-            f"任务启动：版本={pkg_version('surveysubmitter')} 问卷链接={config.url or ''} 平台={config.provider or ''} 目标份数={config.target_num} 当前进度={state.success_count}/{config.target_num} 并发数={worker_count} 作答时长={_format_seconds_range(config.answer_duration_range_seconds)} 随机IP={'开启' if config.proxy.enabled else '关闭'} 代理源={_format_proxy_source(config.proxy.source)} 运行时=纯HTTP"
+            f"任务启动：版本={pkg_version('surveysubmitter')} 问卷链接={config.survey.url or ''} 平台={config.survey.provider or ''} 目标份数={config.control.target_num} 当前进度={state.success_count}/{config.control.target_num} 并发数={worker_count} 作答时长={_format_seconds_range(config.control.answer_duration_range_seconds)} 随机IP={'开启' if config.network.proxy.enabled else '关闭'} 代理源={_format_proxy_source(config.network.proxy.source)} 运行时=纯HTTP"
         )
         stop_event = self._stop_event
         if stop_event is None:

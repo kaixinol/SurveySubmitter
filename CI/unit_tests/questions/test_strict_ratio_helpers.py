@@ -16,7 +16,11 @@ class StrictRatioHelperTests:
         assert not strict_ratio.is_strict_custom_ratio_mode("random", [0, 1], None)
 
     def test_is_strict_ratio_question_reads_map_from_config(self) -> None:
-        ctx = SimpleNamespace(config=SimpleNamespace(question_strict_ratio_map={3: True}))
+        ctx = SimpleNamespace(
+            config=SimpleNamespace(
+                question_maps=SimpleNamespace(question_strict_ratio_map={3: True})
+            )
+        )
         assert strict_ratio.is_strict_ratio_question(ctx, 3)
         assert not strict_ratio.is_strict_ratio_question(ctx, 4)
 

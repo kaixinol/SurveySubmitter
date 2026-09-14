@@ -20,12 +20,12 @@ class RunStopPolicyTests:
             target_num=1,
             samples=[ReverseFillSampleRow(data_row_number=1, worksheet_row_number=2, answers={})],
         )
-        state = ExecutionState(config=ExecutionConfig(reverse_fill_spec=spec, target_num=1))
+        state = ExecutionState(config=ExecutionConfig(answer_policy={'reverse_fill_spec': spec}, control={'target_num': 1}))
         state.initialize_runtime()
         return state
 
     def test_record_failure_stops_after_reaching_threshold(self, make_callable_mock) -> None:
-        config = ExecutionConfig(fail_threshold=2, stop_on_fail=True)
+        config = ExecutionConfig(control={'fail_threshold': 2, 'stop_on_fail': True})
         state = ExecutionState(config=config, consecutive_fail_count=1)
         increment_thread_fail = state.increment_thread_fail
         state.increment_thread_fail = make_callable_mock(side_effect=increment_thread_fail)
@@ -78,7 +78,7 @@ class RunStopPolicyTests:
         assert state.reverse_fill_runtime.discarded_row_numbers == set()
 
     def test_proxy_unavailable_threshold_scales_with_random_proxy_concurrency(self) -> None:
-        config = ExecutionConfig(fail_threshold=5, num_threads=32, proxy=ProxyRuntimeConfig(enabled=True))
+        config = ExecutionConfig(control={'fail_threshold': 5, 'num_threads': 32}, network={'proxy': ProxyRuntimeConfig(enabled=True)})
         state = ExecutionState(config=config, consecutive_fail_count=4)
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
@@ -97,7 +97,7 @@ class RunStopPolicyTests:
         assert state.get_terminal_stop_snapshot()[0] == ""
 
     def test_failure_threshold_uses_half_concurrency_when_threads_above_ten(self) -> None:
-        config = ExecutionConfig(fail_threshold=5, num_threads=32, stop_on_fail=True)
+        config = ExecutionConfig(control={'fail_threshold': 5, 'num_threads': 32, 'stop_on_fail': True})
         state = ExecutionState(config=config, consecutive_fail_count=15)
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
@@ -110,7 +110,7 @@ class RunStopPolicyTests:
         assert state.get_terminal_stop_snapshot()[0] == "fail_threshold"
 
     def test_failure_threshold_keeps_config_value_when_threads_not_above_ten(self) -> None:
-        config = ExecutionConfig(fail_threshold=5, num_threads=10, stop_on_fail=True)
+        config = ExecutionConfig(control={'fail_threshold': 5, 'num_threads': 10, 'stop_on_fail': True})
         state = ExecutionState(config=config, consecutive_fail_count=4)
         policy = RunStopPolicy(config, state)
         stop_signal = threading.Event()
@@ -123,7 +123,7 @@ class RunStopPolicyTests:
         assert state.get_terminal_stop_snapshot()[0] == "fail_threshold"
 
     def test_proxy_unavailable_uses_independent_counter(self) -> None:
-        config = ExecutionConfig(fail_threshold=5, num_threads=8, proxy=ProxyRuntimeConfig(enabled=True))
+        config = ExecutionConfig(control={'fail_threshold': 5, 'num_threads': 8}, network={'proxy': ProxyRuntimeConfig(enabled=True)})
         state = ExecutionState(
             config=config, consecutive_fail_count=3, proxy_unavailable_fail_count=7
         )
@@ -144,7 +144,7 @@ class RunStopPolicyTests:
         assert state.get_terminal_stop_snapshot()[0] == "proxy_unavailable_threshold"
 
     def test_record_success_commits_progress_and_triggers_target_stop(self) -> None:
-        config = ExecutionConfig(target_num=1, proxy=ProxyRuntimeConfig(enabled=True))
+        config = ExecutionConfig(control={'target_num': 1}, network={'proxy': ProxyRuntimeConfig(enabled=True)})
         state = ExecutionState(config=config, consecutive_fail_count=2)
         state.pending_by_thread["Worker-1"] = [("q:1", 1, 3)]
         policy = RunStopPolicy(config, state)
@@ -184,7 +184,7 @@ class RunStopPolicyTests:
             ],
         )
         state = ExecutionState(
-            config=ExecutionConfig(reverse_fill_spec=spec, target_num=2), success_count=1
+            config=ExecutionConfig(answer_policy={'reverse_fill_spec': spec}, control={'target_num': 2}), success_count=1
         )
         state.initialize_runtime()
         state.acquire_sample("Worker-9")

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import math
-from types import SimpleNamespace
 
 import pytest
 
 from survey_submitter.core.config.schema import QuestionInfo
 from survey_submitter.core.questions.normalization import configure_probabilities
+from survey_submitter.core.task import ExecutionConfig
 from survey_submitter.core.questions.schema import (
     _TEXT_RANDOM_ID_CARD,
     _TEXT_RANDOM_ID_CARD_TOKEN,
@@ -27,7 +27,7 @@ from survey_submitter.providers.contracts import ensure_survey_question_meta
 
 class NormalizationRuntimeTests:
     def test_configure_probabilities_single_with_fill_texts_and_attached_selects(self) -> None:
-        ctx = SimpleNamespace()
+        ctx = ExecutionConfig()
         entries = [
             QuestionInfo(
                 num=1,
@@ -42,14 +42,14 @@ class NormalizationRuntimeTests:
                 ),
             ),
         ]
-        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
-        assert ctx.question_config_index_map[1] == ("single", 0)
-        assert ctx.single_prob == [[0.0, 1.0, 0.0]]
-        assert ctx.single_option_fill_texts == [[None, "补充", None]]
-        assert ctx.single_attached_option_selects == [[{"option_index": 1, "weights": [1, 0]}]]
+        configure_probabilities(entries, ctx)
+        assert ctx.question_maps.question_config_index_map[1] == ("single", 0)
+        assert ctx.answer_probs.single_prob == [[0.0, 1.0, 0.0]]
+        assert ctx.choice_fill.single_option_fill_texts == [[None, "补充", None]]
+        assert ctx.choice_fill.single_attached_option_selects == [[{"option_index": 1, "weights": [1, 0]}]]
 
     def test_configure_probabilities_dropdown_with_dimension(self) -> None:
-        ctx = SimpleNamespace()
+        ctx = ExecutionConfig()
         entries = [
             QuestionInfo(
                 num=2,
@@ -62,11 +62,11 @@ class NormalizationRuntimeTests:
                 ),
             ),
         ]
-        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
-        assert ctx.question_dimension_map[2] == "满意度"
+        configure_probabilities(entries, ctx)
+        assert ctx.question_maps.question_dimension_map[2] == "满意度"
 
     def test_configure_probabilities_multiple_with_fill_texts(self) -> None:
-        ctx = SimpleNamespace()
+        ctx = ExecutionConfig()
         entries = [
             QuestionInfo(
                 num=3,
@@ -80,12 +80,12 @@ class NormalizationRuntimeTests:
                 ),
             ),
         ]
-        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
-        assert ctx.multiple_prob == [[25.0, 75.0]]
-        assert ctx.multiple_option_fill_texts == [["A", "B"]]
+        configure_probabilities(entries, ctx)
+        assert ctx.answer_probs.multiple_prob == [[25.0, 75.0]]
+        assert ctx.choice_fill.multiple_option_fill_texts == [["A", "B"]]
 
     def test_configure_probabilities_matrix_with_dimension(self) -> None:
-        ctx = SimpleNamespace()
+        ctx = ExecutionConfig()
         entries = [
             QuestionInfo(
                 num=4,
@@ -98,12 +98,12 @@ class NormalizationRuntimeTests:
                 ),
             ),
         ]
-        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
-        assert ctx.matrix_prob == [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
-        assert ctx.question_dimension_map[4] == "态度"
+        configure_probabilities(entries, ctx)
+        assert ctx.answer_probs.matrix_prob == [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+        assert ctx.question_maps.question_dimension_map[4] == "态度"
 
     def test_configure_probabilities_scale_normalizes_to_sum_one(self) -> None:
-        ctx = SimpleNamespace()
+        ctx = ExecutionConfig()
         entries = [
             QuestionInfo(
                 num=5,
@@ -115,11 +115,11 @@ class NormalizationRuntimeTests:
                 ),
             ),
         ]
-        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
-        assert ctx.scale_prob == [[0.25, 0.75]]
+        configure_probabilities(entries, ctx)
+        assert ctx.answer_probs.scale_prob == [[0.25, 0.75]]
 
     def test_configure_probabilities_score_uses_equal_weights_when_unset(self) -> None:
-        ctx = SimpleNamespace()
+        ctx = ExecutionConfig()
         entries = [
             QuestionInfo(
                 num=6,
@@ -131,11 +131,11 @@ class NormalizationRuntimeTests:
                 ),
             ),
         ]
-        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
-        assert ctx.scale_prob == [[0.5, 0.5]]
+        configure_probabilities(entries, ctx)
+        assert ctx.answer_probs.scale_prob == [[0.5, 0.5]]
 
     def test_configure_probabilities_slider_custom_and_random_modes(self) -> None:
-        ctx = SimpleNamespace()
+        ctx = ExecutionConfig()
         entries = [
             QuestionInfo(
                 num=7,
@@ -158,12 +158,12 @@ class NormalizationRuntimeTests:
                 ),
             ),
         ]
-        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
-        assert ctx.slider_targets[0] == 75.0
-        assert math.isnan(ctx.slider_targets[1])
+        configure_probabilities(entries, ctx)
+        assert ctx.answer_probs.slider_targets[0] == 75.0
+        assert math.isnan(ctx.answer_probs.slider_targets[1])
 
     def test_configure_probabilities_order_uses_negative_one(self) -> None:
-        ctx = SimpleNamespace()
+        ctx = ExecutionConfig()
         entries = [
             QuestionInfo(
                 num=9,
@@ -175,11 +175,11 @@ class NormalizationRuntimeTests:
                 ),
             ),
         ]
-        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
-        assert ctx.question_config_index_map[9] == ("order", -1)
+        configure_probabilities(entries, ctx)
+        assert ctx.question_maps.question_config_index_map[9] == ("order", -1)
 
     def test_configure_probabilities_text_with_ai_enabled(self) -> None:
-        ctx = SimpleNamespace()
+        ctx = ExecutionConfig()
         entries = [
             QuestionInfo(
                 num=10,
@@ -194,14 +194,14 @@ class NormalizationRuntimeTests:
                 ),
             ),
         ]
-        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
-        assert ctx.texts[0] == ["甲", "乙"]
-        assert ctx.texts_prob[0] == [0.25, 0.75]
-        assert ctx.text_ai_flags[0] is True
-        assert ctx.text_titles[0] == "填空"
+        configure_probabilities(entries, ctx)
+        assert ctx.text_answers.texts[0] == ["甲", "乙"]
+        assert ctx.text_answers.texts_prob[0] == [0.25, 0.75]
+        assert ctx.text_answers.text_ai_flags[0] is True
+        assert ctx.text_answers.text_titles[0] == "填空"
 
     def test_configure_probabilities_multi_text_blank_modes(self) -> None:
-        ctx = SimpleNamespace()
+        ctx = ExecutionConfig()
         entries = [
             QuestionInfo(
                 num=11,
@@ -218,13 +218,13 @@ class NormalizationRuntimeTests:
                 ),
             ),
         ]
-        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
-        assert ctx.text_entry_types == ["multi_text"]
-        assert ctx.text_ai_flags[0] is True
-        assert ctx.multi_text_blank_int_ranges[0] == [[3, 9], []]
+        configure_probabilities(entries, ctx)
+        assert ctx.text_answers.text_entry_types == ["multi_text"]
+        assert ctx.text_answers.text_ai_flags[0] is True
+        assert ctx.text_answers.multi_text_blank_int_ranges[0] == [[3, 9], []]
 
     def test_configure_probabilities_location_with_parts(self) -> None:
-        ctx = SimpleNamespace()
+        ctx = ExecutionConfig()
         entries = [
             QuestionInfo(
                 num=12,
@@ -238,12 +238,12 @@ class NormalizationRuntimeTests:
                 ),
             ),
         ]
-        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
-        assert ctx.question_config_index_map[12] == ("location", -1)
-        assert ctx.location_parts[12] == ["北京", "北京", "东城区"]
+        configure_probabilities(entries, ctx)
+        assert ctx.question_maps.question_config_index_map[12] == ("location", -1)
+        assert ctx.location_answers.location_parts[12] == ["北京", "北京", "东城区"]
 
     def test_configure_probabilities_builds_provider_question_mapping(self) -> None:
-        ctx = SimpleNamespace()
+        ctx = ExecutionConfig()
         entries = [
             QuestionInfo(
                 num=2,
@@ -269,10 +269,10 @@ class NormalizationRuntimeTests:
             ),
         ]
 
-        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
+        configure_probabilities(entries, ctx)
 
-        assert ctx.question_config_index_map[2] == ("scale", 1)
-        assert ctx.provider_question_idx_map == {
+        assert ctx.question_maps.question_config_index_map[2] == ("scale", 1)
+        assert ctx.question_maps.provider_question_idx_map == {
             "wjx:4:question-1": ("scale", 0),
             "wjx:5:question-1": ("scale", 1),
         }
@@ -280,7 +280,7 @@ class NormalizationRuntimeTests:
     def test_configure_probabilities_assigns_global_reliability_dimension_when_none_explicit(
         self,
     ) -> None:
-        ctx = SimpleNamespace()
+        ctx = ExecutionConfig()
         entries = [
             QuestionInfo(
                 num=1,
@@ -302,27 +302,29 @@ class NormalizationRuntimeTests:
             ),
         ]
 
-        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
+        configure_probabilities(entries, ctx)
 
-        assert ctx.question_dimension_map == {
+        assert ctx.question_maps.question_dimension_map == {
             1: GLOBAL_RELIABILITY_DIMENSION,
             2: GLOBAL_RELIABILITY_DIMENSION,
         }
 
     def test_configure_probabilities_adds_only_ordinal_single_to_reliability(self) -> None:
-        ctx = SimpleNamespace(
-            questions_metadata={
-                1: ensure_survey_question_meta(
-                    {
-                        "num": 1,
-                        "title": "满意度",
-                        "type_code": "3",
-                        "option_texts": ["非常满意", "满意", "一般", "不满意", "非常不满意"],
-                    }
-                ),
-                2: ensure_survey_question_meta(
-                    {"num": 2, "title": "性别", "type_code": "3", "option_texts": ["男", "女"]}
-                ),
+        ctx = ExecutionConfig(
+            question_maps={
+                "questions_metadata": {
+                    1: ensure_survey_question_meta(
+                        {
+                            "num": 1,
+                            "title": "满意度",
+                            "type_code": "3",
+                            "option_texts": ["非常满意", "满意", "一般", "不满意", "非常不满意"],
+                        }
+                    ),
+                    2: ensure_survey_question_meta(
+                        {"num": 2, "title": "性别", "type_code": "3", "option_texts": ["男", "女"]}
+                    ),
+                }
             }
         )
         entries = [
@@ -346,27 +348,29 @@ class NormalizationRuntimeTests:
             ),
         ]
 
-        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
+        configure_probabilities(entries, ctx)
 
-        assert ctx.question_dimension_map == {1: GLOBAL_RELIABILITY_DIMENSION}
+        assert ctx.question_maps.question_dimension_map == {1: GLOBAL_RELIABILITY_DIMENSION}
 
     def test_configure_probabilities_adds_obvious_attitude_single_to_reliability(self) -> None:
-        ctx = SimpleNamespace(
-            questions_metadata={
-                4: ensure_survey_question_meta(
-                    {
-                        "num": 4,
-                        "title": "年轻人应该先完成学业或事业起步，再考虑生育",
-                        "type_code": "3",
-                        "option_texts": [
-                            "非常不同意",
-                            "比较不同意",
-                            "没意见",
-                            "比较同意",
-                            "非常同意",
-                        ],
-                    }
-                ),
+        ctx = ExecutionConfig(
+            question_maps={
+                "questions_metadata": {
+                    4: ensure_survey_question_meta(
+                        {
+                            "num": 4,
+                            "title": "年轻人应该先完成学业或事业起步，再考虑生育",
+                            "type_code": "3",
+                            "option_texts": [
+                                "非常不同意",
+                                "比较不同意",
+                                "没意见",
+                                "比较同意",
+                                "非常同意",
+                            ],
+                        }
+                    ),
+                }
             }
         )
         entries = [
@@ -387,9 +391,9 @@ class NormalizationRuntimeTests:
             ),
         ]
 
-        configure_probabilities(entries, ctx)  # ty:ignore[invalid-argument-type]
+        configure_probabilities(entries, ctx)
 
-        assert ctx.question_dimension_map == {4: GLOBAL_RELIABILITY_DIMENSION}
+        assert ctx.question_maps.question_dimension_map == {4: GLOBAL_RELIABILITY_DIMENSION}
 
     @pytest.mark.parametrize(
         ("entry", "message"),
@@ -516,7 +520,7 @@ class NormalizationRuntimeTests:
         self, entry: QuestionInfo, message: str
     ) -> None:
         with pytest.raises(ValueError, match=message):
-            configure_probabilities([entry], SimpleNamespace())  # ty:ignore[invalid-argument-type]
+            configure_probabilities([entry], ExecutionConfig())
 
     @pytest.mark.parametrize(
         ("mode", "expected"),
@@ -529,7 +533,7 @@ class NormalizationRuntimeTests:
     def test_text_random_modes_override_ai_and_candidate_text(
         self, mode: str, expected: str
     ) -> None:
-        ctx = SimpleNamespace()
+        ctx = ExecutionConfig()
         configure_probabilities(
             [
                 QuestionInfo(
@@ -548,11 +552,11 @@ class NormalizationRuntimeTests:
             ctx,  # ty:ignore[invalid-argument-type]
         )
 
-        assert ctx.texts == [[expected]]
-        assert ctx.text_ai_flags == [False]
+        assert ctx.text_answers.texts == [[expected]]
+        assert ctx.text_answers.text_ai_flags == [False]
 
     def test_text_random_integer_builds_runtime_token(self) -> None:
-        ctx = SimpleNamespace()
+        ctx = ExecutionConfig()
 
         configure_probabilities(
             [
@@ -572,4 +576,4 @@ class NormalizationRuntimeTests:
             ctx,  # ty:ignore[invalid-argument-type]
         )
 
-        assert ctx.texts == [["__RANDOM_INT__:3:9"]]
+        assert ctx.text_answers.texts == [["__RANDOM_INT__:3:9"]]

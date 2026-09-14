@@ -18,12 +18,12 @@ def provider_run_context(
     thread_name: str = "",
 ) -> Iterator[object | None]:
 
-    if state is not None and config.test_profiles and config.test_profiles_random:
-        state.current_profile_index = random.randint(0, len(config.test_profiles) - 1)
+    if state is not None and config.test_profiles.profiles and config.test_profiles.random:
+        state.current_profile_index = random.randint(0, len(config.test_profiles.profiles) - 1)
 
     reset_answer_context()
     reset_tendency()
-    reset_consistency_context(config.answer_rules, list((config.questions_metadata or {}).values()))
+    reset_consistency_context(config.answer_policy.rules, list((config.question_maps.questions_metadata or {}).values()))
 
     yield None
 

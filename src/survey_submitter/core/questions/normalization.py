@@ -102,30 +102,30 @@ def _raise_if_all_zero_attached_selects(qi: "QuestionInfo", question_num: int) -
 
 
 def _init_target_collections(target: "ExecutionConfig") -> None:
-    target.single_prob = []
-    target.dropdown_prob = []
-    target.multiple_prob = []
-    target.matrix_prob = []
-    target.scale_prob = []
-    target.slider_targets = []
-    target.texts = []
-    target.texts_prob = []
-    target.text_entry_types = []
-    target.text_ai_flags = []
-    target.text_titles = []
-    target.location_parts = {}
-    target.location_random_value_pools = {}
-    target.multi_text_blank_modes = []
-    target.multi_text_blank_ai_flags = []
-    target.multi_text_blank_int_ranges = []
-    target.single_option_fill_texts = []
-    target.single_attached_option_selects = []
-    target.dropdown_option_fill_texts = []
-    target.multiple_option_fill_texts = []
-    target.question_config_index_map = {}
-    target.provider_question_idx_map = {}
-    target.question_dimension_map = {}
-    target.question_strict_ratio_map = {}
+    target.answer_probs.single_prob = []
+    target.answer_probs.dropdown_prob = []
+    target.answer_probs.multiple_prob = []
+    target.answer_probs.matrix_prob = []
+    target.answer_probs.scale_prob = []
+    target.answer_probs.slider_targets = []
+    target.text_answers.texts = []
+    target.text_answers.texts_prob = []
+    target.text_answers.text_entry_types = []
+    target.text_answers.text_ai_flags = []
+    target.text_answers.text_titles = []
+    target.location_answers.location_parts = {}
+    target.location_answers.location_random_value_pools = {}
+    target.text_answers.multi_text_blank_modes = []
+    target.text_answers.multi_text_blank_ai_flags = []
+    target.text_answers.multi_text_blank_int_ranges = []
+    target.choice_fill.single_option_fill_texts = []
+    target.choice_fill.single_attached_option_selects = []
+    target.choice_fill.dropdown_option_fill_texts = []
+    target.choice_fill.multiple_option_fill_texts = []
+    target.question_maps.question_config_index_map = {}
+    target.question_maps.provider_question_idx_map = {}
+    target.question_maps.question_dimension_map = {}
+    target.question_maps.question_strict_ratio_map = {}
 
 
 # ---------------------------------------------------------------------------
@@ -145,7 +145,7 @@ def _remember_provider_mapping(
         qi.details.provider_question_id,
     )
     if provider_key:
-        target.provider_question_idx_map[provider_key] = mapped_value
+        target.question_maps.provider_question_idx_map[provider_key] = mapped_value
 
 
 # ---------------------------------------------------------------------------
@@ -355,19 +355,15 @@ def _handle_single(
     assert isinstance(qi.details.answer_config, ChoiceQuestionAnswerConfig)
     _raise_if_all_zero_single_like(probs, question_num, "single")
     mapped_value = ("single", idx)
-    target.question_config_index_map[question_num] = mapped_value
+    target.question_maps.question_config_index_map[question_num] = mapped_value
     _remember_provider_mapping(target, qi, mapped_value, survey_provider)
-    raw_meta = (
-        getattr(target, "questions_metadata", {}).get(question_num)
-        if hasattr(target, "questions_metadata")
-        else None
-    )
+    raw_meta = target.question_maps.questions_metadata.get(question_num)
     option_texts = list(getattr(raw_meta, "option_texts", []) or [])
     is_ordinal_single = _is_ordinal_options(option_texts) and len(option_texts) == max(
         1, option_count
     )
     if is_ordinal_single:
-        target.question_dimension_map[question_num] = _resolve_runtime_dimension(
+        target.question_maps.question_dimension_map[question_num] = _resolve_runtime_dimension(
             qi,
             reliability_mode_enabled=reliability_mode_enabled,
             strict_ratio=strict_ratio,
@@ -375,11 +371,11 @@ def _handle_single(
         )
         reliability_candidates.append((question_num, strict_ratio, qi.question_type))
     idx += 1
-    target.single_prob.append(_normalize_single_like_prob_config(cast(Any, probs), option_count))
-    target.single_option_fill_texts.append(
+    target.answer_probs.single_prob.append(_normalize_single_like_prob_config(cast(Any, probs), option_count))
+    target.choice_fill.single_option_fill_texts.append(
         _normalize_option_fill_texts(qi.details.answer_config.option_fill_texts, option_count)
     )
-    target.single_attached_option_selects.append(
+    target.choice_fill.single_attached_option_selects.append(
         copy.deepcopy(qi.details.answer_config.attached_option_selects or [])
     )
     return idx
@@ -400,17 +396,17 @@ def _handle_dropdown(
     assert isinstance(qi.details.answer_config, ChoiceQuestionAnswerConfig)
     _raise_if_all_zero_single_like(probs, question_num, "dropdown")
     mapped_value = ("dropdown", idx)
-    target.question_config_index_map[question_num] = mapped_value
+    target.question_maps.question_config_index_map[question_num] = mapped_value
     _remember_provider_mapping(target, qi, mapped_value, survey_provider)
-    target.question_dimension_map[question_num] = _resolve_runtime_dimension(
+    target.question_maps.question_dimension_map[question_num] = _resolve_runtime_dimension(
         qi,
         reliability_mode_enabled=reliability_mode_enabled,
         strict_ratio=strict_ratio,
     )
     reliability_candidates.append((question_num, strict_ratio, qi.question_type))
     idx += 1
-    target.dropdown_prob.append(_normalize_single_like_prob_config(cast(Any, probs), option_count))
-    target.dropdown_option_fill_texts.append(
+    target.answer_probs.dropdown_prob.append(_normalize_single_like_prob_config(cast(Any, probs), option_count))
+    target.choice_fill.dropdown_option_fill_texts.append(
         _normalize_option_fill_texts(qi.details.answer_config.option_fill_texts, option_count)
     )
     return idx
@@ -427,13 +423,13 @@ def _handle_multiple(
 ) -> int:
     assert isinstance(qi.details.answer_config, ChoiceQuestionAnswerConfig)
     mapped_value = ("multiple", idx)
-    target.question_config_index_map[question_num] = mapped_value
+    target.question_maps.question_config_index_map[question_num] = mapped_value
     _remember_provider_mapping(target, qi, mapped_value, survey_provider)
     idx += 1
     if not isinstance(probs, list):
         raise ValueError("多选题必须提供概率列表，数值范围0-100")
-    target.multiple_prob.append([float(cast(Any, value)) for value in probs])
-    target.multiple_option_fill_texts.append(
+    target.answer_probs.multiple_prob.append([float(cast(Any, value)) for value in probs])
+    target.choice_fill.multiple_option_fill_texts.append(
         _normalize_option_fill_texts(qi.details.answer_config.option_fill_texts, option_count)
     )
     return idx
@@ -482,9 +478,9 @@ def _handle_matrix(
         rows = 1
     rows = max(1, rows)
     mapped_value = ("matrix", idx)
-    target.question_config_index_map[question_num] = mapped_value
+    target.question_maps.question_config_index_map[question_num] = mapped_value
     _remember_provider_mapping(target, qi, mapped_value, survey_provider)
-    target.question_dimension_map[question_num] = _resolve_runtime_dimension(
+    target.question_maps.question_dimension_map[question_num] = _resolve_runtime_dimension(
         qi,
         reliability_mode_enabled=reliability_mode_enabled,
         strict_ratio=strict_ratio,
@@ -514,17 +510,17 @@ def _handle_matrix(
             normalized_row = _normalize_matrix_row(raw_row, option_count)
             if normalized_row is None:
                 normalized_row = [1.0 / option_count] * option_count
-            target.matrix_prob.append(normalized_row)
+            target.answer_probs.matrix_prob.append(normalized_row)
             last_row = raw_row if raw_row is not None else last_row
     elif isinstance(probs, list):
         normalized = _normalize_matrix_row(probs, option_count)
         if normalized is None:
             normalized = [1.0 / option_count] * option_count
         for _ in range(rows):
-            target.matrix_prob.append(list(normalized))
+            target.answer_probs.matrix_prob.append(list(normalized))
     else:
         for _ in range(rows):
-            target.matrix_prob.append(-1)
+            target.answer_probs.matrix_prob.append(-1)
     return idx
 
 
@@ -542,16 +538,16 @@ def _handle_scale(
 ) -> int:
     _raise_if_all_zero_single_like(probs, question_num, qi.question_type)
     mapped_value = (qi.question_type, idx)
-    target.question_config_index_map[question_num] = mapped_value
+    target.question_maps.question_config_index_map[question_num] = mapped_value
     _remember_provider_mapping(target, qi, mapped_value, survey_provider)
-    target.question_dimension_map[question_num] = _resolve_runtime_dimension(
+    target.question_maps.question_dimension_map[question_num] = _resolve_runtime_dimension(
         qi,
         reliability_mode_enabled=reliability_mode_enabled,
         strict_ratio=strict_ratio,
     )
     reliability_candidates.append((question_num, strict_ratio, qi.question_type))
     idx += 1
-    target.scale_prob.append(_normalize_single_like_prob_config(cast(Any, probs), option_count))
+    target.answer_probs.scale_prob.append(_normalize_single_like_prob_config(cast(Any, probs), option_count))
     return idx
 
 
@@ -565,12 +561,12 @@ def _handle_slider(
 ) -> tuple[int, bool]:
     """Returns (new_idx, should_continue)."""
     mapped_value = ("slider", idx)
-    target.question_config_index_map[question_num] = mapped_value
+    target.question_maps.question_config_index_map[question_num] = mapped_value
     _remember_provider_mapping(target, qi, mapped_value, survey_provider)
     idx += 1
     mode = (qi.details.distribution_mode or "").lower()
     if mode == "random":
-        target.slider_targets.append(float("nan"))
+        target.answer_probs.slider_targets.append(float("nan"))
         return idx, True
     target_value: float | None = None
     if isinstance(qi.details.custom_weights, (list, tuple)) and qi.details.custom_weights:
@@ -584,7 +580,7 @@ def _handle_slider(
                 target_value = float(cast(Any, probs[0]))
             except (ValueError, TypeError):
                 target_value = None
-    target.slider_targets.append(DEFAULT_SLIDER_TARGET if target_value is None else target_value)
+    target.answer_probs.slider_targets.append(DEFAULT_SLIDER_TARGET if target_value is None else target_value)
     return idx, False
 
 
@@ -595,7 +591,7 @@ def _handle_order(
     survey_provider: str,
 ) -> None:
     mapped_value = ("order", -1)
-    target.question_config_index_map[question_num] = mapped_value
+    target.question_maps.question_config_index_map[question_num] = mapped_value
     _remember_provider_mapping(target, qi, mapped_value, survey_provider)
 
 
@@ -609,15 +605,15 @@ def _handle_location(
         qi.details.answer_config, (LocationQuestionAnswerConfig, UniversityQuestionAnswerConfig)
     )
     mapped_value = (str(qi.question_type), -1)
-    target.question_config_index_map[question_num] = mapped_value
+    target.question_maps.question_config_index_map[question_num] = mapped_value
     _remember_provider_mapping(target, qi, mapped_value, survey_provider)
     if isinstance(qi.details.answer_config, LocationQuestionAnswerConfig):
-        target.location_parts[question_num] = [
+        target.location_answers.location_parts[question_num] = [
             item or ""
             for item in list(qi.details.answer_config.location_parts or [])[:3]
         ]
     if qi.details.answer_config.random_value_pool:
-        target.location_random_value_pools[question_num] = list(
+        target.location_answers.location_random_value_pools[question_num] = list(
             qi.details.answer_config.random_value_pool
         )
 
@@ -636,20 +632,20 @@ def _handle_text(
     )
     if not is_location:
         mapped_value = ("text", idx_text)
-        target.question_config_index_map[question_num] = mapped_value
+        target.question_maps.question_config_index_map[question_num] = mapped_value
         _remember_provider_mapping(target, qi, mapped_value, survey_provider)
         idx_text += 1
     else:
         mapped_value = ("location", -1)
-        target.question_config_index_map[question_num] = mapped_value
+        target.question_maps.question_config_index_map[question_num] = mapped_value
         _remember_provider_mapping(target, qi, mapped_value, survey_provider)
         if isinstance(qi.details.answer_config, LocationQuestionAnswerConfig):
-            target.location_parts[question_num] = [
+            target.location_answers.location_parts[question_num] = [
                 item or ""
                 for item in list(qi.details.answer_config.location_parts or [])[:3]
             ]
         if qi.details.answer_config.random_value_pool:
-            target.location_random_value_pools[question_num] = list(
+            target.location_answers.location_random_value_pools[question_num] = list(
                 qi.details.answer_config.random_value_pool
             )
 
@@ -708,7 +704,7 @@ def _handle_text(
             if len(text_random_range) != 2:
                 raise ValueError("填空题随机整数范围未设置完整")
             normalized_values = [build_random_int_token(*text_random_range)]
-    if not getattr(target, "ai_answering", True):
+    if not target.ai.answering:
         ai_enabled = False
         normalized_blank_ai_flags = [False] * len(normalized_blank_ai_flags)
     if not normalized_values:
@@ -720,18 +716,18 @@ def _handle_text(
         normalized = normalize_probabilities([float(cast(Any, value)) for value in probs])
     else:
         normalized = normalize_probabilities([1.0] * len(normalized_values))
-    target.texts.append(normalized_values)
-    target.texts_prob.append(normalized)
-    target.text_entry_types.append(qi.question_type)
-    target.text_ai_flags.append(ai_enabled)
-    target.text_titles.append(str(qi.title or ""))
-    target.multi_text_blank_modes.append(
+    target.text_answers.texts.append(normalized_values)
+    target.text_answers.texts_prob.append(normalized)
+    target.text_answers.text_entry_types.append(qi.question_type)
+    target.text_answers.text_ai_flags.append(ai_enabled)
+    target.text_answers.text_titles.append(str(qi.title or ""))
+    target.text_answers.multi_text_blank_modes.append(
         list(qi.details.answer_config.multi_text_blank_modes)
         if isinstance(qi.details.answer_config, MultiTextQuestionAnswerConfig)
         else []
     )
-    target.multi_text_blank_ai_flags.append(normalized_blank_ai_flags)
-    target.multi_text_blank_int_ranges.append(normalized_blank_int_ranges)
+    target.text_answers.multi_text_blank_ai_flags.append(normalized_blank_ai_flags)
+    target.text_answers.multi_text_blank_int_ranges.append(normalized_blank_int_ranges)
     return idx_text
 
 
@@ -843,13 +839,13 @@ def _apply_reliability_fallback(
 ) -> None:
     has_explicit_runtime_dimension = any(
         isinstance(dimension, str) and bool(str(dimension))
-        for dimension in target.question_dimension_map.values()
+        for dimension in target.question_maps.question_dimension_map.values()
     )
     if reliability_mode_enabled and reliability_candidates and not has_explicit_runtime_dimension:
         for question_num, strict_ratio, question_type in reliability_candidates:
-            if strict_ratio or target.question_dimension_map.get(question_num):
+            if strict_ratio or target.question_maps.question_dimension_map.get(question_num):
                 continue
-            target.question_dimension_map[question_num] = GLOBAL_RELIABILITY_DIMENSION
+            target.question_maps.question_dimension_map[question_num] = GLOBAL_RELIABILITY_DIMENSION
 
 
 # ---------------------------------------------------------------------------
@@ -898,7 +894,7 @@ def configure_probabilities(
             probs,
             qi.details.custom_weights,
         )
-        target.question_strict_ratio_map[question_num] = strict_ratio
+        target.question_maps.question_strict_ratio_map[question_num] = strict_ratio
 
         handler = _NORMALIZATION_DISPATCH.get(QuestionType(qi.question_type))
         if handler is None:

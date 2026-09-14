@@ -43,7 +43,7 @@ class ReverseFillRuntimeMixin:
     def initialize_runtime(self: "_ReverseFillRuntimeHost") -> None:
         with self.lock:
             self.reverse_fill_runtime = create_reverse_fill_runtime_state(
-                self.config.reverse_fill_spec
+                self.config.answer_policy.reverse_fill_spec
             )
         self.notify_runtime_change()
 
@@ -87,7 +87,7 @@ class ReverseFillRuntimeMixin:
                 return ReverseFillAcquireResult(
                     status="acquired", sample=sample, message="reserved"
                 )
-            target_num = max(0, int(self.config.target_num or 0))
+            target_num = max(0, int(self.config.control.target_num or 0))
             if target_num > 0 and self._possible_total_locked() < target_num:
                 return ReverseFillAcquireResult(
                     status="exhausted", message="reverse_fill_target_unreachable"
@@ -201,7 +201,7 @@ class ReverseFillRuntimeMixin:
             runtime = self.reverse_fill_runtime
             if runtime is None:
                 return False
-            target_num = max(0, int(self.config.target_num or 0))
+            target_num = max(0, int(self.config.control.target_num or 0))
             if target_num <= 0:
                 return False
             return self._possible_total_locked() < target_num

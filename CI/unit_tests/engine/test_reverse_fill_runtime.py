@@ -41,7 +41,7 @@ class ReverseFillRuntimeStateTests:
                 ),
             ],
         )
-        config = ExecutionConfig(reverse_fill_spec=spec, target_num=2)
+        config = ExecutionConfig(answer_policy={'reverse_fill_spec': spec}, control={'target_num': 2})
         state = ExecutionState(config=config)
         state.initialize_runtime()
         return state

@@ -18,7 +18,7 @@ class AsyncProxySessionTests:
             raising=False,
         )
 
-        config = ExecutionConfig(random_user_agent=True)
+        config = ExecutionConfig(network={'random_user_agent': True})
         state = ExecutionState(config=config)
         session = AsyncProxySession(
             config=config,

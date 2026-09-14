@@ -9,9 +9,7 @@ from survey_submitter.providers.contracts import SurveyQuestionMeta
 
 class ProviderCommonTests:
     def test_provider_run_context_resets_runtime_state(self) -> None:
-        config = ExecutionConfig(
-            answer_rules=[{"num": 1}], questions_metadata={1: SurveyQuestionMeta(num=1, title="Q1")}
-        )
+        config = ExecutionConfig(answer_policy={'rules': [{"num": 1}]}, question_maps={'questions_metadata': {1: SurveyQuestionMeta(num=1, title="Q1")}})
         with (
             patch(
                 "survey_submitter.core.engine.provider_common.reset_answer_context"
@@ -28,5 +26,5 @@ class ProviderCommonTests:
         reset_answer_context_mock.assert_called_once()
         reset_tendency_mock.assert_called_once()
         reset_consistency_mock.assert_called_once_with(
-            config.answer_rules, [SurveyQuestionMeta(num=1, title="Q1")]
+            config.answer_policy.rules, [SurveyQuestionMeta(num=1, title="Q1")]
         )

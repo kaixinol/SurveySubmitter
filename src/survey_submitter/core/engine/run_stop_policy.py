@@ -42,17 +42,17 @@ class RunStopPolicy:
         self.state = state
 
     def failure_threshold(self) -> int:
-        base_threshold = max(1, int(self.config.fail_threshold or 1))
-        num_threads = max(1, int(self.config.num_threads or 1))
+        base_threshold = max(1, int(self.config.control.fail_threshold or 1))
+        num_threads = max(1, int(self.config.control.num_threads or 1))
         if num_threads > 10:
             return max(base_threshold, int(math.ceil(num_threads / 2.0)))
         return base_threshold
 
     def proxy_unavailable_threshold(self) -> int:
         base_threshold = self.failure_threshold()
-        if not bool(self.config.proxy.enabled):
+        if not bool(self.config.network.proxy.enabled):
             return base_threshold
-        return max(base_threshold, int(self.config.num_threads or 1))
+        return max(base_threshold, int(self.config.control.num_threads or 1))
 
     def record_failure(
         self,
@@ -81,7 +81,7 @@ class RunStopPolicy:
             message = log_message or ""
             if message:
                 logger.warning(f"{message}")
-            threshold_enabled = bool(self.config.stop_on_fail or force_stop)
+            threshold_enabled = bool(self.config.control.stop_on_fail or force_stop)
             if threshold_enabled:
                 logger.warning(
                     f"已连续失败{consecutive_failures}次，连续失败达到{stop_threshold}次将强制停止"
@@ -111,7 +111,7 @@ class RunStopPolicy:
             if stop_signal:
                 stop_signal.set()
             return True
-        threshold_enabled = bool(self.config.stop_on_fail or force_stop)
+        threshold_enabled = bool(self.config.control.stop_on_fail or force_stop)
         if threshold_enabled and consecutive_failures >= stop_threshold:
             logger.critical("连续失败次数过多，强制停止，请检查配置是否正确")
             self.state.mark_terminal_stop(
@@ -138,17 +138,17 @@ class RunStopPolicy:
         previous_consecutive_failures = 0
 
         with self.state.lock:
-            if self.config.target_num <= 0 or self.state.success_count < self.config.target_num:
+            if self.config.control.target_num <= 0 or self.state.success_count < self.config.control.target_num:
                 previous_consecutive_failures = int(self.state.consecutive_fail_count or 0)
                 self.state.success_count += 1
                 self.state.consecutive_fail_count = 0
                 self.state.proxy_unavailable_fail_count = 0
                 record_thread_success = True
 
-                if self.config.test_profiles and not self.config.test_profiles_random:
+                if self.config.test_profiles.profiles and not self.config.test_profiles.random:
                     self.state.current_profile_index = (
                         self.state.current_profile_index + 1
-                    ) % len(self.config.test_profiles)
+                    ) % len(self.config.test_profiles.profiles)
 
                 logger.info(
                     f"[OK] 已填写{self.state.success_count}份 - 连续失败{self.state.consecutive_fail_count}次 - {time.strftime('%H:%M:%S', time.localtime(time.time()))}"
@@ -158,8 +158,8 @@ class RunStopPolicy:
                         f"提交成功，连续失败计数已清零（重置前={previous_consecutive_failures}）"
                     )
                 if (
-                    self.config.target_num > 0
-                    and self.state.success_count >= self.config.target_num
+                    self.config.control.target_num > 0
+                    and self.state.success_count >= self.config.control.target_num
                 ):
                     trigger_target_stop = True
             else:

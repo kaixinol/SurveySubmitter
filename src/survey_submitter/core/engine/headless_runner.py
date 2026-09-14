@@ -105,7 +105,7 @@ class HeadlessRunner:
         self._engine.start()
 
         try:
-            logger.info(f"开始提交: 目标={exec_config.target_num}, 并发={exec_config.num_threads}")
+            logger.info(f"开始提交: 目标={exec_config.control.target_num}, 并发={exec_config.control.num_threads}")
 
             future = self._engine.start_run(
                 config=exec_config,
@@ -116,7 +116,7 @@ class HeadlessRunner:
                 await asyncio.sleep(5)
                 success = state.success_count
                 fail = state.consecutive_fail_count
-                target = exec_config.target_num
+                target = exec_config.control.target_num
                 logger.info(f"进度: {success}/{target} 成功, {fail} 失败")
 
                 if self._stop_requested:
@@ -129,7 +129,7 @@ class HeadlessRunner:
                     logger.error(f"运行出错: {exc}")
                 else:
                     logger.info(
-                        f"运行完成: {state.success_count}/{exec_config.target_num} 成功, {state.consecutive_fail_count} 失败"
+                        f"运行完成: {state.success_count}/{exec_config.control.target_num} 成功, {state.consecutive_fail_count} 失败"
                     )
         finally:
             self._engine.shutdown()

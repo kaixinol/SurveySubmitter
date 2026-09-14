@@ -66,9 +66,9 @@ MAX_MULTIPLE_SELECTION_ATTEMPTS = 32
 
 def _get_fixed_answer(state: ExecutionState, question_num: int) -> str | None:
     """Get the fixed answer for the current question from test profiles."""
-    if not state.config.test_profiles:
+    if not state.config.test_profiles.profiles:
         return None
-    profile = state.config.test_profiles[state.current_profile_index]
+    profile = state.config.test_profiles.profiles[state.current_profile_index]
     return profile.get(question_num)
 
 
@@ -129,7 +129,7 @@ def _select_choice_index(
     _apply_consistency_gate = entry_type == QuestionType.SINGLE
     _apply_dimension_gate = entry_type == QuestionType.SINGLE
 
-    dimension = config.question_dimension_map.get(current)
+    dimension = config.question_maps.question_dimension_map.get(current)
     has_reliability_dimension = isinstance(dimension, str) and bool(str(dimension))
 
     prob_list = (
@@ -209,10 +209,10 @@ async def _build_choice_action_result(
         ctx=ctx,
         allow_ai_placeholder=allow_ai_placeholder,
         ai_placeholder_text=build_ai_option_fill_placeholder(current, selected_index),
-        ai_answering=config.ai_answering,
+        ai_answering=config.ai.answering,
     )
     fill_value = default_missing_option_fill(question, selected_index, fill_value)
-    if should_skip_optional_option_fill(question, selected_index, config.optional_fill_skip_ratio):
+    if should_skip_optional_option_fill(question, selected_index, config.choice_fill.optional_fill_skip_ratio):
         fill_value = None
     selected_texts = [
         f"{selected_text} / {fill_value}"
@@ -408,8 +408,8 @@ async def _build_wjx_text_action(
         text_values = [reverse_fill_answer.text_value or "" or DEFAULT_FILL_TEXT]
     else:
         ai_enabled = (
-            bool(config.text_ai_flags[config_index])
-            if config_index < len(config.text_ai_flags)
+            bool(config.text_answers.text_ai_flags[config_index])
+            if config_index < len(config.text_answers.text_ai_flags)
             else False
         )
         if ai_enabled:
@@ -439,14 +439,14 @@ async def _build_wjx_text_action(
                     else [generated or "" or DEFAULT_FILL_TEXT]
                 )
         else:
-            text_entry_types = list(ctx.config.text_entry_types or [])
-            multi_text_blank_modes = list(ctx.config.multi_text_blank_modes or [])
-            multi_text_blank_ranges = list(ctx.config.multi_text_blank_int_ranges or [])
+            text_entry_types = list(ctx.config.text_answers.text_entry_types or [])
+            multi_text_blank_modes = list(ctx.config.text_answers.multi_text_blank_modes or [])
+            multi_text_blank_ranges = list(ctx.config.text_answers.multi_text_blank_int_ranges or [])
             text_values = resolve_text_values_from_config(
-                config.texts[config_index]
-                if config_index < len(config.texts)
+                config.text_answers.texts[config_index]
+                if config_index < len(config.text_answers.texts)
                 else [DEFAULT_FILL_TEXT],
-                config.texts_prob[config_index] if config_index < len(config.texts_prob) else [1.0],
+                config.text_answers.texts_prob[config_index] if config_index < len(config.text_answers.texts_prob) else [1.0],
                 blank_count=blank_count,
                 entry_type=str(
                     text_entry_types[config_index]
@@ -504,7 +504,7 @@ def _build_wjx_score_like_action(
 
     if forced_index is None:
         probabilities = (
-            config.scale_prob[config_index] if config_index < len(config.scale_prob) else -1
+            config.answer_probs.scale_prob[config_index] if config_index < len(config.answer_probs.scale_prob) else -1
         )
         probs = normalize_dropdown_probs(probabilities, option_count)
         probs = apply_single_like_consistency(probs, current)
@@ -517,7 +517,7 @@ def _build_wjx_score_like_action(
         selected_index = get_tendency_index(
             option_count,
             probs,
-            dimension=config.question_dimension_map.get(current),
+            dimension=config.question_maps.question_dimension_map.get(current),
             question_index=current,
         )
     else:
@@ -591,8 +591,8 @@ async def _build_multiple_answer_action(
     if not selected:
         return None
     fill_entries = (
-        config.multiple_option_fill_texts[config_index]
-        if config_index < len(config.multiple_option_fill_texts)
+        config.choice_fill.multiple_option_fill_texts[config_index]
+        if config_index < len(config.choice_fill.multiple_option_fill_texts)
         else None
     )
     fill_texts: list[tuple[int, str]] = []
@@ -608,10 +608,10 @@ async def _build_multiple_answer_action(
             ctx=ctx,
             allow_ai_placeholder=allow_ai_placeholder,
             ai_placeholder_text=build_ai_option_fill_placeholder(current, option_idx),
-            ai_answering=config.ai_answering,
+            ai_answering=config.ai.answering,
         )
         fill_value = default_missing_option_fill(question, option_idx, fill_value)
-        if should_skip_optional_option_fill(question, option_idx, config.optional_fill_skip_ratio):
+        if should_skip_optional_option_fill(question, option_idx, config.choice_fill.optional_fill_skip_ratio):
             fill_value = None
         if fill_value:
             fill_texts.append((option_idx, fill_value))
@@ -819,8 +819,8 @@ async def _build_wjx_multiple_action(
 
     # 2. Read raw selection probabilities
     selection_probabilities = (
-        config.multiple_prob[config_index]
-        if config_index < len(config.multiple_prob)
+        config.answer_probs.multiple_prob[config_index]
+        if config_index < len(config.answer_probs.multiple_prob)
         else [DEFAULT_MULTIPLE_PROBABILITY] * option_count
     )
 
@@ -911,7 +911,7 @@ def _build_wjx_matrix_action(
             selected_index = min(max(0, forced_indices[row_index]), option_count - 1)
         else:
             raw_probabilities = (
-                config.matrix_prob[next_index] if next_index < len(config.matrix_prob) else -1
+                config.answer_probs.matrix_prob[next_index] if next_index < len(config.answer_probs.matrix_prob) else -1
             )
             strict_reference: list[float] | None = None
             row_probabilities: list[float] | int | float | None = -1
@@ -951,7 +951,7 @@ def _build_wjx_matrix_action(
             selected_index = get_tendency_index(
                 option_count,
                 row_probabilities,
-                dimension=config.question_dimension_map.get(current),
+                dimension=config.question_maps.question_dimension_map.get(current),
                 question_index=current,
                 row_index=row_index,
             )
@@ -973,9 +973,9 @@ def _build_wjx_slider_action(
     ctx: ExecutionState,
 ) -> AnswerAction | None:
     target_value = 50.0
-    if config_index < len(ctx.config.slider_targets):
+    if config_index < len(ctx.config.answer_probs.slider_targets):
         try:
-            target_value = float(ctx.config.slider_targets[config_index])
+            target_value = float(ctx.config.answer_probs.slider_targets[config_index])
         except (ValueError, TypeError):
             target_value = 50.0
     return AnswerAction(
@@ -1039,7 +1039,7 @@ def _build_wjx_location_action(
         )
 
     # Check for random_value_pool first
-    random_value_pool = ctx.config.location_random_value_pools.get(current)
+    random_value_pool = ctx.config.location_answers.location_random_value_pools.get(current)
     if random_value_pool:
         text_value = random.choice(random_value_pool)
         logger.debug(
@@ -1087,7 +1087,7 @@ async def build_answer_action(
     thread_name: str = "",
     allow_ai_placeholder: bool = False,
 ) -> AnswerAction | None:
-    config_entry = ctx.config.question_config_index_map.get(int(question.num or 0))
+    config_entry = ctx.config.question_maps.question_config_index_map.get(int(question.num or 0))
     if not config_entry:
         return None
     entry_type, config_index = config_entry

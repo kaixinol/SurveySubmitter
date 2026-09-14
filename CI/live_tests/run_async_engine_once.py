@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import logging
 import sys
+
+from loguru import logger
 
 from survey_submitter.core.config.schema import (
     AnswerConfigSection,
@@ -94,7 +95,7 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        logging.disable(logging.CRITICAL)
+        logger.disable("")
         config, questions_info = _build_live_test_config(args.url)
 
         prepared = prepare_execution_artifacts(
@@ -103,12 +104,12 @@ def main() -> int:
             questions_info=list(questions_info),
         )
         execution_config = prepared.execution_config_template
-        execution_config.target_num = 1
-        execution_config.num_threads = 1
-        execution_config.submit_interval_range_seconds = (0, 0)
-        execution_config.answer_duration_range_seconds = (0, 0)
-        execution_config.proxy.enabled = False
-        execution_config.random_user_agent = False
+        execution_config.control.target_num = 1
+        execution_config.control.num_threads = 1
+        execution_config.control.submit_interval_range_seconds = (0, 0)
+        execution_config.control.answer_duration_range_seconds = (0, 0)
+        execution_config.network.proxy.enabled = False
+        execution_config.network.random_user_agent = False
         state = ExecutionState(config=execution_config)
         state.initialize_runtime()
 
@@ -124,7 +125,7 @@ def main() -> int:
         return 1
 
     print(
-        f"provider={execution_config.provider} success_count={state.success_count} "
+        f"provider={execution_config.survey.provider} success_count={state.success_count} "
         f"consecutive_fail_count={state.consecutive_fail_count} terminal={state.get_terminal_stop_snapshot()}"
     )
     return 0 if int(state.success_count or 0) >= 1 else 2

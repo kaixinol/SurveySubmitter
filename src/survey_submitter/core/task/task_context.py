@@ -28,10 +28,16 @@ class ProxyRuntimeConfig(BaseConfigModel):
         return text if text in ("custom", "local") else "custom"
 
 
-class ExecutionConfig(BaseConfigModel):
+class SurveyIdentityConfig(BaseConfigModel):
+    """问卷身份标识：URL、标题与平台。"""
+
     url: str = ""
     title: str = ""
     provider: str = "wjx"
+
+
+class AnswerProbabilityConfig(BaseConfigModel):
+    """按题型索引的答案概率分布与滑块目标值。"""
 
     single_prob: list[list[float] | int | float | None] = []
     dropdown_prob: list[list[float] | int | float | None] = []
@@ -39,23 +45,47 @@ class ExecutionConfig(BaseConfigModel):
     matrix_prob: list[list[float] | int | float | None] = []
     scale_prob: list[list[float] | int | float | None] = []
     slider_targets: list[float] = []
+
+
+class TextAnswerConfig(BaseConfigModel):
+    """填空题答案语料与多行文本逐空配置。"""
+
     texts: list[list[str]] = []
     texts_prob: list[list[float]] = []
     text_entry_types: list[str] = []
     text_ai_flags: list[bool] = []
     text_titles: list[str] = []
-    location_parts: dict[int, list[str]] = {}
-    location_random_value_pools: dict[int, list[str]] = {}
     multi_text_blank_modes: list[list[str]] = []
     multi_text_blank_ai_flags: list[list[bool]] = []
     multi_text_blank_int_ranges: list[list[list[int]]] = []
+
+
+class LocationAnswerConfig(BaseConfigModel):
+    """地区题的省市县结构与随机取值池。"""
+
+    location_parts: dict[int, list[str]] = {}
+    location_random_value_pools: dict[int, list[str]] = {}
+
+
+class ChoiceFillConfig(BaseConfigModel):
+    """选项题的填空文案、关联下拉与选填跳过比例。"""
+
     single_option_fill_texts: list[list[str | None] | None] = []
     single_attached_option_selects: list[list[dict[str, Any]]] = []
     dropdown_option_fill_texts: list[list[str | None] | None] = []
     multiple_option_fill_texts: list[list[str | None] | None] = []
     optional_fill_skip_ratio: float = 0.0
-    answer_rules: list[dict[str, Any]] = []
+
+
+class AnswerPolicyConfig(BaseConfigModel):
+    """答案一致性规则（constraints + per_question 合并）与回填规格。"""
+
+    rules: list[dict[str, Any]] = []
     reverse_fill_spec: ReverseFillSpec | None = None
+
+
+class QuestionMappingConfig(BaseConfigModel):
+    """题号/题键到配置索引、维度与元数据的映射。"""
 
     question_config_index_map: dict[int, tuple[str, int]] = {}
     provider_question_idx_map: dict[str, tuple[str, int]] = {}
@@ -64,24 +94,56 @@ class ExecutionConfig(BaseConfigModel):
     questions_metadata: dict[int, SurveyQuestionMeta] = {}
     provider_question_metadata_map: dict[str, SurveyQuestionMeta] = {}
 
-    num_threads: int = 1
-    target_num: int = 1
-    fail_threshold: int = 5
-    stop_on_fail: bool = True
 
-    submit_interval_range_seconds: tuple[int, int] = (0, 0)
-    answer_duration_range_seconds: tuple[int, int] = (0, 0)
-    answer_datetime_window_ms: tuple[int, int] = (0, 0)
+class NetworkIdentityConfig(BaseConfigModel):
+    """代理、UA 与风控暂停等网络身份配置。"""
 
     proxy: ProxyRuntimeConfig = Field(default_factory=ProxyRuntimeConfig)
     random_user_agent: bool = False
     user_agent_ratios: dict[str, int] = {"wechat": 33, "mobile": 33, "pc": 34}
     pause_on_aliyun_captcha: bool = True
-    ai_system_prompt: str = ""
-    ai_answering: bool = True
 
-    test_profiles: list[dict[int, str]] = []
-    test_profiles_random: bool = True
+
+class AIAnsweringConfig(BaseConfigModel):
+    """AI 答题开关与系统提示词。"""
+
+    system_prompt: str = ""
+    answering: bool = True
+
+
+class TestProfileConfig(BaseConfigModel):
+    """测试档案的固定答案与轮换策略。"""
+
+    profiles: list[dict[int, str]] = []
+    random: bool = True
+
+
+class ExecutionControlConfig(BaseConfigModel):
+    """线程数、目标份数、失败策略与提交节奏。"""
+
+    num_threads: int = 1
+    target_num: int = 1
+    fail_threshold: int = 5
+    stop_on_fail: bool = True
+    submit_interval_range_seconds: tuple[int, int] = (0, 0)
+    answer_duration_range_seconds: tuple[int, int] = (0, 0)
+    answer_datetime_window_ms: tuple[int, int] = (0, 0)
+
+
+class ExecutionConfig(BaseConfigModel):
+    """引擎运行时配置：11 个语义分节通过组合嵌套，每组单一职责。"""
+
+    survey: SurveyIdentityConfig = Field(default_factory=SurveyIdentityConfig)
+    answer_probs: AnswerProbabilityConfig = Field(default_factory=AnswerProbabilityConfig)
+    text_answers: TextAnswerConfig = Field(default_factory=TextAnswerConfig)
+    location_answers: LocationAnswerConfig = Field(default_factory=LocationAnswerConfig)
+    choice_fill: ChoiceFillConfig = Field(default_factory=ChoiceFillConfig)
+    answer_policy: AnswerPolicyConfig = Field(default_factory=AnswerPolicyConfig)
+    question_maps: QuestionMappingConfig = Field(default_factory=QuestionMappingConfig)
+    control: ExecutionControlConfig = Field(default_factory=ExecutionControlConfig)
+    network: NetworkIdentityConfig = Field(default_factory=NetworkIdentityConfig)
+    ai: AIAnsweringConfig = Field(default_factory=AIAnsweringConfig)
+    test_profiles: TestProfileConfig = Field(default_factory=TestProfileConfig)
 
 
 @dataclass
@@ -131,8 +193,10 @@ class ExecutionState(
             object.__setattr__(self, name, value)
             return
         if name in _EXECUTION_CONFIG_FIELD_NAMES:
+            group = _EXECUTION_CONFIG_FIELD_GROUPS.get(name, name)
             raise AttributeError(
-                f"ExecutionState 不允许直接设置配置字段 '{name}'，请改用 state.config.{name}"
+                f"ExecutionState 不允许直接设置配置字段 '{name}'，"
+                f"请改用 state.config.{group}.{name}"
             )
         object.__setattr__(self, name, value)
 
@@ -166,5 +230,18 @@ class ExecutionState(
             )
 
 
-_EXECUTION_CONFIG_FIELD_NAMES = frozenset(ExecutionConfig.model_fields.keys())
+def _collect_config_field_groups(model_cls: type[BaseConfigModel]) -> dict[str, str]:
+    """字段名 → 所属组名（含顶层组名自身）的映射，用于拦截错误拼写。"""
+    groups: dict[str, str] = {}
+    for group_name, group_field in model_cls.model_fields.items():
+        groups.setdefault(group_name, group_name)
+        group_type = group_field.annotation
+        if isinstance(group_type, type) and issubclass(group_type, BaseConfigModel):
+            for field_name in group_type.model_fields:
+                groups.setdefault(field_name, group_name)
+    return groups
+
+
+_EXECUTION_CONFIG_FIELD_GROUPS = _collect_config_field_groups(ExecutionConfig)
+_EXECUTION_CONFIG_FIELD_NAMES = frozenset(_EXECUTION_CONFIG_FIELD_GROUPS)
 _EXECUTION_STATE_FIELD_NAMES = frozenset(ExecutionState.__dataclass_fields__.keys())

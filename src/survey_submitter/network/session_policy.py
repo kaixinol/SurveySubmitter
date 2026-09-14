@@ -62,11 +62,11 @@ def _stop_run_for_local_proxy_pool_exhausted(ctx: ExecutionState) -> None:
 
 
 def _is_local_proxy_source(ctx: ExecutionState) -> bool:
-    return (ctx.config.proxy.source or "").lower() == "local"
+    return (ctx.config.network.proxy.source or "").lower() == "local"
 
 
 def _proxy_fetching_enabled(ctx: ExecutionState) -> bool:
-    return bool(ctx.config.proxy.enabled) and not _is_local_proxy_source(ctx)
+    return bool(ctx.config.network.proxy.enabled) and not _is_local_proxy_source(ctx)
 
 
 def _get_proxy_fetch_async_lock(ctx: ExecutionState) -> asyncio.Lock:
@@ -92,7 +92,7 @@ def release_proxy_fetch_lock(ctx: ExecutionState) -> None:
 
 
 def _resolve_proxy_fetch_max_batch_size(ctx: ExecutionState) -> int:
-    worker_count = max(1, int(ctx.config.num_threads or 1))
+    worker_count = max(1, int(ctx.config.control.num_threads or 1))
     dynamic_limit = worker_count
     return max(1, min(int(PROXY_MAX_PROXIES or dynamic_limit), dynamic_limit))
 
@@ -108,7 +108,7 @@ def _resolve_proxy_request_num_locked(ctx: ExecutionState) -> int:
     waiting_count = max(1, int(ctx.proxy_waiting_threads or 0))
     active_count = len(ctx.proxy_in_use_by_thread)
     remaining_to_start = max(
-        0, int(ctx.config.target_num or 0) - int(ctx.success_count or 0) - active_count
+        0, int(ctx.config.control.target_num or 0) - int(ctx.success_count or 0) - active_count
     )
     if remaining_to_start <= 0:
         return 0
@@ -137,7 +137,7 @@ def resolve_proxy_prefetch_request_count(ctx: ExecutionState) -> int:
     with ctx.lock:
         active_count = len(ctx.proxy_in_use_by_thread)
         remaining_to_start = max(
-            0, int(ctx.config.target_num or 0) - int(ctx.success_count or 0) - active_count
+            0, int(ctx.config.control.target_num or 0) - int(ctx.success_count or 0) - active_count
         )
         if remaining_to_start <= 0:
             return 0
@@ -160,7 +160,7 @@ def should_continue_proxy_prefetch(ctx: ExecutionState) -> bool:
     with ctx.lock:
         active_count = len(ctx.proxy_in_use_by_thread)
         remaining_to_start = max(
-            0, int(ctx.config.target_num or 0) - int(ctx.success_count or 0) - active_count
+            0, int(ctx.config.control.target_num or 0) - int(ctx.success_count or 0) - active_count
         )
     return remaining_to_start > 0
 
@@ -219,7 +219,7 @@ async def _select_proxy_for_session_async(
     stop_signal: StopSignalLike | None = None,
     wait: bool = False,
 ) -> str | None:
-    if not ctx.config.proxy.enabled:
+    if not ctx.config.network.proxy.enabled:
         return None
     selected: ProxyLease | None = None
     with ctx.lock:
@@ -230,7 +230,7 @@ async def _select_proxy_for_session_async(
     if _is_local_proxy_source(ctx):
         if not wait:
             return None
-        if ctx.config.proxy.reuse and ctx.proxy_in_use_by_thread:
+        if ctx.config.network.proxy.reuse and ctx.proxy_in_use_by_thread:
             return None
         _stop_run_for_local_proxy_pool_exhausted(ctx)
         raise SubmitProxyUnavailableError(_LOCAL_PROXY_EXHAUSTED_MESSAGE)
@@ -247,7 +247,7 @@ async def _select_proxy_for_session_async(
             if _is_local_proxy_source(ctx):
                 if not wait:
                     return None
-                if ctx.config.proxy.reuse and ctx.proxy_in_use_by_thread:
+                if ctx.config.network.proxy.reuse and ctx.proxy_in_use_by_thread:
                     return None
                 _stop_run_for_local_proxy_pool_exhausted(ctx)
                 raise SubmitProxyUnavailableError(_LOCAL_PROXY_EXHAUSTED_MESSAGE)
@@ -343,7 +343,7 @@ def release_submit_proxy(ctx: ExecutionState, thread_name: str, proxy_address: s
         released = ctx.release_proxy_in_use(thread_name)
     except (KeyError, AttributeError):
         logger.opt(exception=True).debug("释放提交代理占用失败")
-    if released is not None and ctx.config.proxy.reuse:
+    if released is not None and ctx.config.network.proxy.reuse:
         try:
             _return_proxy_lease_to_pool(ctx, released)
         except Exception:

@@ -158,10 +158,10 @@ def _cmd_dry_run(config_path: str) -> None:
     exec_config = artifacts.execution_config_template
 
     out.write("[dry-run] 执行配置验证通过\n")
-    out.write(f"  目标份数: {exec_config.target_num}\n")
-    out.write(f"  并发线程: {exec_config.num_threads}\n")
-    out.write(f"  提交间隔: {exec_config.submit_interval_range_seconds}s\n")
-    out.write(f"  答题时长: {exec_config.answer_duration_range_seconds}s\n")
+    out.write(f"  目标份数: {exec_config.control.target_num}\n")
+    out.write(f"  并发线程: {exec_config.control.num_threads}\n")
+    out.write(f"  提交间隔: {exec_config.control.submit_interval_range_seconds}s\n")
+    out.write(f"  答题时长: {exec_config.control.answer_duration_range_seconds}s\n")
     out.write("[dry-run] 全部检查通过，可以正式运行\n")
 
 

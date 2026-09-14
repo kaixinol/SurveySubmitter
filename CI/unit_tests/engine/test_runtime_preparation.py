@@ -169,8 +169,8 @@ class RuntimePreparationTests:
         def fake_configure_probabilities(entries, *, ctx, reliability_mode_enabled: bool) -> None:
             assert len(entries) == 1
             assert reliability_mode_enabled
-            ctx.single_prob = [[100.0, 0.0]]
-            ctx.question_config_index_map = {1: ("single", 0)}
+            ctx.answer_probs.single_prob = [[100.0, 0.0]]
+            ctx.question_maps.question_config_index_map = {1: ("single", 0)}
 
         with (
             patch(
@@ -192,16 +192,16 @@ class RuntimePreparationTests:
             )
         assert isinstance(artifacts, PreparedExecutionArtifacts)
         assert artifacts.provider == "wjx"
-        assert artifacts.execution_config_template.title == "测试问卷"
-        assert artifacts.execution_config_template.target_num == 5
-        assert artifacts.execution_config_template.num_threads == 3
-        assert artifacts.execution_config_template.question_config_index_map == {1: ("single", 0)}
-        assert artifacts.execution_config_template.questions_metadata[1].title == "Q1"
-        assert artifacts.execution_config_template.provider_question_metadata_map == {
-            "wjx:p1:q1": artifacts.execution_config_template.questions_metadata[1]
+        assert artifacts.execution_config_template.survey.title == "测试问卷"
+        assert artifacts.execution_config_template.control.target_num == 5
+        assert artifacts.execution_config_template.control.num_threads == 3
+        assert artifacts.execution_config_template.question_maps.question_config_index_map == {1: ("single", 0)}
+        assert artifacts.execution_config_template.question_maps.questions_metadata[1].title == "Q1"
+        assert artifacts.execution_config_template.question_maps.provider_question_metadata_map == {
+            "wjx:p1:q1": artifacts.execution_config_template.question_maps.questions_metadata[1]
         }
-        assert artifacts.execution_config_template.answer_rules == [{"num": 1, "equals": [1]}]
-        assert artifacts.execution_config_template.answer_datetime_window_ms == (0, 0)
+        assert artifacts.execution_config_template.answer_policy.answer_rules == [{"num": 1, "equals": [1]}]
+        assert artifacts.execution_config_template.control.answer_datetime_window_ms == (0, 0)
         assert artifacts.execution_config_template.proxy_ip_pool == []
         sync_proxy_duration.assert_called_once_with((12, 20), provider="wjx")
 
@@ -312,9 +312,9 @@ class RuntimePreparationTests:
                 config, questions_info=self._SAMPLE_QUESTIONS_INFO
             )
         assert proxy_runtime.get_custom_proxy_api_override() == ""
-        assert artifacts.execution_config_template.proxy.enabled is True
-        assert artifacts.execution_config_template.proxy.source == "local"
-        assert artifacts.execution_config_template.proxy.reuse is True
+        assert artifacts.execution_config_template.network.proxy.enabled is True
+        assert artifacts.execution_config_template.network.proxy.source == "local"
+        assert artifacts.execution_config_template.network.proxy.reuse is True
         pool = list(artifacts.execution_config_template.proxy_ip_pool)
         assert [lease.address for lease in pool] == ["http://1.2.3.4:8080"]
 
@@ -483,7 +483,7 @@ class RuntimePreparationTests:
                 fallback_survey_title="解析得到的标题",
                 questions_info=self._SAMPLE_QUESTIONS_INFO,
             )
-        assert artifacts.execution_config_template.title == "解析得到的标题"
+        assert artifacts.execution_config_template.survey.title == "解析得到的标题"
         assert artifacts.provider == "wjx"
         assert len(artifacts.questions_info) == 1
         assert artifacts.questions_info[0].title == "Q1"
@@ -504,7 +504,7 @@ class RuntimePreparationTests:
             artifacts = prepare_execution_artifacts(
                 config, questions_info=self._SAMPLE_QUESTIONS_INFO
             )
-        assert artifacts.execution_config_template.num_threads == 64
+        assert artifacts.execution_config_template.control.num_threads == 64
 
     def test_prepare_execution_artifacts_plumbs_optional_fill_skip_ratio(self) -> None:
         config = self._build_config()
@@ -522,7 +522,7 @@ class RuntimePreparationTests:
             artifacts = prepare_execution_artifacts(
                 config, questions_info=self._SAMPLE_QUESTIONS_INFO
             )
-        assert artifacts.execution_config_template.optional_fill_skip_ratio == 0.4
+        assert artifacts.execution_config_template.choice_fill.optional_fill_skip_ratio == 0.4
 
     def test_prepare_execution_artifacts_clamps_optional_fill_skip_ratio(self) -> None:
         config = self._build_config()
@@ -540,7 +540,7 @@ class RuntimePreparationTests:
             artifacts = prepare_execution_artifacts(
                 config, questions_info=self._SAMPLE_QUESTIONS_INFO
             )
-        assert artifacts.execution_config_template.optional_fill_skip_ratio == 1.0
+        assert artifacts.execution_config_template.choice_fill.optional_fill_skip_ratio == 1.0
 
     def test_prepare_execution_artifacts_uses_reverse_fill_sample_count_and_threads(self) -> None:
         config = self._build_config()
@@ -573,5 +573,5 @@ class RuntimePreparationTests:
             artifacts = prepare_execution_artifacts(
                 config, questions_info=self._SAMPLE_QUESTIONS_INFO
             )
-        assert artifacts.execution_config_template.target_num == 9
-        assert artifacts.execution_config_template.num_threads == 3
+        assert artifacts.execution_config_template.control.target_num == 9
+        assert artifacts.execution_config_template.control.num_threads == 3

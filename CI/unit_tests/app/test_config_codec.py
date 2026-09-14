@@ -667,25 +667,21 @@ class ConfigCodecTests:
     def test_execution_config_test_profiles(self) -> None:
         from survey_submitter.core.task.task_context import ExecutionConfig
 
-        config = ExecutionConfig(test_profiles=[{1: "北京", 2: "上海"}, {1: "广州", 2: "深圳"}])
-        assert len(config.test_profiles) == 2
-        assert config.test_profiles_random is True
+        config = ExecutionConfig(test_profiles={'profiles': {'profiles': [{1: "北京", 2: "上海"}, {1: "广州", 2: "深圳"}]}})
+        assert len(config.test_profiles.profiles.profiles) == 2
+        assert config.test_profiles.profiles.random is True
         assert config.current_profile_index == 0
-        assert config.test_profiles[0] == {1: "北京", 2: "上海"}
+        assert config.test_profiles.profiles.profiles[0] == {1: "北京", 2: "上海"}
 
     def test_profile_cycling_sequential(self) -> None:
         from survey_submitter.core.task.task_context import ExecutionConfig
 
-        config = ExecutionConfig(
-            test_profiles=[{1: "A"}, {1: "B"}, {1: "C"}],
-            test_profiles_random=False,
-            target_num=5,
-        )
+        config = ExecutionConfig(test_profiles={'profiles': [{1: "A"}, {1: "B"}, {1: "C"}], 'random': False}, control={'target_num': 5})
         results = []
         for _ in range(5):
-            profile = config.test_profiles[config.current_profile_index]
+            profile = config.test_profiles.profiles.profiles[config.current_profile_index]
             results.append(profile.get(1))
             config.current_profile_index = (config.current_profile_index + 1) % len(
-                config.test_profiles
+                config.test_profiles.profiles.profiles
             )
         assert results == ["A", "B", "C", "A", "B"]

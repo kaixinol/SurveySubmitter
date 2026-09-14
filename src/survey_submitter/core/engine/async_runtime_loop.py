@@ -221,7 +221,7 @@ class AsyncSlotRunner:
             return True
         with self.state.lock:
             target_reached = bool(
-                self.config.target_num > 0 and self.state.success_count >= self.config.target_num
+                self.config.control.target_num > 0 and self.state.success_count >= self.config.control.target_num
             )
         if target_reached:
             self.stop_policy.trigger_target_reached_stop(self.stop_proxy)
@@ -253,7 +253,7 @@ class AsyncSlotRunner:
         return await acquire_task
 
     def _resolve_dispatch_delay_seconds(self) -> float:
-        min_wait, max_wait = self.config.submit_interval_range_seconds
+        min_wait, max_wait = self.config.control.submit_interval_range_seconds
         if max_wait <= 0:
             return 0.0
         if max_wait == min_wait:
@@ -297,7 +297,7 @@ class AsyncSlotRunner:
         threshold_override = (
             int(cast(int, threshold_value))
             if threshold_value is not None
-            else max(1, int(self.config.fail_threshold or 1), int(self.config.num_threads or 1))
+            else max(1, int(self.config.control.fail_threshold or 1), int(self.config.control.num_threads or 1))
         )
         stopped = self.stop_policy.record_failure(
             self.stop_proxy,
@@ -312,7 +312,7 @@ class AsyncSlotRunner:
         if stopped:
             self.run_context.stop_event.set()
             return True
-        if self.config.proxy.enabled and _record_bad_proxy_and_maybe_pause(self.state):
+        if self.config.network.proxy.enabled and _record_bad_proxy_and_maybe_pause(self.state):
             return True
         return False
 
@@ -348,7 +348,7 @@ class AsyncSlotRunner:
     def _handle_submission_verification_error(
         self, exc: SubmissionVerificationRequiredError
     ) -> bool:
-        if self.config.proxy.enabled and self.proxy_session.proxy_address:
+        if self.config.network.proxy.enabled and self.proxy_session.proxy_address:
             log_masked_proxy = mask_proxy_for_log(self.proxy_session.proxy_address)
             try:
                 _mark_proxy_temporarily_bad(self.state, self.proxy_session.proxy_address)
@@ -561,13 +561,13 @@ class AsyncSlotRunner:
             return _RoundOutcome(requeue=False)
 
         async def submit_proxy_lease_factory():
-            if self.config.proxy.enabled:
+            if self.config.network.proxy.enabled:
                 await self._update_http_step("获取提交代理")
             submit_proxy = await acquire_submit_proxy(
                 self.state,
                 self.slot_label,
                 stop_signal=self.stop_proxy,
-                wait=bool(self.config.proxy.enabled),
+                wait=bool(self.config.network.proxy.enabled),
             )
             self.proxy_session.set_current_submit_proxy(
                 submit_proxy.address, provider=submit_proxy.provider

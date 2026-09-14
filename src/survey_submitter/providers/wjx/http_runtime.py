@@ -214,7 +214,7 @@ def _escape_wjx_submit_text(value: str | int | float | None) -> str:
 
 def _question_items(config: ExecutionConfig) -> list[SurveyQuestionMeta]:
     return sorted(
-        list((config.questions_metadata or {}).values()),
+        list((config.question_maps.questions_metadata or {}).values()),
         key=lambda item: (int(getattr(item, "page", 1) or 1), int(item.num or 0)),
     )
 
@@ -341,7 +341,7 @@ def _record_action(ctx: ExecutionState, action: AnswerAction) -> None:
 
 def _question_error_label(config: ExecutionConfig, question_num: int) -> str:
     try:
-        question = (config.questions_metadata or {}).get(int(question_num))
+        question = (config.question_maps.questions_metadata or {}).get(int(question_num))
     except (ValueError, TypeError):
         question = None
     if question is None:
@@ -478,7 +478,7 @@ def _sample_ktimes(config: ExecutionConfig) -> int:
     default_seconds = 90
     try:
         sampled = sample_answer_duration_seconds(
-            config.answer_duration_range_seconds,
+            config.control.answer_duration_range_seconds,
             provider="wjx",
             default_unconfigured_seconds=default_seconds,
         )
@@ -541,8 +541,8 @@ def _build_wjx_submit_params(
     )
     scene_id = _extract_wjx_scene_id(page_html)
     jqnonce = str(uuid.uuid4())
-    domain = _submit_domain(config.url)
-    shortid = _short_id_from_url(config.url)
+    domain = _submit_domain(config.survey.url)
+    shortid = _short_id_from_url(config.survey.url)
     channel_profile = _resolve_wjx_channel_profile(user_agent_value, user_agent_profile)
     params = {
         "shortid": shortid,
@@ -585,7 +585,7 @@ async def _post_wjx_submit_request(
     if submit_proxy_lease_factory is not None:
         submit_proxy_lease = await submit_proxy_lease_factory()
         submit_proxy_address = submit_proxy_lease.address or None
-    if bool(config.proxy.enabled) and not submit_proxy_address:
+    if bool(config.network.proxy.enabled) and not submit_proxy_address:
         raise SubmitProxyUnavailableError("提交前未获取到随机 IP")
     submit_proxies = _proxy_arg(submit_proxy_address)
     if submit_proxy_address:
@@ -646,9 +646,9 @@ async def fill_wjx_http(
         headers = {
             **DEFAULT_HTTP_HEADERS,
             "User-Agent": user_agent_value,
-            "Referer": config.url,
+            "Referer": config.survey.url,
         }
-        page_html = await _load_wjx_page(config.url, headers=headers, proxies={})
+        page_html = await _load_wjx_page(config.survey.url, headers=headers, proxies={})
 
         actions, _plan, submitdata = await _build_and_record_actions(
             config,

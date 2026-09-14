@@ -8,7 +8,9 @@ import survey_submitter.core.questions.distribution as distribution
 class _FakeCtx:
     def __init__(self, *, counts=(0, None), dimension_map=None) -> None:
         self._counts = counts
-        self.config = SimpleNamespace(question_dimension_map=dimension_map or {})
+        self.config = SimpleNamespace(
+            question_maps=SimpleNamespace(question_dimension_map=dimension_map or {})
+        )
         self.append_calls: list[tuple[str, int, int]] = []
 
     def snapshot_distribution_stats(self, stat_key: str, option_count: int):

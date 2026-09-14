@@ -25,10 +25,7 @@ class OptionalFillSkipRuntimeTests:
         )
 
     async def test_full_skip_ratio_drops_optional_fills_but_keeps_required(self) -> None:
-        config = ExecutionConfig(
-            optional_fill_skip_ratio=1.0,
-            multiple_option_fill_texts=[["无", "无", "无"]],
-        )
+        config = ExecutionConfig(choice_fill={'optional_fill_skip_ratio': 1.0, 'multiple_option_fill_texts': [["无", "无", "无"]]})
         ctx = ExecutionState(config=config)
 
         action = await _build_multiple_answer_action(
@@ -48,10 +45,7 @@ class OptionalFillSkipRuntimeTests:
         assert action.selected_texts == ("A", "B", "C / 无")
 
     async def test_zero_ratio_keeps_all_optional_fills(self) -> None:
-        config = ExecutionConfig(
-            optional_fill_skip_ratio=0.0,
-            multiple_option_fill_texts=[["无", "无", "无"]],
-        )
+        config = ExecutionConfig(choice_fill={'optional_fill_skip_ratio': 0.0, 'multiple_option_fill_texts': [["无", "无", "无"]]})
         ctx = ExecutionState(config=config)
 
         action = await _build_multiple_answer_action(

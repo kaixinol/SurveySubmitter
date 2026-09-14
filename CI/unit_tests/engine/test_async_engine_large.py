@@ -144,7 +144,7 @@ class AsyncRuntimeEngineLargeTests:
 
     def test_start_run_stop_pause_resume_and_parse(self, monkeypatch) -> None:
         engine = _build_engine()
-        config = ExecutionConfig(num_threads=2, provider="wjx")
+        config = ExecutionConfig(control={'num_threads': 2}, survey={'provider': "wjx"})
         state = ExecutionState(config=config)
         submitted: list[object] = []
         run_future = _DoneFuture(done=False)
@@ -203,7 +203,7 @@ class AsyncRuntimeEngineLargeTests:
         self, monkeypatch
     ) -> None:
         engine = _build_engine()
-        config = ExecutionConfig(num_threads=2, target_num=5, provider="wjx")
+        config = ExecutionConfig(control={'num_threads': 2, 'target_num': 5}, survey={'provider': "wjx"})
         state = ExecutionState(config=config)
         bus_events: list[dict[str, object]] = []
         engine._status_bus = SimpleNamespace(emit=lambda event: bus_events.append(event))  # ty:ignore[invalid-assignment]
@@ -258,12 +258,7 @@ class AsyncRuntimeEngineLargeTests:
         self, monkeypatch
     ) -> None:
         engine = _build_engine()
-        config = ExecutionConfig(
-            num_threads=2,
-            target_num=5,
-            proxy=ProxyRuntimeConfig(enabled=True),
-            provider="wjx",
-        )
+        config = ExecutionConfig(control={'num_threads': 2, 'target_num': 5}, network={'proxy': ProxyRuntimeConfig(enabled=True)}, survey={'provider': "wjx"})
         state = ExecutionState(config=config)
         events: list[str] = []
 
@@ -305,12 +300,7 @@ class AsyncRuntimeEngineLargeTests:
         self, monkeypatch
     ) -> None:
         engine = _build_engine()
-        config = ExecutionConfig(
-            num_threads=2,
-            target_num=5,
-            proxy=ProxyRuntimeConfig(enabled=True),
-            provider="wjx",
-        )
+        config = ExecutionConfig(control={'num_threads': 2, 'target_num': 5}, network={'proxy': ProxyRuntimeConfig(enabled=True)}, survey={'provider': "wjx"})
         state = ExecutionState(config=config)
         fetch_counts: list[int] = []
 
@@ -370,12 +360,7 @@ class AsyncRuntimeEngineLargeTests:
     @pytest.mark.asyncio
     async def test_run_async_proxy_prefetch_does_not_write_after_stop(self, monkeypatch) -> None:
         engine = _build_engine()
-        config = ExecutionConfig(
-            num_threads=1,
-            target_num=3,
-            proxy=ProxyRuntimeConfig(enabled=True),
-            provider="wjx",
-        )
+        config = ExecutionConfig(control={'num_threads': 1, 'target_num': 3}, network={'proxy': ProxyRuntimeConfig(enabled=True)}, survey={'provider': "wjx"})
         state = ExecutionState(config=config)
 
         class _FakeRunner:
@@ -407,12 +392,7 @@ class AsyncRuntimeEngineLargeTests:
     @pytest.mark.asyncio
     async def test_run_async_proxy_prefetch_rechecks_demand_after_lock(self, monkeypatch) -> None:
         engine = _build_engine()
-        config = ExecutionConfig(
-            num_threads=1,
-            target_num=1,
-            proxy=ProxyRuntimeConfig(enabled=True),
-            provider="wjx",
-        )
+        config = ExecutionConfig(control={'num_threads': 1, 'target_num': 1}, network={'proxy': ProxyRuntimeConfig(enabled=True)}, survey={'provider': "wjx"})
         state = ExecutionState(config=config)
         fetch_counts: list[int] = []
 
