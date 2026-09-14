@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from types import SimpleNamespace
 
 import survey_submitter.core.engine.async_proxy_session as proxy_session_module
@@ -28,7 +27,7 @@ class AsyncProxySessionTests:
             update_step=lambda _text: None,
         )
 
-        ua = asyncio.run(session.select_user_agent())
+        ua = session.select_user_agent()
 
         assert ua == "UA"
         assert session.user_agent_profile is profile

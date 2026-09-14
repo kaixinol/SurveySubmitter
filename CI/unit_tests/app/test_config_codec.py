@@ -470,7 +470,7 @@ class ConfigCodecTests:
         from survey_submitter.core.questions.schema import UniversityQuestionAnswerConfig
 
         qi = _make_question_info(
-            question_type="text",
+            question_type="university",
             answer_config=UniversityQuestionAnswerConfig(
                 random_value_pool=["清华大学", "北京大学", "浙江大学"],
             ),
@@ -577,14 +577,10 @@ class ConfigCodecTests:
             answer_config_type_for_question_type,
         )
 
-        result = answer_config_type_for_question_type(
-            "text", location_parts=["北京"], is_university=True
-        )
+        result = answer_config_type_for_question_type("university")
         assert result is UniversityQuestionAnswerConfig
 
-        result = answer_config_type_for_question_type(
-            "text", location_parts=["北京"], is_university=False
-        )
+        result = answer_config_type_for_question_type("text", location_parts=["北京"])
         assert result is LocationQuestionAnswerConfig
 
     def test_serialize_deserialize_test_profiles(self) -> None:
@@ -665,23 +661,30 @@ class ConfigCodecTests:
         assert config.answer_config.test_profiles.random is True
 
     def test_execution_config_test_profiles(self) -> None:
-        from survey_submitter.core.task.task_context import ExecutionConfig
+        from survey_submitter.core.task.task_context import ExecutionConfig, ExecutionState
 
-        config = ExecutionConfig(test_profiles={'profiles': {'profiles': [{1: "北京", 2: "上海"}, {1: "广州", 2: "深圳"}]}})
-        assert len(config.test_profiles.profiles.profiles) == 2
-        assert config.test_profiles.profiles.random is True
-        assert config.current_profile_index == 0
-        assert config.test_profiles.profiles.profiles[0] == {1: "北京", 2: "上海"}
+        config = ExecutionConfig(
+            test_profiles={'profiles': [{1: "北京", 2: "上海"}, {1: "广州", 2: "深圳"}]}
+        )
+        state = ExecutionState(config=config)
+        assert len(config.test_profiles.profiles) == 2
+        assert config.test_profiles.random is True
+        assert state.current_profile_index == 0
+        assert config.test_profiles.profiles[0] == {1: "北京", 2: "上海"}
 
     def test_profile_cycling_sequential(self) -> None:
-        from survey_submitter.core.task.task_context import ExecutionConfig
+        from survey_submitter.core.task.task_context import ExecutionConfig, ExecutionState
 
-        config = ExecutionConfig(test_profiles={'profiles': [{1: "A"}, {1: "B"}, {1: "C"}], 'random': False}, control={'target_num': 5})
+        config = ExecutionConfig(
+            test_profiles={'profiles': [{1: "A"}, {1: "B"}, {1: "C"}], 'random': False},
+            control={'target_num': 5},
+        )
+        state = ExecutionState(config=config)
         results = []
         for _ in range(5):
-            profile = config.test_profiles.profiles.profiles[config.current_profile_index]
+            profile = config.test_profiles.profiles[state.current_profile_index]
             results.append(profile.get(1))
-            config.current_profile_index = (config.current_profile_index + 1) % len(
-                config.test_profiles.profiles.profiles
+            state.current_profile_index = (state.current_profile_index + 1) % len(
+                config.test_profiles.profiles
             )
         assert results == ["A", "B", "C", "A", "B"]

@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock
 import pytest
 
 import survey_submitter.integrations.ai.protocols as protocols
-from survey_submitter.integrations.ai.client import save_ai_settings
 from survey_submitter.integrations.ai.protocols import (
     extract_chat_completion_text,
     extract_responses_text,
@@ -16,22 +15,13 @@ from survey_submitter.integrations.ai.protocols import (
 
 
 class AIProtocolTests:
-    def setup_method(self, _method) -> None:
-        save_ai_settings(
-            api_key="test-key",
-            base_url="https://example.com/v1",
-            api_protocol="responses",
-            model="demo-model",
-            system_prompt="测试提示词",
-        )
-
-    def testresolve_custom_endpoint_appends_protocol_suffix(self) -> None:
+    def test_resolve_custom_endpoint_appends_protocol_suffix(self) -> None:
         protocol, url, explicit = resolve_custom_endpoint("https://example.com/v1", "responses")
         assert protocol == "responses"
         assert url == "https://example.com/v1/responses"
         assert not explicit
 
-    def testresolve_custom_endpoint_handles_explicit_and_invalid_urls(self) -> None:
+    def test_resolve_custom_endpoint_handles_explicit_and_invalid_urls(self) -> None:
         assert resolve_custom_endpoint(" https://example.com/v1/chat/completions/ ", "auto") == (
             "chat_completions",
             "https://example.com/v1/chat/completions",
@@ -47,7 +37,7 @@ class AIProtocolTests:
         with pytest.raises(RuntimeError, match="Base URL"):
             resolve_custom_endpoint("   ", "auto")
 
-    def testextract_chat_completion_text_prefers_message_content(self) -> None:
+    def test_extract_chat_completion_text_prefers_message_content(self) -> None:
         text = extract_chat_completion_text(
             {
                 "choices": [
@@ -64,7 +54,7 @@ class AIProtocolTests:
         )
         assert text == "第一句\n第二句"
 
-    def testextract_responses_text_reads_output_content(self) -> None:
+    def test_extract_responses_text_reads_output_content(self) -> None:
         text = extract_responses_text(
             {"output": [{"content": [{"type": "output_text", "text": "连接成功"}]}]}
         )
@@ -83,7 +73,7 @@ class AIProtocolTests:
         with pytest.raises(RuntimeError, match="内容为空"):
             extract_responses_text({"output": [{"content": [{"type": "image", "text": "忽略"}]}]})
 
-    def testis_endpoint_mismatch_error(self) -> None:
+    def test_is_endpoint_mismatch_error(self) -> None:
         assert is_endpoint_mismatch_error(RuntimeError("405 method not allowed"))
         assert not is_endpoint_mismatch_error(RuntimeError("quota exceeded"))
 
@@ -172,7 +162,14 @@ class AIProtocolTests:
 
         original_chat = client_module.acall_chat_completions
         original_responses = client_module.acall_responses
-        save_ai_settings(api_protocol="auto")
+        original_settings = client_module.get_ai_settings
+        client_module.get_ai_settings = lambda: {
+            "api_key": "test-key",
+            "base_url": "https://api.example.com/v1",
+            "api_protocol": "auto",
+            "model": "demo-model",
+            "system_prompt": "",
+        }  # ty:ignore[invalid-assignment]
         calls: list[str] = []
 
         async def _fake_chat(*_args, **_kwargs):
@@ -196,5 +193,6 @@ class AIProtocolTests:
         finally:
             client_module.acall_chat_completions = original_chat
             client_module.acall_responses = original_responses
+            client_module.get_ai_settings = original_settings
         assert answer == "回退成功"
         assert calls == ["chat", "responses"]

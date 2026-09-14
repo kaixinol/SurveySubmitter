@@ -157,7 +157,7 @@ class AsyncRuntimeLoopLargeTests:
         )
         runner, _state, _ctx, _scheduler = _build_runner(config=config, state=state)
 
-        proxy, ua = await runner._select_session_proxy_and_ua()
+        proxy, ua = runner._select_session_proxy_and_ua()
 
         assert (proxy, ua) == (None, "UA")
         assert calls == []
@@ -245,7 +245,7 @@ class AsyncRuntimeLoopLargeTests:
         )
         monkeypatch.setattr(runner, "_prepare_round_context", lambda: asyncio.sleep(0, result=True))
         monkeypatch.setattr(
-            runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA"))
+            runner, "_select_session_proxy_and_ua", lambda: (None, "UA")
         )
 
         await runner.run()
@@ -258,8 +258,8 @@ class AsyncRuntimeLoopLargeTests:
         self, monkeypatch
     ) -> None:
         config = ExecutionConfig(survey={'url': "https://www.wjx.cn/vm/demo.aspx", 'provider': "wjx"}, network={'proxy': ProxyRuntimeConfig(enabled=True)})
-        config.proxy_ip_pool.append(ProxyLease(address="http://1.1.1.1:80", source="unit"))
         runner, state, _ctx, scheduler = _build_runner(config=config)
+        state.proxy_ip_pool.append(ProxyLease(address="http://1.1.1.1:80", source="unit"))
         scheduler.acquire_values = [6, None]
         submit_calls: list[dict[str, object]] = []
         pre_submit_active: list[set[str]] = []
@@ -277,7 +277,7 @@ class AsyncRuntimeLoopLargeTests:
         monkeypatch.setattr(runner.http_submitter, "submit", fake_submit)
         monkeypatch.setattr(runner, "_prepare_round_context", fake_prepare)
         monkeypatch.setattr(
-            runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA"))
+            runner, "_select_session_proxy_and_ua", lambda: (None, "UA")
         )
 
         await runner.run()
@@ -307,7 +307,7 @@ class AsyncRuntimeLoopLargeTests:
         monkeypatch.setattr(runner.http_submitter, "submit", fake_submit)
         monkeypatch.setattr(runner, "_prepare_round_context", lambda: asyncio.sleep(0, result=True))
         monkeypatch.setattr(
-            runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA"))
+            runner, "_select_session_proxy_and_ua", lambda: (None, "UA")
         )
         monkeypatch.setattr(
             runtime_loop, "_record_bad_proxy_and_maybe_pause", lambda *_args, **_kwargs: False
@@ -339,7 +339,7 @@ class AsyncRuntimeLoopLargeTests:
         )
         monkeypatch.setattr(runner, "_prepare_round_context", lambda: asyncio.sleep(0, result=True))
         monkeypatch.setattr(
-            runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA"))
+            runner, "_select_session_proxy_and_ua", lambda: (None, "UA")
         )
         monkeypatch.setattr(
             runtime_loop,
@@ -366,11 +366,9 @@ class AsyncRuntimeLoopLargeTests:
         )
         monkeypatch.setattr(runner, "_prepare_round_context", lambda: asyncio.sleep(0, result=True))
         monkeypatch.setattr(
-            runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA"))
+            runner, "_select_session_proxy_and_ua", lambda: (None, "UA")
         )
-        monkeypatch.setattr(
-            runner, "_handle_ai_runtime_error", lambda exc: asyncio.sleep(0, result=False)
-        )
+        monkeypatch.setattr(runner, "_handle_ai_runtime_error", lambda exc: False)
         release_flags: list[bool] = []
         monkeypatch.setattr(
             runner,
@@ -399,7 +397,7 @@ class AsyncRuntimeLoopLargeTests:
         )
         monkeypatch.setattr(runner, "_prepare_round_context", lambda: asyncio.sleep(0, result=True))
         monkeypatch.setattr(
-            runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA"))
+            runner, "_select_session_proxy_and_ua", lambda: (None, "UA")
         )
 
         await runner.run()
@@ -426,7 +424,7 @@ class AsyncRuntimeLoopLargeTests:
                 "当前随机 IP 已被风控，正在更换随机 IP 重试。"
             )
 
-        async def select_proxy():
+        def select_proxy():
             runner.proxy_session.proxy_address = "http://1.1.1.1:80"
             return "http://1.1.1.1:80", "UA"
 
@@ -461,7 +459,7 @@ class AsyncRuntimeLoopLargeTests:
         )
         monkeypatch.setattr(runner, "_prepare_round_context", lambda: asyncio.sleep(0, result=True))
         monkeypatch.setattr(
-            runner, "_select_session_proxy_and_ua", lambda: asyncio.sleep(0, result=(None, "UA"))
+            runner, "_select_session_proxy_and_ua", lambda: (None, "UA")
         )
 
         await runner.run()
@@ -492,7 +490,7 @@ class AsyncRuntimeLoopLargeTests:
         monkeypatch.setattr(
             runner,
             "_select_session_proxy_and_ua",
-            lambda: asyncio.sleep(0, result=("http://1.1.1.1:80", "UA")),
+            lambda: ("http://1.1.1.1:80", "UA"),
         )
         monkeypatch.setattr(runner, "_handle_http_transport_error", lambda _exc: True)
 
@@ -535,7 +533,7 @@ class AsyncRuntimeLoopLargeTests:
         monkeypatch.setattr(
             runner,
             "_select_session_proxy_and_ua",
-            lambda: asyncio.sleep(0, result=("http://1.1.1.1:80", "UA")),
+            lambda: ("http://1.1.1.1:80", "UA"),
         )
         monkeypatch.setattr(
             runner,

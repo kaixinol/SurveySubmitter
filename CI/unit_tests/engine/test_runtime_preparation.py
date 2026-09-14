@@ -200,9 +200,9 @@ class RuntimePreparationTests:
         assert artifacts.execution_config_template.question_maps.provider_question_metadata_map == {
             "wjx:p1:q1": artifacts.execution_config_template.question_maps.questions_metadata[1]
         }
-        assert artifacts.execution_config_template.answer_policy.answer_rules == [{"num": 1, "equals": [1]}]
+        assert artifacts.execution_config_template.answer_policy.rules == [{"num": 1, "equals": [1]}]
         assert artifacts.execution_config_template.control.answer_datetime_window_ms == (0, 0)
-        assert artifacts.execution_config_template.proxy_ip_pool == []
+        assert list(artifacts.proxy_ip_pool) == []
         sync_proxy_duration.assert_called_once_with((12, 20), provider="wjx")
 
     def test_prepare_execution_artifacts_seeds_proxy_ip_list_into_pool(self) -> None:
@@ -225,7 +225,7 @@ class RuntimePreparationTests:
             artifacts = prepare_execution_artifacts(
                 config, questions_info=self._SAMPLE_QUESTIONS_INFO
             )
-        pool = list(artifacts.execution_config_template.proxy_ip_pool)
+        pool = list(artifacts.proxy_ip_pool)
         assert [lease.address for lease in pool] == ["http://1.2.3.4:8080", "http://5.6.7.8:3128"]
         assert all(lease.source == "custom" for lease in pool)
 
@@ -315,15 +315,13 @@ class RuntimePreparationTests:
         assert artifacts.execution_config_template.network.proxy.enabled is True
         assert artifacts.execution_config_template.network.proxy.source == "local"
         assert artifacts.execution_config_template.network.proxy.reuse is True
-        pool = list(artifacts.execution_config_template.proxy_ip_pool)
+        pool = list(artifacts.proxy_ip_pool)
         assert [lease.address for lease in pool] == ["http://1.2.3.4:8080"]
 
     def test_prepare_execution_artifacts_local_proxy_resolves_file_and_url_sources(
         self,
     ) -> None:
         import tempfile
-
-        from survey_submitter.network.proxy.pool import is_proxy_responsive
 
         with tempfile.NamedTemporaryFile(
             "w", suffix=".txt", delete=False, encoding="utf-8"
@@ -371,7 +369,7 @@ class RuntimePreparationTests:
             artifacts = prepare_execution_artifacts(
                 config, questions_info=self._SAMPLE_QUESTIONS_INFO
             )
-        pool = [lease.address for lease in artifacts.execution_config_template.proxy_ip_pool]
+        pool = [lease.address for lease in artifacts.proxy_ip_pool]
         assert pool == [
             "http://1.2.3.4:8080",
             "http://5.6.7.8:3128",
@@ -410,7 +408,7 @@ class RuntimePreparationTests:
             artifacts = prepare_execution_artifacts(
                 config, questions_info=self._SAMPLE_QUESTIONS_INFO
             )
-        pool = [lease.address for lease in artifacts.execution_config_template.proxy_ip_pool]
+        pool = [lease.address for lease in artifacts.proxy_ip_pool]
         assert pool == ["http://5.6.7.8:3128"]
 
     def test_prepare_execution_artifacts_local_proxy_all_unresponsive_raises(self) -> None:
@@ -455,7 +453,7 @@ class RuntimePreparationTests:
             artifacts = prepare_execution_artifacts(
                 config, questions_info=self._SAMPLE_QUESTIONS_INFO
             )
-        pool = [lease.address for lease in artifacts.execution_config_template.proxy_ip_pool]
+        pool = [lease.address for lease in artifacts.proxy_ip_pool]
         assert len(pool) == 3  # ceil(2 * 1.5)
         assert set(pool).issubset(
             {f"http://10.0.0.{i}:8080" for i in range(20)}
@@ -491,6 +489,7 @@ class RuntimePreparationTests:
     def test_prepare_execution_artifacts_clamps_threads_by_http_limit(self) -> None:
         config = self._build_config()
         config.execution.num_threads = 99
+        config.execution.target_num = 100
         with (
             patch(
                 "survey_submitter.core.engine.execution_builder.build_enabled_reverse_fill_spec",

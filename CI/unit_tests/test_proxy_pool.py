@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import time
 
 from survey_submitter.core.task import ProxyLease
@@ -104,26 +103,6 @@ class ProxyPoolTests:
             )
         )
         assert not pool.is_proxy_responsive("1.1.1.1:8000")
-
-    def test_proxy_responsive_async_uses_async_http_client(self, patch_attrs) -> None:
-        calls: list[dict[str, object]] = []
-
-        async def fake_aget(_url: str, **kwargs):
-            calls.append(kwargs)
-            return _Response(204)
-
-        patch_attrs(
-            (pool.http_client, "aget", fake_aget),
-            (pool.time, "perf_counter", iter([1.0, 1.2]).__next__),
-        )
-
-        result = asyncio.run(pool.is_proxy_responsive_async("1.1.1.1:8000"))
-
-        assert result is True
-        assert calls[0]["proxies"] == {
-            "http": "http://1.1.1.1:8000",
-            "https": "http://1.1.1.1:8000",
-        }
 
     def test_parse_expire_at_handles_naive_aware_and_bad_values(self) -> None:
         assert pool._parse_expire_at_timestamp("") == 0.0

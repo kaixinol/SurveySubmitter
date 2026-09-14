@@ -7,9 +7,9 @@
     # 生成 / 刷新基线（默认用当前实现）
     python CI/scripts/wjx_parser_regression.py --emit
 
-    # 用指定的解析器模块生成基线（例如从 git 历史恢复的旧实现）
-    python CI/scripts/wjx_parser_regression.py --emit \
-        --impl survey_submitter.providers.wjx._legacy_parser
+    # 用指定的解析器模块生成基线（例如从 git 历史恢复的旧实现，
+    # 放到某个临时包路径下再用 --impl 指向它）
+    python CI/scripts/wjx_parser_regression.py --emit --impl <模块路径>
 
     # 与基线对账（改造解析器后跑）
     python CI/scripts/wjx_parser_regression.py --check

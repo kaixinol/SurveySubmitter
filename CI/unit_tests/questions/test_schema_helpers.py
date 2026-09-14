@@ -51,15 +51,11 @@ class SchemaHelperTests:
         assert config.location_parts == []
 
     def test_answer_config_type_for_question_type_university(self) -> None:
-        result = answer_config_type_for_question_type(
-            "text", location_parts=["北京"], is_university=True
-        )
+        result = answer_config_type_for_question_type("university")
         assert result is UniversityQuestionAnswerConfig
 
     def test_answer_config_type_for_question_type_location(self) -> None:
-        result = answer_config_type_for_question_type(
-            "text", location_parts=["北京"], is_university=False
-        )
+        result = answer_config_type_for_question_type("text", location_parts=["北京"])
         assert result is LocationQuestionAnswerConfig
 
     def test_answer_config_type_for_question_type_choice(self) -> None:

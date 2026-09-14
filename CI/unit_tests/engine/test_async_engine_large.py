@@ -293,7 +293,7 @@ class AsyncRuntimeEngineLargeTests:
         assert "slot-1" in events
         assert "slot-2" in events
         assert not any(event.startswith("fetch-") for event in events)
-        assert list(state.config.proxy_ip_pool) == []
+        assert list(state.proxy_ip_pool) == []
 
     @pytest.mark.asyncio
     async def test_run_keeps_prefetching_proxy_pool_after_first_batch_is_consumed(
@@ -314,13 +314,13 @@ class AsyncRuntimeEngineLargeTests:
                     deadline = asyncio.get_running_loop().time() + 1.0
                     try:
                         while (
-                            not state.config.proxy_ip_pool
+                            not state.proxy_ip_pool
                             and asyncio.get_running_loop().time() < deadline
                         ):
                             await asyncio.sleep(0.01)
                         with state.lock:
-                            if state.config.proxy_ip_pool:
-                                state.config.proxy_ip_pool.popleft()
+                            if state.proxy_ip_pool:
+                                state.proxy_ip_pool.popleft()
                                 state.success_count += 1
                         state.notify_runtime_change()
                         await asyncio.sleep(0)
@@ -387,7 +387,7 @@ class AsyncRuntimeEngineLargeTests:
 
         await engine._run(config=config, state=state)
 
-        assert list(state.config.proxy_ip_pool) == []
+        assert list(state.proxy_ip_pool) == []
 
     @pytest.mark.asyncio
     async def test_run_async_proxy_prefetch_rechecks_demand_after_lock(self, monkeypatch) -> None:
@@ -405,12 +405,12 @@ class AsyncRuntimeEngineLargeTests:
                 try:
                     await asyncio.sleep(0)
                     with state.lock:
-                        state.config.proxy_ip_pool.append(ProxyLease(address="http://9.9.9.9:8000"))
+                        state.proxy_ip_pool.append(ProxyLease(address="http://9.9.9.9:8000"))
                     state.notify_runtime_change()
                     await asyncio.sleep(0.05)
                     with state.lock:
-                        if state.config.proxy_ip_pool:
-                            state.config.proxy_ip_pool.popleft()
+                        if state.proxy_ip_pool:
+                            state.proxy_ip_pool.popleft()
                             state.success_count = 1
                     state.notify_runtime_change()
                 finally:
@@ -437,7 +437,7 @@ class AsyncRuntimeEngineLargeTests:
         )
 
         def fake_recheck(_state):
-            return 0 if list(state.config.proxy_ip_pool) else 1
+            return 0 if list(state.proxy_ip_pool) else 1
 
         recheck_calls = {"count": 0}
 
